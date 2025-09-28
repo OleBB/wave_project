@@ -115,30 +115,37 @@ class WaveProcessor:
     def compute_resting_levels(self):
         rest_files = [f for f in self.csv_files if 'nowind' in f.lower() and 'baddata' not in f.lower()]
         if not rest_files:
-            raise ValueError("No vindstille files found for resting level")
-
+            raise ValueError("No valid 'no wind' files found for resting level")
+    
         self.resting_probes_all = []
         for f in rest_files:
             df = pd.read_csv(self.folder_path / f, header=None)
-            probes = [df[col].to_numpy()[:self.stillwater_samples] for col in self.probe_cols]
+            probes = []
+            for col in self.probe_cols:
+                data = df[col].to_numpy()[:self.stillwater_samples]
+                if not data.size:
+                    raise ValueError(f"No valid data in column {col} of file {f}")
+                probes.append(data)
             self.resting_probes_all.append(probes)
-
-        avg_resting = [
-            np.nanmean(np.concatenate([resting_probes_all[f][i] for f in range(len(resting_probes_all))]))
+    
+        # Compute average resting levels (no *1000)
+        self.avg_resting_mm = [
+            np.nanmean(np.concatenate([self.resting_probes_all[f][i] for f in range(len(self.resting_probes_all))]))
             for i in range(len(self.probe_cols))
         ]
-        self.avg_resting_mm = [val*1000 for val in avg_resting]
-
-        # Offsets to align to probe 3
-        ref_idx = 2
-        self.offsets = [avg_resting[ref_idx]-avg_resting[i] for i in range(len(self.probe_cols))]
-
-        # Correct probes
+        print(f"Average resting levels (mm): {self.avg_resting_mm}")
+    
+        # Offsets to align to Probe 3
+        ref_idx = 2  # Probe 3
+        self.offsets = [self.avg_resting_mm[ref_idx] - self.avg_resting_mm[i] for i in range(len(self.probe_cols))]
+        print(f"Offsets relative to Probe 3: {self.offsets}")
+    
+        # Correct probes (no *1000)
         self.corrected_probes_mm = [
-            [np.array(arr + self.offsets[i])*1000 if len(arr)>0 else np.array([]) for arr in self.cut_probe_arrays[i]]
+            [np.array(arr + self.offsets[i]) if len(arr) > 0 else np.array([]) for arr in self.cut_probe_arrays[i]]
             for i in range(len(self.probe_cols))
         ]
-        self.plot_resting_levels(resting_probes_all)
+        self.plot_resting_levels()
 
 
     def apply_moving_average(self):
@@ -179,22 +186,25 @@ class WaveProcessor:
         signal = np.array(self.probes_ma[probe_idx][file_idx])
         time_axis = np.array(self.time_axes_ma[probe_idx][file_idx])
         stillwater = self.avg_resting_mm[probe_idx]
-
+    
+        print(f"Probe {probe_idx+1}, File {file_idx}: stillwater = {stillwater} mm")  # Debug
+    
         if len(signal) < 2:
             print(f"Cannot plot Probe {probe_idx+1}, File {file_idx}: signal too short")
             return np.nan
-
+    
+        # Shift signal to center around 0 relative to stillwater
         signal_shifted = signal - stillwater
-
+    
         dt_ms = np.mean(np.diff(time_axis)) if len(time_axis) > 1 else 4.0
-        fs = 1000/dt_ms
-        min_distance = int(fs / (2*self.signal_freq))
-
+        fs = 1000 / dt_ms
+        min_distance = int(fs / (2 * self.signal_freq))
+    
         peaks, _ = find_peaks(signal_shifted, distance=min_distance, prominence=0.5)
         troughs, _ = find_peaks(-signal_shifted, distance=min_distance, prominence=0.5)
         amps, time_pairs = self.compute_amplitudes(peaks, troughs, signal_shifted, time_axis, max_amplitudes=max_peaks)
         avg_amp = np.mean(amps) if amps else np.nan
-
+    
         # Save results
         key = f'amplitudes_probe{probe_idx+1}_file{file_idx}'
         self.data_dict[key] = {
@@ -204,13 +214,15 @@ class WaveProcessor:
             'time_pairs': time_pairs,
             'average_amplitude': avg_amp
         }
-
+    
         # Plot
-        plt.figure(figsize=(10,4))
+        plt.figure(figsize=(10, 4))
         plt.plot(time_axis, signal_shifted, label='Smoothed Signal')
-        if len(peaks)>0: plt.plot(time_axis[peaks], signal_shifted[peaks],'ro',label='Peaks')
-        if len(troughs)>0: plt.plot(time_axis[troughs], signal_shifted[troughs],'go',label='Troughs')
-        plt.axhline(0,color='red',linestyle='--',label='Stillwater Level')
+        if len(peaks) > 0:
+            plt.plot(time_axis[peaks], signal_shifted[peaks], 'ro', label='Peaks')
+        if len(troughs) > 0:
+            plt.plot(time_axis[troughs], signal_shifted[troughs], 'go', label='Troughs')
+        plt.axhline(0, color='red', linestyle='--', label='Stillwater Level')
         plt.xlabel("Time (ms)")
         plt.ylabel("Amplitude (mm relative to stillwater)")
         plt.title(f"Probe {probe_idx+1}, {self.file_names[file_idx]} Amplitude: {avg_amp:.2f} mm")
@@ -219,24 +231,25 @@ class WaveProcessor:
         plt.tight_layout()
         if output_dir:
             Path(output_dir).mkdir(parents=True, exist_ok=True)
-            plt.savefig(Path(output_dir)/f'probe{probe_idx+1}_file{file_idx}_amplitude.png')
+            plt.savefig(Path(output_dir) / f'probe{probe_idx+1}_file{file_idx}_amplitude.png')
         plt.show(block=False)
         return avg_amp
+   
     
-    def plot_resting_levels(self, resting_probes_all):
-        plt.figure(figsize=(10,6))
+    def plot_resting_levels(self):
+        if not self.resting_probes_all:
+            raise ValueError("self.resting_probes_all is empty or not set")
         
+        plt.figure(figsize=(10, 6))
         for probe_idx in range(len(self.probe_cols)):
-            # collect all samples from all rest files for this probe
-            all_samples = [resting_probes_all[f][probe_idx] for f in range(len(resting_probes_all))]
-            concatenated = np.concatenate(all_samples)
-    
+            all_samples = [self.resting_probes_all[f][probe_idx] for f in range(len(self.resting_probes_all))]
+            concatenated = np.concatenate(all_samples)  # Remove *1000 if data is in mm
             plt.plot(concatenated, label=f"Probe {probe_idx+1}")
-    
         plt.xlabel("Sample index")
-        plt.ylabel("Raw amplitude [mm?]")
-        plt.title("Resting level samples from 'nowind' runs")
+        plt.ylabel("Raw amplitude [mm]")
+        plt.title("Resting level samples from 'no wind' runs")
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
         plt.show()
+    

@@ -35,7 +35,7 @@ processor = WaveProcessor(
 
 # ---------------- Select all CSV files ----------------
 selected_indices = list(range(len(processor.csv_files)))  # automatically all CSVs
-selected_indices = [0]
+selected_indices = [0,1]
 processor.load_selected_files(selected_indices)
 
 # ---------------- Compute resting levels and offsets ----------------
@@ -65,7 +65,7 @@ for i, fname in enumerate(processor.file_names):
         print(f"{fname}: insufficient amplitude data")
 
 # Example: plot stillwater for first file 
-processor.plot_resting_levels(resting_probes_all=0)
+#processor.plot_resting_levels()
 
 
 
