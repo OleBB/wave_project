@@ -231,7 +231,8 @@ class WaveProcessor:
         plt.tight_layout()
         if output_dir:
             Path(output_dir).mkdir(parents=True, exist_ok=True)
-            plt.savefig(Path(output_dir) / f'probe{probe_idx+1}_file{file_idx}_amplitude.png')
+            #  SAVE # 
+            plt.savefig(Path(output_dir) / f'file{file_idx}_probe{probe_idx+1}_amplitude.png')
         plt.show(block=False)
         return avg_amp
    
