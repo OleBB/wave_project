@@ -16,7 +16,7 @@ from scipy.signal import find_peaks
 class WaveProcessor:
     def __init__(self, folder_path, output_dir, probe_cols=[1,2,3,4],
                  fixed_samples=None, start_cut=None, probe_ranges=None,
-                 stillwater_samples=2000, window_size=50, signal_freq=1.3):
+                 stillwater_samples=3000, window_size=50, signal_freq=1.3):
         """
         probe_ranges: dict {probe_idx: (start_cut, end_index)}
         """
@@ -81,7 +81,7 @@ class WaveProcessor:
             df = pd.read_csv(self.folder_path / file, header=None)
             ts = pd.to_datetime(df[0])
             for i, col in enumerate(self.probe_cols):
-                probe_arrays[i].append(np.array(df[col].to_numpy()))
+                probe_arrays[i].append(np.array(df[col].to_numpy()) *1000)  #millimeter 
             timestamps.append((ts - ts.iloc[0]).dt.total_seconds() * 1000)
             self.file_names.append(file)
             min_length = min(min_length, len(df))
@@ -108,7 +108,7 @@ class WaveProcessor:
                     continue
                 truncated_probes.append(arr[s:e])
                 truncated_times.append(t[s:e])
-
+            
             self.cut_probe_arrays.append(truncated_probes)
             self.time_axes.append(truncated_times)
 
@@ -122,7 +122,7 @@ class WaveProcessor:
             df = pd.read_csv(self.folder_path / f, header=None)
             probes = []
             for col in self.probe_cols:
-                data = df[col].to_numpy()[:self.stillwater_samples]
+                data = df[col].to_numpy()[:self.stillwater_samples]*1000 #millimeter
                 if not data.size:
                     raise ValueError(f"No valid data in column {col} of file {f}")
                 probes.append(data)
@@ -175,7 +175,7 @@ class WaveProcessor:
 
                 probe_list_ma.append(ma)
                 probe_time_list.append(ma_time)
-
+                
             self.probes_ma.append(probe_list_ma)
             self.time_axes_ma.append(probe_time_list)
 
@@ -187,7 +187,7 @@ class WaveProcessor:
         time_axis = np.array(self.time_axes_ma[probe_idx][file_idx])
         stillwater = self.avg_resting_mm[probe_idx]
     
-        print(f"Probe {probe_idx+1}, File {file_idx}: stillwater = {stillwater} mm")  # Debug
+        #print(f"Probe {probe_idx+1}, File {file_idx}: stillwater = {stillwater} mm")  # Debug
     
         if len(signal) < 2:
             print(f"Cannot plot Probe {probe_idx+1}, File {file_idx}: signal too short")
