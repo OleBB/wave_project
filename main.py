@@ -17,7 +17,7 @@ results_folder = project_root / "waveresults"
 results_folder.mkdir(exist_ok=True)
 
 # ---------------- Create processor ----------------
-probe_window = 2675 # 14per/1.3Hz = 10.7s . 10.7s/250 samples/sec. = 2675. 
+probe_window = 2500 # 14per/1.3Hz = 10.7s . 10.7s/250 samples/sec. = 2675. 
 probe2start = 4500 #fra 18K til 28K ms
 probe3start = 6000
 probe_ranges = {
@@ -35,7 +35,7 @@ processor = WaveProcessor(
 
 # ---------------- Select all CSV files ----------------
 selected_indices = list(range(len(processor.csv_files)))  # automatically all CSVs
-selected_indices = [0,1]
+#selected_indices = [0,1]
 processor.load_selected_files(selected_indices)
 
 # ---------------- Compute resting levels and offsets ----------------
@@ -59,8 +59,8 @@ for i, fname in enumerate(processor.file_names):
     p3 = avg_amps_probe3[i]
     if not np.isnan(p2) and not np.isnan(p3):
         diff = p2 - p3
-        ratio = p2/p3 if p3 != 0 else np.nan
-        print(f"{fname}: Probe2={p2:.2f} mm, Probe3={p3:.2f} mm, Diff={diff:.2f}, Ratio={ratio:.2f}")
+        ratio = p3/p2 if p3 != 0 else np.nan
+        print(f"{fname}: Probe2={p2:.2f} mm, Probe3={p3:.2f} mm, Diff={diff:.2f}, P3/P2 Ratio={ratio:.2f}")
     else:
         print(f"{fname}: insufficient amplitude data")
 
