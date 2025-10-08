@@ -9,7 +9,7 @@ __pycache__/
 *.ipynb
 
 # Explicitly include specific notebooks to track
-!notebooks/fremvisning.ipynb
+wavenotebooks/!notebooks/fremvisning.ipynb
 !notebooks/finebilde.ipynb
 
 # Data folders (large CSV files)
