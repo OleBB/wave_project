@@ -11,6 +11,7 @@ __pycache__/
 # Explicitly include specific notebooks to track
 !wavenotebooks/fremvisning.ipynb
 !wavenotebooks/finebilde.ipynb
+!wavenotebooks/cmd+shift+prikk_gitignore_inkluder_ønsket_notebook.txt
 
 # Data folders (large CSV files)
 #wavedata/raw/
