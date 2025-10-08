@@ -1,0 +1,26 @@
+# Conda environment files (excluding environment.yml, which should be tracked)
+*.egg-info/
+__pycache__/
+*.pyc
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+# Ignore all Jupyter notebooks by default
+*.ipynb
+
+# Explicitly include specific notebooks to track
+!notebooks/fremvisning.ipynb
+!notebooks/finebilde.ipynb
+
+# Data folders (large CSV files)
+#wavedata/raw/
+#wavedata/processed/
+#wavedata/outputs/
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+
+# macOS-specific
+.DS_Store
