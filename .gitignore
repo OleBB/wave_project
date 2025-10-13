@@ -13,8 +13,8 @@ __pycache__/
 !wavenotebooks/finebilde.ipynb
 
 
-/Users/ole/Kodevik/wave_project/wavenotebooks/cmd+shift+prikk_gitignore_inkluder_ønsket_notebook.txt
-/wavenotebooks/slettefil.txt
+wavenotebooks/cmd+shift+prikk_gitignore_inkluder_ønsket_notebook.txt
+wavenotebooks/slettefil.txt
 
 # Data folders (large CSV files)
 #wavedata/raw/
