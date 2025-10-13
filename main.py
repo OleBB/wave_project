@@ -4,7 +4,7 @@
 Main runner for wave signal processing
 """
 
-from scripts.wave_processor import WaveProcessor
+from wavescripts.wave_processor import WaveProcessor
 from pathlib import Path
 import numpy as np
 
