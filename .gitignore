@@ -20,6 +20,7 @@ wavenotebooks/slettefil.txt
 #wavedata/raw/
 #wavedata/processed/
 #wavedata/outputs/
+#pressuredata
 
 # Temporary files
 *.log
