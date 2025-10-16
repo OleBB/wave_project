@@ -53,37 +53,27 @@ print(f"Found {len(files)} .lvm files")
 #    [read_lvm(f, skip_lines_after_header=2) for f in files[:1]],  # Change files[:1] to files for all
 #    ignore_index=True
 #)
+#amps = df['mA']
+#amps = amps[(amps >= 0.002) & (amps <= 0.02)] *1000
 
-amps = df['mA']
-amps = amps[(amps >= 0.002) & (amps <= 0.02)] *1000
- 
-"""Use .where() when you want to preserve time/index continuity — useful for time series, 
-so you can see where the dropouts occurred."""
-# Convert to mA
-#df['mA'] =  df['mA'].where(df['mA'] != 0) * 1000
-#df = df[amps.values != 0]
-#amps.where(amps !=0).mean(trim(0.0))
-#sales.where(sales != 0).mean(trim=0.1) * 1000
-
-
-"""If you want to cap the values instead of removing them:
-amps = amps.clip(lower=-0.01, upper=0.01)"""
-# drop rows with all zeros
-#df = df.loc[(df!=0).any(axis=1)] #trenger ikke den any trur eg.
+# files = list of your LVM files
+dfs = [read_lvm(f, skip_lines_after_header=2)[['mA']] for f in files]  # select only mA column
+# Optionally rename columns so each file has a unique name
+for i, f in enumerate(files):
+    dfs[i].columns = [f"mA_{i+1}"]
+# Concatenate horizontally
+df = pd.concat(dfs, axis=1)
+df = df[(df >= 0.002) & (df <= 0.02)] *1000
 
 
-snittet = amps.mean()
+snittet = df.mean()
 print('snittet er ', snittet)
 
-# Save to CSV
-#df.to_csv("all_measurements.csv", index=False)
+
 
 #%%
-# Plot exmAle
 import matplotlib.pyplot as plt
-#df['mA'].clip(lower=5, upper=95)
-amps.iloc[0:2000].plot()  # Line plot of A only
-#df.iloc[0:3].plot()
+df.iloc[0:2000].plot()
 
 
 """
@@ -96,6 +86,6 @@ plt.xlabel("Time [ms]")
 plt.ylabel("Current [mA]")
 plt.show()
 #plt.title("All LVM Files")
-#plt.legend()
+plt.legend(snittet.iloc[0], snittet.iloc[1], snittet.iloc[2])
 #plt.tight_layout()
-#plt.show()
+plt.show()
