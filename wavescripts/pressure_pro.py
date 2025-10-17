@@ -81,11 +81,32 @@ If you’re working with large time-series data, you can downsample before plott
 df["mA"].iloc[::100].plot()  # plot every 100th point"""
 
 #plt.figure(figsize=(10, 6))
-#plt.
 plt.xlabel("Time [ms]")
 plt.ylabel("Current [mA]")
-plt.show()
-#plt.title("All LVM Files")
-plt.legend(snittet.iloc[0], snittet.iloc[1], snittet.iloc[2])
+plt.title("Pressure samples")
+
+sn1 = (snittet.iloc[0])
+sn2 = (snittet.iloc[1])
+sn3 = (snittet.iloc[2])
+
+#ax.legend([sn1, sn2, sn3], ['sn1', 'sn2', 'sn3'])
+plt.legend()
+print(sn1, sn2, sn3)
+
+#plt.legend(f'Snitt:{snittet}' ) #.iloc[0], snittet.iloc[1], snittet.iloc[2])
 #plt.tight_layout()
 plt.show()
+
+
+#%%
+df["mA"].iloc[::100].plot()  # plot every 100th point
+
+#plt.figure(figsize=(10, 6))
+plt.xlabel("Time [ms]")
+plt.ylabel("Current [mA]")
+plt.title("Pressure, downsampled")
+plt.legend(snittet) #, snittet.iloc[1], snittet.iloc[2])
+#plt.tight_layout()
+plt.show()
+
+
