@@ -1,0 +1,25 @@
+LabVIEW Measurement	
+Writer_Version	2
+Reader_Version	2
+Separator	Tab
+Decimal_Separator	,
+Multi_Headings	Yes
+X_Columns	No
+Time_Pref	Absolute
+Operator	admin
+Description	her skal ett snitt finnes
+Date	2025/10/24
+Time	19:44:07,2477030754089355469
+***End_of_Header***	
+	
+Channels	1	
+Samples	1	
+Date	2025/10/24	
+Time	19:44:07,2477030754089355469	
+X_Dimension	Time	
+X0	0,0000000000000000E+0	
+Delta_X	1,000000	
+***End_of_Header***		
+X_Value	Untitled	Comment
+	5,287786
+
