@@ -1,0 +1,31 @@
+LabVIEW Measurement	
+Writer_Version	2
+Reader_Version	2
+Separator	Tab
+Decimal_Separator	,
+Multi_Headings	Yes
+X_Columns	No
+Time_Pref	Relative
+Operator	admin
+Date	2025/10/23
+Time	17:58:24,6618800163269042969
+***End_of_Header***	
+	
+Channels	1	
+Samples	8	
+Date	2025/10/23	
+Time	17:58:24,6618800163269042969	
+X_Dimension	Time	
+X0	0,0000000000000000E+0	
+Delta_X	1,000000	
+***End_of_Header***		
+X_Value	Untitled	Comment
+	3,800970	nå med halvmeter trykkslange. 2første målinger uten vind. lowestwind. pitot laveste 015. ser jo ut som det er ekstremt mye mindre fluktuasjoner!!
+	3,800569
+	4,362375
+	4,379309
+	4,388714
+	4,379664
+	4,374510
+	4,329097
+

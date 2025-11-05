@@ -1,0 +1,30 @@
+LabVIEW Measurement	
+Writer_Version	2
+Reader_Version	2
+Separator	Tab
+Decimal_Separator	,
+Multi_Headings	Yes
+X_Columns	No
+Time_Pref	Relative
+Operator	admin
+Date	2025/10/23
+Time	13:27:56,7776975631713867188
+***End_of_Header***	
+	
+Channels	1	
+Samples	7	
+Date	2025/10/23	
+Time	13:27:56,7776975631713867188	
+X_Dimension	Time	
+X0	0,0000000000000000E+0	
+Delta_X	1,000000	
+***End_of_Header***		
+X_Value	Untitled	Comment
+	4,728096	Lowestwind - 10 sekunders kjøringer, med proben i nederste posisjon, oppå planken
+	4,745135
+	4,720779
+	4,733322
+	4,740164
+	4,749421
+	4,755177
+
