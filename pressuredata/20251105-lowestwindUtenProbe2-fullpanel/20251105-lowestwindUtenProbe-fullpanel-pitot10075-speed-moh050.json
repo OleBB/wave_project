@@ -1,0 +1,18 @@
+{
+    "created_at": "2025-11-07T13:49:05.447577",
+    "parent": "/Users/ole/Kodevik/wave_project/pressuredata/20251105-lowestwindUtenProbe2-fullpanel",
+    "filename": "20251105-lowestwindUtenProbe-fullpanel-pitot10075-speed-moh050.txt",
+    "metadata": {
+        "Date": "20251105",
+        "WindCondition": "Lowest",
+        "TunnelCondition": "UtenProbe",
+        "PanelCondition": "full",
+        "Mooring": "high",
+        "WaveAmplitude": "",
+        "WaveFrequency": "",
+        "PitotPlacement": "10075",
+        "FileContents": "speed",
+        "Height(mm)": 50
+    },
+    "notes": ""
+}
