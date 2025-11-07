@@ -1,0 +1,1 @@
+""Arit"	""RMS""	""Stan"	""Vari"	""Kurt"	""Medi"	""Mode"	""Summ"	""Skew"
