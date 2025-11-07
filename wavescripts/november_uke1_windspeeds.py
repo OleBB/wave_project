@@ -66,29 +66,6 @@ def process_folder(folder_path):
     heights, means = zip(*sorted(zip(heights, means)))
     return np.array(heights), np.array(means)
 
-"""
-# --- MAIN PLOTTING ---
-plt.figure(figsize=(8, 6))
-
-for folder in selected_folders:
-    folder_path = os.path.join(root_dir, folder)
-    if not os.path.isdir(folder_path):
-        print(f"Skipping (not found): {folder_path}")
-        continue
-
-    heights, means = process_folder(folder_path)
-    plt.plot(means, heights, marker='o', label=folder)
-
-plt.ylabel("Height [mm]")
-plt.xlabel("Mean value")
-
-plt.title("Mean Value vs Height per Folder")
-plt.legend(title="Folder")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-"""
-
 #%%
 # --- MAIN PLOTTING ---
 fig, ax = plt.subplots(figsize=(8, 6))  
@@ -113,23 +90,13 @@ for folder in selected_folders:
 # Set labels and titles
 ax.set_ylabel("Height [mm]")
 ax.set_xlabel("Mean value")
-ax.set_title("Mean Value vs Height per Folder")
-
-# Set y-limits to increase whitespace above the plot
-ax.set_ylim(ymin=0, ymax=380)  # Change max value to 380
-
-# Enable grid with finer settings
+ax.set_title("Windspeeds")
+ax.set_ylim(0, 380)
+ax.yaxis.set_major_locator(plt.MultipleLocator(20))
+ax.yaxis.set_minor_locator(plt.MultipleLocator(5))
 ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+ax.legend()
 
-# Set more ticks on the x and y axes for a finer grid
-ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))  # Ensure major ticks are integer values
-ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=10))     # Set number of bins/ticks on the y-axis
-
-# Add legend
-ax.legend(title="Folder")
-
-# Tight layout to fit everything
 plt.tight_layout()
-
-# Show the plot
+#plt.savefig("../windresults/nov04-06-lowestwind.pdf", bbox_inches="tight")
 plt.show()
