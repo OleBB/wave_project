@@ -52,28 +52,30 @@ fig, ax = plt.subplots(figsize=(8, 6))
 
 angles, means, labels = process_files(ein_folder)
 
-ax.scatter(angles, means)
+ax.scatter(means, angles)
+
+
 
 # annotate each point
-for a, m, lab in zip(angles, means, labels):
-    short = lab[:12]   # or any substring you want
+for a, m, lab in zip(means, angles, labels):
+    match = re.search(r'5ang([A-Za-z0-9]+)', lab)
+    short = match.group(1)
     ax.annotate(short, (a, m), xytext=(0, 5), textcoords="offset points",
                 ha='center', fontsize=8)
 
 ax.set_xlabel("Angle")
 ax.set_ylabel("Mean pressure")
-plt.show()
+
 
 
 ax.set_ylabel("Angle in degrees")
 ax.set_xlabel("Wind speed [m/s]")
 ax.set_title("Wind speed accuracy based on angle ")
 
-ax.set_ylim(ymin=min(angles), ymax=30)
-
 ax.grid(True, which='both', linestyle='--', linewidth=0.5)
-#ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))  # Ensure major ticks are integer values
-#ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=10))     # Set number of bins/ticks on the y-axis
+
+ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))  # Ensure major ticks are integer values
+ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=10))     # Set number of bins/ticks on the y-axis
 #ax.legend(title="Folder")
 #plt.tight_layout()
-
+plt.show()

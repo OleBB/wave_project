@@ -11,6 +11,8 @@ from scipy import stats  # needs: pip install scipy
 file1 = "/Users/ole/Kodevik/wave_project/pressuredata/20251105-lowestwindUtenProbe-fullpanel/20251105-lowestwindUtenProbe-fullpanel-pitot10075-speed-moh160.txt"
 file2 = "/Users/ole/Kodevik/wave_project/pressuredata/20251105-lowestwindUtenProbe-fullpanel/20251105-lowestwindUtenProbe-fullpanel-pitot10075-bonus/20251105-lowestwindUtenProbe-fullpanel-pitot10075-speed-moh160-pitot15grader.txt"
 
+file1 = "/Users/ole/Kodevik/wave_project/pressuredata/20251106-lowestwindUtenProbe2-fullpanel-amp0100-freq1300/20251106-lowestwindUP2-angletest/20251106-lowestwindUP2-allpanel-angleTest-pitot10075-speed-moh051.txt"
+file2 = "/Users/ole/Kodevik/wave_project/pressuredata/20251106-lowestwindUtenProbe2-fullpanel-amp0100-freq1300/20251106-lowestwindUP2-angletest/20251106-lowestwindUP2-allpanel-angleTest-pitot10075ang0xtratid-speed-moh051.txt"
 
 def read_values(filename):
     """Reads quoted numbers with commas as decimals and returns a NumPy array."""
