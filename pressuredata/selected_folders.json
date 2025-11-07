@@ -1,0 +1,35 @@
+{
+  "created_at": "2025-11-06T21:17:46",
+  "parent": "/Users/ole/Kodevik/wave_project/pressuredata",
+  "folders": [
+    "20251017-pitot-fullwind",
+    "20251020-pitot-lowestwind-labview_mean",
+    "20251024-pitot-mean",
+    "20251024-pitot-mean-ekstra",
+    "20251024-pitot-mean-fullwind",
+    "20251024-pitot-mean-nowind",
+    "20251025-pitot-mean-lowestwind",
+    "20251028-pitot-fullwind",
+    "20251028-pitot-lowestwind",
+    "20251029-pitot-lowestwind",
+    "20251030-lowestwind-newcode",
+    "20251104-fullwind",
+    "20251104-lowestwind",
+    "20251105-fullwindUtenProbe2-fullpanel",
+    "20251105-lowestwind",
+    "20251105-lowestwind-fullpanel",
+    "20251105-lowestwindUtenProbe2-fullpanel",
+    "20251106-fullwindUtenProbe2-fullpanel",
+    "20251106-fullwindUtenProbe2-fullpanel-amp0100-freq1300",
+    "20251106-lowestwindUtenProbe2-fullpanel-amp0100-freq1300",
+    "2025en_slange_baki_tanken",
+    "2025fyrste_gong_pitot",
+    "2025fyrste_skikkelige_pitot"
+  ],
+  "config": {
+    "pattern": "moh(\\d{3})",
+    "file_ext": ".txt",
+    "flip_axes": false
+  },
+  "notes": ""
+}

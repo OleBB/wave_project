@@ -1,0 +1,1 @@
+forsøk på se på en laaang tidsserie. normalt har jeg alle serier på 30 sek, men de lengre feilmerker jeg med vilje +1 slik at høgden blir 1mm for mye
