@@ -3,7 +3,7 @@
 """
 Wave Signal Processor
 
-@author: ole
+@author: gpt/grok
 """
 
 import os
