@@ -7,19 +7,20 @@ Main runner for wave signal processing
 from wavescripts.wave_processor import WaveProcessor
 from pathlib import Path
 import numpy as np
+import pandas as pd
 
 # ---------------- Paths ----------------
 project_root = Path(__file__).parent
-data_folder = project_root / "wavedata"
+data_folder = project_root / "wavedata/20251110-tett6roof-lowM-ekte580"
 results_folder = project_root / "waveresults"
 
 # Ensure results folder exists
 results_folder.mkdir(exist_ok=True)
 
 # ---------------- Create processor ----------------
-probe_window = 2500 # 14per/1.3Hz = 10.7s . 10.7s/250 samples/sec. = 2675. 
-probe2start = 4500 #fra 18K til 28K ms
-probe3start = 6000
+probe_window = 20000#2500 # 14per/1.3Hz = 10.7s . 10.7s/250 samples/sec. = 2675. 
+probe2start = 0#4500 #fra 18K til 28K ms
+probe3start = 0#6000
 probe_ranges = {
     1: (probe2start, probe2start+probe_window),  # Probe 2
     2: (probe3start, probe3start+probe_window),  # Probe 3
@@ -34,8 +35,8 @@ processor = WaveProcessor(
 )
 
 # ---------------- Select all CSV files ----------------
-selected_indices = list(range(len(processor.csv_files)))  # automatically all CSVs
-#selected_indices = [0,1]
+#selected_indices = list(range(len(processor.csv_files)))  # automatically all CSVs
+selected_indices = [3]
 processor.load_selected_files(selected_indices)
 
 # ---------------- Compute resting levels and offsets ----------------
@@ -52,6 +53,8 @@ for i in range(len(selected_indices)):
     avg_amps_probe2.append(processor.plot_amplitude_comparison(probe_idx=1, file_idx=i, output_dir=results_folder))
     avg_amps_probe3.append(processor.plot_amplitude_comparison(probe_idx=2, file_idx=i, output_dir=results_folder))
 
+p2_p3_amp_data = []
+
 # ---------------- Compare Probe 2 vs Probe 3 ----------------
 print("\nProbe 2 vs Probe 3 amplitude comparison:")
 for i, fname in enumerate(processor.file_names):
@@ -60,9 +63,15 @@ for i, fname in enumerate(processor.file_names):
     if not np.isnan(p2) and not np.isnan(p3):
         diff = p2 - p3
         ratio = p3/p2 if p3 != 0 else np.nan
+        p2_p3_amp_data.append([fname, p2, p3, diff, ratio])
         print(f"{fname}: Probe2={p2:.2f} mm, Probe3={p3:.2f} mm, Diff={diff:.2f}, P3/P2 Ratio={ratio:.2f}")
     else:
         print(f"{fname}: insufficient amplitude data")
+        p2_p3_amp_data.append([fname, 'insufficient amplitude data', '', '', ''])
+        
+# Create a DataFrame
+p2_p3_amp_columns = ['File Name', 'Probe 2 Amplitude (mm)', 'Probe 3 Amplitude (mm)', 'Difference (mm)', 'P3/P2 Ratio']
+df = pd.DataFrame(p2_p3_amp_data, columns=p2_p3_amp_columns)
 
 # Example: plot stillwater for first file 
 #processor.plot_resting_levels()
