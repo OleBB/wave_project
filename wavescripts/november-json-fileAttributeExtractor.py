@@ -32,15 +32,9 @@ def extract_metadata(filename):
         "WaveFrequency": "",          # Default value
         "PitotPlacement": "",         # Default value
         "FileContents": "",
-        "Height(mm)": 0,              # Default as zero
+        "Real Pitot Height(mm)": 0,              # Default as zero
     }
-    date_match = re.search(r'(\d{8})', filename)
-    if date_match:
-        metadata["Date"] = date_match.group(1)
-        if metadata["Date"] < "20251106":
-            metadata["Mooring"] = "high"
-        else:
-            metadata["Mooring"] = "low"
+    
     
     pitot_match = re.search(r'-pitot(\d+)', filename)
     if pitot_match:
