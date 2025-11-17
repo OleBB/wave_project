@@ -7,25 +7,129 @@ Created on Thu Nov 13 16:27:38 2025
 """
 
 import matplotlib.pyplot as plt
+import os
 
-def plot_second_column(df,rangestart,rangeend, title=None):
-    """
-    Plots the 2nd column of a pandas DataFrame.
-    """
-    df.iloc[rangestart:rangeend, 1].plot()
-    if title:
-        plt.title(title)
-    plt.xlabel(df.columns[1])
-    plt.show()
+def plot_column(df, start, end, chosenprobe, title="", ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10,5))
+
+    ax.plot(df.iloc[start:end, chosenprobe])   # or whichever column you use
+    ax.set_title(title)
 
 
 
-def plot_column(df,rangestart, rangeend, col_index=1, title=None):
-    """
-    More flexible version: plot any column by index.
-    """
-    df.iloc[rangestart:rangeend, col_index].plot()
-    if title:
-        plt.title(title)
-    plt.xlabel(df.columns[col_index])
+
+# ------------------------------------------------------------
+# Moving average helper
+# ------------------------------------------------------------
+def apply_moving_average(df, data_cols, win=50):
+    df_ma = df.copy()
+    df_ma[data_cols] = df[data_cols].rolling(window=win, min_periods=win).mean()
+    return df_ma
+
+
+# ------------------------------------------------------------
+# Short label builder (prevents huge legend)
+# ------------------------------------------------------------
+def make_label(row):
+    panel = row.get("PanelCondition", "")
+    wind  = row.get("WindCondition", "")
+    amp   = row.get("WaveAmplitudeInput [Volt]", "")
+    freq  = row.get("WaveFrequencyInput [Hz]", "")
+
+    return f"{panel}panel-{wind}wind-amp{amp}-freq{freq}"
+
+
+# ------------------------------------------------------------
+# Core plot function (single dataset)
+# ------------------------------------------------------------
+def plot_column(df, start, end, chosenprobe, title="", ax=None,
+                color="black", linestyle="-"):
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 5))
+    
+    ax.plot(df[chosenprobe].iloc[start:end],
+            label=title,
+            color=color,
+            linestyle=linestyle)
+
+    ax.set_title(title)
+    return ax
+
+
+# ------------------------------------------------------------
+# Main function: filters metadata, smooths, colors, styles, plots
+# ------------------------------------------------------------
+def plot_filtered(meta_df,
+                  dfs,
+                  amp=None,
+                  freq=None,
+                  wind=None,
+                  chosenprobe=None,
+                  rangestart=0,
+                  rangeend=None,
+                  data_cols=None,
+                  win=1):
+    
+    if data_cols is None:
+        data_cols = ["Probe 1","Probe 2","Probe 3","Probe 4"]
+    # --- Filtering based on requested conditions ---
+    df_sel = meta_df.copy()
+
+    if amp is not None:
+        df_sel = df_sel[df_sel["WaveAmplitudeInput [Volt]"] == amp]
+
+    if freq is not None:
+        df_sel = df_sel[df_sel["WaveFrequencyInput [Hz]"] == freq]
+
+    if wind is not None:
+        df_sel = df_sel[df_sel["WindCondition"] == wind]
+
+    if df_sel.empty:
+        print("No matching datasets found.")
+        return
+
+    # Mapping for consistent colors
+    wind_colors = {
+        "full":   "red",
+        "nowind": "blue",
+        "lowest": "green"
+    }
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for idx, row in df_sel.iterrows():
+
+        path_key = row["path"]
+        df_raw   = dfs[path_key]
+        
+        print("Columns for", row["path"], df_raw.columns.tolist())
+
+
+        # Apply moving average
+        df_ma = apply_moving_average(df_raw, data_cols, win=win)
+
+        # Color based on wind
+        windcond = row["WindCondition"]
+        color = wind_colors.get(windcond, "black")
+
+        # Linestyle based on panel condition
+        panelcond = row["PanelCondition"]
+        linestyle = "--" if "full" in panelcond else "-"
+
+        # Short label for legend
+        label = make_label(row)
+
+        # Plot it
+        ax.plot(df_ma[chosenprobe].iloc[rangestart:rangeend],
+                label=label,
+                color=color,
+                linestyle=linestyle)
+
+    ax.set_xlabel("Milliseconds")
+    ax.set_ylabel(chosenprobe)
+    ax.set_title(f"{chosenprobe} — smoothed (win={win})")
+    ax.legend()
+
     plt.show()
