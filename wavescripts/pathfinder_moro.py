@@ -55,7 +55,7 @@ def extract_wavemetadata(filename):
     if panel_match:
         metadata["PanelCondition"] = panel_match.group(1)
     
-    modtime = os.path.getmtime(fil1)
+    modtime = os.path.getmtime(filename)
     date = datetime.fromtimestamp(modtime)
     date_match = re.search(r'(\d{8})', filename)
     if date_match:
