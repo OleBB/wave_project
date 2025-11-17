@@ -3,7 +3,7 @@
 """
 Created on Thu Nov  6 20:51:51 2025
 
-@author: gpt
+@author: Ole
 """
 
 import os
@@ -75,7 +75,7 @@ def wind_plotter(selected_folders):
     
     # Set labels and titles
     ax.set_ylabel("Height [mm]")
-    ax.set_xlabel("Mean value")
+    ax.set_xlabel("M/S")
     ax.set_title("Windspeeds")
     ax.set_ylim(0, 380)
     ax.yaxis.set_major_locator(plt.MultipleLocator(20))

@@ -19,8 +19,8 @@ results_folder.mkdir(exist_ok=True)
 
 # ---------------- Create processor ----------------
 probe_window = 20000#2500 # 14per/1.3Hz = 10.7s . 10.7s/250 samples/sec. = 2675. 
-probe2start = 0#4500 #fra 18K til 28K ms
-probe3start = 0#6000
+probe2start = 4500#4500 #fra 18K til 28K ms
+probe3start = 6000#6000
 probe_ranges = {
     1: (probe2start, probe2start+probe_window),  # Probe 2
     2: (probe3start, probe3start+probe_window),  # Probe 3
@@ -36,7 +36,7 @@ processor = WaveProcessor(
 
 # ---------------- Select all CSV files ----------------
 #selected_indices = list(range(len(processor.csv_files)))  # automatically all CSVs
-selected_indices = [3]
+selected_indices = [1,2,3,4,5]
 processor.load_selected_files(selected_indices)
 
 # ---------------- Compute resting levels and offsets ----------------
