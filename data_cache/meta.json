@@ -10,7 +10,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-fullwind-amp0200-freq0650-per15-depth580-mstop30-run1.csv",
@@ -23,7 +27,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-nowind-amp0200-freq1300-per15-depth580-mstop30-run1.csv",
@@ -36,7 +44,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": 271.86294820717126,
+    "Stillwater Probe 2": 271.0605577689243,
+    "Stillwater Probe 3": 271.48067729083664,
+    "Stillwater Probe 4": 272.2506772908367
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-nowind-amp0300-freq1300-per15-depth580-mstop30-run1.csv",
@@ -49,7 +61,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": 272.37318725099607,
+    "Stillwater Probe 2": 271.736374501992,
+    "Stillwater Probe 3": 272.372470119522,
+    "Stillwater Probe 4": 272.82577689243027
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-fullwind-amp0100-freq0650-per15-depth580-mstop30-run1.csv",
@@ -62,7 +78,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-fullwind-amp0100-freq1300-per15-depth580-mstop30-run1.csv",
@@ -75,7 +95,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-fullwind-amp0300-freq1300-per15-depth580-mstop30-run1.csv",
@@ -88,7 +112,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-nowind-amp0100-freq1300-per15-depth580-mstop30-run1.csv",
@@ -101,7 +129,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": 272.20673306772903,
+    "Stillwater Probe 2": 271.49083665338645,
+    "Stillwater Probe 3": 272.31573705179284,
+    "Stillwater Probe 4": 272.9524701195219
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-nowind-amp0200-freq0650-per15-depth580-mstop30-run1.csv",
@@ -114,7 +146,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": 272.4505976095618,
+    "Stillwater Probe 2": 271.962749003984,
+    "Stillwater Probe 3": 272.06844621513943,
+    "Stillwater Probe 4": 272.88996015936254
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-fullwind-amp0300-freq0650-per15-depth580-mstop30-run1.csv",
@@ -127,7 +163,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-fullwind-amp0300-freq1300-per15-depth580-mstop30-run1.csv",
@@ -140,7 +180,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-nowind-amp0100-freq0650-per15-depth580-mstop30-run1.csv",
@@ -153,7 +197,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": 272.53139442231077,
+    "Stillwater Probe 2": 272.08071713147416,
+    "Stillwater Probe 3": 272.4706374501992,
+    "Stillwater Probe 4": 272.93816733067723
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-nowind-amp0100-freq1300-per15-depth580-mstop30-run1.csv",
@@ -166,7 +214,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": 271.87557768924296,
+    "Stillwater Probe 2": 271.34745019920325,
+    "Stillwater Probe 3": 271.8764541832669,
+    "Stillwater Probe 4": 272.4717529880478
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-fullwind-amp0200-freq0650-per15-depth580-mstop30-run1.csv",
@@ -179,7 +231,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-fullwind-amp0200-freq1300-per15-depth580-mstop30-run1.csv",
@@ -192,7 +248,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-nowind-amp0300-freq0650-per15-depth580-mstop30-run1.csv",
@@ -205,7 +265,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": 272.9106772908366,
+    "Stillwater Probe 2": 271.8005179282868,
+    "Stillwater Probe 3": 272.0524701195219,
+    "Stillwater Probe 4": 272.88338645418327
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-fullwind-amp0100-freq1300-per15-depth580-mstop30-run1.csv",
@@ -218,7 +282,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-fullwind-amp0100-freq0650-per15-depth580-mstop30-run1.csv",
@@ -231,7 +299,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-lowestwind-amp0200-freq1300-per15-depth580-mstop30-run1.csv",
@@ -244,7 +316,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-lowestwind-amp0100-freq0650-per15-depth580-mstop30-run1.csv",
@@ -257,7 +333,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-lowestwind-amp0300-freq1300-per15-depth580-mstop30-run1.csv",
@@ -270,7 +350,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-lowestwind-amp0100-freq1300-per15-depth580-mstop30-run1.csv",
@@ -283,7 +367,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-lowestwind-amp0200-freq0650-per15-depth580-mstop30-run1.csv",
@@ -296,7 +384,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-lowestwind-amp0300-freq1300-per15-depth580-mstop30-run1.csv",
@@ -309,7 +401,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-lowestwind-amp0100-freq0650-per15-depth580-mstop30-run1.csv",
@@ -322,7 +418,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-lowestwind-amp0200-freq1300-per15-depth580-mstop30-run1.csv",
@@ -335,7 +435,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/fullpanel-lowestwind-amp0200-freq0650-per15-depth580-mstop30-run1.csv",
@@ -348,7 +452,11 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   },
   {
     "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580/nopanel-lowestwind-amp0300-freq0650-per15-depth580-mstop30-run1.csv",
@@ -361,6 +469,10 @@
     "WavePeriodInput": "15",
     "WaterDepth [mm]": "580",
     "Extra seconds": "30",
-    "Run number": "1"
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   }
 ]
