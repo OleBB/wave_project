@@ -111,8 +111,6 @@ def load_or_update(
 
     print(f"Loading {len(new_files)} new files...")
     
-
-    meinHeaders = ["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]
     # ---- Load new files ----
     for i, path in enumerate(new_files, 1):
         key = str(path.resolve())
@@ -132,8 +130,10 @@ def load_or_update(
                 print(f"  Skipping unsupported type: {path.name}")
                 continue
 
-            dfs[key] = df
-            
+            for i in range(1, 5):
+                df[f"Probe {i}"] *= 1000 #gange med millimeter
+        
+            dfs[key] = df 
             
             filename = path.name
             metadata = {
@@ -147,19 +147,33 @@ def load_or_update(
                 "WavePeriodInput": "",         
                 "WaterDepth [mm]": "",         
                 "Extra seconds": "",         
-                "Run number": ""
+                "Run number": "",
+                "Stillwater Probe 1": "",
+                "Stillwater Probe 2": "",
+                "Stillwater Probe 3": "",
+                "Stillwater Probe 4": "",
             }
+            
+            stillwater_samples = 250
             
             wind_match = re.search(r'-([A-Za-z]+)wind-', filename)
             if wind_match:
                 metadata["WindCondition"] = wind_match.group(1)
-        
+                if wind_match.group(1) == "no":
+                    metadata["Stillwater Probe 1"]  = df["Probe 1"].loc[0:stillwater_samples].mean(skipna=True)
+                    metadata["Stillwater Probe 2"] = df["Probe 2"].loc[0:stillwater_samples].mean(skipna=True)
+                    metadata["Stillwater Probe 3"] = df["Probe 3"].loc[0:stillwater_samples].mean(skipna=True)
+                    metadata["Stillwater Probe 4"] = df["Probe 4"].loc[0:stillwater_samples].mean(skipna=True)
+                    #kan vel slå sammen til en linje per Probe?
+                    #metadata["Stillwater Probe 1"] = stilldatamean_probe1
+                    #metadata["Stillwater Probe 2"] = stilldatamean_probe2
+                    #metadata["Stillwater Probe 3"] = stilldatamean_probe3
+                    #metadata["Stillwater Probe 4"] = stilldatamean_probe4
+            
                 
             tunnel_match = re.search(r'([0-9])roof', filename)
             if tunnel_match:
                 metadata["TunnelCondition"] = tunnel_match.group(1) + " roof plates"
-            
-            #### LEGG TIL noe som leser mappenavnet om det er 6roof eller ikke.
             
             panel_match = re.search(r'([A-Za-z]+)panel', filename)
             if panel_match:
@@ -206,9 +220,13 @@ def load_or_update(
             if run_match:
                 metadata["Run number"] = run_match.group(1).lower()  # Store as lower case for consistency
             meta_list.append(metadata)
-
+            
+            # - - - - - - - - - - - #
+            
+            
+            
             print(f"  [{i}/{len(new_files)}] Loaded {path.name} → {len(df):,} rows")
-
+            
         except Exception as e:
             print(f"  Failed to load {path.name}: {e}")
 

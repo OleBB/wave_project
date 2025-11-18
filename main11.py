@@ -21,7 +21,7 @@ print("Loaded:", len(dfs), "dataframes")
 import os
 import matplotlib.pyplot as plt
 
-first_key = meta["path"].iloc[0] #take first path value
+first_key = meta["path"].loc[0] #take first path value
 df2 = dfs[first_key]
 
 data_cols = ["Probe 1","Probe 2","Probe 3","Probe 4"]
@@ -141,7 +141,7 @@ for idx, row in selected.iterrows():
 
     # ---- PLOT ----
     plt.plot(
-        df_ma[chosenprobe].iloc[rangestart:rangeend],
+        df_ma[chosenprobe].loc[rangestart:rangeend],
         label=label,
         color=color,
         linestyle=linestyle
@@ -226,7 +226,7 @@ for idx, row in selected.iterrows():
 
     # ---- PLOT ----
     plt.plot(
-        df_ma["Probe 2"].iloc[rangestart:rangeend],
+        df_ma["Probe 2"].loc[rangestart:rangeend],
         label=label,
         color=color,
         linestyle=linestyle
@@ -304,7 +304,7 @@ for key in selected_keys:
     
     # plot only Probe 2 in the chosen range
     plt.plot(
-        df_plot["Probe 2"].iloc[rangestart:rangeend],
+        df_plot["Probe 2"].loc[rangestart:rangeend],
         label=label
     )
 

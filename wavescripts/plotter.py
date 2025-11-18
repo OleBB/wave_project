@@ -8,25 +8,7 @@ Created on Thu Nov 13 16:27:38 2025
 
 import matplotlib.pyplot as plt
 import os
-
-def plot_column(df, start, end, chosenprobe, title="", ax=None):
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(10,5))
-
-    ax.plot(df.iloc[start:end, chosenprobe])   # or whichever column you use
-    ax.set_title(title)
-
-
-
-
-# ------------------------------------------------------------
-# Moving average helper
-# ------------------------------------------------------------
-def apply_moving_average(df, data_cols, win=50):
-    df_ma = df.copy()
-    df_ma[data_cols] = df[data_cols].rolling(window=win, min_periods=win).mean()
-    return df_ma
-
+from wavescripts.processor import find_resting_levels, remove_outliers, apply_moving_average, compute_simple_amplitudes
 
 # ------------------------------------------------------------
 # Short label builder (prevents huge legend)
@@ -70,8 +52,11 @@ def plot_filtered(meta_df,
                   rangestart=0,
                   rangeend=None,
                   data_cols=None,
-                  win=1):
+                  win=1,
+                  figsize=None
+                  ):
     
+    # - By default all columns will be processed
     if data_cols is None:
         data_cols = ["Probe 1","Probe 2","Probe 3","Probe 4"]
     # --- Filtering based on requested conditions ---
@@ -93,7 +78,7 @@ def plot_filtered(meta_df,
     # Mapping for consistent colors
     wind_colors = {
         "full":   "red",
-        "nowind": "blue",
+        "no": "blue",
         "lowest": "green"
     }
 
@@ -106,10 +91,11 @@ def plot_filtered(meta_df,
         
         print("Columns for", row["path"], df_raw.columns.tolist())
 
-
         # Apply moving average
         df_ma = apply_moving_average(df_raw, data_cols, win=win)
-
+        # - For smooth signals, a simple location of n biggest is taken.
+        n_amplitudes = 10
+        average_simple_amplitude = compute_simple_amplitudes(df_ma, data_cols, n_amplitudes) 
         # Color based on wind
         windcond = row["WindCondition"]
         color = wind_colors.get(windcond, "black")
@@ -133,3 +119,17 @@ def plot_filtered(meta_df,
     ax.legend()
 
     plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
