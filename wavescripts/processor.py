@@ -28,7 +28,7 @@ def find_resting_levels():
 
 
 def remove_outliers():
-    
+    return
     
 # ------------------------------------------------------------
 # Moving average helper
@@ -45,24 +45,5 @@ def apply_moving_average(df, data_cols, win=1):
 def compute_simple_amplitudes(df_ma, data_cols, n):
     top_n = df_ma[data_cols].nlargest(n)
     bottom_n = df_ma[data_cols].nsmallest(n)
-    return topn
+    return top_n, bottom_n
 
-
-
-
-def comp_amplitudes(peaks, troughs, signal, time_axis, max_amplitudes=10):
-    amplitudes = []
-    time_pairs = []
-    
-    for i in range(min(len(peaks), len(troughs), max_amplitudes)):
-        if i + 1 < len(troughs) and peaks[i] < troughs[i + 1]:
-            if peaks[i] < len(signal) and troughs[i] < len(signal):
-                amp = abs(signal[peaks[i]] - signal[troughs[i]]) / 2
-                amplitudes.append(amp)
-                time_pairs.append((time_axis[peaks[i]], time_axis[troughs[i]]))
-        elif peaks[i] < troughs[i]:
-            if peaks[i] < len(signal) and troughs[i] < len(signal):
-                amp = abs(signal[peaks[i]] - signal[troughs[i]]) / 2
-                amplitudes.append(amp)
-                time_pairs.append((time_axis[peaks[i]], time_axis[troughs[i]]))
-    return amplitudes[:max_amplitudes], time_pairs[:max_amplitudes]

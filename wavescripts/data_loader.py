@@ -144,7 +144,7 @@ def load_or_update(
                 "Mooring": "",          # high was default BEFORE 20251106-fullwind.
                 "WaveAmplitudeInput [Volt]": "",       
                 "WaveFrequencyInput [Hz]": "",          
-                "WavePeriodInput": "",         
+                "WavePeriodInput": "",
                 "WaterDepth [mm]": "",         
                 "Extra seconds": "",         
                 "Run number": "",
