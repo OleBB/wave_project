@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 18 08:41:03 2025
+Created on Tue Nov 18 16:08:40 2025
 
 @author: ole
 """
+#brukt til å testeter
 from pathlib import Path
 from wavescripts.data_loader import load_or_update
 dfs, meta = load_or_update(Path("wavezarchive/testingfolder"))
@@ -13,6 +14,8 @@ print(meta.tail())
 print("Loaded:", len(dfs), "dataframes")
 
 #%%
+
+
 firstkey = meta["path"].iloc[0] #take first path value
 mydf = dfs[firstkey]
 
@@ -23,27 +26,11 @@ df1000 = mydf["Probe 1"].iloc[0:1000].mean(skipna=True)
 
 import matplotlib.pyplot as plt
 import os
-from wavescripts.processor import compute_simple_amplitudes
-
-top, bott = compute_simple_amplitudes(mydf, "Probe 1", 10)
-total_top = top.sum()
-total_bott = bott.sum()
-avg = (total_top-total_bott)/(len(top))
-
-vindu = 4000
-fra = 1000
-til = fra+vindu
-
-fra2 = 1000
-til2 = fra2+vindu
-
-fra3 = 1000
-til3  = fra3+vindu
-
-x1 = mydf["Probe 1"].iloc[fra:til]
-x2 = mydf["Probe 2"].iloc[fra2:til2]
-x3 = mydf["Probe 3"].iloc[fra3:til3]
-x4 = mydf["Probe 4"].iloc[fra3:til3]
+pr = 3000
+x1 = mydf["Probe 1"].iloc[0:pr]
+x2 = mydf["Probe 2"].iloc[0:pr]
+x3 = mydf["Probe 3"].iloc[0:pr]
+x4 = mydf["Probe 4"].iloc[0:pr]
 
 plt.title(firstkey[58:])
 plt.legend()
@@ -51,9 +38,3 @@ plt.plot(x1)
 plt.plot(x2)
 plt.plot(x3)
 plt.plot(x4)
-
-
-
-
-
-
