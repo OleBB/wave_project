@@ -45,6 +45,67 @@ def plot_column(df, start, end, chosenprobe, title="", ax=None,
 # ------------------------------------------------------------
 def plot_filtered(meta_df,
                   dfs,
+                  df_sel,
+                  amp=None,
+                  freq=None,
+                  wind=None,
+                  chosenprobe=None,
+                  rangestart=0,
+                  rangeend=None,
+                  data_cols=None,
+                  win=1,
+                  figsize=None
+                  ):
+    
+    # Mapping for consistent colors
+    wind_colors = {
+        "full":   "red",
+        "no": "blue",
+        "lowest": "green"
+    }
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for idx, row in df_sel.iterrows():
+
+        path_key = row["path"]
+        df_raw   = dfs[path_key]
+        
+        print("Columns for", row["path"], df_raw.columns.tolist())
+
+        # Apply moving average
+        df_ma = apply_moving_average(df_raw, data_cols, win=win)
+        # - For smooth signals, a simple location of n biggest is taken.
+        n_amplitudes = 10
+        
+        # Color based on wind
+        windcond = row["WindCondition"]
+        color = wind_colors.get(windcond, "black")
+
+        # Linestyle based on panel condition
+        panelcond = row["PanelCondition"]
+        linestyle = "--" if "full" in panelcond else "-"
+
+        # Short label for legend
+        label = make_label(row)
+
+        # Plot it
+        ax.plot(df_ma[chosenprobe].iloc[rangestart:rangeend],
+                label=label,
+                color=color,
+                linestyle=linestyle)
+
+    ax.set_xlabel("Milliseconds")
+    ax.set_ylabel(chosenprobe)
+    ax.set_title(f"{chosenprobe} — smoothed (win={win})")
+    ax.legend()
+
+    plt.show()
+    
+#%% BACKUP AF PLOT_FILTERED
+"""
+def plot_filtered(meta_df,
+                  dfs,
                   amp=None,
                   freq=None,
                   wind=None,
@@ -120,6 +181,8 @@ def plot_filtered(meta_df,
     ax.legend()
 
     plt.show()
+    
+"""
 
 
 
