@@ -474,5 +474,39 @@
     "Stillwater Probe 2": "",
     "Stillwater Probe 3": "",
     "Stillwater Probe 4": ""
+  },
+  {
+    "path": "/Users/ole/Kodevik/wave_project/wavezarchive/testingfolder/nopanel-fullwind-nowave-per40-depth580-mstop30-run1.csv",
+    "WindCondition": "full",
+    "TunnelCondition": "",
+    "PanelCondition": "no",
+    "Mooring": "low",
+    "WaveAmplitudeInput [Volt]": "",
+    "WaveFrequencyInput [Hz]": "",
+    "WavePeriodInput": "40",
+    "WaterDepth [mm]": "580",
+    "Extra seconds": "30",
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
+  },
+  {
+    "path": "/Users/ole/Kodevik/wave_project/wavezarchive/testingfolder/nopanel-fullwind-nowave-per40-depth580-mstop30-run1-COPY.csv",
+    "WindCondition": "full",
+    "TunnelCondition": "",
+    "PanelCondition": "no",
+    "Mooring": "low",
+    "WaveAmplitudeInput [Volt]": "",
+    "WaveFrequencyInput [Hz]": "",
+    "WavePeriodInput": "40",
+    "WaterDepth [mm]": "580",
+    "Extra seconds": "30",
+    "Run number": "1",
+    "Stillwater Probe 1": "",
+    "Stillwater Probe 2": "",
+    "Stillwater Probe 3": "",
+    "Stillwater Probe 4": ""
   }
 ]

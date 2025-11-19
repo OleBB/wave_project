@@ -59,6 +59,7 @@ def plot_filtered(meta_df,
     # - By default all columns will be processed
     if data_cols is None:
         data_cols = ["Probe 1","Probe 2","Probe 3","Probe 4"]
+    
     # --- Filtering based on requested conditions ---
     df_sel = meta_df.copy()
 
@@ -95,7 +96,7 @@ def plot_filtered(meta_df,
         df_ma = apply_moving_average(df_raw, data_cols, win=win)
         # - For smooth signals, a simple location of n biggest is taken.
         n_amplitudes = 10
-        average_simple_amplitude = compute_simple_amplitudes(df_ma, data_cols, n_amplitudes) 
+        
         # Color based on wind
         windcond = row["WindCondition"]
         color = wind_colors.get(windcond, "black")

@@ -28,6 +28,8 @@ def find_resting_levels():
 
 
 def remove_outliers():
+    #lag noe basert på steepness, kanskje tilogmed ak. Hvis ak er for bratt
+    # og datapunktet for høyt, så må den markeres, og så fjernes.
     return
     
 # ------------------------------------------------------------
@@ -38,12 +40,12 @@ def apply_moving_average(df, data_cols, win=1):
     df_ma[data_cols] = df[data_cols].rolling(window=win, min_periods=win).mean()
     return df_ma
 
-
 # ------------------------------------------------------------
 # Ny funksjon
 # ------------------------------------------------------------
-def compute_simple_amplitudes(df_ma, data_cols, n):
-    top_n = df_ma[data_cols].nlargest(n)
-    bottom_n = df_ma[data_cols].nsmallest(n)
-    return top_n, bottom_n
+def compute_simple_amplitudes(df_ma, chosenprobe, n):
+    top_n = df_ma[chosenprobe].nlargest(n)
+    bottom_n = df_ma[chosenprobe].nsmallest(n)
+    average = (top_n.sum()-bottom_n.sum())/(len(top_n))
+    return average #top_n, bottom_n
 

@@ -13,6 +13,53 @@ print(meta.tail())
 print("Loaded:", len(dfs), "dataframes")
 
 #%%
+
+from wavescripts.plotter import plot_filtered
+
+#lage input til plot_filtered()
+
+meta
+dfs
+
+
+amp="0100"
+freq="1300"
+wind="full"
+chosenprobe="Probe 3"
+rangestart=3100
+rangeend=5800
+data_cols=["Probe 3"] #None = ["Probe 1","Probe 2","Probe 3","Probe 4"]
+win = 1
+figsize=None
+
+
+
+#Plot_filtered må ta inn ferdig utvalgte prober, med spesifisert amp og freq
+plot_filtered(
+    meta,
+    dfs,
+    amp, 
+    freq,
+    wind,
+    chosenprobe,
+    rangestart=3100,
+    rangeend=5800,
+    data_cols=["Probe 3"], #None = ["Probe 1","Probe 2","Probe 3","Probe 4"]
+    win = 1,
+    figsize=None
+
+)
+
+#average_simple_amplitude = compute_simple_amplitudes(df_ma, chosenprobe, n_amplitudes) 
+#print('avg simp  amp  = ', average_simple_amplitude)
+
+
+
+
+
+
+
+#%%
 firstkey = meta["path"].iloc[0] #take first path value
 mydf = dfs[firstkey]
 
@@ -40,20 +87,31 @@ til2 = fra2+vindu
 fra3 = 1000
 til3  = fra3+vindu
 
-x1 = mydf["Probe 1"].iloc[fra:til]
-x2 = mydf["Probe 2"].iloc[fra2:til2]
-x3 = mydf["Probe 3"].iloc[fra3:til3]
-x4 = mydf["Probe 4"].iloc[fra3:til3]
+#x1 = mydf["Probe 1"].iloc[fra:til]
+#x2 = mydf["Probe 2"].iloc[fra2:til2]
+#x3 = mydf["Probe 3"].iloc[fra3:til3]
+#x4 = mydf["Probe 4"].iloc[fra3:til3]
 
-plt.title(firstkey[58:])
+#plt.title(firstkey[58:])
+
+mydf[["Probe 1", "Probe 2", "Probe 3", "Probe 4"]].iloc[fra:til].plot()
 plt.legend()
+
+#%%
+x1 = mydf["Probe 1"].iloc[fra:til]
+x1.name = "Probe 1"
+x2 = mydf["Probe 2"].iloc[fra2:til2] 
+x2.name = "Probe 2"
+x3 = mydf["Probe 3"].iloc[fra3:til3] 
+x3.name = "Probe 3"
+x4 = mydf["Probe 4"].iloc[fra3:til3] 
+x4.name = "Probe 4"
+
 plt.plot(x1)
 plt.plot(x2)
 plt.plot(x3)
 plt.plot(x4)
 
-
-
-
+plt.legend()
 
 
