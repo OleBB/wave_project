@@ -17,14 +17,27 @@ from datetime import datetime
 
 CSVFILES = []
 
+def find_wave_range(df, data_cols):
+    #tar inn valgt dataframe
+    #tar inn utvalgte kolonner
+    
+    #finner første skikkelige topp, ved å se etter ramp-up?
+    #   eller, ved å se etter aller største...?
+    #finner siste skikkelige topp. 
+    #beregner avstand basert på innkommende bølgeparametere
+    #velger de bølgene mellom
+    
+    return
+
 def find_resting_levels():
     resting_files = [f for f in CSVFILES if 'nowind' in f.lower()]
-    if not rest_files:
+    if not resting_files:
         raise ValueError("No valid nowind-files found to compute resting level")
     
     
     for f in resting_files:
         df99 = df99.copy()
+    return
 
 
 def remove_outliers():
