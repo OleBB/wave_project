@@ -25,14 +25,16 @@ dfs#kanslettes
 ################ INPUT 
 amp="0100"
 freq="1300"
-wind="full"
+wind="no"
 chosenprobe="Probe 3"
-rangestart=3100
-rangeend=5800
+rangestart=2100
+rangeend=9800
 data_cols=["Probe 3"] #None = ["Probe 1","Probe 2","Probe 3","Probe 4"]
-win = 1
+win = 10
 figsize=None
 ##################
+
+
 
  # --- Filtering based on requested conditions ---
 df_sel = meta.copy()
@@ -49,11 +51,7 @@ if wind is not None:
 if df_sel.empty:
     print("No matching datasets found.")
     
-#%%
-
-plot_filtered(meta, dfs, df_sel)
-#fig, ax = plt.subplots(figsize)
-#%%
+processed_dfs = {}
 for idx, row in df_sel.iterrows():
 
     path_key = row["path"]
@@ -63,19 +61,34 @@ for idx, row in df_sel.iterrows():
 
     # Apply moving average
     df_ma = apply_moving_average(df_raw, data_cols, win=win)
-    # - For smooth signals, a simple location of n biggest is taken.
-    n_amplitudes = 10
-    
-    # Color based on wind
-    #windcond = row["WindCondition"]
-    #color = wind_colors.get(windcond, "black")
+    #nå har jeg fått 1 behandlet dataframe, denne må jeg ta vare på og
+    # gi fra meg. tilbake i en ny dict?
+    processed_dfs[path_key] = df_ma
 
-    # Linestyle based on panel condition
-    #panelcond = row["PanelCondition"]
-    #linestyle = "--" if "full" in panelcond else "-"
 
-    # Short label for legend
-    #label = make_label(row)
+
+#%%
+
+
+
+#fig, ax = plt.subplots(figsize)
+plot_filtered(
+    meta,
+    processed_dfs,
+    df_sel,
+    amp, 
+    freq,
+    wind,
+    chosenprobe,
+    rangestart,
+    rangeend,
+    data_cols, #None = ["Probe 1","Probe 2","Probe 3","Probe 4"]
+    win,
+    figsize
+
+)
+#%%
+
 
   
 #Plot_filtered må ta inn ferdig utvalgte prober, med spesifisert amp og freq
