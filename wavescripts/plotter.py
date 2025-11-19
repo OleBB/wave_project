@@ -42,12 +42,13 @@ def plot_column(df, start, end, chosenprobe, title="", ax=None,
 # ------------------------------------------------------------
 # Main function: filters metadata, smooths, colors, styles, plots
 # ------------------------------------------------------------
-def plot_filtered(meta_df,
-                  processed_dfs,
+def plot_filtered(processed_dfs,
                   df_sel,
                   amp=None,
                   freq=None,
                   wind=None,
+                  tunnel=None,
+                  mooring=None,
                   chosenprobe=None,
                   rangestart=0,
                   rangeend=None,
@@ -58,9 +59,9 @@ def plot_filtered(meta_df,
     
     # Mapping for consistent colors
     wind_colors = {
-        "full":   "red",
-        "no": "blue",
-        "lowest": "green"
+        "full":"red",
+        "no":"blue",
+        "lowest":"green"
     }
 
     fig, ax = plt.subplots(figsize=(10, 6))
