@@ -17,83 +17,92 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-def find_wave_range(df, data_col,
-                    input_volt,
-                    input_freq,
-                    per,
-                    detect_win=10,
-                    baseline_seconds=2.0,
-                    sigma_factor=5.0,
-                    skip_periods=None,
-                    keep_periods=None,
-                    debug=False):
-    
+def find_wave_range(
+    df,
+    df_sel,  # sliter med å fånn inmetadataen.. må mulig fjerne disse
+    data_col,
+    input_volt,
+    input_freq,
+    input_per=None,              # probably not needed anymore
+    detect_win=10,
+    baseline_seconds=2.0,
+    sigma_factor=5.0,
+    skip_periods=None,
+    keep_periods=None,
+    debug=False
+):
     """
-    Find a 'good' wave interval for your signal:
-    - flat noise first (several seconds)
-    - gradual ramp-up of 5–12 periods
-    - then stable waves
+    Detect the start and end of the stable wave interval.
 
-    Returns
-    -------
-    (int, int): (good_start_idx, good_end_idx)
+    Signal behavior (based on Ole's description):
+      - baseline mean ~271
+      - wave begins ~5 sec after baseline ends
+      - ramp-up lasts ~12 periods
+      - stable region has peaks ~280, troughs ~260
+
+    Returns (good_start_idx, good_end_idx)
     """
-    # --- Auto-compute periods if not given ---
+
+    # ==========================================================
+    # AUTO-CALCULATE SKIP & KEEP PERIODS BASED ON REAL SIGNAL
+    # ==========================================================
+
+    # ---- Skip: baseline (5 seconds) + ramp-up (12 periods) ----
     if skip_periods is None:
-        # Skip some early transient cycles
-        skip_periods = int(max(1, input_freq * 0.3 + input_volt * 0.1))
+        baseline_skip_periods = int(5 * input_freq)        # 5 seconds worth of periods
+        ramp_skip_periods     = 12                         # fixed from your signal observations
+        skip_periods          = baseline_skip_periods + ramp_skip_periods
 
+    # ---- Keep: 10–15 stable periods ----
     if keep_periods is None:
-        # Keep enough cycles to capture a full stable wave envelope
-        keep_periods = int(max(3, input_freq * 5 + input_volt * 0.5))
-    
-    # ------
-    #print(df.head())
-    # 1) Smooth signal for detection
-    signal = (df[data_col]
-              .rolling(window=detect_win, min_periods=1)
-              .mean()
-              .values)
-    signal = np.nan_to_num(signal)
+        keep_periods = 8#int(input_per-8) #TK BYTT UT PLZ FIX noe her
+        
 
-    # 2) Compute sample rate from Date column
-    dt = (df["Date"].loc[1] - df["Date"].loc[0]).total_seconds()
+    # ==========================================================
+    # PROCESSING STARTS HERE
+    # ==========================================================
+
+    # 1) Smooth signal
+    signal = (
+        df[data_col]
+        .rolling(window=detect_win, min_periods=1)
+        .mean()
+        .fillna(0)
+        .values
+    )
+
+    # 2) Sample rate
+    dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
     Fs = 1.0 / dt
-    print(f'Fs = {Fs}, and dt = {dt}')
 
-    # 3) Baseline window length in samples
+    # 3) Baseline mean/std
     baseline_samples = int(baseline_seconds * Fs)
     baseline = signal[:baseline_samples]
     baseline_mean = np.mean(baseline)
     baseline_std  = np.std(baseline)
-    print(f'from find_wave_range:baseline-MEAN is {baseline_mean}')
-    # 4) Movement threshold
-    threshold = baseline_std * sigma_factor
+
+    threshold = sigma_factor * baseline_std
     movement = np.abs(signal - baseline_mean)
 
-    # 5) First time we see real motion
+    # 4) First actual movement above noise floor
     first_motion_idx = np.argmax(movement > threshold)
 
-    # 6) Period-based skipping and windowing
+    # 5) Convert frequency → samples per period
     T = 1.0 / float(input_freq)
     samples_per_period = int(Fs * T)
 
+    # 6) Final "good" window
     good_start_idx = first_motion_idx + skip_periods * samples_per_period
-    good_end_idx   = good_start_idx  + keep_periods * samples_per_period
-    
-    # Clamp to valid range
+    good_end_idx   = good_start_idx + keep_periods * samples_per_period
+
+    # Clamp
     good_start_idx = min(good_start_idx, len(signal) - 1)
     good_end_idx   = min(good_end_idx,   len(signal) - 1)
-    print(f'from find_wave_range:goodstartindex = {good_start_idx}')
-    print("input_freq used:", input_freq)
-    print("samples_per_period =", samples_per_period)
-    print("first_motion_idx =", first_motion_idx)
-    print("skip_periods =", skip_periods)
-    print("good_start_idx =", good_start_idx)
-    
+    from wavescripts.plotter import plot_ramp_detection
     if debug:
-        debug_plot_ramp_detection(
+        plot_ramp_detection(
             df=df,
+            df_sel=df_sel,
             data_col=data_col,
             signal=signal,
             baseline_mean=baseline_mean,
@@ -103,20 +112,21 @@ def find_wave_range(df, data_col,
             good_end_idx=good_end_idx,
             title=f"Ramp Detection Debug – {data_col}"
         )
-        
+
     debug_info = {
-        "signal": signal,
         "baseline_mean": baseline_mean,
         "baseline_std": baseline_std,
-        "threshold": threshold,
-        "first_motion_idx": first_motion_idx
+        "first_motion_idx": first_motion_idx,
+        "samples_per_period": samples_per_period,
+        "skip_periods": skip_periods,
+        "keep_periods": keep_periods
     }
+
     return good_start_idx, good_end_idx, debug_info
 
-
-
-
+# =============================================== 
 # === Take in a filtered subset then process === #
+# ===============================================
 def process_selected_data(dfs, df_sel, plotvariables):
     processed = {}
     auto_ranges={}
@@ -124,20 +134,13 @@ def process_selected_data(dfs, df_sel, plotvariables):
     
     data_col = plotvariables["processing"]["data_cols"][0] # one column only
     win      = plotvariables["processing"]["win"]
-    input_volt      = float(plotvariables["filters"]["amp"])/1000
-    input_freq     = float(plotvariables["filters"]["freq"])/1000 #1300 blir til 1.3
-    input_per      = float(plotvariables["filters"]["per"])
-    
-    print(f'amp {input_volt}, input_freq {input_freq}, input_per {input_per}')
-    
-    # FUTURE: If I should change my Json-entry to the proper 1.3 insted of the 1300
-    #Auto-correct: if input_freq is too large, assume it's in mHz
-    input_freq = input_freq / 1000 if input_freq > 50 else input_freq
-    print('datacol is =',data_col)
 
     for _, row in df_sel.iterrows():
         path = row["path"]
         df_raw = dfs[path]
+        meta_volt = row["WaveAmplitudeInput [Volt]"]
+        meta_freq = row["WaveFrequencyInput [Hz]"]
+        meta_per = row["WavePeriodInput"]
         #print('df_raw process_selected_data : ',df_raw.head())
         
         # Step 1: Smooth this probe only
@@ -147,10 +150,11 @@ def process_selected_data(dfs, df_sel, plotvariables):
         # Step 2: Determine where the wave begins and ends
         detect_window = 10
         start, end, debug_info = find_wave_range(df_raw, 
+                                     df_sel,                                          
                                      data_col, 
-                                     input_volt,
-                                     input_freq,
-                                     input_per,
+                                     meta_volt,
+                                     meta_freq,
+                                     meta_per,
                                      detect_win=detect_window, 
                                      debug=True) #her skrur man på debug
 
@@ -165,7 +169,7 @@ def process_selected_data(dfs, df_sel, plotvariables):
     return processed, auto_ranges, debug_data
 
 """minner om at auto_ranges ikke er fullstendig korrigert
- for hva som er automatisk, hva som er manuelt input
+ for hva som er ekte automatisk, hva som er manuelt input
  og hva som er 'final' """
 
 def debug_plot_ramp_detection(df, data_col,

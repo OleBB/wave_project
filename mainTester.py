@@ -6,7 +6,7 @@ Created on Tue Nov 18 08:41:03 2025
 """
 from pathlib import Path
 from wavescripts.data_loader import load_or_update
-dfs, meta = load_or_update(Path("wavezarchive/testingfolder"))
+dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
 
 print(meta.tail())
 print("Loaded:", len(dfs), "dataframes")
@@ -16,9 +16,9 @@ from wavescripts.processor import find_resting_levels, remove_outliers, apply_mo
 # === Config ===
 plotvariables = {
     "filters": {
-        "amp": "0100", #bruker variabelen input_volt
-        "freq": "1300", #bruker variabelen input_freq
-        "per": "15", #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "amp": 0.1, #bruk et tall 
+        "freq": 1.3, #bruk et tall  
+        "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "wind": "no", #full, no, lowest
         "tunnel": None,
         "mooring": "low"
@@ -42,13 +42,13 @@ plotvariables = {
 #with open("plotsettings.json") as f:
 #      plotvariables = json.load(f)
 
-# === Filter ===
+print('# === Filter ===')
 from wavescripts.filters import filter_chosen_files
 df_sel = filter_chosen_files(meta,plotvariables)
 #nå har vi de utvalgte: df_sel altså dataframes_selected
 #så da kan vi processere dataframesene slik vi ønsker
 
-# === Process === 
+print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
 # - and optional check (debug) range 
 processed_dfs, auto_ranges, debug_data = process_selected_data(dfs, df_sel, plotvariables)
