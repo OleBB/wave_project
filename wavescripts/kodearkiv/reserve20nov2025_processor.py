@@ -1,10 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Nov 17 17:18:03 2025
-
-@author: ole
-"""
+#copy of processor thursday 20 nov 14:50
+# før store endringer i find_wave ranges
 
 from pathlib import Path
 from typing import Iterator, Dict, Tuple
@@ -20,7 +15,7 @@ import matplotlib.pyplot as plt
 def find_wave_range(df, data_col,
                     input_volt,
                     input_freq,
-                    per,
+                    input_per,
                     detect_win=10,
                     baseline_seconds=2.0,
                     sigma_factor=5.0,

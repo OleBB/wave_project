@@ -43,12 +43,12 @@ def plot_column(df, start, end, chosenprobe, title="", ax=None,
 # ... handles the input from main and runs plot_filtered
 # ... Choose to plot separate plots or a combined overlaid plot
 # ------------------------------------------------------------
-def plot_selection(processed_dfs, df_sel, auto_ranges, plotvariables):
+def plotter_selection(processed_dfs, df_sel, auto_ranges, plotvariables):
 
     manual_start = plotvariables["processing"]["rangestart"]
     manual_end   = plotvariables["processing"]["rangeend"]
-    plot_separate = plotvariables["plotting"]["separate"]
-    plot_overlay = plotvariables["plotting"]["overlay"]
+    #plot_separate = 
+    #plot_overlay = plotvariables["plotting"]["overlay"]
 
     # ---- compute plot ranges per path ----
     plot_ranges = {}
@@ -59,7 +59,7 @@ def plot_selection(processed_dfs, df_sel, auto_ranges, plotvariables):
         plot_ranges[path] = (start, end)
 
     # ---- SEPARATE PLOTS ----
-    if plot_separate:
+    if plotvariables["plotting"]["separate"]:
         for path, df_ma in processed_dfs.items():
 
             plot_start, plot_end = plot_ranges[path]
@@ -78,7 +78,7 @@ def plot_selection(processed_dfs, df_sel, auto_ranges, plotvariables):
             )
 
     # ---- OVERLAYED PLOT ----
-    if plot_overlay:
+    if  plotvariables["plotting"]["overlay"]:
         plot_overlayed(
             processed_dfs,
             df_sel,
@@ -99,7 +99,7 @@ def plot_filtered(processed_dfs,
     win         = runtime_vars["win"]
     figsize     = runtime_vars.get("figsize")
 
-
+    
     # Mapping for consistent colors
     wind_colors = {
         "full":"red",
