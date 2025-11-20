@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Created on Thu Nov 20 16:47:45 2025
+
+@author: ole
+"""
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
 Created on Thu Nov 13 16:27:38 2025
 
 @author: gpt
@@ -20,6 +27,7 @@ def make_label(row):
     freq  = row.get("WaveFrequencyInput [Hz]", "")
 
     return f"{panel}panel-{wind}wind-amp{amp}-freq{freq}"
+
 
 # ------------------------------------------------------------
 # Core plot function (single dataset)
@@ -203,77 +211,51 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
     plt.tight_layout()
     plt.show()
 
-#%%
 
-def plot_ramp_detection(df, df_sel, data_col,
-                              signal,
-                              baseline_mean,
-                              threshold,
-                              first_motion_idx,
-                              good_start_idx,
-                              good_end_idx,
-                              title="Ramp Detection Debug"):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%%
+def plot_ramp_debug_neverused(df, data_col, debug_info, title="Ramp Detection Debug"):
+
+    signal = debug_info["signal"]
+    baseline_mean = debug_info["baseline_mean"]
+    threshold = debug_info["threshold"]
+    first_motion_idx = debug_info["first_motion_idx"]
+    good_start_idx, good_end_idx = debug_info["good_start"], debug_info["good_end"]
 
     time = df["Date"]
 
     plt.figure(figsize=(14, 6))
+    plt.plot(time, df[data_col], label="Raw", alpha=0.4)
+    plt.plot(time, signal, label="Smoothed", linewidth=2)
 
-    # Raw probe signal
-    plt.plot(time, df[data_col], label="Raw signal", alpha=0.4)
-
-    # Smoothed detection signal
-    plt.plot(time, signal, label="Smoothed (detect)", linewidth=2)
-
-    # Baseline mean
-    plt.axhline(baseline_mean, color="blue", linestyle="--",
-                label=f"Baseline mean = {baseline_mean:.3f}")
-
-    # Threshold region
-    plt.axhline(baseline_mean + threshold, color="red", linestyle="--",
-                label=f"+ Threshold ({threshold:.3f})")
+    plt.axhline(baseline_mean, color="blue", linestyle="--", label="Baseline mean")
+    plt.axhline(baseline_mean + threshold, color="red", linestyle="--", label="+threshold")
     plt.axhline(baseline_mean - threshold, color="red", linestyle="--")
 
-    # First motion
-    plt.axvline(time.iloc[first_motion_idx],
-                color="orange", linestyle="--", linewidth=2,
-                label=f"First motion @ {first_motion_idx}")
+    plt.axvline(time.iloc[first_motion_idx], color="orange", linestyle="--", label="first motion")
+    plt.axvline(time.iloc[good_start_idx], color="green", linestyle="--", label="good start")
+    plt.axvline(time.iloc[good_end_idx], color="purple", linestyle="--", label="good end")
 
-    # Good interval start / end
-    plt.axvline(time.iloc[good_start_idx],
-                color="green", linestyle="--", linewidth=2,
-                label=f"Good start @ {good_start_idx}")
+    plt.axvspan(time.iloc[good_start_idx], time.iloc[good_end_idx], color="green", alpha=0.15)
 
-    plt.axvline(time.iloc[good_end_idx],
-                color="purple", linestyle="--", linewidth=2,
-                label=f"Good end @ {good_end_idx}")
-
-    # Shaded good region
-    plt.axvspan(time.iloc[good_start_idx],
-                time.iloc[good_end_idx],
-                color="green", alpha=0.15)
-    
-    thetitle = make_label(df_sel)
-
-    plt.title(thetitle)
+    plt.title(title)
     plt.xlabel("Time")
     plt.ylabel(data_col)
     plt.legend()
     plt.tight_layout()
     plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

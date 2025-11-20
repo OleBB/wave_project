@@ -159,7 +159,10 @@ def load_or_update(
                 "Stillwater Probe 3": "",
                 "Stillwater Probe 4": "",
             }
-            
+            #########################
+            #Big note to self! viktig beskjed
+            #dersom noe gjøres med metadata-teksten så må 
+            #########################
             stillwater_samples = 250
             
             wind_match = re.search(r'-([A-Za-z]+)wind-', filename)
@@ -170,12 +173,6 @@ def load_or_update(
                     metadata["Stillwater Probe 2"] = df["Probe 2"].loc[0:stillwater_samples].mean(skipna=True)
                     metadata["Stillwater Probe 3"] = df["Probe 3"].loc[0:stillwater_samples].mean(skipna=True)
                     metadata["Stillwater Probe 4"] = df["Probe 4"].loc[0:stillwater_samples].mean(skipna=True)
-                    #kan vel slå sammen til en linje per Probe?
-                    #metadata["Stillwater Probe 1"] = stilldatamean_probe1
-                    #metadata["Stillwater Probe 2"] = stilldatamean_probe2
-                    #metadata["Stillwater Probe 3"] = stilldatamean_probe3
-                    #metadata["Stillwater Probe 4"] = stilldatamean_probe4
-            
                 
             tunnel_match = re.search(r'([0-9])roof', filename)
             if tunnel_match:
@@ -204,16 +201,18 @@ def load_or_update(
                     
             amplitude_match = re.search(r'-amp([A-Za-z0-9]+)-', filename)
             if amplitude_match:
-                metadata["WaveAmplitudeInput [Volt]"] = amplitude_match.group(1)  
+                raw_amp = amplitude_match.group(1)
+                metadata["WaveAmplitudeInput [Volt]"] = int(raw_amp)/1000.0
 
-            frequency_match = re.search(r'-freq([A-Za-z0-9]+)', filename)
-            if frequency_match:
-                metadata["WaveFrequencyInput [Hz]"] =  frequency_match.group(1)  
-            
-            period_match = re.search(r'-per([A-Za-z0-9]+)', filename)
-            if period_match:
-                metadata["WavePeriodInput"] =  period_match.group(1) 
-                
+            freq_match = re.search(r'-freq(\d+)-', filename)
+            if freq_match:
+                raw_freq = freq_match.group(1)
+                metadata["WaveFrequencyInput [Hz]"] = int(raw_freq) / 1000.0
+
+            per_match = re.search(r'-per(\d+)-', filename)
+            if per_match:
+                metadata["WavePeriodInput"] = int(per_match.group(1))
+
             depth_match = re.search(r'-depth([A-Za-z0-9]+)', filename)
             if depth_match:
                 metadata["WaterDepth [mm]"] =  depth_match.group(1) 
