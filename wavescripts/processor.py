@@ -16,12 +16,15 @@ from datetime import datetime
 #from wavescripts.data_loader import load_or_update #blir vel motsatt.. 
 import numpy as np
 
-def find_wave_range(df, data_col, freq,
-                    detect_win=40,
+def find_wave_range(df, data_col, 
+                    freq,
+                    detect_win=10,
                     baseline_seconds=2.0,
                     sigma_factor=5.0,
-                    skip_periods=5,
-                    keep_periods=5):
+                    skip_periods=10,
+                    keep_periods=5,
+                    debug=False):
+    
     """
     Find a 'good' wave interval for your signal:
     - flat noise first (several seconds)
@@ -41,15 +44,16 @@ def find_wave_range(df, data_col, freq,
     signal = np.nan_to_num(signal)
 
     # 2) Compute sample rate from Date column
-    dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
+    dt = (df["Date"].loc[1] - df["Date"].loc[0]).total_seconds()
     Fs = 1.0 / dt
+    print(f'Fs = {Fs}, and dt = {dt}')
 
     # 3) Baseline window length in samples
     baseline_samples = int(baseline_seconds * Fs)
     baseline = signal[:baseline_samples]
     baseline_mean = np.mean(baseline)
     baseline_std  = np.std(baseline)
-    print(f'baseline-std is {baseline_std}')
+    print(f'from find_wave_range:baseline-MEAN is {baseline_mean}')
     # 4) Movement threshold
     threshold = baseline_std * sigma_factor
     movement = np.abs(signal - baseline_mean)
@@ -67,7 +71,14 @@ def find_wave_range(df, data_col, freq,
     # Clamp to valid range
     good_start_idx = min(good_start_idx, len(signal) - 1)
     good_end_idx   = min(good_end_idx,   len(signal) - 1)
-    print(f'startindex = {good_start_idx}')
+    print(f'from find_wave_range:goodstartindex = {good_start_idx}')
+    print("freq used:", freq)
+    print("samples_per_period =", samples_per_period)
+    print("first_motion_idx =", first_motion_idx)
+    print("skip_periods =", skip_periods)
+    print("good_start_idx =", good_start_idx)
+
+    
     return good_start_idx, good_end_idx
 
 
@@ -79,21 +90,29 @@ def process_selected_data(dfs, df_sel, plotvariables):
 
     data_col = plotvariables["processing"]["data_cols"][0] # one column only
     win      = plotvariables["processing"]["win"]
-    freq     = float(plotvariables["filters"]["freq"])
+    freq     = float(plotvariables["filters"]["freq"])/1000 #1300 blir til 1.3
+    
+    # FUTURE: If I should change my Json-entry to the proper 1.3 insted of the 1300
+    #Auto-correct: if freq is too large, assume it's in mHz
+    freq = freq / 1000 if freq > 50 else freq
     print('datacol is =',data_col)
 
     for _, row in df_sel.iterrows():
         path = row["path"]
         df_raw = dfs[path]
-        print('df_raw process_selected_data : ',df_raw.head())
+        #print('df_raw process_selected_data : ',df_raw.head())
 
         # Step 1: Smooth this probe only
         df_ma = apply_moving_average(df_raw, [data_col], win) 
-        print('df_ma inside process_selected_data : ',df_ma.head())
+        #print('df_ma inside process_selected_data where, \n the first number of samples will become Nan because thats how the function works \n',df_ma.head())
         
         # Step 2: Determine where the wave begins and ends
         detect_window = 10
-        start, end = find_wave_range(df_raw, data_col, freq, detect_window) #tallet her er window-size
+        start, end = find_wave_range(df_raw, 
+                                     data_col, 
+                                     freq, 
+                                     detect_win=detect_window, 
+                                     debug=True) #tallet her er window-size
 
         df_ma["wave_start"] = start
         df_ma["wave_end"] = end
