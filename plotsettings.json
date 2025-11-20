@@ -1,0 +1,19 @@
+{
+  "filters": {
+    "amp": "0100",
+    "freq": "1300",
+    "wind": "full",
+    "tunnel": null,
+    "mooring": "low"
+  },
+  "processing": {
+    "chosenprobe": "Probe 3",
+    "rangestart": 2100,
+    "rangeend": 9800,
+    "data_cols": ["Probe 3"],
+    "win": 10
+  },
+  "plotting": {
+    "figsize": null
+  }
+}

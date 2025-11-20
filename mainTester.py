@@ -11,53 +11,25 @@ dfs, meta = load_or_update(Path("wavezarchive/testingfolder"))
 print(meta.tail())
 print("Loaded:", len(dfs), "dataframes")
 
-
-from wavescripts.plotter import plot_filtered
 from wavescripts.processor import find_resting_levels, remove_outliers, apply_moving_average, compute_simple_amplitudes
 
-#%% - kan gjøres om senere til å passe med en JSON
-# de første variablene brukes til filtrering av fil
-# de 
-plotvariables = {
-    "amp":"0100", #0100, 0200, 0300
-    "freq":"1300", #1300, 0650
-    "wind":"full", #full, no, lowest
-    "tunnel":None, #ingen foreløpig?
-    "mooring" : "low", #low, har jeg lagt inn noen med high?
-    "chosenprobe":"Probe 3", 
-    "rangestart":2100,
-    "rangeend":9800,
-    "data_cols":["Probe 3"], #None = ["Probe 1","Probe 2","Probe 3","Probe 4"]
-    "win": 10,
-    "figsize":None,
-    }
 #%%
-#For å mappe dictionary
-column_map = {
-    "amp": "WaveAmplitudeInput [Volt]",
-    "freq": "WaveFrequencyInput [Hz]",
-    "wind": "WindCondition",
-    "tunnel": "TunnelCondition",
-    "mooring": "Mooring",
-}
-
+# === Config ===
 plotvariables = {
     "filters": {
-        "amp": "0200",
+        "amp": "0100",
         "freq": "1300",
-        "wind": "lowest",
+        "wind": "no", #full, no, lowest
         "tunnel": None,
         "mooring": "low"
     },
-
     "processing": {
-        "chosenprobe": "Probe 3",
-        "rangestart": 2100,
-        "rangeend": 9800,
-        "data_cols": ["Probe 3"],
+        "chosenprobe": "Probe 1",
+        "rangestart": None,
+        "rangeend": None,
+        "data_cols": ["Probe 1"],#her kan jeg velge fler, må huske [listeformat]
         "win": 11
     },
-
     "plotting": {
         "figsize": None
     }
@@ -65,116 +37,75 @@ plotvariables = {
 #
 #import json
 #with open("plotsettings.json") as f:
-#   plotvariables = json.load(f)
-def filter_chosen_files(plotvariables):
-    df_sel = meta.copy()
+#      plotvariables = json.load(f)
 
-    filter_values = plotvariables["filters"]
-
-    for var_key, col_name in column_map.items():
-        value = filter_values[var_key]
-        if value is not None:
-            df_sel = df_sel[df_sel[col_name] == value]
-
-    return df_sel
-
-
-df_sel = filter_chosen_files(plotvariables)
-#nå har vi de utvalgte: df_sel eller, dataframes_selected
+# === Filter ===
+from wavescripts.filters import filter_chosen_files
+df_sel = filter_chosen_files(meta,plotvariables)
+#nå har vi de utvalgte: df_sel altså dataframes_selected
 #så da kan vi processere dataframesene slik vi ønsker
-processed_dfs = {}
-for idx, row in df_sel.iterrows():
-    
-    path_key = row["path"]
-    df_raw   = dfs[path_key]
-    
-    print("Columns for", row["path"], df_raw.columns.tolist())
-    # proccess to apply moving average 
-    df_ma = apply_moving_average(df_raw, 
-                                 plotvariables["processing"]["data_cols"], 
-                                 plotvariables["processing"]["win"])
-    processed_dfs[path_key] = df_ma  
+
+# === Process ===
+from wavescripts.processor import process_selected_data
+processed_dfs = process_selected_data(dfs, df_sel, plotvariables)
+
+# === Plot ===
+from wavescripts.plotter import plot_filtered
+#%%
+processed_dfs, auto_ranges = process_selected_data(dfs, df_sel, plotvariables)
+
+manual_start = plotvariables["processing"]["rangestart"]
+manual_end   = plotvariables["processing"]["rangeend"]
+
+for path, df_ma in processed_dfs.items():
+
+    auto_start, auto_end = auto_ranges[path]
+
+    # Use manual if provided, otherwise automatic
+    final_start = manual_start if manual_start is not None else auto_start
+    final_end   = manual_end   if manual_end   is not None else auto_end
+
+    runtime_vars = {
+        **plotvariables["filters"],
+        **plotvariables["processing"],
+        **plotvariables["plotting"],
+        "rangestart": final_start,
+        "rangeend": final_end,
+    }
+
+    plot_filtered(
+        processed_dfs={path: df_ma},
+        df_sel=df_sel[df_sel["path"] == path],
+        **runtime_vars
+    )
+
 #%% - Med ferdig processerte dataframes, kan vi plotte dem
+from wavescripts.plotter import plot_filtered
 plot_filtered(
     processed_dfs=processed_dfs,
     df_sel=df_sel,
     **plotvariables["filters"],     # amp, freq, wind, tunnel, mooring
     **plotvariables["processing"],  # chosenprobe, rangestart, rangeend, data_cols, win
     **plotvariables["plotting"],    # figsize
-)#**herekspandererPlotvariables[med nested dictionary]
+)#**herEkspandererPlotvariables[med nested dictionary]
+
+#%% - TESTE RAMPUP
+
+# 1. Smooth signal using SAME moving average function you already use
+df_smoothed = apply_moving_average(df, [data_col], win)
+signal = df_smoothed[data_col].values
+
+# 2. Estimate still-water noise from early part of signal
+baseline_std = np.std(signal[:200])
+threshold = baseline_std * 3.0
+
+# 3. Detect ramp-up point: where smoothed signal exceeds threshold
+start_idx = np.argmax(np.abs(signal) > threshold)
+
 
 #%%
-#Basert på utvalgte plottevariabler så kan vi nå velge alle datasett som samsvarer
-def filter_chosen_files_igjen(plotvariables):
-    df_sel = meta.copy()
-    mapping = {
-        "amp": ("WaveAmplitudeInput [Volt]"),
-        "freq": ("WaveFrequencyInput [Hz]"),
-        "wind": ("WindCondition"),
-        "tunnel": ("TunnelCondition"),
-        "mooring": ("Mooring"),
-    }
-    for key, col in mapping.items():
-        if plotvariables[key] is not None:
-            df_sel = df_sel[df_sel[col] == plotvariables[key]]
-    if df_sel.empty:
-        print("No matching datasets found.")
-    return df_sel
-
-df_sel = filter_chosen_files(plotvariables)
-#nå har vi de utvalgte: df_sel eller, dataframes_selected
-#så da kan vi processere dataframesene slik vi ønsker
-processed_dfs = {}
-for idx, row in df_sel.iterrows():
-    
-    path_key = row["path"]
-    df_raw   = dfs[path_key]
-    
-    print("Columns for", row["path"], df_raw.columns.tolist())
-    # proccess to apply moving average
-    df_ma = apply_moving_average(df_raw, plotvariables["data_cols"], plotvariables["win"])
-    processed_dfs[path_key] = df_ma  
-#%% - Med ferdig processerte dataframes, kan vi plotte dem
-plot_filtered(
-    processed_dfs = processed_dfs,
-    df_sel = df_sel,
-    **plotvariables   # this expands the dict into arguments!
-) #"""This works only if plot_filtered() has matching parameter names:"""
-
-
-#%% #Equivalent JSON file would look like:
-"""
-{
-  "filters": {
-    "amp": "0100",
-    "freq": "1300",
-    "wind": "lowest",
-    "tunnel": null,
-    "mooring": "low"
-  },
-  "processing": {
-    "chosenprobe": "Probe 3",
-    "rangestart": 2100,
-    "rangeend": 9800,
-    "data_cols": ["Probe 3"],
-    "win": 10
-  },
-  "plotting": {
-    "figsize": null
-  }
-}
-
-#load with
-import json
-
-with open("plotsettings.json") as f:
-    plotvariables = json.load(f)
-
-"""
-
-#%%
-#average_simple_amplitude = compute_simple_amplitudes(df_ma, chosenprobe, n_amplitudes) 
-#print('avg simp  amp  = ', average_simple_amplitude)
+average_simple_amplitude = compute_simple_amplitudes(df_ma, chosenprobe, n_amplitudes) 
+print('avg simp  amp  = ', average_simple_amplitude)
 
 
 #%%

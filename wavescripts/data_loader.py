@@ -129,10 +129,16 @@ def load_or_update(
             else:
                 print(f"  Skipping unsupported type: {path.name}")
                 continue
-
+            
+            #--------------------------#
+            #------ FORMATTING --------#
+            #--------------------------#
             for i in range(1, 5):
                 df[f"Probe {i}"] *= 1000 #gange med millimeter
-        
+
+            df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y %H:%M:%S.%f")
+            #--------------------------#
+            
             dfs[key] = df 
             
             filename = path.name
