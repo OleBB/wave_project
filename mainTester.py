@@ -12,26 +12,28 @@ print(meta.tail())
 print("Loaded:", len(dfs), "dataframes")
 
 from wavescripts.processor import find_resting_levels, remove_outliers, apply_moving_average, compute_simple_amplitudes
-
 #%%
 # === Config ===
 plotvariables = {
     "filters": {
         "amp": "0100",
         "freq": "1300",
-        "wind": "no", #full, no, lowest
+        "wind": "full", #full, no, lowest
         "tunnel": None,
         "mooring": "low"
     },
     "processing": {
-        "chosenprobe": "Probe 1",
-        "rangestart": None,
-        "rangeend": None,
-        "data_cols": ["Probe 1"],#her kan jeg velge fler, må huske [listeformat]
+        "chosenprobe": "Probe 2",
+        "rangestart": 0,
+        "rangeend": 10000,
+        "data_cols": ["Probe 2"],#her kan jeg velge fler, må huske [listeformat]
         "win": 11
     },
     "plotting": {
-        "figsize": None
+        "figsize": None,
+        "separate":True,
+        "overlay": False
+        
     }
 }
 #
@@ -46,75 +48,14 @@ df_sel = filter_chosen_files(meta,plotvariables)
 #så da kan vi processere dataframesene slik vi ønsker
 
 # === Process ===
-from wavescripts.processor import process_selected_data
-processed_dfs = process_selected_data(dfs, df_sel, plotvariables)
-
-# === Plot ===
-from wavescripts.plotter import plot_filtered
-#%%
+from wavescripts.processor import process_selected_data, plot_ramp_debug
 processed_dfs, auto_ranges = process_selected_data(dfs, df_sel, plotvariables)
-
-manual_start = plotvariables["processing"]["rangestart"]
-manual_end   = plotvariables["processing"]["rangeend"]
-
-for path, df_ma in processed_dfs.items():
-
-    auto_start, auto_end = auto_ranges[path]
-
-    # Use manual if provided, otherwise automatic
-    final_start = manual_start if manual_start is not None else auto_start
-    final_end   = manual_end   if manual_end   is not None else auto_end
-
-    runtime_vars = {
-        **plotvariables["filters"],
-        **plotvariables["processing"],
-        **plotvariables["plotting"],
-        "rangestart": final_start,
-        "rangeend": final_end,
-    }
-
-    plot_filtered(
-        processed_dfs={path: df_ma},
-        df_sel=df_sel[df_sel["path"] == path],
-        **runtime_vars
-    )
-
-from wavescripts.plotter import plot_multiple
-
-RUN_MULTIPLE = True   # toggle this
-if RUN_MULTIPLE:
-    plot_multiple(processed_dfs, df_sel, auto_ranges, plotvariables)
-#%% - Med ferdig processe
-
-#%%
-# === Overlay plot ===
-from wavescripts.plotter import plot_overlayed
-
-RUN_OVERLAY = True   # toggle this
-if RUN_OVERLAY:
-    plot_overlayed(processed_dfs, df_sel, auto_ranges, plotvariables)
-#%% - Med ferdig processerte dataframes, kan vi plotte dem
-from wavescripts.plotter import plot_filtered
-plot_filtered(
-    processed_dfs=processed_dfs,
-    df_sel=df_sel,
-    **plotvariables["filters"],     # amp, freq, wind, tunnel, mooring
-    **plotvariables["processing"],  # chosenprobe, rangestart, rangeend, data_cols, win
-    **plotvariables["plotting"],    # figsize
-)#**herEkspandererPlotvariables[med nested dictionary]
-
-#%% - TESTE RAMPUP
-
-# 1. Smooth signal using SAME moving average function you already use
-df_smoothed = apply_moving_average(df, [data_col], win)
-signal = df_smoothed[data_col].values
-
-# 2. Estimate still-water noise from early part of signal
-baseline_std = np.std(signal[:200])
-threshold = baseline_std * 3.0
-
-# 3. Detect ramp-up point: where smoothed signal exceeds threshold
-start_idx = np.argmax(np.abs(signal) > threshold)
+#%% -  Med ferdig processerte dataframes, kan vi plotte dem,
+# === Plot selection separately and/or overlaid ===
+from wavescripts.plotter import plot_selection
+#plot_selection(processed_dfs, df_sel, auto_ranges, plotvariables)
+if plotvariables["plotting"]["separate"] or plotvariables["plotting"]["overlay"]:
+    plot_selection(processed_dfs, df_sel, auto_ranges, plotvariables)
 
 
 #%%

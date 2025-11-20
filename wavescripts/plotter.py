@@ -39,25 +39,67 @@ def plot_column(df, start, end, chosenprobe, title="", ax=None,
     ax.set_title(title)
     return ax
 
+# ------------------------------------------------------------
+# ... handles the input from main and runs plot_filtered
+# ... Choose to plot separate plots or a combined overlaid plot
+# ------------------------------------------------------------
+def plot_selection(processed_dfs, df_sel, auto_ranges, plotvariables):
+
+    manual_start = plotvariables["processing"]["rangestart"]
+    manual_end   = plotvariables["processing"]["rangeend"]
+    plot_separate = plotvariables["plotting"]["separate"]
+    plot_overlay = plotvariables["plotting"]["overlay"]
+
+    # ---- compute plot ranges per path ----
+    plot_ranges = {}
+    for path in processed_dfs:
+        auto_start, auto_end = auto_ranges[path]
+        start = manual_start if manual_start is not None else auto_start
+        end   = manual_end   if manual_end   is not None else auto_end
+        plot_ranges[path] = (start, end)
+
+    # ---- SEPARATE PLOTS ----
+    if plot_separate:
+        for path, df_ma in processed_dfs.items():
+
+            plot_start, plot_end = plot_ranges[path]
+
+            runtime_vars = {
+                **plotvariables["processing"],
+                **plotvariables["plotting"],
+                "rangestart": plot_start,
+                "rangeend": plot_end,
+            }
+
+            plot_filtered(
+                processed_dfs={path: df_ma},
+                df_sel=df_sel[df_sel["path"] == path],
+                **runtime_vars
+            )
+
+    # ---- OVERLAYED PLOT ----
+    if plot_overlay:
+        plot_overlayed(
+            processed_dfs,
+            df_sel,
+            plot_ranges,    # <-- instead of auto_ranges
+            plotvariables
+        )
 
 # ------------------------------------------------------------
 # Main function: filters metadata, smooths, colors, styles, plots
 # ------------------------------------------------------------
 def plot_filtered(processed_dfs,
                   df_sel,
-                  amp=None,
-                  freq=None,
-                  wind=None,
-                  tunnel=None,
-                  mooring=None,
-                  chosenprobe=None,
-                  rangestart=0,
-                  rangeend=None,
-                  data_cols=None,
-                  win=1,
-                  figsize=None
-                  ):
-    
+                  **runtime_vars):
+    #unpack plotvariables/kwargs:
+    chosenprobe = runtime_vars["chosenprobe"]
+    rangestart  = runtime_vars["rangestart"]
+    rangeend    = runtime_vars["rangeend"]
+    win         = runtime_vars["win"]
+    figsize     = runtime_vars.get("figsize")
+
+
     # Mapping for consistent colors
     wind_colors = {
         "full":"red",
@@ -111,98 +153,86 @@ def plot_filtered(processed_dfs,
 
     plt.show()
 
-def plot_multiple(processed_dfs, df_sel, auto_ranges, plotvariables):
+def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
     """
-    Plot all datasets on top of each other,
-    aligned so that their wave starts at t = 0 ms.
+    Overlay multiple datasets on the same axes,
+    aligning each on its own good_start_idx, and using
+    the same legend style as plot_filtered (make_label).
     """
-
+    # Mapping for consistent colors
+    wind_colors = {
+        "full":"red",
+        "no":"blue",
+        "lowest":"green"
+    }
     chosenprobe = plotvariables["processing"]["chosenprobe"]
     figsize     = plotvariables["plotting"]["figsize"] or (12, 6)
 
     fig, ax = plt.subplots(figsize=figsize)
 
     for idx, row in df_sel.iterrows():
-
         path = row["path"]
-        df = processed_dfs[path]
+        
+        # Color based on wind
+        windcond = row["WindCondition"]
+        color = wind_colors.get(windcond, "black")
+        
+        # skip if this path isn't in processed_dfs/auto_ranges
+        if path not in processed_dfs or path not in plot_ranges:
+            continue
 
-        start_idx, end_idx = auto_ranges[path]
-        df_cut = df.iloc[start_idx:end_idx]
+        df_ma = processed_dfs[path]
+        start_idx, end_idx = plot_ranges[path]
 
-        # Convert timestamps to milliseconds relative to local start
+        # slice the good part
+        df_cut = df_ma.iloc[start_idx:end_idx]
+
+        if df_cut.empty:
+            continue
+
+        # time in ms relative to local start
         t0 = df_cut["Date"].iloc[0]
         time_ms = (df_cut["Date"] - t0).dt.total_seconds() * 1000
 
-        # Label for the legend
-        label = f"{row['WindCondition']} — {row['Mooring']} — {row['WaveAmplitudeInput [Volt]']}"
+        # use your existing label function
+        label = make_label(row)
 
-        ax.plot(time_ms, df_cut[chosenprobe], label=label)
+        ax.plot(time_ms,
+                df_cut[chosenprobe],
+                label=label,
+                color=color)
 
-    ax.set_xlabel("Time [ms, aligned]")
+    ax.set_xlabel("Time [ms, aligned at clean start]")
     ax.set_ylabel(chosenprobe)
-    ax.set_title(f"Overlayed Waves — Aligned by Ramp-up End")
+    ax.set_title(f"{chosenprobe} — overlayed clean segments")
     ax.legend()
+    plt.tight_layout()
     plt.show()
 
 
-def debug_plot_ramp_detection(df, data_col,
-                              signal,
-                              baseline_mean,
-                              threshold,
-                              first_motion_idx,
-                              good_start_idx,
-                              good_end_idx,
-                              title="Ramp Detection Debug"):
-    """
-    Visualizes the detection process:
-    - raw data
-    - smoothed signal used for detection
-    - baseline region
-    - threshold
-    - motion point
-    - good region window
-    """
+def plot_ramp_debug(df, data_col, debug_info, title="Ramp Detection Debug"):
 
-    time = df["Date"]  # datetime index
+    signal = debug_info["signal"]
+    baseline_mean = debug_info["baseline_mean"]
+    threshold = debug_info["threshold"]
+    first_motion_idx = debug_info["first_motion_idx"]
+    good_start_idx, good_end_idx = debug_info["good_start"], debug_info["good_end"]
+
+    time = df["Date"]
 
     plt.figure(figsize=(14, 6))
+    plt.plot(time, df[data_col], label="Raw", alpha=0.4)
+    plt.plot(time, signal, label="Smoothed", linewidth=2)
 
-    # --- Raw probe signal ---
-    plt.plot(time, df[data_col],
-             label="Raw signal", alpha=0.4)
-
-    # --- Smoothed detection signal ---
-    plt.plot(time, signal,
-             label="Smoothed (detect)", linewidth=2)
-
-    # --- Baseline mean ---
-    plt.axhline(baseline_mean, color="blue", linestyle="--",
-                label=f"Baseline mean = {baseline_mean:.3f}")
-
-    # --- Threshold ---
-    plt.axhline(baseline_mean + threshold, color="red", linestyle="--",
-                label=f"+ Threshold ({threshold:.3f})")
+    plt.axhline(baseline_mean, color="blue", linestyle="--", label="Baseline mean")
+    plt.axhline(baseline_mean + threshold, color="red", linestyle="--", label="+threshold")
     plt.axhline(baseline_mean - threshold, color="red", linestyle="--")
 
-    # --- First motion ---
-    plt.axvline(time.iloc[first_motion_idx],
-                color="orange", linestyle="--", linewidth=2,
-                label=f"First motion index = {first_motion_idx}")
+    plt.axvline(time.iloc[first_motion_idx], color="orange", linestyle="--", label="first motion")
+    plt.axvline(time.iloc[good_start_idx], color="green", linestyle="--", label="good start")
+    plt.axvline(time.iloc[good_end_idx], color="purple", linestyle="--", label="good end")
 
-    # --- Good interval start / end ---
-    plt.axvline(time.iloc[good_start_idx],
-                color="green", linestyle="--", linewidth=2,
-                label=f"Good start = {good_start_idx}")
-
-    plt.axvline(time.iloc[good_end_idx],
-                color="purple", linestyle="--", linewidth=2,
-                label=f"Good end = {good_end_idx}")
-
-    # --- Shade good region ---
-    plt.axvspan(time.iloc[good_start_idx],
-                time.iloc[good_end_idx],
-                color="green", alpha=0.15)
+    plt.axvspan(time.iloc[good_start_idx], time.iloc[good_end_idx], color="green", alpha=0.15)
 
     plt.title(title)
     plt.xlabel("Time")
@@ -210,7 +240,6 @@ def debug_plot_ramp_detection(df, data_col,
     plt.legend()
     plt.tight_layout()
     plt.show()
-
 
 
 
