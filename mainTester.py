@@ -79,6 +79,20 @@ for path, df_ma in processed_dfs.items():
         **runtime_vars
     )
 
+from wavescripts.plotter import plot_multiple
+
+RUN_MULTIPLE = True   # toggle this
+if RUN_MULTIPLE:
+    plot_multiple(processed_dfs, df_sel, auto_ranges, plotvariables)
+#%% - Med ferdig processe
+
+#%%
+# === Overlay plot ===
+from wavescripts.plotter import plot_overlayed
+
+RUN_OVERLAY = True   # toggle this
+if RUN_OVERLAY:
+    plot_overlayed(processed_dfs, df_sel, auto_ranges, plotvariables)
 #%% - Med ferdig processerte dataframes, kan vi plotte dem
 from wavescripts.plotter import plot_filtered
 plot_filtered(
