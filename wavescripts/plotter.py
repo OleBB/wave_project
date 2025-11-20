@@ -9,6 +9,7 @@ Created on Thu Nov 13 16:27:38 2025
 import matplotlib.pyplot as plt
 import os
 
+
 # ------------------------------------------------------------
 # Short label builder (prevents huge legend)
 # ------------------------------------------------------------
@@ -84,7 +85,7 @@ def plot_filtered(processed_dfs,
         label = make_label(row)
 
         # Plot it
-        ax.plot(df_ma[chosenprobe].iloc[rangestart:rangeend],
+        ax.plot(df_ma[chosenprobe].loc[rangestart:rangeend],
                 label=label,
                 color=color,
                 linestyle=linestyle)
