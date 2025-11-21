@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 def find_wave_range(
     df,
     df_sel,  # sliter med å fånn inmetadataen.. må mulig fjerne disse
-    data_col,
     input_volt,
     input_freq,
     input_per=None,              # probably not needed anymore
@@ -61,7 +60,10 @@ def find_wave_range(
     # ==========================================================
     # PROCESSING STARTS HERE
     # ==========================================================
-
+    
+    """LEGGE TIL SAMMENLIKNING AV PÅFØLGENDE 
+    BØLGE FOR Å SE STABILT signal. """
+    
     # 1) Smooth signal
     signal = (
         df[data_col]
@@ -151,7 +153,7 @@ def process_selected_data(dfs, df_sel, plotvariables):
         detect_window = 10
         start, end, debug_info = find_wave_range(df_raw, 
                                      df_sel,                                          
-                                     data_col, 
+                                     #ta inn alle prober, alltid, uansett 
                                      meta_volt,
                                      meta_freq,
                                      meta_per,
@@ -173,7 +175,7 @@ def process_selected_data(dfs, df_sel, plotvariables):
         debug_data[path] = debug_info
     #---end of for loop---#
     
-    auto_ranges... 
+    #auto_ranges... 
     #stjal noen print-statements
     print("type(df_sel) =", type(df_sel))
     try:
