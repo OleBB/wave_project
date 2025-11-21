@@ -158,10 +158,16 @@ def load_or_update(
                 "Stillwater Probe 2": "",
                 "Stillwater Probe 3": "",
                 "Stillwater Probe 4": "",
+                "Estimated Probe 1 start" : "",
+                "Estimated Probe 2 start" : "",
+                "Estimated Probe 3 start" : "",
+                "Estimated Probe 4 start" : "",
+                "Estimated range : ""   
             }
             #########################
             #Big note to self! viktig beskjed
-            #dersom noe gjøres med metadata-teksten så må 
+            #dersom noe gjøres med metadata-teksten så må
+            #man være påpasselig med å endre navn der inputen taes inn
             #########################
             stillwater_samples = 250
             

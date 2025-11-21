@@ -25,8 +25,8 @@ plotvariables = {
     },
     "processing": {
         "chosenprobe": "Probe 2",
-        "rangestart": 0,
-        "rangeend": 10000,
+        "rangestart": None,
+        "rangeend": None,
         "data_cols": ["Probe 2"],#her kan jeg velge fler, må huske [listeformat]
         "win": 11
     },
@@ -50,7 +50,7 @@ df_sel = filter_chosen_files(meta,plotvariables)
 
 print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
-# - and optional check (debug) range 
+# - and optional check (or "debug") range 
 processed_dfs, auto_ranges, debug_data = process_selected_data(dfs, df_sel, plotvariables)
 #%% -  Med ferdig processerte dataframes, kan vi plotte dem,
 # === Plot selection separately and/or overlaid ===

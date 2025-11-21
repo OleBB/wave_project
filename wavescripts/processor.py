@@ -53,7 +53,7 @@ def find_wave_range(
         ramp_skip_periods     = 12                         # fixed from your signal observations
         skip_periods          = baseline_skip_periods + ramp_skip_periods
 
-    # ---- Keep: 10–15 stable periods ----
+    # ---- Keep: x stable periods ----
     if keep_periods is None:
         keep_periods = 8#int(input_per-8) #TK BYTT UT PLZ FIX noe her
         
@@ -98,6 +98,7 @@ def find_wave_range(
     # Clamp
     good_start_idx = min(good_start_idx, len(signal) - 1)
     good_end_idx   = min(good_end_idx,   len(signal) - 1)
+    
     from wavescripts.plotter import plot_ramp_detection
     if debug:
         plot_ramp_detection(
@@ -129,9 +130,8 @@ def find_wave_range(
 # ===============================================
 def process_selected_data(dfs, df_sel, plotvariables):
     processed = {}
-    auto_ranges={}
     debug_data ={}
-    
+    #kikk på data_col senere TK 
     data_col = plotvariables["processing"]["data_cols"][0] # one column only
     win      = plotvariables["processing"]["win"]
 
@@ -157,19 +157,37 @@ def process_selected_data(dfs, df_sel, plotvariables):
                                      meta_per,
                                      detect_win=detect_window, 
                                      debug=True) #her skrur man på debug
-
-        df_ma["wave_start"] = start
-        df_ma["wave_end"] = end
+        
+        #heller hente en oppdatert df_sel?? #df_sel["Calculated start"] = start #pleide å være df_ma her men må jo ha engangsmetadata i metadata. 
+        #...??# df_sel["Calculated end"] = end #
+        # === Put the calculated start_idx into
+        for path, (start, end) in auto_ranges.items():
+            mask = meta["path"] == path
+            meta.loc[mask, "auto_start"] = good_start_idx
+            meta.loc[mask, "auto_end"]   = good_end_idx
+            """OOOPS MÅ VÆRE TILPASSET PROBE OGSÅ"""
         
         processed[path] = df_ma
-        auto_ranges[path] = (start, end)
+        #bytt ut med å heller importere range fra metadata #auto_ranges[path] = (start, end)
+        #trenger vel egt ikke ha med window sizen som ble brukt
         debug_data[path] = debug_info
+    #---end of for loop---#
+    
+    auto_ranges... 
+    #stjal noen print-statements
+    print("type(df_sel) =", type(df_sel))
+    try:
+        print("df_sel sample (first 5):", list(df_sel)[:5])
+    except Exception:
+        print("Could not list df_sel")
+    print("type(auto_ranges) =", type(auto_ranges))
+    print("auto_ranges keys (first 10")
+    #her returneres de processerte df'ene og debug-greier(!!?)
+    #
+    return processed, debug_data #fjernet auto_ranges
 
-
-    return processed, auto_ranges, debug_data
-
-"""minner om at auto_ranges ikke er fullstendig korrigert
- for hva som er ekte automatisk, hva som er manuelt input
+"""minner om at ordet auto_ranges ikke er fullstendig bytta ut
+ med de som er ekte automatisk, hva som er manuelt input
  og hva som er 'final' """
 
 def debug_plot_ramp_detection(df, data_col,
