@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Created on Fri Nov 21 10:20:14 2025
+
+@author: ole
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
 Created on Mon Nov 17 17:18:03 2025
 
 @author: ole
@@ -16,47 +24,6 @@ from datetime import datetime
 #from wavescripts.data_loader import load_or_update #blir vel motsatt.. 
 import numpy as np
 import matplotlib.pyplot as plt
-
-PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
-
-def detect_all_probes(df, df_sel, input_volt, input_freq, input_per=None,
-                      detect_win=10, baseline_seconds=2.0, sigma_factor=5.0,
-                      skip_periods=None, keep_periods=None, debug=False):
-    results = {}
-    for probe in PROBES:
-        start, end, info = find_wave_range(
-            df=df,
-            df_sel=df_sel,
-            data_col=probe,
-            input_volt=input_volt,
-            input_freq=input_freq,
-            input_per=input_per,
-            detect_win=detect_win,
-            baseline_seconds=baseline_seconds,
-            sigma_factor=sigma_factor,
-            skip_periods=skip_periods,
-            keep_periods=keep_periods,
-            debug=debug
-        )
-        samples_per_period = int(info["samples_per_period"])
-        kp = int(info["keep_periods"])
-        range_samples = int(samples_per_period * kp)
-        results[probe] = {
-            "auto_start_samples": int(start),
-            "auto_range_samples": int(range_samples),
-            "debug_info": info
-        }
-    return results
-import os, json
-from tempfile import NamedTemporaryFile
-
-def atomic_json_save(obj, path):
-    dirpath = os.path.dirname(path) or "."
-    with NamedTemporaryFile(dir=dirpath, delete=False, mode="w", encoding="utf-8") as tmp:
-        tmpname = tmp.name
-        json.dump(obj, tmp, indent=2, ensure_ascii=False)
-    os.replace(tmpname, path)
-
 
 def find_wave_range(
     df,

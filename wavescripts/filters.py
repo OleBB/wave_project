@@ -17,17 +17,41 @@ column_map = {
     "mooring": "Mooring",
 }
 
-def filter_chosen_files(meta,plotvariables):
+#uio GPT:
+def filter_chosen_files(meta, plotvariables):
+    """
+    meta: pd.DataFrame with columns referenced in column_map
+    plotvariables: dict with nested "filters" mapping short keys -> value or list-of-values
+    Behavior:
+      - If a filter value is None or empty string -> skip that filter (no restriction)
+      - If a filter value is a list/tuple/set -> match any of those values (.isin)
+      - Otherwise -> equality match
+    Returns a filtered DataFrame (index preserved).
+    """
     df_sel = meta.copy()
+    filter_values = plotvariables.get("filters", {})
 
-    filter_values = plotvariables["filters"] #husk at det er nested dictionary
+    applied = []  # collect applied filters for debug
 
     for var_key, col_name in column_map.items():
+        if var_key not in filter_values:
+            continue
         value = filter_values[var_key]
-        if value is not None:
+
+        # skip "no filter" values
+        if value is None or (isinstance(value, str) and value.strip() == ""):
+            continue
+
+        if isinstance(value, (list, tuple, set, pd.Series)):
+            df_sel = df_sel[df_sel[col_name].isin(value)]
+            applied.append((col_name, "in", value))
+        else:
             df_sel = df_sel[df_sel[col_name] == value]
-    antall = len(df_sel)
-    print(f'Found {antall} files:')
+            applied.append((col_name, "==", value))
+
+    number_of = len(df_sel)
+    print(f'Applied filters: {applied}')
+    print(f'Found {number_of} files:')
     pd.set_option("display.max_colwidth", 200)
-    print(df_sel["path"])#.apply(lambda p: p[-90:]))
+    print(df_sel["path"])
     return df_sel
