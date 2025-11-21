@@ -162,7 +162,7 @@ def load_or_update(
                 "Estimated Probe 2 start" : "",
                 "Estimated Probe 3 start" : "",
                 "Estimated Probe 4 start" : "",
-                "Estimated range : ""   
+                "Estimated range" : ""   
             }
             #########################
             #Big note to self! viktig beskjed
