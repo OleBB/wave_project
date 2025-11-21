@@ -42,19 +42,31 @@ def plot_column(df, start, end, chosenprobe, title="", ax=None,
 # ... handles the input from main and runs plot_filtered
 # ... Choose to plot separate plots or a combined overlaid plot
 # ------------------------------------------------------------
-def plotter_selection(processed_dfs, df_sel, auto_ranges, plotvariables):
+def plotter_selection(processed_dfs, df_sel, plotvariables):
 
     manual_start = plotvariables["processing"]["rangestart"]
     manual_end   = plotvariables["processing"]["rangeend"]
+    
+    """... tenker å lage en knapp som velger 
+    av eller på manuell range vs calculated range 
+    den dataaen må jo lagres til meta.json"""
+    # debug - print types and a small sample
+    print("type(df_sel) =", type(df_sel))
+    try:
+        print("df_sel sample (first 5):", list(df_sel)[:5])
+    except Exception:
+        print("Could not list df_sel")
+    print("type(auto_ranges) =", type(auto_ranges))
+    print("auto_ranges keys (first 10):", list(auto_ranges.keys())[:10])
 
     # ---- compute plot ranges per path ----
     plot_ranges = {}
-    for path in processed_dfs:
+    for path in df_sel["path"]: #pleide å være processed_dfs
         auto_start, auto_end = auto_ranges[path]
         start = manual_start if manual_start is not None else auto_start
         end   = manual_end   if manual_end   is not None else auto_end
         plot_ranges[path] = (start, end)
-
+    print('plot ranges variable:',plot_ranges)    
     # ---- RUN SEPARATE PLOTS ----
     if plotvariables["plotting"]["separate"]:
         for path, df_ma in processed_dfs.items():
@@ -102,15 +114,15 @@ def plot_filtered(processed_dfs,
         "no":"blue",
         "lowest":"green"
     }
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
+    figsize = (10,6)
+    fig, ax = plt.subplots(figsize=figsize)
 
     for idx, row in df_sel.iterrows():
         
 
         path_key = row["path"]
         df_ma   = processed_dfs[path_key]
-        #print("Columns for", row["path"], df_ma.columns.tolist())
+        print("Columns for", row["path"], df_ma.columns.tolist())
 
         # Color based on wind
         windcond = row["WindCondition"]
@@ -128,7 +140,7 @@ def plot_filtered(processed_dfs,
         print("df len    =", len(df_ma))
         df_cut = df_ma.loc[rangestart:rangeend]
         print("df_cut len:", len(df_cut))
-        print(df_cut["Date"].head())
+        #print(df_cut["Date"].head())
         
         # Convert Date column to milliseconds relative to the start
         t0 = df_cut["Date"].iloc[0]
@@ -252,11 +264,11 @@ def plot_ramp_detection(df, df_sel, data_col,
                 time.iloc[good_end_idx],
                 color="green", alpha=0.15)
     
-    thetitle = make_label(df_sel)
+    thetitle = (df_sel["path"].iat[0])
 
     plt.title(thetitle)
     plt.xlabel("Time")
-    plt.ylabel(data_col)
+    plt.ylabel("Height [mm]")
     plt.legend()
     plt.tight_layout()
     plt.show()
