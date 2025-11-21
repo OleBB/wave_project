@@ -47,6 +47,8 @@ def plotter_selection(processed_dfs, df_sel, plotvariables):
     manual_start = plotvariables["processing"]["rangestart"]
     manual_end   = plotvariables["processing"]["rangeend"]
     
+    """Estimated Probe 1 start"""
+    
     """... tenker å lage en knapp som velger 
     av eller på manuell range vs calculated range 
     den dataaen må jo lagres til meta.json"""
