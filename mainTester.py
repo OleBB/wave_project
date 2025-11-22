@@ -4,7 +4,16 @@
 Created on Tue Nov 18 08:41:03 2025
 @author: ole
 """
+import os
 from pathlib import Path
+# ------------------------------------------------------------------
+# Make the script always run from the folder where THIS file lives
+# ------------------------------------------------------------------
+file_dir = Path(__file__).resolve().parent
+os.chdir(file_dir)
+# ------------------------------------------------------------------
+#%%
+
 from wavescripts.data_loader import load_or_update
 dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
 
@@ -39,7 +48,7 @@ plotvariables = {
 }
 #
 #import json
-#with open("plotsettings.json") as f:
+#with open("plotsettings.json") as f:_
 #      plotvariables = json.load(f)
 
 print('# === Filter ===')
@@ -50,13 +59,39 @@ df_sel = filter_chosen_files(meta,plotvariables)
 
 print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
-# - and optional check (or "debug") range 
-processed_dfs, debug_data = process_selected_data(dfs, df_sel, plotvariables)
+# - and optional check (or "debug") range (turn on/off in processor.py)
+processed_dfs, df_sel, debug_data = process_selected_data(dfs, df_sel, plotvariables)
+#from wavescripts.dataloader import update_metadata
+#update_metadata(df_sel)
 #%% -  Med ferdig processerte dataframes, kan vi plotte dem,
 # === Plot selection separately and/or overlaid ===
 from wavescripts.plotter import plotter_selection
 plotter_selection(processed_dfs, df_sel, plotvariables)
+#%%
 
+# Step 1: Load raw data + basic metadata
+from wavescripts.data_loader import load_or_update, update_processed_metadata
+dfs, meta = load_or_update("wavedata/20251110-tett6roof-lowM-ekte580")
+import pandas as pd
+# Step 2: YOUR ANALYSIS — you modify meta and/or dfs as much as you want
+for key, df in dfs.items():
+    path = Path(key)
+    row = meta[meta["path"] == key].iloc[0]
+
+    # Example: compute zeroed waves and significant height
+    stillwater = df["Probe 1"].iloc[:250].mean()
+    eta = df["Probe 1"] - stillwater
+
+    # Update the metadata row (in-place)
+    meta.loc[meta["path"] == key, "Computed Probe 1 start"] = float(stillwater)
+    meta.loc[meta["path"] == key, "Hs"] = float(4 * eta.std())
+    meta.loc[meta["path"] == key, "T_z"] = float(0.71)  # or proper zero-crossing
+    meta.loc[meta["path"] == key, "Processed at"] = pd.Timestamp("now")
+
+    # Optionally save updated DataFrame back (with eta, filtered, etc.)
+    df["eta_1"] = eta
+    dfs[key] = df  # will be saved next time you call load_or_update or manually
+update_processed_metadata(meta)
 
 #%%
 #average_simple_amplitude = compute_simple_amplitudes(df_ma, chosenprobe, n_amplitudes) 

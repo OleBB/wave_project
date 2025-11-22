@@ -1,0 +1,326 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Nov 21 10:20:14 2025
+
+@author: ole
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Nov 17 17:18:03 2025
+
+@author: ole
+"""
+
+from pathlib import Path
+from typing import Iterator, Dict, Tuple
+import json
+import re
+import pandas as pd
+import os
+from datetime import datetime
+#from wavescripts.data_loader import load_or_update #blir vel motsatt.. 
+import numpy as np
+import matplotlib.pyplot as plt
+
+def find_wave_range(
+    df,
+    df_sel,  # sliter med å fånn inmetadataen.. må mulig fjerne disse
+    input_volt,
+    input_freq,
+    input_per=None,              # probably not needed anymore
+    detect_win=10,
+    baseline_seconds=2.0,
+    sigma_factor=5.0,
+    skip_periods=None,
+    keep_periods=None,
+    debug=False
+):
+    """
+    Detect the start and end of the stable wave interval.
+
+    Signal behavior (based on Ole's description):
+      - baseline mean ~271
+      - wave begins ~5 sec after baseline ends
+      - ramp-up lasts ~12 periods
+      - stable region has peaks ~280, troughs ~260
+
+    Returns (good_start_idx, good_end_idx)
+    """
+
+    # ==========================================================
+    # AUTO-CALCULATE SKIP & KEEP PERIODS BASED ON REAL SIGNAL
+    # ==========================================================
+
+    # ---- Skip: baseline (5 seconds) + ramp-up (12 periods) ----
+    if skip_periods is None:
+        baseline_skip_periods = int(5 * input_freq)        # 5 seconds worth of periods
+        ramp_skip_periods     = 12                         # fixed from your signal observations
+        skip_periods          = baseline_skip_periods + ramp_skip_periods
+
+    # ---- Keep: x stable periods ----
+    if keep_periods is None:
+        keep_periods = 8#int(input_per-8) #TK BYTT UT PLZ FIX noe her
+        
+
+    # ==========================================================
+    # PROCESSING STARTS HERE
+    # ==========================================================
+    
+    """LEGGE TIL SAMMENLIKNING AV PÅFØLGENDE 
+    BØLGE FOR Å SE STABILT signal. """
+    
+    # 1) Smooth signal
+    signal = (
+        df[data_col]
+        .rolling(window=detect_win, min_periods=1)
+        .mean()
+        .fillna(0)
+        .values
+    )
+
+    # 2) Sample rate
+    dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
+    Fs = 1.0 / dt
+
+    # 3) Baseline mean/std
+    baseline_samples = int(baseline_seconds * Fs)
+    baseline = signal[:baseline_samples]
+    baseline_mean = np.mean(baseline)
+    baseline_std  = np.std(baseline)
+
+    threshold = sigma_factor * baseline_std
+    movement = np.abs(signal - baseline_mean)
+
+    # 4) First actual movement above noise floor
+    first_motion_idx = np.argmax(movement > threshold)
+
+    # 5) Convert frequency → samples per period
+    T = 1.0 / float(input_freq)
+    samples_per_period = int(Fs * T)
+
+    # 6) Final "good" window
+    good_start_idx = first_motion_idx + skip_periods * samples_per_period
+    good_end_idx   = good_start_idx + keep_periods * samples_per_period
+
+    # Clamp
+    good_start_idx = min(good_start_idx, len(signal) - 1)
+    good_end_idx   = min(good_end_idx,   len(signal) - 1)
+    
+    from wavescripts.plotter import plot_ramp_detection
+    if debug:
+        plot_ramp_detection(
+            df=df,
+            df_sel=df_sel,
+            data_col=data_col,
+            signal=signal,
+            baseline_mean=baseline_mean,
+            threshold=threshold,
+            first_motion_idx=first_motion_idx,
+            good_start_idx=good_start_idx,
+            good_end_idx=good_end_idx,
+            title=f"Ramp Detection Debug – {data_col}"
+        )
+
+    debug_info = {
+        "baseline_mean": baseline_mean,
+        "baseline_std": baseline_std,
+        "first_motion_idx": first_motion_idx,
+        "samples_per_period": samples_per_period,
+        "skip_periods": skip_periods,
+        "keep_periods": keep_periods
+    }
+
+    return good_start_idx, good_end_idx, debug_info
+
+# =============================================== 
+# === Take in a filtered subset then process === #
+# ===============================================
+def process_selected_data(dfs, df_sel, plotvariables):
+    processed = {}
+    debug_data ={}
+    #kikk på data_col senere TK 
+    data_col = plotvariables["processing"]["data_cols"][0] # one column only
+    win      = plotvariables["processing"]["win"]
+
+    for _, row in df_sel.iterrows():
+        path = row["path"]
+        df_raw = dfs[path]
+        meta_volt = row["WaveAmplitudeInput [Volt]"]
+        meta_freq = row["WaveFrequencyInput [Hz]"]
+        meta_per = row["WavePeriodInput"]
+        #print('df_raw process_selected_data : ',df_raw.head())
+        
+        # Step 1: Smooth this probe only
+        df_ma = apply_moving_average(df_raw, [data_col], win) 
+        #print('df_ma inside process_selected_data where, \n the first number of samples will become Nan because thats how the function works \n',df_ma.head())
+        
+        # Step 2: Determine where the wave begins and ends
+        detect_window = 10
+        start, end, debug_info = find_wave_range(df_raw, 
+                                     df_sel,                                          
+                                     #ta inn alle prober, alltid, uansett 
+                                     meta_volt,
+                                     meta_freq,
+                                     meta_per,
+                                     detect_win=detect_window, 
+                                     debug=True) #her skrur man på debug
+        
+        #heller hente en oppdatert df_sel?? #df_sel["Calculated start"] = start #pleide å være df_ma her men må jo ha engangsmetadata i metadata. 
+        #...??# df_sel["Calculated end"] = end #
+        # === Put the calculated start_idx into
+        for path, (start, end) in auto_ranges.items():
+            mask = meta["path"] == path
+            meta.loc[mask, "auto_start"] = good_start_idx
+            meta.loc[mask, "auto_end"]   = good_end_idx
+            """OOOPS MÅ VÆRE TILPASSET PROBE OGSÅ"""
+        
+        processed[path] = df_ma
+        #bytt ut med å heller importere range fra metadata #auto_ranges[path] = (start, end)
+        #trenger vel egt ikke ha med window sizen som ble brukt
+        debug_data[path] = debug_info
+    #---end of for loop---#
+    
+    #auto_ranges... 
+    #stjal noen print-statements
+    print("type(df_sel) =", type(df_sel))
+    try:
+        print("df_sel sample (first 5):", list(df_sel)[:5])
+    except Exception:
+        print("Could not list df_sel")
+    print("type(auto_ranges) =", type(auto_ranges))
+    print("auto_ranges keys (first 10")
+    #her returneres de processerte df'ene og debug-greier(!!?)
+    #
+    return processed, debug_data #fjernet auto_ranges
+
+"""minner om at ordet auto_ranges ikke er fullstendig bytta ut
+ med de som er ekte automatisk, hva som er manuelt input
+ og hva som er 'final' """
+
+def debug_plot_ramp_detection(df, data_col,
+                              signal,
+                              baseline_mean,
+                              threshold,
+                              first_motion_idx,
+                              good_start_idx,
+                              good_end_idx,
+                              title="Ramp Detection Debug"):
+
+    time = df["Date"]
+
+    plt.figure(figsize=(14, 6))
+
+    # Raw probe signal
+    plt.plot(time, df[data_col], label="Raw signal", alpha=0.4)
+
+    # Smoothed detection signal
+    plt.plot(time, signal, label="Smoothed (detect)", linewidth=2)
+
+    # Baseline mean
+    plt.axhline(baseline_mean, color="blue", linestyle="--",
+                label=f"Baseline mean = {baseline_mean:.3f}")
+
+    # Threshold region
+    plt.axhline(baseline_mean + threshold, color="red", linestyle="--",
+                label=f"+ Threshold ({threshold:.3f})")
+    plt.axhline(baseline_mean - threshold, color="red", linestyle="--")
+
+    # First motion
+    plt.axvline(time.iloc[first_motion_idx],
+                color="orange", linestyle="--", linewidth=2,
+                label=f"First motion @ {first_motion_idx}")
+
+    # Good interval start / end
+    plt.axvline(time.iloc[good_start_idx],
+                color="green", linestyle="--", linewidth=2,
+                label=f"Good start @ {good_start_idx}")
+
+    plt.axvline(time.iloc[good_end_idx],
+                color="purple", linestyle="--", linewidth=2,
+                label=f"Good end @ {good_end_idx}")
+
+    # Shaded good region
+    plt.axvspan(time.iloc[good_start_idx],
+                time.iloc[good_end_idx],
+                color="green", alpha=0.15)
+
+    plt.title(title)
+    plt.xlabel("Time")
+    plt.ylabel(data_col)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+
+def find_wave_range_text(df, data_col, input_freq, duration_factor=1.5):
+    """
+    Find the time-window range where the wave starts and define
+    an interval based on wave frequency.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Single raw or processed dataframe.
+    data_col : str
+        Single probe column to analyze (e.g. "Probe 3").
+    freq : float
+        Wave frequency in Hz.
+    duration_factor : float
+        How many wave periods the returned interval should cover.
+
+    Returns
+    -------
+    (int, int)
+        start index, end index of the window
+    """
+
+def find_wave_range_originali(df, data_cols):
+    #tar inn valgt dataframe
+    #tar inn utvalgte kolonner
+    
+    #finner første skikkelige topp, ved å se etter ramp-up?
+    #   eller, ved å se etter aller største...?
+    #finner siste skikkelige topp. 
+    #beregner avstand basert på innkommende bølgeparametere
+    #velger de bølgene mellom
+    
+    return
+
+def find_resting_levels():
+    resting_files = [f for f in CSVFILES if 'nowind' in f.lower()]
+    if not resting_files:
+        raise ValueError("No valid nowind-files found to compute resting level")
+    
+    
+    for f in resting_files:
+        df99 = df99.copy()
+    return
+
+
+def remove_outliers():
+    #lag noe basert på steepness, kanskje tilogmed ak. Hvis ak er for bratt
+    # og datapunktet for høyt, så må den markeres, og så fjernes.
+    return
+    
+# ------------------------------------------------------------
+# Moving average helper
+# ------------------------------------------------------------
+def apply_moving_average(df, data_cols, win=1):
+    df_ma = df.copy()
+    #print('inside moving average: ', df_ma.head())
+    df_ma[data_cols] = df[data_cols].rolling(window=win, min_periods=win).mean()
+    return df_ma
+
+# ------------------------------------------------------------
+# Ny funksjon
+# ------------------------------------------------------------
+def compute_simple_amplitudes(df_ma, chosenprobe, n):
+    top_n = df_ma[chosenprobe].nlargest(n)
+    bottom_n = df_ma[chosenprobe].nsmallest(n)
+    average = (top_n.sum()-bottom_n.sum())/(len(top_n))
+    return average #top_n, bottom_n
+
