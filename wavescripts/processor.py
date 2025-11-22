@@ -19,51 +19,10 @@ import matplotlib.pyplot as plt
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
-def detect_all_probes(df, df_sel, input_volt, input_freq, input_per=None,
-                      detect_win=10, baseline_seconds=2.0, sigma_factor=5.0,
-                      skip_periods=None, keep_periods=None, debug=False):
-    results = {}
-    for probe in PROBES:
-        start, end, info = find_wave_range(
-            df=df,
-            df_sel=df_sel,
-            data_col=probe,
-            input_volt=input_volt,
-            input_freq=input_freq,
-            input_per=input_per,
-            detect_win=detect_win,
-            baseline_seconds=baseline_seconds,
-            sigma_factor=sigma_factor,
-            skip_periods=skip_periods,
-            keep_periods=keep_periods,
-            debug=debug
-        )
-        samples_per_period = int(info["samples_per_period"])
-        kp = int(info["keep_periods"])
-        range_samples = int(samples_per_period * kp)
-        results[probe] = {
-            "auto_start_samples": int(start),
-            "auto_range_samples": int(range_samples),
-            "debug_info": info
-        }
-    return results
-import os, json
-from tempfile import NamedTemporaryFile
-
-def atomic_json_save(obj, path):
-    dirpath = os.path.dirname(path) or "."
-    with NamedTemporaryFile(dir=dirpath, delete=False, mode="w", encoding="utf-8") as tmp:
-        tmpname = tmp.name
-        json.dump(obj, tmp, indent=2, ensure_ascii=False)
-    os.replace(tmpname, path)
-
-
 def find_wave_range(
-    df,
-    df_sel,  # sliter med å fånn inmetadataen.. må mulig fjerne disse
-    input_volt,
-    input_freq,
-    input_per=None,              # probably not needed anymore
+    df, #detta er jo heile dicten... hadde 
+    df_sel,  # detta er kun metadata for de utvalgte
+    data_col,            
     detect_win=10,
     baseline_seconds=2.0,
     sigma_factor=5.0,
@@ -86,10 +45,10 @@ def find_wave_range(
     # ==========================================================
     # AUTO-CALCULATE SKIP & KEEP PERIODS BASED ON REAL SIGNAL
     # ==========================================================
-
+    importertfrekvens = 1# TK TK BYTT UT med en ekte import fra metadata
     # ---- Skip: baseline (5 seconds) + ramp-up (12 periods) ----
     if skip_periods is None:
-        baseline_skip_periods = int(5 * input_freq)        # 5 seconds worth of periods
+        baseline_skip_periods = int(5 * importertfrekvens)        # 5 seconds worth of periods
         ramp_skip_periods     = 12                         # fixed from your signal observations
         skip_periods          = baseline_skip_periods + ramp_skip_periods
 
@@ -97,7 +56,6 @@ def find_wave_range(
     if keep_periods is None:
         keep_periods = 8#int(input_per-8) #TK BYTT UT PLZ FIX noe her
         
-
     # ==========================================================
     # PROCESSING STARTS HERE
     # ==========================================================
@@ -105,6 +63,7 @@ def find_wave_range(
     """LEGGE TIL SAMMENLIKNING AV PÅFØLGENDE 
     BØLGE FOR Å SE STABILT signal. """
     
+    print(f"data_col before signal.. {data_col}")
     # 1) Smooth signal
     signal = (
         df[data_col]
@@ -131,7 +90,7 @@ def find_wave_range(
     first_motion_idx = np.argmax(movement > threshold)
 
     # 5) Convert frequency → samples per period
-    T = 1.0 / float(input_freq)
+    T = 1.0 / float(importertfrekvens)
     samples_per_period = int(Fs * T)
 
     # 6) Final "good" window
@@ -171,44 +130,35 @@ def find_wave_range(
 # =============================================== 
 # === Take in a filtered subset then process === #
 # ===============================================
+PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 def process_selected_data(dfs, df_sel, plotvariables):
     processed = {}
     debug_data ={}
-    #kikk på data_col senere TK 
-    data_col = plotvariables["processing"]["data_cols"][0] # one column only
     win      = plotvariables["processing"]["win"]
 
     for _, row in df_sel.iterrows():
         path = row["path"]
         df_raw = dfs[path]
-        meta_volt = row["WaveAmplitudeInput [Volt]"]
-        meta_freq = row["WaveFrequencyInput [Hz]"]
-        meta_per = row["WavePeriodInput"]
-        #print('df_raw process_selected_data : ',df_raw.head())
+        print("type(df_raw) =", type(df_raw))
+    
+        detect_window = 10 #10 er default i find_wave_range
         
-        # Step 1: Smooth this probe only
-        df_ma = apply_moving_average(df_raw, [data_col], win) 
-        #print('df_ma inside process_selected_data where, \n the first number of samples will become Nan because thats how the function works \n',df_ma.head())
-        
-        # Step 2: Determine where the wave begins and ends
-        detect_window = 10
-        start, end, debug_info = find_wave_range(df_raw, 
-                                     df_sel,                                          
-                                     #ta inn alle prober, alltid, uansett 
-                                     meta_volt,
-                                     meta_freq,
-                                     meta_per,
+        # === PROCESS ALL THE PROBES === #
+        for probe in PROBES: #loope over alle 4 kolonnene
+            #smooth the probe
+            print(f'probe in loop is: {probe}')
+
+            df_ma = apply_moving_average(df_raw, data_col=probe, win=win)
+            
+            # find the start of the signal
+            start, end, debug_info = find_wave_range(df_raw, 
+                                     df_sel,    
+                                     data_col=probe,
                                      detect_win=detect_window, 
                                      debug=True) #her skrur man på debug
         
         #heller hente en oppdatert df_sel?? #df_sel["Calculated start"] = start #pleide å være df_ma her men må jo ha engangsmetadata i metadata. 
-        #...??# df_sel["Calculated end"] = end #
         # === Put the calculated start_idx into
-        for path, (start, end) in auto_ranges.items():
-            mask = meta["path"] == path
-            meta.loc[mask, "auto_start"] = good_start_idx
-            meta.loc[mask, "auto_end"]   = good_end_idx
-            """OOOPS MÅ VÆRE TILPASSET PROBE OGSÅ"""
         
         processed[path] = df_ma
         #bytt ut med å heller importere range fra metadata #auto_ranges[path] = (start, end)
@@ -216,22 +166,17 @@ def process_selected_data(dfs, df_sel, plotvariables):
         debug_data[path] = debug_info
     #---end of for loop---#
     
-    #auto_ranges... 
-    #stjal noen print-statements
+ 
     print("type(df_sel) =", type(df_sel))
     try:
         print("df_sel sample (first 5):", list(df_sel)[:5])
     except Exception:
         print("Could not list df_sel")
-    print("type(auto_ranges) =", type(auto_ranges))
-    print("auto_ranges keys (first 10")
     #her returneres de processerte df'ene og debug-greier(!!?)
     #
-    return processed, debug_data #fjernet auto_ranges
+    return processed, debug_data 
 
-"""minner om at ordet auto_ranges ikke er fullstendig bytta ut
- med de som er ekte automatisk, hva som er manuelt input
- og hva som er 'final' """
+
 
 def debug_plot_ramp_detection(df, data_col,
                               signal,
@@ -311,7 +256,7 @@ def find_wave_range_text(df, data_col, input_freq, duration_factor=1.5):
         start index, end index of the window
     """
 
-def find_wave_range_originali(df, data_cols):
+def find_wave_range_originali(df, data_col):
     #tar inn valgt dataframe
     #tar inn utvalgte kolonner
     
@@ -342,10 +287,10 @@ def remove_outliers():
 # ------------------------------------------------------------
 # Moving average helper
 # ------------------------------------------------------------
-def apply_moving_average(df, data_cols, win=1):
+def apply_moving_average(df, data_col, win=1):
     df_ma = df.copy()
     #print('inside moving average: ', df_ma.head())
-    df_ma[data_cols] = df[data_cols].rolling(window=win, min_periods=win).mean()
+    df_ma[data_col] = df[data_col].rolling(window=win, min_periods=win).mean()
     return df_ma
 
 # ------------------------------------------------------------
