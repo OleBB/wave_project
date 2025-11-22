@@ -140,61 +140,6 @@ from wavescripts.data_loader import update_processed_metadata
 from wavescripts.data_loader import save_processed_dataframes
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
-def ensure_stillwater_columns_old(
-    dfs: dict[str, pd.DataFrame],
-    meta: pd.DataFrame,
-) -> pd.DataFrame:
-    """
-    One-time function.
-    If 'Stillwater Probe X' columns are missing or all NaN,
-    compute them from all Windcondition == "no" runs and write to every row.
-    """
-    probe_cols = [f"Stillwater Probe {i}" for i in range(1, 5)]
-    
-    # Check if already done
-    if all(col in meta.columns for col in probe_cols):
-        if not meta[probe_cols].isna().all().all():  # at least one value exists
-            print("From ensure_stillwater_columns: Stillwater columns already exist → nothing to do")
-            return meta
-
-    print("Computing Stillwater Probe X from Windcondition == 'no' runs...")
-
-    # Find all no-wind runs
-    nowind_mask = meta["WindCondition"].astype(str).str.strip().str.lower() == "no"
-    nowind_paths = meta.loc[nowind_mask, "path"].tolist()
-
-    if not nowind_paths:
-        raise ValueError("No runs with WindCondition == 'no' found!")
-
-    stillwater = {}
-    for i in range(1, 5):
-        probe = f"probe {i}"
-        values = []
-        for path in nowind_paths:
-            if path in dfs and probe in dfs[path].columns:
-                values.extend(dfs[path][probe].dropna().values)
-        
-        level = np.median(values)
-        stillwater[f"Stillwater Probe {i}"] = level
-        print(f"  Stillwater Probe {i}: {level:.2f} mm  ({len(values)} samples)")
-
-    # Write the SAME value into EVERY row (this is correct and expected)
-    for col, val in stillwater.items():
-        meta[col] = val
-
-    # Ensure folder column for saving
-    if "PROCESSED_folder" not in meta.columns:
-        if "experiment_folder" in meta.columns:
-            meta["PROCESSED_folder"] = "PROCESSED-" + meta["experiment_folder"]
-        else:
-            meta["PROCESSED_folder"] = "PROCESSED-" + Path(meta["path"].iloc[0]).parent.name
-
-    # Save back using your existing perfect function
-    update_processed_metadata(meta)
-    print("Stillwater levels saved into meta.json for all runs")
-
-    return meta
-
 def ensure_stillwater_columns(
     dfs: dict[str, pd.DataFrame],
     meta: pd.DataFrame,
@@ -268,6 +213,90 @@ def ensure_stillwater_columns(
 def process_selected_data(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
+    meta_full: pd.DataFrame,
+    debug: bool = True,
+    win: int = 10,
+) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
+    """
+    Zeroes all selected runs using the shared stillwater levels.
+    Adds eta_1..eta_4 (zeroed signal) and moving average.
+    """
+    # 1. Make sure stillwater levels are computed and valid
+    meta_full = ensure_stillwater_columns(dfs, meta_full)
+
+    # Extract the four stillwater values (same for whole experiment)
+    stillwater = {}
+    for i in range(1, 5):
+        val = meta_full[f"Stillwater Probe {i}"].iloc[0]
+        if pd.isna(val):
+            raise ValueError(f"Stillwater Probe {i} is NaN! Run ensure_stillwater_columns first.")
+        stillwater[i] = float(val)
+        if debug:
+            print(f"  Stillwater Probe {i} = {val:.3f} mm")
+
+    if debug:
+        print(f"Using stillwater levels: {stillwater}")
+
+    # 2. Process only the selected runs
+    processed_dfs = {}
+
+    for _, row in meta_sel.iterrows():
+        path = row["path"]
+        if path not in dfs:
+            print(f"Warning: File not loaded: {path}")
+            continue
+
+        df = dfs[path].copy()
+
+        # Zero each probe
+        for i in range(1, 5):
+            probe_col = f"Probe {i}"           # ← your actual column name
+            if probe_col not in df.columns:
+                print(f"  Missing column {probe_col} in {Path(path).name}")
+                continue
+
+            sw = stillwater[i]
+            eta_col = f"eta_{i}"
+
+            # This is the key line: subtract stillwater → zero mean
+            df[eta_col] = df[probe_col] - sw
+
+            # Optional: moving average of the zeroed signal
+            df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
+
+            if debug:
+                print(f"  {Path(path).name:35} → eta_{i} mean = {df[eta_col].mean():.4f} mm")
+
+        processed_dfs[path] = df
+
+    # 3. Make sure meta_sel has the stillwater columns too (for plotting later)
+    for i in range(1, 5):
+        col = f"Stillwater Probe {i}"
+        if col not in meta_sel.columns:
+            meta_sel[col] = stillwater[i]
+
+    # 4. Make sure meta_sel knows where to save
+    if "PROCESSED_folder" not in meta_sel.columns:
+        if "PROCESSED_folder" in meta_full.columns:
+            folder = meta_full["PROCESSED_folder"].iloc[0]
+        elif "experiment_folder" in meta_full.columns:
+            folder = "PROCESSED-" + meta_full["experiment_folder"].iloc[0]
+        else:
+            raw_folder = Path(meta_full["path"].iloc[0]).parent.name
+            folder = f"PROCESSED-{raw_folder}"
+        meta_sel["PROCESSED_folder"] = folder
+        if debug:
+            print(f"Set PROCESSED_folder = {folder}")
+
+    # 5. Save updated metadata (now with stillwater columns)
+    update_processed_metadata(meta_sel)
+
+    print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
+    return processed_dfs, meta_sel
+
+def process_selected_data_old(
+    dfs: dict[str, pd.DataFrame],
+    meta_sel: pd.DataFrame,
     meta_full: pd.DataFrame,   # full meta of the experiment
     debug: bool = True,
     win: int = 10,
@@ -277,13 +306,8 @@ def process_selected_data(
     meta_full = ensure_stillwater_columns(dfs, meta_full)
 
     # Extract the values (they are the same in every row!)
-    stille1 = meta_full["Stillwater Probe 1"]
-    stille2 = meta_sel["Stillwater Probe 1"]
-    print('stille1 meta_full er ',stille1)
-    print(f'stille2 er {stille2}')
     stillwater = {f"Stillwater Probe {i}": meta_full[f"Stillwater Probe {i}"].iloc[0] for i in range(1,5)}
-    #HER ER DET NOE GÆRNT!
-    #print(f"Stillwater values and their types {stillwater}, type(?)")
+
     for i in range(1,5):
         val = stillwater[f"Stillwater Probe {i}"]
         print(f"  Stillwater Probe {i} → {val!r}  (type: {type(val).__name__})")
@@ -295,15 +319,10 @@ def process_selected_data(
         df = dfs[path].copy()
         # Clean columns once and for all
         for i in range(1, 5):
-            col = f"Probe {i}"                    # ← change if your name is different!
-            #if col not in df.columns:
-            #    print(f"Missing column {col} in {path}") #trokke de trengs
-            #    continue
-            #df[col] = pd.to_numeric(df[col], errors='coerce')   # ← magic line
+            col = f"Probe {i}"                    
         for i in range(1, 5):
             probe = f"Probe {2}"
             sw = stillwater[f"Stillwater Probe {i}"] 
-            print(f'sw of {i} is : {sw}')
             df[f"eta_{i}"] = df[probe] - sw
             df[f"{probe}_ma"] = df[f"eta_{i}"].rolling(win, center=False).mean()
     
@@ -337,7 +356,7 @@ def process_selected_data(
 
 #######################
 # =============================================== 
-# === Take in a filtered subset then process === #
+# === OLD OLD OLD Take in a filtered subset then process === #
 # ===============================================
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 def process_selected_data_old(dfs, df_sel, plotvariables):
@@ -364,7 +383,7 @@ def process_selected_data_old(dfs, df_sel, plotvariables):
                                      df_sel,    
                                      data_col=probe,
                                      detect_win=detect_window, 
-                                     debug=False) #her skrur man debug. trur æ
+                                     debug=False) 
             df_sel[f"Computed {probe} start"] = start
         processed[path] = df_ma
         debug_data[path] = debug_info
@@ -374,15 +393,6 @@ def process_selected_data_old(dfs, df_sel, plotvariables):
 ######################
 
 
-def find_resting_levels():
-    resting_files = [f for f in CSVFILES if 'nowind' in f.lower()]
-    if not resting_files:
-        raise ValueError("No valid nowind-files found to compute resting level")
-    
-    
-    for f in resting_files:
-        df99 = df99.copy()
-    return
 
 
 def remove_outliers():

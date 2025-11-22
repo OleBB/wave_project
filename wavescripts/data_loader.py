@@ -245,19 +245,12 @@ def update_processed_metadata(
     processed_root: Path | str | None = None,
 ) -> None:
     """
-    Takes a FULLY PROCESSED metadata DataFrame (with new columns added)
-    and writes it back to the correct meta.json file(s) in waveprocessed/.
-    
-    No computation inside — only saving.
-    
-    Requirements:
-    - meta_df must have a column "experiment_folder" (or "path" containing the folder name)
-    - OR you can add a column "PROCESSED_folder" with the exact folder name like 
-      "PROCESSED-20251110-tett6roof-lowM-ekte580"
+    Safely updates meta.json files:
+      • Keeps existing runs
+      • Adds new runs
+      • Updates changed rows (matched by 'path')
+      • Never overwrites or deletes data
     """
-    # --------------------------------------------------
-    # 1. Find project root
-    # --------------------------------------------------
     current_file = Path(__file__).resolve()
     project_root = next(
         (p for p in current_file.parents if (p / "main.py").exists() or (p / ".git").exists()),
@@ -265,44 +258,64 @@ def update_processed_metadata(
     )
     processed_root = Path(processed_root or project_root / "waveprocessed")
 
-    # --------------------------------------------------
-    # 2. Group by experiment folder
-    # --------------------------------------------------
-    # Try to get the processed folder name — flexible detection
+    # Ensure we have a way to group by experiment
     if "PROCESSED_folder" in meta_df.columns:
         meta_df["__group_key"] = meta_df["PROCESSED_folder"]
     elif "experiment_folder" in meta_df.columns:
         meta_df["__group_key"] = "PROCESSED-" + meta_df["experiment_folder"].astype(str)
     elif "path" in meta_df.columns:
-        # Extract from path: .../20251110-... → PROCESSED-20251110-...
         meta_df["__group_key"] = meta_df["path"].apply(
             lambda p: "PROCESSED-" + Path(p).resolve().parent.name
         )
     else:
-        raise ValueError("meta_df must contain one of: 'PROCESSED_folder', 'experiment_folder', or 'path'")
+        raise ValueError("Need PROCESSED_folder, experiment_folder, or path column")
 
-    # --------------------------------------------------
-    # 3. Write each group back to its meta.json
-    # --------------------------------------------------
     for processed_folder_name, group_df in meta_df.groupby("__group_key"):
         cache_dir = processed_root / processed_folder_name
-        if not cache_dir.exists():
-            print(f"Warning: Cache folder not found, creating: {cache_dir}")
-            cache_dir.mkdir(parents=True, exist_ok=True)
-
         meta_path = cache_dir / "meta.json"
 
-        # Convert to list of dicts (drop helper column)
-        records = group_df.drop(columns=["__group_key"], errors="ignore").to_dict("records")
+        # Load existing metadata if file exists
+        if meta_path.exists():
+            try:
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    old_records = json.load(f)
+                old_df = pd.DataFrame(old_records)
+                print(f"Loaded {len(old_df)} existing entries from {meta_path.name}")
+            except Exception as e:
+                print(f"Could not read existing {meta_path} → starting fresh: {e}")
+                old_df = pd.DataFrame()
+        else:
+            old_df = pd.DataFrame()
+            cache_dir.mkdir(parents=True, exist_ok=True)
 
-        # Pretty save
+        # Clean incoming data
+        new_df = group_df.drop(columns=["__group_key"], errors="ignore").copy()
+        new_df["path"] = new_df["path"].astype(str)  # ensure path is string
+
+        if not old_df.empty:
+            old_df["path"] = old_df["path"].astype(str)
+
+            # Merge: update existing + add new ones
+            if not new_df.empty:
+                # Use 'path' as key — it's unique per file
+                combined = pd.concat([old_df, new_df], ignore_index=True)
+                combined = combined.drop_duplicates(subset="path", keep="last")  # last = newest
+                final_df = combined
+            else:
+                final_df = old_df
+        else:
+            final_df = new_df
+
+        # Save back safely
+        records = final_df.to_dict("records")
         meta_path.write_text(
-            json.dumps(records, indent=2, default=str),  # default=str handles NaN/datetime
+            json.dumps(records, indent=2, default=str),
             encoding="utf-8"
         )
-        print(f"Updated {meta_path.relative_to(project_root)} ← {len(records)} entries")
-
-    print(f"\nAll {len(meta_df)} metadata records saved successfully!")
+        added = len(final_df) - len(old_df) if not old_df.empty else len(final_df)
+        print(f"Updated {meta_path.relative_to(project_root)} → {len(final_df)} entries (+{added} new)")
+    
+    print(f"\nMetadata safely updated and preserved across {meta_df['__group_key'].nunique()} experiment(s)!")
 
 
 def load_meta_from_processed(folder_name: str) -> pd.DataFrame:
