@@ -87,3 +87,14 @@ def debug_plot_ramp_detection(df, data_col,
     plt.legend()
     plt.tight_layout()
     plt.show()
+    
+    
+#
+#GROKKOLINI:
+    
+    Recommended New Workflow (2025 Best Practice)
+text1. load_or_update()               → raw dfs + basic meta
+2. One single big meta DataFrame  → filter once (your df_sel)
+3. Add computed columns directly in meta (no row-wise loop!)
+4. update_processed_metadata(meta) → save
+5. (Optional) Save processed DataFrames with new columns (eta, filtered, etc.)

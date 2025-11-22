@@ -112,6 +112,8 @@ def load_or_update(
             try:
                 dfs = pd.read_pickle(dfs_path)
                 meta_list = json.loads(meta_path.read_text(encoding="utf-8"))
+                # grokk snakka om dette: TK New robust way — always get a DataFrame with predictable columns
+                #meta_df = pd.read_json(meta_path, orient="records", dtype=False)
                 print(f"   Loaded {len(dfs)} cached files")
             except Exception as e:
                 print(f"   Cache corrupted ({e}) → rebuilding")
@@ -302,7 +304,14 @@ def update_processed_metadata(
 
     print(f"\nAll {len(meta_df)} metadata records saved successfully!")
 
-def update_metadata(df_sel, skip_empty_strings=True):
+def save_processed_dataframes(dfs: dict, meta_df: pd.DataFrame, processed_root=None):
+    for key, df in dfs.items():
+        row = meta_df[meta_df["path"] == key].iloc[0]
+        processed_folder = row.get("PROCESSED_folder") or f"PROCESSED-{Path(key).parent.name}"
+        cache_dir = Path(processed_root or "waveprocessed") / processed_folder
+        pd.to_pickle(dfs, cache_dir / "dfs.pkl")
+
+def Min_ubrukte_update_metadata_kan_slettes(df_sel, skip_empty_strings=True):
     #nå har vi tatt inn en df der rett row må svare til rett json-entry 
     #we now have a small dataframe "df_sel" that contains only the few 
     #paths we want to update. 
@@ -377,11 +386,6 @@ def apply_updates_to_metadata(metadata_list, updates):
             obj.update(updates[p])
     return metadata_list
 
-#example usage
-#build updates from dataframes
-
-    
-#######    
 
 FOLDER1 = Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")
 
