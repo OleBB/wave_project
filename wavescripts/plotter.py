@@ -237,8 +237,9 @@ def plot_ramp_detection(df, df_sel, data_col,
     # Raw probe signal
     plt.plot(time, df[data_col], label="Raw signal", alpha=0.4)
 
+    #print('data_col in plot ramp detection is',data_col)
     # Smoothed detection signal
-    plt.plot(time, signal, label="Smoothed (detect)", linewidth=2)
+    plt.plot(time, signal, label=f"Smoothed, {data_col}", linewidth=2)
 
     # Baseline mean
     plt.axhline(baseline_mean, color="blue", linestyle="--",
@@ -273,7 +274,7 @@ def plot_ramp_detection(df, df_sel, data_col,
     plt.title(thetitle)
     plt.xlabel("Time")
     plt.ylabel("Height [mm]")
-    plt.legend()
+    plt.legend(loc='upper left',bbox_to_anchor=(0,1))
     plt.tight_layout()
     plt.show()
 
