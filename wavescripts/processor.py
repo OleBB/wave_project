@@ -187,13 +187,12 @@ def process_selected_data_old(dfs, df_sel, plotvariables):
 
 
 
-from processor import update_processed_metadata
-import pandas as pd
-import numpy as np
+from wavescripts.data_loader import update_processed_metadata
+from wavescripts.data_loader import save_processed_dataframes
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
-def process_selected_data(dfs: dict, meta_sel: pd.DataFrame, plotvariables: dict):
+def process_selected_data(dfs: dict, meta_sel: pd.DataFrame, plotvariables: dict, debug=False):
     """
     Vectorized, clean, fast version.
     No iterrows → 10–100x faster + much cleaner.
@@ -222,7 +221,7 @@ def process_selected_data(dfs: dict, meta_sel: pd.DataFrame, plotvariables: dict
     for _, row in meta_sel.iterrows():
         path = row["path"]
         df = processed_dfs[path]  # or dfs[path] if you don't need ma yet
-
+        print('inni loopen for _, row in meta_sel.iterrows() ')
         for probe in PROBES:
             start, end, _ = find_wave_range(
                 df, meta_sel, data_col=probe, detect_win=detect_win, debug=False
@@ -243,7 +242,7 @@ def process_selected_data(dfs: dict, meta_sel: pd.DataFrame, plotvariables: dict
 
         # Extract stillwater from first N samples (vectorized per file)
         stillwaters = []
-        etas = []
+        eta = []
         hs_values = []
         for path in meta_sel["path"]:
             df = processed_dfs[path]
@@ -269,9 +268,12 @@ def process_selected_data(dfs: dict, meta_sel: pd.DataFrame, plotvariables: dict
     # ------------------------------------------------------------------
     # Save updated metadata
     update_processed_metadata(meta_sel)
-
+    
     # Optional: Save processed DataFrames (with eta, moving avg, etc.)
-    save_processed_dataframes(processed_dfs, meta_sel)
+    # ------------------------------------------------------------------
+    # 6. OPTIONAL SAVE everything . HAKKE PRØVD SJÆL. TK
+    # ------------------------------------------------------------------
+    #save_processed_dataframes(processed_dfs, meta_sel)
 
     print(f"Processed {len(meta_sel)} files → metadata updated with {len(new_columns)} new fields")
     return processed_dfs, meta_sel

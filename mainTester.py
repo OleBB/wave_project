@@ -60,9 +60,8 @@ df_sel = filter_chosen_files(meta,plotvariables)
 print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
 # - and optional check (or "debug") range (turn on/off in processor.py)
-processed_dfs, df_sel, debug_data = process_selected_data(dfs, df_sel, plotvariables)
-#from wavescripts.dataloader import update_metadata
-#update_metadata(df_sel)
+processed_dfs, meta_sel = process_selected_data(dfs, df_sel, plotvariables, debug=True)
+
 #%% -  Med ferdig processerte dataframes, kan vi plotte dem,
 # === Plot selection separately and/or overlaid ===
 from wavescripts.plotter import plotter_selection
@@ -114,8 +113,36 @@ for probe in PROBES: #loope over alle 4 kolonnene
  #heller hente en oppdatert df_sel?? #df_sel["Calculated start"] = start #pleide å være df_ma her men må jo ha engangsmetadata i metadata. 
  # === Put the calculated start_idx into
 
+#%%
+
+# processing.py — clean and professional
+from wavescripts.data_loader import load_or_update, update_processed_metadata
+from wavescripts.processor import process_selected_data
 
 
+# 1. Load everything
+dfs, meta = load_or_update("wavedata/20251110-tett6roof-lowM-ekte580")
+
+# 2. Select what you want to (re)process
+df_sel = meta[
+    (meta["WindCondition"] == "no") &
+    (meta["WaveAmplitudeInput [Volt]"] > 0.05)
+].copy()
+
+# 3. Process — clean, fast, vectorized
+processed_dfs, df_sel = process_selected_data(dfs, df_sel, plotvariables)
+
+print("All done. Metadata updated. Ready for plots!")
+
+from wavescripts.data_loader import load_meta_from_processed
+meta = load_meta_from_processed("PROCESSED-20251110-tett6roof-lowM-ekte580")
+
+# Now everything just works:
+selected = meta[
+    (meta["WindCondition"] == "no") &
+    (meta["WaveAmplitudeInput [Volt]"] > 0.05) &
+    meta["Computed Probe 1 start"].notna()
+]
 
 #%%
 """... KANSKJE DISPLAYE JSON ENTRYEN SÅ
