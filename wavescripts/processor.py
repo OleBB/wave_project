@@ -136,6 +136,209 @@ def find_wave_range(
 # =============================================== 
 # === Take in a filtered subset then process === #
 # ===============================================
+from wavescripts.data_loader import update_processed_metadata
+from wavescripts.data_loader import save_processed_dataframes
+PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
+
+def ensure_stillwater_columns_old(
+    dfs: dict[str, pd.DataFrame],
+    meta: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    One-time function.
+    If 'Stillwater Probe X' columns are missing or all NaN,
+    compute them from all Windcondition == "no" runs and write to every row.
+    """
+    probe_cols = [f"Stillwater Probe {i}" for i in range(1, 5)]
+    
+    # Check if already done
+    if all(col in meta.columns for col in probe_cols):
+        if not meta[probe_cols].isna().all().all():  # at least one value exists
+            print("From ensure_stillwater_columns: Stillwater columns already exist → nothing to do")
+            return meta
+
+    print("Computing Stillwater Probe X from Windcondition == 'no' runs...")
+
+    # Find all no-wind runs
+    nowind_mask = meta["WindCondition"].astype(str).str.strip().str.lower() == "no"
+    nowind_paths = meta.loc[nowind_mask, "path"].tolist()
+
+    if not nowind_paths:
+        raise ValueError("No runs with WindCondition == 'no' found!")
+
+    stillwater = {}
+    for i in range(1, 5):
+        probe = f"probe {i}"
+        values = []
+        for path in nowind_paths:
+            if path in dfs and probe in dfs[path].columns:
+                values.extend(dfs[path][probe].dropna().values)
+        
+        level = np.median(values)
+        stillwater[f"Stillwater Probe {i}"] = level
+        print(f"  Stillwater Probe {i}: {level:.2f} mm  ({len(values)} samples)")
+
+    # Write the SAME value into EVERY row (this is correct and expected)
+    for col, val in stillwater.items():
+        meta[col] = val
+
+    # Ensure folder column for saving
+    if "PROCESSED_folder" not in meta.columns:
+        if "experiment_folder" in meta.columns:
+            meta["PROCESSED_folder"] = "PROCESSED-" + meta["experiment_folder"]
+        else:
+            meta["PROCESSED_folder"] = "PROCESSED-" + Path(meta["path"].iloc[0]).parent.name
+
+    # Save back using your existing perfect function
+    update_processed_metadata(meta)
+    print("Stillwater levels saved into meta.json for all runs")
+
+    return meta
+
+def ensure_stillwater_columns(
+    dfs: dict[str, pd.DataFrame],
+    meta: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Computes the true still-water level for each probe using ALL "no wind" runs,
+    then copies that value into EVERY row of the metadata (including windy runs).
+    Safe to call multiple times.
+    """
+    probe_cols = [f"Stillwater Probe {i}" for i in range(1, 5)]
+
+    # If all columns exist AND all values are real numbers → we're done
+    if all(col in meta.columns for col in probe_cols):
+        if meta[probe_cols].notna().all().all():  # every cell has a real number
+            print("Stillwater levels already computed and valid → skipping")
+            return meta
+
+    print("Computing still-water levels from all 'WindCondition == no' runs...")
+
+    # Find all no-wind runs
+    mask = meta["WindCondition"].astype(str).str.strip().str.lower() == "no"
+    nowind_paths = meta.loc[mask, "path"].tolist()
+
+    if not nowind_paths:
+        raise ValueError("No runs with WindCondition == 'no' found! Cannot compute still water.")
+
+    # Compute median from ALL calm data combined
+    stillwater_values = {}
+    for i in range(1, 5):
+        probe_name = f"probe {i}"  # adjust if your columns are named differently
+        all_values = []
+
+        for path in nowind_paths:
+            if path in dfs:
+                df = dfs[path]
+                if probe_name in df.columns:
+                    clean = pd.to_numeric(df[probe_name], errors='coerce').dropna()
+                    all_values.extend(clean.tolist())
+                # Also try other common names just in case
+                elif f"Probe {i}" in df.columns:
+                    clean = pd.to_numeric(df[f"Probe {i}"], errors='coerce').dropna()
+                    all_values.extend(clean.tolist())
+
+        if len(all_values) == 0:
+            raise ValueError(f"No valid data found for {probe_name} in any no-wind run!")
+
+        level = np.median(all_values)
+        stillwater_values[f"Stillwater Probe {i}"] = float(level)
+        print(f"  Stillwater Probe {i}: {level:.3f} mm  (from {len(all_values):,} samples)")
+
+    # Robust median
+
+    # Write the same value into EVERY row (this is correct!)
+    for col, value in stillwater_values.items():
+        meta[col] = value
+
+    # Make sure we can save correctly
+    if "PROCESSED_folder" not in meta.columns:
+        if "experiment_folder" in meta.columns:
+            meta["PROCESSED_folder"] = "PROCESSED-" + meta["experiment_folder"].iloc[0]
+        else:
+            raw_folder = Path(meta["path"].iloc[0]).parent.name
+            meta["PROCESSED_folder"] = f"PROCESSED-{raw_folder}"
+
+    # Save to disk
+    update_processed_metadata(meta)
+    print("Stillwater levels successfully saved to meta.json for ALL runs")
+
+    return meta
+
+def process_selected_data(
+    dfs: dict[str, pd.DataFrame],
+    meta_sel: pd.DataFrame,
+    meta_full: pd.DataFrame,   # full meta of the experiment
+    debug: bool = True,
+    win: int = 10,
+) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
+
+    # 1. Ensure stillwater levels exist (idempotent — safe to call anytime)
+    meta_full = ensure_stillwater_columns(dfs, meta_full)
+
+    # Extract the values (they are the same in every row!)
+    stille1 = meta_full["Stillwater Probe 1"]
+    stille2 = meta_sel["Stillwater Probe 1"]
+    print('stille1 meta_full er ',stille1)
+    print(f'stille2 er {stille2}')
+    stillwater = {f"Stillwater Probe {i}": meta_full[f"Stillwater Probe {i}"].iloc[0] for i in range(1,5)}
+    #HER ER DET NOE GÆRNT!
+    #print(f"Stillwater values and their types {stillwater}, type(?)")
+    for i in range(1,5):
+        val = stillwater[f"Stillwater Probe {i}"]
+        print(f"  Stillwater Probe {i} → {val!r}  (type: {type(val).__name__})")
+    print(f'stillwater = hva , jo: {stillwater}')
+    # 2. Process only selected runs
+    processed_dfs = {}
+    for _, row in meta_sel.iterrows():
+        path = row["path"]
+        df = dfs[path].copy()
+        # Clean columns once and for all
+        for i in range(1, 5):
+            col = f"Probe {i}"                    # ← change if your name is different!
+            #if col not in df.columns:
+            #    print(f"Missing column {col} in {path}") #trokke de trengs
+            #    continue
+            #df[col] = pd.to_numeric(df[col], errors='coerce')   # ← magic line
+        for i in range(1, 5):
+            probe = f"Probe {2}"
+            sw = stillwater[f"Stillwater Probe {i}"] 
+            print(f'sw of {i} is : {sw}')
+            df[f"eta_{i}"] = df[probe] - sw
+            df[f"{probe}_ma"] = df[f"eta_{i}"].rolling(win, center=False).mean()
+    
+        processed_dfs[path] = df
+    
+    # Add stillwater columns to meta_sel too (in case they were missing)
+    for col, val in stillwater.items():
+        if col not in meta_sel.columns:
+            meta_sel[col] = val
+    #for kolonne, value in dfs[riktig path]:
+    
+        # === DEBUG === #
+    #find_wave_range(df_raw, df_sel,data_col=probe, detect_win=detect_window, debug=False)   
+    
+    # Ensure meta_sel knows which folder to save into
+    if "PROCESSED_folder" not in meta_sel.columns:
+        if "PROCESSED_folder" in meta_full.columns:
+            folder = meta_full["PROCESSED_folder"].iloc[0]
+        elif "experiment_folder" in meta_full.columns:
+            folder = "PROCESSED-" + meta_full["experiment_folder"].iloc[0]
+        else:
+            raw_folder = Path(meta_full["path"].iloc[0]).parent.name
+            folder = f"PROCESSED-{raw_folder}"
+        
+        meta_sel["PROCESSED_folder"] = folder
+        print(f"Set PROCESSED_folder = {folder}")
+
+    update_processed_metadata(meta_sel)
+
+    return processed_dfs, meta_sel
+
+#######################
+# =============================================== 
+# === Take in a filtered subset then process === #
+# ===============================================
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 def process_selected_data_old(dfs, df_sel, plotvariables):
     processed = {}
@@ -161,159 +364,15 @@ def process_selected_data_old(dfs, df_sel, plotvariables):
                                      df_sel,    
                                      data_col=probe,
                                      detect_win=detect_window, 
-                                     debug=False) #her skrur man på debug. trur æ
+                                     debug=False) #her skrur man debug. trur æ
             df_sel[f"Computed {probe} start"] = start
-                    
-        # etter avsluttet indre for-loop
-        #pushe start og end 
-        #heller hente en oppdatert df_sel?? #df_sel["Calculated start"] = start #pleide å være df_ma her men må jo ha engangsmetadata i metadata. 
-        # === Put the calculated start_idx into
-        
         processed[path] = df_ma
-        #bytt ut med å heller importere range fra metadata #auto_ranges[path] = (start, end)
-        #trenger vel egt ikke ha med window sizen som ble brukt
         debug_data[path] = debug_info
-    #---end of for loop---#
-    
- 
-    print("type(df_sel) =", type(df_sel))
-    try:
-        print("df_sel sample (first 5):", list(df_sel)[:5])
-    except Exception:
-        print("Could not list df_sel")
-    #her returneres de processerte df'ene og debug-greier(!!?)
-    #
     return processed, df_sel, debug_data 
 
 
+######################
 
-from wavescripts.data_loader import update_processed_metadata
-from wavescripts.data_loader import save_processed_dataframes
-
-PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
-
-def process_selected_data(dfs: dict, meta_sel: pd.DataFrame, plotvariables: dict, debug):
-    """
-    Vectorized, clean, fast version.
-    No iterrows → 10–100x faster + much cleaner.
-    """
-    win = plotvariables["processing"]["win"]
-    detect_win = 1  # or make configurable
-
-    # We'll collect new columns to add to meta_sel
-    new_columns = {}
-
-    # ------------------------------------------------------------------
-    # 1. Apply moving average to ALL dataframes at once (vectorized)
-    # ------------------------------------------------------------------
-    processed_dfs = {}
-    for path, df in dfs.items():
-        df_processed = df.copy()
-        for probe in PROBES:
-            df_processed[f"{probe}_ma"] = df_processed[probe].rolling(window=win, center=False).mean()
-        processed_dfs[path] = df_processed
-
-    # ------------------------------------------------------------------
-    # 2. Compute start indices using your find_wave_range — but vectorized!
-    # ------------------------------------------------------------------
-    # Option A: Your current function works per signal → keep it, but call efficiently
-    starts = {probe: [] for probe in PROBES}
-    for _, row in meta_sel.iterrows():
-        path = row["path"]
-        df = processed_dfs[path]  # or dfs[path] if you don't need ma yet
-        print('inni loopen for _, row in meta_sel.iterrows() ')
-        for probe in PROBES:
-            start, end, _ = find_wave_range(
-                df, meta_sel, data_col=probe, detect_win=detect_win, debug=debug
-            )
-            starts[probe].append(start)
-
-    # Add computed starts directly as new columns
-    for probe in PROBES:
-        new_columns[f"Computed {probe} start"] = starts[probe]
-
-    # ------------------------------------------------------------------
-    # 3. Add other computed values (Hs, Tz, zeroed waves, etc.) — fully vectorized
-    # ------------------------------------------------------------------
-    stillwater_samples = 250
-    for probe in PROBES:
-        probe_col = probe
-        eta_col = f"eta_{probe.split()[1]}"
-
-        # Extract stillwater from first N samples (vectorized per file)
-        stillwaters = []
-        eta = []
-        hs_values = []
-        for path in meta_sel["path"]:
-            df = processed_dfs[path]
-            sw = df[probe_col].iloc[:stillwater_samples].mean()
-            eta = df[probe_col] - sw
-            df[eta_col] = eta  # add zeroed wave to the DataFrame
-            processed_dfs[path] = df
-
-            stillwaters.append(sw)
-            hs_values.append(4 * eta.std())  # H_s ≈ 4 * std for narrow-band
-
-        new_columns[f"Stillwater {probe}"] = stillwaters
-        new_columns[f"Hs {probe}"] = hs_values
-
-    # ------------------------------------------------------------------
-    # 4. Update meta_sel with all new columns at once
-    # ------------------------------------------------------------------
-    for col_name, values in new_columns.items():
-        meta_sel[col_name] = values
-
-    # ------------------------------------------------------------------
-    # 5. Save everything
-    # ------------------------------------------------------------------
-    # Save updated metadata
-    update_processed_metadata(meta_sel)
-    
-    # Optional: Save processed DataFrames (with eta, moving avg, etc.)
-    # ------------------------------------------------------------------
-    # 6. OPTIONAL SAVE everything . HAKKE PRØVD SJÆL. TK
-    # ------------------------------------------------------------------
-    #save_processed_dataframes(processed_dfs, meta_sel)
-
-    print(f"Processed {len(meta_sel)} files → metadata updated with {len(new_columns)} new fields")
-    return processed_dfs, meta_sel
-
-
-
-
-def find_wave_range_text(df, data_col, input_freq, duration_factor=1.5):
-    """
-    Find the time-window range where the wave starts and define
-    an interval based on wave frequency.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Single raw or processed dataframe.
-    data_col : str
-        Single probe column to analyze (e.g. "Probe 3").
-    freq : float
-        Wave frequency in Hz.
-    duration_factor : float
-        How many wave periods the returned interval should cover.
-
-    Returns
-    -------
-    (int, int)
-        start index, end index of the window
-    """
-
-def find_wave_range_originali(df, data_col):
-    #tar inn valgt dataframe
-    #tar inn utvalgte kolonner
-    
-    #finner første skikkelige topp, ved å se etter ramp-up?
-    #   eller, ved å se etter aller største...?
-    #finner siste skikkelige topp. 
-    #beregner avstand basert på innkommende bølgeparametere
-    #velger de bølgene mellom
-    
-    return
 
 def find_resting_levels():
     resting_files = [f for f in CSVFILES if 'nowind' in f.lower()]

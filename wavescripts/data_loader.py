@@ -163,7 +163,7 @@ def load_or_update(
                     "WindCondition": "", "TunnelCondition": "", "PanelCondition": "", "Mooring": "",
                     "WaveAmplitudeInput [Volt]": "", "WaveFrequencyInput [Hz]": "", "WavePeriodInput": "",
                     "WaterDepth [mm]": "", "Extra seconds": "", "Run number": "",
-                    "Stillwater Probe 1": "", "Stillwater Probe 2": "", "Stillwater Probe 3": "", "Stillwater Probe 4": "",
+                    "Stillwater Probe 1": None, "Stillwater Probe 2": None, "Stillwater Probe 3": None, "Stillwater Probe 4": None,
                     "Computed Probe 1 start": "", "Computed Probe 2 start": "", "Computed Probe 3 start": "", "Computed Probe 4 start": "",
                     "Computed range": "", "experiment_folder": experiment_name
                 }
@@ -303,6 +303,24 @@ def update_processed_metadata(
         print(f"Updated {meta_path.relative_to(project_root)} ← {len(records)} entries")
 
     print(f"\nAll {len(meta_df)} metadata records saved successfully!")
+
+
+def load_meta_from_processed(folder_name: str) -> pd.DataFrame:
+    """
+    Safely load any PROCESSED-.../meta.json as a proper DataFrame
+    """
+    meta_path = Path("waveprocessed") / folder_name / "meta.json"
+    if not meta_path.exists():
+        raise FileNotFoundError(f"Metadata not found: {meta_path}")
+    
+    # This is bulletproof — preserves types, handles nulls, keeps column order logical
+    df = pd.read_json(meta_path, orient="records", convert_dates=["Date"])
+    
+    # Optional: ensure path is string
+    if "path" in df.columns:
+        df["path"] = df["path"].astype(str)
+    
+    return df
 
 def save_processed_dataframes(dfs: dict, meta_df: pd.DataFrame, processed_root=None):
     for key, df in dfs.items():
