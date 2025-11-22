@@ -192,7 +192,7 @@ from wavescripts.data_loader import save_processed_dataframes
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
-def process_selected_data(dfs: dict, meta_sel: pd.DataFrame, plotvariables: dict, debug=False):
+def process_selected_data(dfs: dict, meta_sel: pd.DataFrame, plotvariables: dict, debug):
     """
     Vectorized, clean, fast version.
     No iterrows → 10–100x faster + much cleaner.
@@ -224,7 +224,7 @@ def process_selected_data(dfs: dict, meta_sel: pd.DataFrame, plotvariables: dict
         print('inni loopen for _, row in meta_sel.iterrows() ')
         for probe in PROBES:
             start, end, _ = find_wave_range(
-                df, meta_sel, data_col=probe, detect_win=detect_win, debug=False
+                df, meta_sel, data_col=probe, detect_win=detect_win, debug=debug
             )
             starts[probe].append(start)
 

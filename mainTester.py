@@ -28,7 +28,7 @@ plotvariables = {
         "amp": 0.1, #bruk et tall 
         "freq": 1.3, #bruk et tall  
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": "no", #full, no, lowest
+        "wind": "lowest", #full, no, lowest
         "tunnel": None,
         "mooring": "low"
     },
