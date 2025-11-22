@@ -28,7 +28,7 @@ plotvariables = {
         "amp": 0.1, #bruk et tall 
         "freq": 1.3, #bruk et tall  
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": "lowest", #full, no, lowest
+        "wind": "no", #full, no, lowest
         "tunnel": None,
         "mooring": "low"
     },
@@ -59,10 +59,10 @@ df_sel = filter_chosen_files(meta,plotvariables)
 
 print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
-# - and optional check (or "debug") range (turn on/off in processor.py)
-processed_dfs, meta_sel = process_selected_data(dfs, df_sel, plotvariables, debug=True)
+# - and optional check: DEBUG = TRUE gir plott av wave-range.
+processed_dfs, meta_sel = process_selected_data(dfs, df_sel,meta,debug=True,win=10)
 
-#%% -  Med ferdig processerte dataframes, kan vi plotte dem,
+ #%% -  Med ferdig processerte dataframes, kan vi plotte dem,
 # === Plot selection separately and/or overlaid ===
 from wavescripts.plotter import plotter_selection
 plotter_selection(processed_dfs, df_sel, plotvariables)

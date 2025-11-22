@@ -219,7 +219,7 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
     plt.tight_layout()
     plt.show()
 
-#%%
+#%% ##
 
 def plot_ramp_detection(df, df_sel, data_col,
                               signal,
