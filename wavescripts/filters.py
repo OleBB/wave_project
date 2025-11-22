@@ -17,7 +17,7 @@ column_map = {
     "mooring": "Mooring",
 }
 
-def filter_chosen_files(meta, plotvariables):
+def filter_chosen_files(meta, plotvariables,chooseAll=False):
     """
     meta: pd.DataFrame with columns referenced in column_map
     plotvariables: dict with nested "filters" mapping short keys -> value or list-of-values
@@ -27,6 +27,10 @@ def filter_chosen_files(meta, plotvariables):
       - Otherwise -> equality match
     Returns a filtered DataFrame (index preserved).
     """
+    # === Førstemann til mølla! This one overrides === #
+    if chooseAll:
+        return meta
+    # === === === #
     df_sel = meta.copy()
     filter_values = plotvariables.get("filters", {})
     """Use .get(..., default) when the key may be absent and you want a
@@ -36,7 +40,7 @@ def filter_chosen_files(meta, plotvariables):
     """
 
     applied = []  # collect applied filters for debug
-
+    
     for var_key, col_name in column_map.items():
         if var_key not in filter_values:
             continue
@@ -58,4 +62,5 @@ def filter_chosen_files(meta, plotvariables):
     print(f'Found {number_of} files:')
     pd.set_option("display.max_colwidth", 200)
     print(df_sel["path"])
+    
     return df_sel

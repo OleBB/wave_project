@@ -150,15 +150,23 @@ def plot_filtered(processed_dfs,
         t0 = df_cut["Date"].iloc[0]
         time_ms = (df_cut["Date"] - t0).dt.total_seconds() * 1000
     
-         # Plot it
-        ax.plot(time_ms, df_cut[chosenprobe],
-                label=label,
-                color=color,
-                linestyle=linestyle) 
+        # NEW — automatically uses zeroed signal if it exists
+        probe_num = chosenprobe.split()[-1] # extracts "1" from "Probe 1"
+        zeroed_col = f"eta_{probe_num}"
+        
+        if zeroed_col in df_cut.columns:
+            y_data = df_cut[zeroed_col]
+            ylabel = f"{zeroed_col} (zeroed)"
+        else:
+            y_data = df_cut[chosenprobe]
+            ylabel = chosenprobe
+
+        ax.plot(time_ms, y_data, label=label, color=color, linestyle=linestyle)
+        ax.set_ylabel(ylabel)
 
     ax.set_xlabel("Milliseconds")
     ax.set_ylabel(chosenprobe)
-    ax.set_title(f"{chosenprobe} — smoothed (win={win})")
+    ax.set_title(f"{chosenprobe} — smoothed (window={win})")
     ax.legend()
 
     plt.show()
