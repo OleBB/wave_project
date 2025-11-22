@@ -58,16 +58,18 @@ def plotter_selection(processed_dfs, df_sel, plotvariables):
         print("df_sel sample (first 5):", list(df_sel)[:5])
     except Exception:
         print("Could not list df_sel")
-    print("type(auto_ranges) =", type(auto_ranges))
-    print("auto_ranges keys (first 10):", list(auto_ranges.keys())[:10])
+    #print("type(auto_ranges) =", type(auto_ranges))
+    #print("auto_ranges keys (first 10):", list(auto_ranges.keys())[:10])
 
     # ---- compute plot ranges per path ----
     plot_ranges = {}
+    
     for path in df_sel["path"]: #pleide å være processed_dfs
-        auto_start, auto_end = auto_ranges[path]
-        start = manual_start if manual_start is not None else auto_start
-        end   = manual_end   if manual_end   is not None else auto_end
+        #auto_start, auto_end = auto_ranges[path]
+        start = manual_start if manual_start is not None else None#siste her pleide å være auto
+        end   = manual_end   if manual_end   is not None else None
         plot_ranges[path] = (start, end)
+    
     print('plot ranges variable:',plot_ranges)    
     # ---- RUN SEPARATE PLOTS ----
     if plotvariables["plotting"]["separate"]:

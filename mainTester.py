@@ -51,16 +51,35 @@ df_sel = filter_chosen_files(meta,plotvariables)
 print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
 # - and optional check (or "debug") range 
-processed_dfs, auto_ranges, debug_data = process_selected_data(dfs, df_sel, plotvariables)
+processed_dfs, debug_data = process_selected_data(dfs, df_sel, plotvariables)
 #%% -  Med ferdig processerte dataframes, kan vi plotte dem,
 # === Plot selection separately and/or overlaid ===
 from wavescripts.plotter import plotter_selection
-plotter_selection(processed_dfs, df_sel, auto_ranges, plotvariables)
+plotter_selection(processed_dfs, df_sel, plotvariables)
 
 
 #%%
 #average_simple_amplitude = compute_simple_amplitudes(df_ma, chosenprobe, n_amplitudes) 
 #print('avg simp  amp  = ', average_simple_amplitude)
+pæf = df_sel["path"]
+df_raw = dfs[pæf]
+from wavescripts.processor import find_wave_range
+PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
+for probe in PROBES: #loope over alle 4 kolonnene
+     #smooth the probe
+     print(f'probe in loop is: {probe}')
+     df_ma = apply_moving_average(df_raw, data_cols=probe, win=10)
+     #find the start of the signal
+     start, end, debug_info = find_wave_range(df_raw, 
+                              df_sel,    
+                              data_cols=probe,
+                              detect_win=10, 
+                              debug=True) #her skrur man på debug
+ 
+ #heller hente en oppdatert df_sel?? #df_sel["Calculated start"] = start #pleide å være df_ma her men må jo ha engangsmetadata i metadata. 
+ # === Put the calculated start_idx into
+
+
 
 
 #%%

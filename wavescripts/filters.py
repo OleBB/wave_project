@@ -17,7 +17,6 @@ column_map = {
     "mooring": "Mooring",
 }
 
-#uio GPT:
 def filter_chosen_files(meta, plotvariables):
     """
     meta: pd.DataFrame with columns referenced in column_map
@@ -30,6 +29,11 @@ def filter_chosen_files(meta, plotvariables):
     """
     df_sel = meta.copy()
     filter_values = plotvariables.get("filters", {})
+    """Use .get(..., default) when the key may be absent and you want a
+    safe fallback (common for config-like dicts).
+    Use [] when the key must exist and its absence 
+    should be treated as a bug (so you want an immediate KeyError).
+    """
 
     applied = []  # collect applied filters for debug
 
