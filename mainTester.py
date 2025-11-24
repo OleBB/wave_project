@@ -53,7 +53,9 @@ plotvariables = {
 
 print('# === Filter ===')
 from wavescripts.filters import filter_chosen_files
-df_sel = filter_chosen_files(meta,plotvariables,chooseAll=False)
+meta_sel = filter_chosen_files(meta,
+                             plotvariables,
+                             chooseAll=False)
 #nå har vi de utvalgte: df_sel altså dataframes_selected
 #så da kan vi processere dataframesene slik vi ønsker
 
@@ -61,10 +63,11 @@ print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
 # - and optional check: DEBUG gir noen ekstra printa linjer
 processed_dfs, meta_sel = process_selected_data(dfs, 
-                                                df_sel, 
+                                                meta_sel, 
                                                 meta, 
                                                 debug=True, 
                                                 win=10, 
+                                                find_range=True,
                                                 range_plot=False)
 
 #%%

@@ -235,7 +235,7 @@ def plot_ramp_detection(df, df_sel, data_col,
                               threshold,
                               first_motion_idx,
                               good_start_idx,
-                              good_end_idx,
+                              good_range,
                               title="Ramp Detection Debug"):
 
     time = df["Date"]
@@ -267,17 +267,20 @@ def plot_ramp_detection(df, df_sel, data_col,
     plt.axvline(time.iloc[good_start_idx],
                 color="green", linestyle="--", linewidth=2,
                 label=f"Good start @ {good_start_idx}")
-
+    good_end_idx = good_start_idx+good_range
     plt.axvline(time.iloc[good_end_idx],
                 color="purple", linestyle="--", linewidth=2,
-                label=f"Good end @ {good_end_idx}")
+                label=f"Good end = {good_end_idx}")
 
     # Shaded good region
     plt.axvspan(time.iloc[good_start_idx],
                 time.iloc[good_end_idx],
                 color="green", alpha=0.15)
-    
+    print('nu printes head til df_sel inni plot_ramp_detection')
+    print(df_sel.head())
     thetitle = (df_sel["path"].iat[0])
+    print('printing path for the title ',thetitle)
+    print('printing path for optional title ',df_sel["path"].iat[0])
 
     plt.title(thetitle)
     plt.xlabel("Time")

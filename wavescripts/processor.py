@@ -40,7 +40,7 @@ def find_wave_range(
       - ramp-up lasts ~12 periods
       - stable region has peaks ~280, troughs ~260
 
-    Returns (good_start_idx, good_end_idx)
+    Returns (good_start_idx, good_range)
     """
 
     # ==========================================================
@@ -103,11 +103,11 @@ def find_wave_range(
 
     # 6) Final "good" window
     good_start_idx = first_motion_idx + skip_periods * samples_per_period
-    good_end_idx   = good_start_idx + keep_periods * samples_per_period
+    good_range   = keep_periods * samples_per_period
 
     # Clamp
     good_start_idx = min(good_start_idx, len(signal) - 1)
-    good_end_idx   = min(good_end_idx,   len(signal) - 1)
+    good_range   = min(good_range,   len(signal) - 1)
     
     from wavescripts.plotter import plot_ramp_detection
     if range_plot:
@@ -121,7 +121,7 @@ def find_wave_range(
             threshold=threshold,
             first_motion_idx=first_motion_idx,
             good_start_idx=good_start_idx,
-            good_end_idx=good_end_idx,
+            good_range=good_range,
             title=f"Ramp Detection Debug – {data_col}"
         )
 
@@ -134,7 +134,7 @@ def find_wave_range(
         "keep_periods": keep_periods
     }
 
-    return good_start_idx, good_end_idx, debug_info
+    return good_start_idx, good_range, debug_info
 
 # =============================================== 
 # === Stillwater === #
@@ -223,6 +223,7 @@ def process_selected_data(
     meta_full: pd.DataFrame,
     debug: bool = True,
     win: int = 10,
+    find_range: bool = True,
     range_plot: bool = True
 ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
     """
@@ -278,25 +279,23 @@ def process_selected_data(
         processed_dfs[path] = df
     
     #2. b) #Optional: Find wave range
-    for _, row in meta_sel.iterrows():
-        path = row["path"]
-        
-        df = processed_dfs[path].copy()
-        print("df repr:", repr(df))
-        print("type(df):", type(df))
-        
-        for i in range(1,5):
-            probe = f"Probe {i}"
-            print('nu kjøres indre loop')
-            start, end, debug_info = find_wave_range(df, 
-                                                     meta_sel, 
-                                                     data_col=probe, 
-                                                     detect_win=win, 
-                                                     range_plot=True
-                                                     )
-            probestartcolumn  = f'Computed Probe {i} start'
-            meta_sel[probestartcolumn] = start
-            print('meta_sel sin Computed probe i start...',meta_sel[probestartcolumn])
+    if find_range:
+        for _, row in meta_sel.iterrows():
+            path = row["path"]
+            df = processed_dfs[path].copy()
+          
+            for i in range(1,5):
+                probe = f"Probe {i}"
+                print('nu kjøres indre loop')
+                start, end, debug_info = find_wave_range(df, 
+                                                         meta_sel, 
+                                                         data_col=probe, 
+                                                         detect_win=win, 
+                                                         range_plot=True
+                                                         )
+                probestartcolumn  = f'Computed Probe {i} start'
+                meta_sel[probestartcolumn] = start
+                print('meta_sel sin Computed probe i start...',meta_sel[probestartcolumn])
 
     
     print('start, end og debug(range)_info',start,end, debug_info )
