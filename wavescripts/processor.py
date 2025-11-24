@@ -54,22 +54,18 @@ def find_wave_range(
    
     dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
     Fs = 1.0 / dt
-    importertfrekvens = df_sel.get('frequency', 1.0)  # Use real frequency from metadata if available
-    if isinstance(importertfrekvens, pd.Series):
-        importertfrekvens = importertfrekvens.iloc[0]
-        
-        # ─────── CRITICAL FIX FOR YOUR REAL DATA ───────
-    # Use the ACTUAL frequency from metadata, not 1.0
-    freq_val = df_sel.get('WaveFrequencyInput [Hz]', 1.3)
-    if isinstance(freq_val, pd.Series):
-        importertfrekvens = float(freq_val.iloc[0])
+    
+    # ─────── BULLETPROOF FREQUENCY EXTRACTION (never crashes) ───────
+    freq_raw = df_sel["WaveFrequencyInput [Hz]"] if isinstance(df_sel, pd.Series) else df_sel["WaveFrequencyInput [Hz]"].iloc[0]
+    if pd.isna(freq_raw) or str(freq_raw).strip() in ["", "nan"]:
+        importertfrekvens = 1.3
+        print(f"Warning: No valid frequency found → using fallback {importertfrekvens} Hz")
     else:
-        importertfrekvens = float(freq_val)
+        importertfrekvens = float(freq_raw)
 
     samples_per_period = int(round(Fs / importertfrekvens))
+  
 # ─────────────────────────────────────────────────────────────
-    samples_per_period = int(round(Fs / importertfrekvens))
-    
     # Make ramp detection work on your real, gentle ramp-ups
     min_ramp_peaks = 5
     max_ramp_peaks = 20

@@ -73,7 +73,7 @@ processed_dfs, meta_sel = process_selected_data(dfs,
 #%%
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis
 
-summary_df = wind_damping_analysis(processed_dfs, df_sel, window_ms=(6000, 14000))
+summary_df = wind_damping_analysis(processed_dfs, meta_sel, window_ms=(6000, 14000))
 
 summary = full_tank_diagnostics(processed_dfs, window_ms=(8000, 8100))
 
