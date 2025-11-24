@@ -98,3 +98,42 @@ text1. load_or_update()               → raw dfs + basic meta
 3. Add computed columns directly in meta (no row-wise loop!)
 4. update_processed_metadata(meta) → save
 5. (Optional) Save processed DataFrames with new columns (eta, filtered, etc.)
+
+#%%
+print("Stillwater values and their types:")
+for i in range(1,5):
+    val = stillwater[f"Stillwater Probe {i}"]
+    print(f"  Stillwater Probe {i} → {val!r}  (type: {type(val).__name__})")
+
+#%% skulle debugge når 
+
+#The real culprit is this line:
+#sw = stillwater[f"Stillwater Probe {i}"]
+print("FINDING THE EXACT FILE AND COLUMN THAT CAUSES THE ERROR\n" + "-"*60)
+
+for path in dfs.keys():
+    df = dfs[path]
+    print(f"File: {Path(path).name}")
+    for i in range(1, 5):
+        possible_names = [f"Probe {i}", f"probe {i}", f"Probe{i}", f"probe{i}", str(i)]
+        found = False
+        for name in possible_names:
+            if name in df.columns:
+                col = name
+                found = True
+                break
+        if not found:
+            print(f"  Probe {i} column NOT FOUND in this file!")
+            continue
+
+        # Check if column is numeric
+        series = df[col]
+        if series.dtype == "object" or str(series.dtype).startswith("<U"):
+            # definitely has strings
+            bad_examples = series[pd.to_numeric(series, errors='coerce').isna()].unique()[:10]
+            print(f"  BROKEN → '{col}' contains strings! Examples: {list(bad_examples)}")
+        else:
+            print(f"  OK → '{col}' is numeric ({series.dtype})")
+
+
+
