@@ -231,6 +231,7 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 def plot_ramp_detection(df, df_sel, data_col,
                         signal,
                         baseline_mean,
@@ -282,7 +283,9 @@ def plot_ramp_detection(df, df_sel, data_col,
     # ─────────────────────────────────────────────────────────────────────────────
 
     # Title from filename
-    filename = df_sel["path"].iat[0].split("/")[-1]
+    # New – works whether df_sel is DataFrame or single row (Series)
+    path_value = df_sel["path"] if isinstance(df_sel, pd.Series) else df_sel["path"].iloc[0]
+    filename = str(path_value).split("/")[-1]
     plt.title(f"{filename}  →  {data_col}", fontsize=14, pad=20)
 
     plt.xlabel("Time")

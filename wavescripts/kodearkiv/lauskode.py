@@ -136,4 +136,124 @@ for path in dfs.keys():
             print(f"  OK → '{col}' is numeric ({series.dtype})")
 
 
+#%%.-- denna er vel bare å slette
+################### OLD 
+def old_find_wave_range(
+    df,  
+    df_sel,  # detta er kun metadata for de utvalgte
+    data_col,            
+    detect_win=1,
+    baseline_seconds=2.0,
+    sigma_factor=5.0,
+    skip_periods=None,
+    keep_periods=None,
+    range_plot=True
+):
+    #VARIABEL over^
+    """
+    Detect the start and end of the stable wave interval.
+
+    Signal behavior (based on Ole's description):
+      - baseline mean ~271
+      - wave begins ~5 sec after baseline ends
+      - ramp-up lasts ~12 periods
+      - stable region has peaks ~280, troughs ~260
+
+    Returns (good_start_idx, good_range)
+    """
+
+    # ==========================================================
+    # AUTO-CALCULATE SKIP & KEEP PERIODS BASED ON REAL SIGNAL
+    # ==========================================================
+    importertfrekvens = 1# TK TK BYTT UT med en ekte import fra metadata
+    # ---- Skip: baseline (5 seconds) + ramp-up (12 periods) ----
+    if skip_periods is None:
+        baseline_skip_periods = int(5 * importertfrekvens)        # 5 seconds worth of periods
+        ramp_skip_periods     = 12 #VARIABEL # fixed from your signal observations
+        skip_periods          = baseline_skip_periods + ramp_skip_periods
+
+    # ---- Keep: x stable periods ----
+    if keep_periods is None:
+        keep_periods = 8#int(input_per-8) #VARIABEL
+        
+    # ==========================================================
+    # PROCESSING STARTS HERE
+    # ==========================================================
+    
+    """TODO TK: LEGGE TIL SAMMENLIKNING AV PÅFØLGENDE 
+    BØLGE FOR Å SE STABILT signal. 
+    OG Se på alle bølgetoppene"""
+    
+    """TODO TK: SJEKKE OM lengdene på periodene er like"""
+    
+    """TODO TK: """
+    print(df.columns)
+    print(df.head())
+    print(df.dtypes)
+    print(f"data_col before signal.. {data_col}")
+    # 1) Smooth signal
+    signal = (
+        df[data_col]
+        .rolling(window=detect_win, min_periods=1)
+        .mean()
+        .fillna(0)
+        .values
+    )
+
+    # 2) Sample rate
+    dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
+    Fs = 1.0 / dt
+
+    # 3) Baseline mean/std
+    baseline_samples = int(baseline_seconds * Fs)
+    baseline = signal[:baseline_samples]
+    baseline_mean = np.mean(baseline)
+    baseline_std  = np.std(baseline)
+
+    threshold = sigma_factor * baseline_std
+    movement = np.abs(signal - baseline_mean)
+
+    # 4) First actual movement above noise floor
+    first_motion_idx = np.argmax(movement > threshold)
+
+    # 5) Convert frequency → samples per period
+    T = 1.0 / float(importertfrekvens)
+    samples_per_period = int(Fs * T)
+
+    # 6) Final "good" window
+    good_start_idx = first_motion_idx + skip_periods * samples_per_period
+    good_range   = round(keep_periods * samples_per_period)
+
+    # Clamp so that the last value is a real one
+    good_start_idx = min(good_start_idx, len(signal) - 1)
+    #good_range   = min(good_range,   len(signal) - 1)
+    
+    print('nu printes good start_idx', good_start_idx)
+    print('nu printes good range', good_range)
+    from wavescripts.plotter import plot_ramp_detection
+    if range_plot:
+        print('nu kjøres range_plot')
+        plot_ramp_detection(
+            df=df,
+            df_sel=df_sel,
+            data_col=data_col,
+            signal=signal,
+            baseline_mean=baseline_mean,
+            threshold=threshold,
+            first_motion_idx=first_motion_idx,
+            good_start_idx=good_start_idx,
+            good_range=good_range,
+            title=f"Ramp Detection Debug – {data_col}"
+        )
+
+    debug_info = {
+        "baseline_mean": baseline_mean,
+        "baseline_std": baseline_std,
+        "first_motion_idx": first_motion_idx,
+        "samples_per_period": samples_per_period,
+        "skip_periods": skip_periods,
+        "keep_periods": keep_periods
+    }
+
+    return good_start_idx, good_range, debug_info
 
