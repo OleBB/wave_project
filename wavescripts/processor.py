@@ -19,7 +19,235 @@ import matplotlib.pyplot as plt
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
+from scipy.signal import find_peaks
+
 def find_wave_range(
+    df,
+    df_sel,  # metadata for selected files
+    data_col,
+    detect_win=1,
+    baseline_seconds=2.0,
+    sigma_factor=5.0,
+    skip_periods=None,
+    keep_periods=None,
+    range_plot=True,
+    min_ramp_peaks=5,
+    max_ramp_peaks=15,
+    max_dips_allowed=1,
+    min_growth_factor=2.0,   # final amp must be at least 2x first
+):
+    """
+    Intelligent detection of stable oscillation phase using peak amplitude ramp-up.
+    Replaces crude "skip 5s + 12 periods" with actual detection of monotonic increase.
+    """
+    # ==========================================================
+    # 1. Basic preprocessing
+    # ==========================================================
+    signal_smooth = (
+        df[data_col]
+        .rolling(window=detect_win, center=True, min_periods=1)
+        .mean()
+        .bfill().ffill()
+        .values
+    )
+    
+   
+    dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
+    Fs = 1.0 / dt
+    importertfrekvens = df_sel.get('frequency', 1.0)  # Use real frequency from metadata if available
+    if isinstance(importertfrekvens, pd.Series):
+        importertfrekvens = importertfrekvens.iloc[0]
+        
+        # ─────── CRITICAL FIX FOR YOUR REAL DATA ───────
+    # Use the ACTUAL frequency from metadata, not 1.0
+    freq_val = df_sel.get('WaveFrequencyInput [Hz]', 1.3)
+    if isinstance(freq_val, pd.Series):
+        importertfrekvens = float(freq_val.iloc[0])
+    else:
+        importertfrekvens = float(freq_val)
+
+    samples_per_period = int(round(Fs / importertfrekvens))
+# ─────────────────────────────────────────────────────────────
+    samples_per_period = int(round(Fs / importertfrekvens))
+    
+    # Make ramp detection work on your real, gentle ramp-ups
+    min_ramp_peaks = 5
+    max_ramp_peaks = 20
+    max_dips_allowed = 2
+    min_growth_factor = 1.015   # 1.5% total growth is enough (your ramp is slow!)
+# ───────────────────────────────────────────────
+    samples_per_period = int(round(Fs / importertfrekvens))
+
+    # ==========================================================
+    # 2. Baseline & first motion (still useful for rough start)
+    # ==========================================================
+    baseline_samples = int(baseline_seconds * Fs)
+    baseline = signal_smooth[:baseline_samples]
+    baseline_mean = np.mean(baseline)
+    baseline_std = np.std(baseline)
+    threshold = baseline_mean + sigma_factor * baseline_std
+
+    above_noise = signal_smooth > threshold
+    first_motion_idx = np.argmax(above_noise) if np.any(above_noise) else 0
+
+    # ==========================================================
+    # 3. Peak detection on absolute signal (handles both positive/negative swings)
+    # ==========================================================
+    # Use prominence and distance tuned to your frequency
+    min_distance = max(3, samples_per_period // 3)  # at least 1/3 period apart
+    peaks, properties = find_peaks(
+        np.abs(signal_smooth),
+        distance=min_distance,
+        prominence=0.5 * baseline_std,  # ignore tiny noise peaks
+        height=threshold
+    )
+
+    if len(peaks) < min_ramp_peaks + 3:
+        print("Not enough peaks detected – falling back to legacy method")
+        # Legacy fallback
+        skip_periods = skip_periods or (5 + 12)
+        keep_periods = keep_periods or 8
+        good_start_idx = first_motion_idx + int(skip_periods * samples_per_period)
+        good_range = int(keep_periods * samples_per_period)
+        good_range = min(good_range, len(df) - good_start_idx)
+        return good_start_idx, good_range, {}
+
+    peak_amplitudes = np.abs(signal_smooth[peaks])
+
+    # ==========================================================
+    # 4. Ramp-up detection: nearly monotonic increase with ≤1 dip
+    # ==========================================================
+    def find_best_ramp(seq, min_len=5, max_len=15, max_dips=1, min_growth=2.0):
+        n = len(seq)
+        best_start = best_end = -1
+        best_len = 0
+        best_dips = 99
+
+        for length in range(min_len, min(max_len + 1, n)):
+            for start in range(n - length + 1):
+                end = start + length - 1
+                sub = seq[start:end + 1]
+
+                dips = sum(1 for i in range(1, len(sub)) if sub[i] <= sub[i - 1])
+                growth_ok = sub[-1] >= sub[0] * min_growth
+
+                if dips <= max_dips and growth_ok:
+                    if length > best_len or (length == best_len and dips < best_dips):
+                        best_start, best_end = start, end
+                        best_len = length
+                        best_dips = dips
+
+        if best_start == -1:
+            return None
+        return best_start, best_end, seq[best_start:best_end + 1]
+
+    ramp_result = find_best_ramp(
+        peak_amplitudes,
+        min_len=min_ramp_peaks,
+        max_len=max_ramp_peaks,
+        max_dips=max_dips_allowed,
+        min_growth=min_growth_factor
+    )
+
+    if ramp_result is None:
+        print("No clear ramp-up found – using legacy timing")
+        skip_periods = skip_periods or (5 + 12)
+        keep_periods = keep_periods or 8
+        good_start_idx = first_motion_idx + int(skip_periods * samples_per_period)
+    else:
+        ramp_start_peak_idx, ramp_end_peak_idx, ramp_seq = ramp_result
+        print(f"RAMP-UP DETECTED: {len(ramp_seq)} peaks, "
+              f"from {ramp_seq[0]:.2f} → {ramp_seq[-1]:.2f} (x{ramp_seq[-1]/ramp_seq[0]:.1f})")
+
+        # Convert last ramp peak → sample index
+        last_ramp_sample_idx = peaks[ramp_end_peak_idx]
+
+        # Stable phase starts right after ramp-up
+        good_start_idx = last_ramp_sample_idx + samples_per_period // 4  # small safety margin
+        keep_periods = keep_periods or 10
+
+    # Final stable window
+    good_range = int(keep_periods * samples_per_period)
+    good_start_idx = min(good_start_idx, len(df) - good_range - 1)
+    good_range = min(good_range, len(df) - good_start_idx)
+
+    # ==========================================================
+    # 5. Plotting (enhanced with peak highlighting)
+    # ==========================================================
+    # ADD THIS BLOCK AND RUN – IT WILL STOP AFTER ONE FILE
+    if 'dumped' not in locals():   # only once
+        print("\n=== SIGNAL FOR GROK (downsampled 200:1) ===")
+        print("value")
+        # print("\n".join(f"{x:.5f}" for x in df[data_col].values[::200]))  # every 200th point
+        # print("=== FULL STATS ===")
+        print(f"total_points: {len(df)}")
+        print(f"dt_sec: {dt:.6f}")
+        print(f"frequency_hz: {importertfrekvens}")
+        print(f"samples_per_period: {samples_per_period}")
+        print(f"baseline_mean: {baseline_mean:.4f}")
+        print(f"baseline_std: {baseline_std:.4f}")
+        print(f"first_motion_idx: {first_motion_idx}")
+        print("=== PEAKS (index, value) ===")
+        peaks_abs = np.abs(signal_smooth[peaks]) if 'peaks' in locals() and len(peaks)>0 else []
+        for i, (pidx, pval) in enumerate(zip(peaks[:30], peaks_abs[:30])):  # max 30 peaks
+            print(f"{pidx:5d} -> {pval:.5f}")
+        if len(peaks) > 30:
+            print("... (more peaks exist)")
+        print("=== END – COPY ALL ABOVE AND SEND TO GROK ===")
+        dumped = True
+        #import sys; sys.exit(0)
+        
+    # ==========================================================
+    # 5. Plotting – safe version that works with your current plot_ramp_detection
+    # ==========================================================
+    if range_plot:
+        try:
+            from wavescripts.plotter import plot_ramp_detection
+
+            # Build kwargs only with arguments your current function actually accepts
+            plot_kwargs = {
+                "df": df,
+                "df_sel": df_sel,
+                "data_col": data_col,
+                "signal": signal_smooth,
+                "baseline_mean": baseline_mean,
+                "threshold": threshold,
+                "first_motion_idx": first_motion_idx,
+                "good_start_idx": good_start_idx,
+                "good_range": good_range,
+                "title": f"Smart Ramp Detection – {data_col}"
+            }
+
+            # Only add new arguments if we have them and ramp was found
+            if 'peaks' in locals() and ramp_result is not None:
+                plot_kwargs["peaks"] = peaks
+                plot_kwargs["peak_amplitudes"] = peak_amplitudes
+                ramp_peak_samples = peaks[ramp_result[0]:ramp_result[1]+1]
+                plot_kwargs["ramp_peak_indices"] = ramp_peak_samples
+
+            plot_ramp_detection(**plot_kwargs)
+
+        except Exception as e:
+            print(f"Plot failed (will work after you update plotter): {e}")
+
+    debug_info = {
+        "baseline_mean": baseline_mean,
+        "baseline_std": baseline_std,
+        "first_motion_idx": first_motion_idx,
+        "samples_per_period": samples_per_period,
+        "detected_peaks": len(peaks),
+        "ramp_found": ramp_result is not None,
+        "ramp_length_peaks": len(ramp_result[2]) if ramp_result else None,
+        "keep_periods_used": keep_periods,
+    }
+
+    return good_start_idx, good_range, debug_info
+
+
+
+
+################### OLD 
+def old_find_wave_range(
     df,  
     df_sel,  # detta er kun metadata for de utvalgte
     data_col,            
@@ -103,12 +331,14 @@ def find_wave_range(
 
     # 6) Final "good" window
     good_start_idx = first_motion_idx + skip_periods * samples_per_period
-    good_range   = keep_periods * samples_per_period
+    good_range   = round(keep_periods * samples_per_period)
 
-    # Clamp
+    # Clamp so that the last value is a real one
     good_start_idx = min(good_start_idx, len(signal) - 1)
-    good_range   = min(good_range,   len(signal) - 1)
+    #good_range   = min(good_range,   len(signal) - 1)
     
+    print('nu printes good start_idx', good_start_idx)
+    print('nu printes good range', good_range)
     from wavescripts.plotter import plot_ramp_detection
     if range_plot:
         print('nu kjøres range_plot')
@@ -286,7 +516,7 @@ def process_selected_data(
           
             for i in range(1,5):
                 probe = f"Probe {i}"
-                print('nu kjøres indre loop')
+                print('nu kjøres indre loop i 2.b) i process_selected_data')
                 start, end, debug_info = find_wave_range(df, 
                                                          meta_sel, 
                                                          data_col=probe, 

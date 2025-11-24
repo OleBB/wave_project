@@ -229,7 +229,71 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
 
 #%% ##
 
+import matplotlib.pyplot as plt
+import numpy as np
 def plot_ramp_detection(df, df_sel, data_col,
+                        signal,
+                        baseline_mean,
+                        threshold,
+                        first_motion_idx,
+                        good_start_idx,
+                        good_range,
+                        peaks=None,
+                        peak_amplitudes=None,
+                        ramp_peak_indices=None,
+                        title="Ramp Detection Debug"):
+    time = df["Date"].values
+    raw = df[data_col].values
+
+    plt.figure(figsize=(15, 7))
+
+    # 1. Plot raw + smoothed
+    plt.plot(time, raw, color="lightgray", alpha=0.6, label="Raw signal")
+    plt.plot(time, signal, color="black", linewidth=2, label=f"Smoothed {data_col}")
+
+    # 2. Baseline & threshold
+    plt.axhline(baseline_mean, color="blue", linestyle="--", label=f"Baseline = {baseline_mean:.2f} mm")
+    plt.axhline(baseline_mean + threshold, color="red", linestyle=":", alpha=0.7)
+    plt.axhline(baseline_mean - threshold, color="red", linestyle=":", alpha=0.7)
+
+    # 3. First motion
+    plt.axvline(time[first_motion_idx], color="orange", linewidth=2, linestyle="--",
+                label=f"First motion #{first_motion_idx}")
+
+    # 4. Good stable interval
+    good_start_idx = int(good_start_idx)
+    good_end_idx = min(len(time) - 1, good_start_idx + int(good_range) - 1)
+
+    plt.axvline(time[good_start_idx], color="green", linewidth=3, label=f"Stable start #{good_start_idx}")
+    plt.axvline(time[good_end_idx], color="purple", linewidth=2, linestyle="--", label=f"End #{good_end_idx}")
+    plt.axvspan(time[good_start_idx], time[good_end_idx], color="green", alpha=0.15, label="Stable region")
+
+    # 5. Optional: highlight detected peaks and ramp-up
+    if peaks is not None:
+        plt.plot(time[peaks], signal[peaks], "ro", markersize=6, alpha=0.7, label="Detected peaks")
+    if ramp_peak_indices is not None:
+        plt.plot(time[ramp_peak_indices], signal[ramp_peak_indices],
+                 "o", color="lime", markersize=10, markeredgecolor="darkgreen", markeredgewidth=2,
+                 label=f"Ramp-up ({len(ramp_peak_indices)} peaks)")
+
+    # ────────────────── MAGIC ZOOM THAT MAKES THE WAVE VISIBLE ──────────────────
+    zoom_margin = 15  # mm above/below baseline — perfect for your ±8 mm waves
+    plt.ylim(baseline_mean - zoom_margin, baseline_mean + zoom_margin)
+    # ─────────────────────────────────────────────────────────────────────────────
+
+    # Title from filename
+    filename = df_sel["path"].iat[0].split("/")[-1]
+    plt.title(f"{filename}  →  {data_col}", fontsize=14, pad=20)
+
+    plt.xlabel("Time")
+    plt.ylabel("Water level [mm]")
+    plt.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+#%%
+def old_plot_ramp_detection(df, df_sel, data_col,
                               signal,
                               baseline_mean,
                               threshold,
@@ -264,18 +328,54 @@ def plot_ramp_detection(df, df_sel, data_col,
                 label=f"First motion @ {first_motion_idx}")
 
     # Good interval start / end
+    # plt.axvline(time.iloc[good_start_idx],
+                # color="green", linestyle="--", linewidth=2,
+                # label=f"Good start @ {good_start_idx}")
+    # good_end_idx = good_start_idx+good_range
+    # plt.axvline(time.iloc[good_end_idx],
+                # color="purple", linestyle="--", linewidth=2,
+                # label=f"Good end = {good_end_idx}")
+    #####################
+        # Good interval start / end
+    # Ensure indices are integers
+    good_start_idx = int(good_start_idx)
+    good_range = int(good_range)
+    
+    # Compute inclusive end (if good_range is a number of samples you want to KEEP,
+    # then the last included index is good_start_idx + good_range - 1.
+    # If your good_range already represents an inclusive offset, remove the -1.)
+    computed_end = good_start_idx + good_range - 1
+    
+    # Clamp computed_end into the valid index range [0, len(time)-1]
+    last_valid_idx = len(time) - 1
+    good_end_idx = min(max(0, computed_end), last_valid_idx)
+    
+    # If clamping changed the end, adjust good_range if you rely on it later
+    good_range = max(0, good_end_idx - good_start_idx + 1)
+    
     plt.axvline(time.iloc[good_start_idx],
                 color="green", linestyle="--", linewidth=2,
                 label=f"Good start @ {good_start_idx}")
-    good_end_idx = good_start_idx+good_range
     plt.axvline(time.iloc[good_end_idx],
                 color="purple", linestyle="--", linewidth=2,
                 label=f"Good end = {good_end_idx}")
-
+    
+    # Only draw the shaded region if start <= end
+    if good_start_idx <= good_end_idx:
+        plt.axvspan(time.iloc[good_start_idx],
+                    time.iloc[good_end_idx],
+                    color="green", alpha=0.15)
+    else:
+        # Optional: warn or log that the computed interval was invalid
+        print(f"Warning: computed good interval invalid: start={good_start_idx}, end={good_end_idx}")
+    
+        
+    
+    #############
     # Shaded good region
-    plt.axvspan(time.iloc[good_start_idx],
-                time.iloc[good_end_idx],
-                color="green", alpha=0.15)
+    #plt.axvspan(time.iloc[good_start_idx],
+                # time.iloc[good_end_idx],
+                # color="green", alpha=0.15)
     print('nu printes head til df_sel inni plot_ramp_detection')
     print(df_sel.head())
     thetitle = (df_sel["path"].iat[0])
@@ -305,3 +405,4 @@ def plot_ramp_detection(df, df_sel, data_col,
 
 
 
+# 
