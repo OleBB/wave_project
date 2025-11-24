@@ -60,11 +60,12 @@ df_sel = filter_chosen_files(meta,plotvariables,chooseAll=False)
 print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
 # - and optional check: DEBUG gir noen ekstra printa linjer
-processed_dfs, meta_sel = process_selected_data(dfs, df_sel,meta,debug=True,win=10)
-#%% - and optional check: SEE = TRUE gir plott av wave-range.
-eller skal dette gjøres via procesoren?
-from wavescripts.processor import plot_ramp_detection
-plot_ramp_detection(df, meta_sel, data_col, signal, baseline_mean, threshold, firstmotion_idx, good_start_idx, good_end_idx, title)
+processed_dfs, meta_sel = process_selected_data(dfs, 
+                                                df_sel, 
+                                                meta, 
+                                                debug=True, 
+                                                win=10, 
+                                                range_plot=False)
 
 #%%
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis

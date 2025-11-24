@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
 def find_wave_range(
-    df, #detta er jo heile dicten... hadde 
+    df,  
     df_sel,  # detta er kun metadata for de utvalgte
     data_col,            
     detect_win=1,
@@ -28,7 +28,7 @@ def find_wave_range(
     sigma_factor=5.0,
     skip_periods=None,
     keep_periods=None,
-    debug=False
+    range_plot=True
 ):
     #VARIABEL over^
     """
@@ -68,7 +68,9 @@ def find_wave_range(
     """TODO TK: SJEKKE OM lengdene på periodene er like"""
     
     """TODO TK: """
-    
+    print(df.columns)
+    print(df.head())
+    print(df.dtypes)
     print(f"data_col before signal.. {data_col}")
     # 1) Smooth signal
     signal = (
@@ -108,7 +110,8 @@ def find_wave_range(
     good_end_idx   = min(good_end_idx,   len(signal) - 1)
     
     from wavescripts.plotter import plot_ramp_detection
-    if debug:
+    if range_plot:
+        print('nu kjøres range_plot')
         plot_ramp_detection(
             df=df,
             df_sel=df_sel,
@@ -134,7 +137,7 @@ def find_wave_range(
     return good_start_idx, good_end_idx, debug_info
 
 # =============================================== 
-# === Take in a filtered subset then process === #
+# === Stillwater === #
 # ===============================================
 from wavescripts.data_loader import update_processed_metadata
 from wavescripts.data_loader import save_processed_dataframes
@@ -220,6 +223,7 @@ def process_selected_data(
     meta_full: pd.DataFrame,
     debug: bool = True,
     win: int = 10,
+    range_plot: bool = True
 ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
     """
     Zeroes all selected runs using the shared stillwater levels.
@@ -277,12 +281,25 @@ def process_selected_data(
     for _, row in meta_sel.iterrows():
         path = row["path"]
         
-        df = processed_dfs[path].copy
+        df = processed_dfs[path].copy()
+        print("df repr:", repr(df))
+        print("type(df):", type(df))
         
-    
-        find_wave_range(df_raw, df_sel,data_col=probe, detect_win=detect_window, debug=False)   
+        for i in range(1,5):
+            probe = f"Probe {i}"
+            print('nu kjøres indre loop')
+            start, end, debug_info = find_wave_range(df, 
+                                                     meta_sel, 
+                                                     data_col=probe, 
+                                                     detect_win=win, 
+                                                     range_plot=True
+                                                     )
+            probestartcolumn  = f'Computed Probe {i} start'
+            meta_sel[probestartcolumn] = start
+            print('meta_sel sin Computed probe i start...',meta_sel[probestartcolumn])
 
     
+    print('start, end og debug(range)_info',start,end, debug_info )
     
     # 3. Make sure meta_sel has the stillwater columns too (for plotting later)
     for i in range(1, 5):
