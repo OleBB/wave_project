@@ -210,6 +210,10 @@ def ensure_stillwater_columns(
 
     return meta
 
+
+# =============================================== 
+# === Take in a filtered subset then process === #
+# ===============================================
 def process_selected_data(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
@@ -237,7 +241,7 @@ def process_selected_data(
     if debug:
         print(f"Using stillwater levels: {stillwater}")
 
-    # 2. Process only the selected runs
+    # 2.a) Process only the selected runs
     processed_dfs = {}
 
     for _, row in meta_sel.iterrows():
@@ -268,7 +272,18 @@ def process_selected_data(
                 print(f"  {Path(path).name:35} → eta_{i} mean = {df[eta_col].mean():.4f} mm")
 
         processed_dfs[path] = df
+    
+    #2. b) #Optional: Find wave range
+    for _, row in meta_sel.iterrows():
+        path = row["path"]
+        
+        df = processed_dfs[path].copy
+        
+    
+        find_wave_range(df_raw, df_sel,data_col=probe, detect_win=detect_window, debug=False)   
 
+    
+    
     # 3. Make sure meta_sel has the stillwater columns too (for plotting later)
     for i in range(1, 5):
         col = f"Stillwater Probe {i}"
@@ -294,7 +309,8 @@ def process_selected_data(
     print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
     return processed_dfs, meta_sel
 
-def process_selected_data_old(
+################### GAMMAL KODE ########################
+def old_process_selected_data_old(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
     meta_full: pd.DataFrame,   # full meta of the experiment
@@ -359,7 +375,7 @@ def process_selected_data_old(
 # === OLD OLD OLD Take in a filtered subset then process === #
 # ===============================================
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
-def process_selected_data_old(dfs, df_sel, plotvariables):
+def older_process_selected_data_old(dfs, df_sel, plotvariables):
     processed = {}
     debug_data ={}
     win      = plotvariables["processing"]["win"]
