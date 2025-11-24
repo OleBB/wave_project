@@ -68,7 +68,7 @@ processed_dfs, meta_sel = process_selected_data(dfs,
                                                 debug=True, 
                                                 win=10, 
                                                 find_range=True,
-                                                range_plot=False)
+                                                range_plot=True)
 
 #%%
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis
