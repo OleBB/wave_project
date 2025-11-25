@@ -46,7 +46,7 @@ plotvariables = {
         
     }
 }
-#
+# alternativt importere plotvariabler
 #import json
 #with open("plotsettings.json") as f:_
 #      plotvariables = json.load(f)
@@ -56,8 +56,8 @@ from wavescripts.filters import filter_chosen_files
 meta_sel = filter_chosen_files(meta,
                              plotvariables,
                              chooseAll=False)
-#nå har vi de utvalgte: df_sel altså dataframes_selected
-#så da kan vi processere dataframesene slik vi ønsker
+#nå har vi de utvalgte: meta_sel altså metadataframes_selected
+
 
 print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
@@ -73,12 +73,17 @@ processed_dfs, meta_sel = process_selected_data(dfs,
 #%%
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis
 
-summary_df = wind_damping_analysis(processed_dfs, meta_sel, window_ms=(6000, 14000))
+window_ms = (6000,7000)# TK, må få funksjonene til å ta inn wave range,mao, startverdi og rangeverdi
+#... fra meta_sel, evt fra en reloadet meta. 
+#%%
+summary_df = wind_damping_analysis(processed_dfs, meta_sel, window_ms)
 
-summary = full_tank_diagnostics(processed_dfs, window_ms=(8000, 8100))
+summary = full_tank_diagnostics(processed_dfs, window_ms)
 
-
-overview = amplitude_overview(processed_dfs, window_ms=(5000, 15000))
+#%%
+overview = amplitude_overview(processed_dfs, window_ms)
+#to måter å få ut første verdien fra dictionary
+#next(iter(processed_dfs.values())) #uten .values får man key, eller så kan man skrive .keys, og .item gir tuple med key og value.
 # Pick any file
 df = list(processed_dfs.values())[0]
 print('name:' ,df.head())
@@ -89,27 +94,39 @@ for i in range(1,5):
     if col in df.columns:
         amp = (df[col].quantile(0.99) - df[col].quantile(0.01)) / 2
         print(f"  Probe {i}: {amp:.1f} mm  →  {'PROBABLY BAD' if amp > 50 else 'OK'}")
+#%%
+col1 = "eta_2"
+col2 = "eta_3"
+start_ms = 6000
+end_ms = 7000
+result = compare_probe_amplitudes_and_lag(df,col1, col2, start_ms, end_ms)
 
-result = compare_probe_amplitudes_and_lag(df, start_ms=6000, end_ms=7000)
-res = compare_probe_amplitudes_and_lag(df, start_ms=5000, end_ms=15000)
+res = compare_probe_amplitudes_and_lag(df, col1, col2, start_ms, end_ms)
 
-window = df.loc[5000:15000]
-t = (window.index - window.index[0]) / 1000  # seconds
+window = df.loc[start_ms:end_ms]
+t = (window.index - window.index[0]) #/ 1000  #seconds
 
 import matplotlib.pyplot as plt
 plt.figure(figsize=(10,4))
 plt.plot(t, window["eta_2"], label="Probe 2", alpha=0.8)
-plt.plot(t, window["eta_3"] - res["lag_ms"], label=f"Probe 3 (shifted -{res['lag_ms']:.0f}ms)", alpha=0.8)
+plt.plot(t - res["lag_ms"], window["eta_3"], label=f"Probe 3 (shifted -{res['lag_ms']:.0f}ms)", alpha=0.8)
 plt.legend()
-plt.xlabel("Time [s]")
+plt.xlabel("milliseconds")
 plt.ylabel("Elevation [mm]")
 plt.title("Perfect alignment after time-shift correction")
 plt.grid(alpha=0.3)
 plt.show()
-  #%% -  Med ferdig processerte dataframes, kan vi plotte dem,
-# === Plot selection separately and/or overlaid ===
-from wavescripts.plotter import plotter_selection
-plotter_selection(processed_dfs, df_sel, plotvariables)
+
+#%% - Create a "report"  - but currently its really just a table with df data. 
+from wavescripts.create_report import markdown_report_from_df
+markdown_report_from_df(df,
+                            title="Wave Tank Analysis Report",
+                            subtitle="a preliminary draft",
+                            out_path="report.md",
+                            plots_folder="reportplots",
+                            save_plots=True,
+                            max_rows=50)
+
 #%%
 
 # Step 1: Load raw data + basic metadata

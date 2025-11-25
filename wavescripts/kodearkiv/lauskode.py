@@ -257,3 +257,103 @@ def old_find_wave_range(
 
     return good_start_idx, good_range, debug_info
 
+### klippet vekk fra processor:
+    
+    ################### GAMMAL KODE ########################
+    def old_process_selected_data_old(
+        dfs: dict[str, pd.DataFrame],
+        meta_sel: pd.DataFrame,
+        meta_full: pd.DataFrame,   # full meta of the experiment
+        debug: bool = True,
+        win: int = 10,
+    ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
+
+        # 1. Ensure stillwater levels exist (idempotent — safe to call anytime)
+        meta_full = ensure_stillwater_columns(dfs, meta_full)
+
+        # Extract the values (they are the same in every row!)
+        stillwater = {f"Stillwater Probe {i}": meta_full[f"Stillwater Probe {i}"].iloc[0] for i in range(1,5)}
+
+        for i in range(1,5):
+            val = stillwater[f"Stillwater Probe {i}"]
+            print(f"  Stillwater Probe {i} → {val!r}  (type: {type(val).__name__})")
+        print(f'stillwater = hva , jo: {stillwater}')
+        # 2. Process only selected runs
+        processed_dfs = {}
+        for _, row in meta_sel.iterrows():
+            path = row["path"]
+            df = dfs[path].copy()
+            # Clean columns once and for all
+            for i in range(1, 5):
+                col = f"Probe {i}"                    
+            for i in range(1, 5):
+                probe = f"Probe {2}"
+                sw = stillwater[f"Stillwater Probe {i}"] 
+                df[f"eta_{i}"] = df[probe] - sw
+                df[f"{probe}_ma"] = df[f"eta_{i}"].rolling(win, center=False).mean()
+        
+            processed_dfs[path] = df
+        
+        # Add stillwater columns to meta_sel too (in case they were missing)
+        for col, val in stillwater.items():
+            if col not in meta_sel.columns:
+                meta_sel[col] = val
+        #for kolonne, value in dfs[riktig path]:
+        
+            # === DEBUG === #
+        #find_wave_range(df_raw, df_sel,data_col=probe, detect_win=detect_window, debug=False)   
+        
+        # Ensure meta_sel knows which folder to save into
+        if "PROCESSED_folder" not in meta_sel.columns:
+            if "PROCESSED_folder" in meta_full.columns:
+                folder = meta_full["PROCESSED_folder"].iloc[0]
+            elif "experiment_folder" in meta_full.columns:
+                folder = "PROCESSED-" + meta_full["experiment_folder"].iloc[0]
+            else:
+                raw_folder = Path(meta_full["path"].iloc[0]).parent.name
+                folder = f"PROCESSED-{raw_folder}"
+            
+            meta_sel["PROCESSED_folder"] = folder
+            print(f"Set PROCESSED_folder = {folder}")
+
+        update_processed_metadata(meta_sel)
+
+        return processed_dfs, meta_sel
+
+    #######################
+    # =============================================== 
+    # === OLD OLD OLD Take in a filtered subset then process === #
+    # ===============================================
+    PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
+    def older_process_selected_data_old(dfs, df_sel, plotvariables):
+        processed = {}
+        debug_data ={}
+        win      = plotvariables["processing"]["win"]
+
+        for _, row in df_sel.iterrows():
+            path = row["path"]
+            df_raw = dfs[path]
+            print("type(df_raw) =", type(df_raw))
+        
+            detect_window = 1 #10 er default i find_wave_range
+            
+            # === PROCESS ALL THE PROBES === #
+            for probe in PROBES: #loope over alle 4 kolonnene
+                print(f'probe in loop is: {probe}')
+                # --- Apply moving avg. to the selected df_ma for each >probe in PROBES< 
+                df_ma = apply_moving_average(df_raw, data_col=probe, win=win)
+                print(f'df-ma per {probe} sitt tail:',df_ma[probe].tail())
+                
+                # find the start of the signal and optionally run the debug-plot
+                start, end, debug_info = find_wave_range(df_raw, 
+                                         df_sel,    
+                                         data_col=probe,
+                                         detect_win=detect_window, 
+                                         debug=False) 
+                df_sel[f"Computed {probe} start"] = start
+            processed[path] = df_ma
+            debug_data[path] = debug_info
+        return processed, df_sel, debug_data 
+
+
+    ######################
