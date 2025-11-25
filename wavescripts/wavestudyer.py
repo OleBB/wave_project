@@ -12,16 +12,18 @@ import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
 
 def compare_probe_amplitudes_and_lag(df, 
-                                   col1="eta_1", 
-                                   col2="eta_2",
-                                   start_ms=5000,   # where the nice waves start
-                                   end_ms=15000):   # where they end
+                                   col1, 
+                                   col2,
+                                   start_ms,   # where the nice waves start
+                                   end_ms):   # where they end
     """
     Returns amplitude and time lag between two probes in a clean interval.
     """
     # 1. Cut the good part
     window = df.loc[start_ms:end_ms]
-
+    print('nu printes df.loc[start_ms]')
+    print(df.loc[start_ms])
+    
     s1 = window[col1].values
     s2 = window[col2].values
     time_ms = window.index.values  # assuming index is milliseconds
@@ -58,7 +60,7 @@ def compare_probe_amplitudes_and_lag(df,
     lag_ms = lags[np.argmax(corr)] * (time_ms[1] - time_ms[0])  # convert samples → ms
 
     # Convert to distance (if you know probe spacing!)
-    probe_distance_mm = 500  # CHANGE THIS: actual distance between Probe 1 and 2 in mm
+    probe_distance_mm = 500  # TK TODO CHANGE THIS: actual distance between Probe 1 and 2 in mm
     celerity_m_s = probe_distance_mm / 1000 / (abs(lag_ms)/1000) if lag_ms != 0 else np.inf
 
     # Print beautiful result
@@ -78,7 +80,7 @@ def compare_probe_amplitudes_and_lag(df,
 
 from pathlib import Path
 
-def amplitude_overview(processed_dfs, window_ms=(5000, 15000)):
+def amplitude_overview(processed_dfs, window_ms):
     start_ms, end_ms = window_ms
     results = []
 
@@ -154,7 +156,7 @@ import pandas as pd
 from pathlib import Path
 from scipy.signal import correlate
 
-def full_tank_diagnostics(processed_dfs, window_ms=(5000, 15000)):
+def full_tank_diagnostics(processed_dfs,window_ms):
     start_ms, end_ms = window_ms
     results = []
 
