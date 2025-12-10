@@ -23,6 +23,7 @@ print("Loaded:", len(dfs), "dataframes")
 from wavescripts.processor import remove_outliers, compute_simple_amplitudes
 #%%
 # === Config ===
+chooseAll = False
 plotvariables = {
     "filters": {
         "amp": 0.1, #0.1, 0.2, 0.3 
@@ -45,6 +46,7 @@ plotvariables = {
         "overlay": False
         
     }
+    
 }
 # alternativt importere plotvariabler
 #import json
@@ -156,7 +158,7 @@ update_processed_metadata(meta)
 #%%
 #average_simple_amplitude = compute_simple_amplitudes(df_ma, chosenprobe, n_amplitudes) 
 #print('avg simp  amp  = ', average_simple_amplitude)
-pæf = df_sel["path"]
+pæf = meta_sel["path"]
 df_raw = dfs[pæf]
 from wavescripts.processor import find_wave_range
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
@@ -166,7 +168,7 @@ for probe in PROBES: #loope over alle 4 kolonnene
      df_ma = apply_moving_average(df_raw, data_cols=probe, win=10)
      #find the start of the signal
      start, end, debug_info = find_wave_range(df_raw, 
-                              df_sel,    
+                              meta_sel,    
                               data_cols=probe,
                               detect_win=10, 
                               debug=True) #her skrur man på debug

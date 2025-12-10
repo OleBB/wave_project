@@ -9,7 +9,9 @@ Created on Sat Nov 22 22:01:11 2025
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, correlate
+from pathlib import Path
+
 
 def compare_probe_amplitudes_and_lag(df, 
                                    col1, 
@@ -78,7 +80,7 @@ def compare_probe_amplitudes_and_lag(df,
         "celerity_m_s": celerity_m_s
     }
 
-from pathlib import Path
+
 
 def amplitude_overview(processed_dfs, window_ms):
     start_ms, end_ms = window_ms
@@ -151,10 +153,7 @@ def amplitude_overview(processed_dfs, window_ms):
     print("="*110)
     return pd.DataFrame(results)
 
-import numpy as np
-import pandas as pd
-from pathlib import Path
-from scipy.signal import correlate
+
 
 def full_tank_diagnostics(processed_dfs,window_ms):
     start_ms, end_ms = window_ms
@@ -247,10 +246,7 @@ def full_tank_diagnostics(processed_dfs,window_ms):
     print("="*120)
     return pd.DataFrame(results)
 
-import numpy as np
-import pandas as pd
-from pathlib import Path
-from scipy.signal import correlate
+
 
 def wind_damping_analysis(processed_dfs, meta_sel, window_ms=(6000, 14000)):
     """

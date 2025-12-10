@@ -16,6 +16,8 @@ from datetime import datetime
 #from wavescripts.data_loader import load_or_update #blir vel motsatt.. 
 import numpy as np
 import matplotlib.pyplot as plt
+from wavescripts.data_loader import update_processed_metadata
+
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
@@ -247,7 +249,6 @@ def find_wave_range(
 # =============================================== 
 # === Stillwater === #
 # ===============================================
-from wavescripts.data_loader import update_processed_metadata
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 

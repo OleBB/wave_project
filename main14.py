@@ -23,6 +23,7 @@ print("Loaded:", len(dfs), "dataframes")
 from wavescripts.processor import remove_outliers, compute_simple_amplitudes
 #%%
 # === Config ===
+chooseAll = False
 plotvariables = {
     "filters": {
         "amp": 0.1, #0.1, 0.2, 0.3 
@@ -46,11 +47,12 @@ plotvariables = {
         
     }
 }
-#
+# ==== ELLER IMPORTER EGEN CONFIG ==== #
 #import json
 #with open("plotsettings.json") as f:_
 #      plotvariables = json.load(f)
 
+#%%
 print('# === Filter ===')
 from wavescripts.filters import filter_chosen_files
 meta_sel = filter_chosen_files(meta,
