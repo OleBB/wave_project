@@ -248,7 +248,7 @@ def full_tank_diagnostics(processed_dfs,window_ms):
 
 
 
-def wind_damping_analysis(processed_dfs, meta_sel, window_ms=(6000, 14000)):
+def wind_damping_analysis(processed_dfs, meta_sel):
     """
     Full analysis of wave damping (P3/P2) vs wind condition.
     Your tank: 250 Hz, P1→P2 = 30 cm, P2→P3 = 3.0 m
@@ -256,7 +256,7 @@ def wind_damping_analysis(processed_dfs, meta_sel, window_ms=(6000, 14000)):
     dt_ms = 4.0  # 250 Hz → 4 ms per sample
     results = []
 
-    print(f"\nWAVE DAMPING vs WIND CONDITION — Window: {window_ms[0]}–{window_ms[1]} ms (250 Hz)")
+    print(f"\nWAVE DAMPING vs WIND CONDITION in") #Window: {window_ms[0]}–{window_ms[1]}")
     print("="*130)
     print(f"{'File':<28} {'Wind':<8} {'P1':>6} {'P2':>6} {'P3':>6} {'P4':>6}  "
           f"{'P2/P1':>6} {'P3/P2':>7} {'P4/P3':>6}  {'Lag12':>6}  {'Celerity':>7}  Verdict")
@@ -266,56 +266,54 @@ def wind_damping_analysis(processed_dfs, meta_sel, window_ms=(6000, 14000)):
     wind_groups = {"full": [], "no": [], "lowest": [], "other": []}
 
     for path, df in processed_dfs.items():
-        row = meta_sel[meta_sel["path"] == path]
-        if row.empty:
+        metarows = meta_sel[meta_sel["path"] == path]
+        if metarows.empty:
             wind = "unknown"
         else:
-            wind = str(row["WindCondition"].iloc[0]).lower().strip()
+            wind = str(metarows["WindCondition"].iloc[0]).lower().strip()
             wind = wind if wind in ["full", "no", "lowest"] else "other"
-
-        try:
-            w = df.loc[window_ms[0]:window_ms[1]]
-        except:
-            w = df
-
-        amps = {}
-        for i in range(1,5):
-            col = f"eta_{i}"
-            if col not in w.columns:
-                amps[i] = np.nan
-                continue
-            s = w[col].dropna()
-            if len(s) < 200:
-                amps[i] = np.nan
-                continue
-            amp = (np.percentile(s, 99.5) - np.percentile(s, 0.5)) / 2
-            amps[i] = round(amp, 2)
-
-        # Ratios
-        r21 = round(amps.get(2,1)/amps.get(1,1), 3) if amps.get(1) else np.nan
-        r32 = round(amps.get(3,1)/amps.get(2,1), 3) if amps.get(2) else np.nan
-        r43 = round(amps.get(4,1)/amps.get(3,1), 3) if amps.get(3) else np.nan
-
+        
+        
+        P1 = meta_sel["P1 Amplitude"]
+        P2 = meta_sel["P2 Amplitude"]
+        P3 = meta_sel["P3 Amplitude"]
+        P4 = meta_sel["P4 Amplitude"]
+        
+        P2toP1 = round(P2/P1)
+        P3toP2 = round(P3/P2)
+        P4toP3 = round(P4/P3)
         # Lag P1→P2 (30 cm)
-        def get_lag_ms(a_col, b_col):
-            if a_col not in w or b_col not in w: return np.nan
-            a = w[a_col].interpolate().values
-            b = w[b_col].interpolate().values
-            if len(a) < 200: return np.nan
-            corr = correlate(a - a.mean(), b - b.mean(), mode='full')
-            lag_samples = np.argmax(corr) - (len(a) - 1)
-            return round(lag_samples * dt_ms, 0)
-
-        lag12_ms = get_lag_ms("eta_1", "eta_2")
-        celerity = round(0.30 / (abs(lag12_ms)/1000), 2) if lag12_ms and abs(lag12_ms) > 20 else np.nan
+        for _, row in metarows:
+            
+            start = []
+            #end = []
+            for i in range(1,5):
+                start[i] = meta_sel[f"Probe {i} start"]
+                #end[i] = meta_sel[f"Probe {i} end"]
+            
+            
+                
+            #col = f"eta{i}"
+           #w = df[col]
+            def get_lag_ms(a_col, b_col):
+                 #   if a_col not in w or b_col not in w: return np.nan
+                 a = w[a_col].interpolate().values
+                 b = w[b_col].interpolate().values
+                if len(a) < 200: return np.nan
+                corr = correlate(a - a.mean(), b - b.mean(), mode='full')
+                lag_samples = np.argmax(corr) - (len(a) - 1)
+                #return round(lag_samples * dt_ms, 0)
+    
+            lag12_ms = get_lag_ms("eta_1", "eta_2")
+            celerity = round(0.30 / (abs(lag12_ms)/1000), 2) if lag12_ms and abs(lag12_ms) > 20 else np.nan
 
         # Verdict
         verdict = []
-        if not (0.8 <= r21 <= 1.3):
+        if not (0.8 <= P2toP1 <= 1.3):
             verdict.append("P2 CALIB?")
-        if r32 > 1.1:
+        if P3toP2 > 1.1:
             verdict.append("Amplification!")
-        if abs(r43 - 1) > 0.15:
+        if abs(P4toP3 - 1) > 0.15:
             verdict.append("P3≠P4")
         verdict_str = " | ".join(verdict) if verdict else "OK"
 
@@ -329,17 +327,17 @@ def wind_damping_analysis(processed_dfs, meta_sel, window_ms=(6000, 14000)):
         results.append({
             "file": Path(path).name,
             "wind": wind_label,
-            "amp1": amps.get(1), "amp2": amps.get(2), "amp3": amps.get(3), "amp4": amps.get(4),
-            "P2/P1": r21, "P3/P2": r32, "celerity_m_s": celerity
+            "P1 avg ampl": amps.get(1), "P2 avg ampl": amps.get(2), "P3 avg ampl": amps.get(3), "P4 avg ampl": amps.get(4),
+            "P2/P1": P2toP1, "P3/P2": P3toP2, "celerity_m_s": celerity
         })
-        wind_groups[wind].append(r32)
+        wind_groups[wind].append(P3toP2)
 
     print("="*130)
 
     # SUMMARY BY WIND CONDITION
     print("\nDAMPING SUMMARY (P3/P2 over 3.0 m):")
     print("-" * 50)
-    for w in ["no", "lowest", "full"]:
+    for df in ["no", "lowest", "full"]:
         ratios = [r for r in wind_groups[w] if not np.isnan(r)]
         if ratios:
             mean_ratio = np.mean(ratios)

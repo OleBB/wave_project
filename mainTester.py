@@ -68,18 +68,21 @@ processed_dfs, meta_sel = process_selected_data(dfs,
                                                 meta, 
                                                 debug=True, 
                                                 win=10, 
-                                                find_range=True,
-                                                range_plot=True)
-
+                                                find_range=False,
+                                                range_plot=False)
+#TODO fiks slik at find_wave_range starter ved null eller ved en topp?
+# nå tar den first_motion_idx+ gitt antall bølger.
+#from wavescripts.processor import cut_selected_data
+#nu ønsker jeg en ferdig kutta ???
 #%% - 
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis
 #window ms må være en optional plotte/behandle-feature. 
-window_ms = (6000,7000)# TK, må få funksjonene til å ta inn wave range,mao, startverdi og rangeverdi
+
 #... fra meta_sel, evt fra en reloadet meta. 
-summary_df = wind_damping_analysis(processed_dfs, meta_sel, window_ms)
+summary_df = wind_damping_analysis(processed_dfs, meta_sel)
 
 summary = full_tank_diagnostics(processed_dfs, window_ms)
-
+#TODO få resultater fra disse over i run_and_save_report.py
 #%%
 overview = amplitude_overview(processed_dfs, window_ms)
 #to måter å få ut første verdien fra dictionary

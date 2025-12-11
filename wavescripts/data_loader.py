@@ -165,7 +165,7 @@ def load_or_update(
                     "WaterDepth [mm]": "", "Extra seconds": "", "Run number": "",
                     "Stillwater Probe 1": None, "Stillwater Probe 2": None, "Stillwater Probe 3": None, "Stillwater Probe 4": None,
                     "Computed Probe 1 start": "", "Computed Probe 2 start": "", "Computed Probe 3 start": "", "Computed Probe 4 start": "",
-                    "Computed range": "", "experiment_folder": experiment_name
+                    "Computed Probe 1 end": "", "Computed Probe 2 end": "", "Computed Probe 3 end": "", "Computed Probe 4 end": "", "experiment_folder": experiment_name
                 }
 
                 stillwater_samples = 250

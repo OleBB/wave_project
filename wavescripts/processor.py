@@ -17,11 +17,11 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from wavescripts.data_loader import update_processed_metadata
+from scipy.signal import find_peaks
 
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
-from scipy.signal import find_peaks
 
 def find_wave_range(
     df,
@@ -35,7 +35,7 @@ def find_wave_range(
     range_plot=True,
     min_ramp_peaks=5,
     max_ramp_peaks=15,
-    max_dips_allowed=1,
+    max_dips_allowed=2,
     min_growth_factor=2.0,   # final amp must be at least 2x first
 ):
     """
@@ -57,7 +57,7 @@ def find_wave_range(
     dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
     Fs = 1.0 / dt
     
-    # ─────── BULLETPROOF FREQUENCY EXTRACTION (never crashes) ───────
+    # ───────  FREQUENCY EXTRACTION ───────
     freq_raw = df_sel["WaveFrequencyInput [Hz]"] if isinstance(df_sel, pd.Series) else df_sel["WaveFrequencyInput [Hz]"].iloc[0]
     if pd.isna(freq_raw) or str(freq_raw).strip() in ["", "nan"]:
         importertfrekvens = 1.3
@@ -108,14 +108,15 @@ def find_wave_range(
         good_start_idx = first_motion_idx + int(skip_periods * samples_per_period)
         good_range = int(keep_periods * samples_per_period)
         good_range = min(good_range, len(df) - good_start_idx)
-        return good_start_idx, good_range, {}
+        good_end_idx = good_start_idx + good_range
+        return good_start_idx, good_end_idx, {}
 
     peak_amplitudes = np.abs(signal_smooth[peaks])
 
     # ==========================================================
-    # 4. Ramp-up detection: nearly monotonic increase with ≤1 dip
+    # 4. Ramp-up detection: nearly monotonic increase with dips
     # ==========================================================
-    def find_best_ramp(seq, min_len=5, max_len=15, max_dips=1, min_growth=2.0):
+    def find_best_ramp(seq, min_len=5, max_len=15, max_dips=2, min_growth=2.0):
         n = len(seq)
         best_start = best_end = -1
         best_len = 0
@@ -138,7 +139,9 @@ def find_wave_range(
         if best_start == -1:
             return None
         return best_start, best_end, seq[best_start:best_end + 1]
-
+    # ==========================================================
+    # Kjører "find_best_ramp(...)"
+    # ==========================================================
     ramp_result = find_best_ramp(
         peak_amplitudes,
         min_len=min_ramp_peaks,
@@ -164,13 +167,14 @@ def find_wave_range(
         good_start_idx = last_ramp_sample_idx + samples_per_period // 4  # small safety margin
         keep_periods = keep_periods or 10
 
-    # Final stable window
-    good_range = int(keep_periods * samples_per_period)
+    # Final stable window - nå tar den start+range=end
+    good_range     = int(keep_periods * samples_per_period)
     good_start_idx = min(good_start_idx, len(df) - good_range - 1)
-    good_range = min(good_range, len(df) - good_start_idx)
+    good_range     = min(good_range, len(df) - good_start_idx)
+    good_end_idx   = good_start_idx + good_range
 
     # ==========================================================
-    # 5.a= Få hjelp av grok
+    # 5.a Få hjelp av grok
     # ==========================================================
     # for å printe verdiene slik at grok kunne forstå signalet
     # if 'dumped' not in locals():   # only once
@@ -239,11 +243,7 @@ def find_wave_range(
         "keep_periods_used": keep_periods,
     }
 
-    return good_start_idx, good_range, debug_info
-
-
-
-
+    return good_start_idx, good_end_idx, debug_info
 
 
 # ========================================================== #
@@ -321,7 +321,39 @@ def ensure_stillwater_columns(
     return meta
 
 
-# ================================================== #
+
+# ------------------------------------------------------------
+# enkel utregning av amplituder
+# ------------------------------------------------------------
+def compute_simple_amplitudes(processed_dfs: dict, meta_sel: pd.DataFrame) -> pd.DataFrame:
+    records = []
+    for path, df in processed_dfs.items():
+        subset_meta = meta_sel[meta_sel["path"] == path]
+        for _, row in subset_meta.iterrows():
+            row_out = {"path": path}
+            for i in range(1, 5):
+                col = f"eta_{i}"
+                s_idx = int(row[f"Computed Probe {i} start"])
+                e_idx = int(row[f"Computed Probe {i} end"])
+                print(f'start idx er {s_idx}')
+                if s_idx > e_idx:
+                    s_idx, e_idx = e_idx, s_idx
+                s = df[col].iloc[s_idx:e_idx+1]
+                amp = (np.percentile(s, 99.5) - np.percentile(s, 0.5)) / 2.0
+                row_out[f"P{i} Amplitude"] = float(amp)
+            records.append(row_out)
+    return pd.DataFrame.from_records(records)
+
+
+
+def remove_outliers():
+    #lag noe basert på steepness, kanskje tilogmed ak. Hvis ak er for bratt
+    # og datapunktet for høyt, så må den markeres, og så fjernes.
+    #se Karens script
+    return
+
+
+# ================================================reco== #
 # === Take in a filtered subset then process     === #
 # === using functions: ensure_stillwater_columns === #
 # === using functions: find_wave_range           === #
@@ -381,13 +413,14 @@ def process_selected_data(
 
             # Optional: moving average of the zeroed signal
             df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
-
+            
             if debug:
                 print(f"  {Path(path).name:35} → eta_{i} mean = {df[eta_col].mean():.4f} mm")
-
         processed_dfs[path] = df
     
-    #2. b) #Optional: Find wave range
+    # ==========================================================
+    # 2. b) Optional- kjører FIND_WAVE_RANGE(...)
+    # ==========================================================
     if find_range:
         for idx, row in meta_sel.iterrows():
             path = row["path"]
@@ -404,10 +437,21 @@ def process_selected_data(
                                                          )
                 probestartcolumn  = f'Computed Probe {i} start'
                 meta_sel.loc[idx, probestartcolumn] = start
-                print('meta_sel sin Computed probe i start...',meta_sel[probestartcolumn])
+                probeendcolumn = f'Computed Probe {i} end'
+                meta_sel.loc[idx, probeendcolumn] = end
+                print(f'meta_sel sin Computed probe {i} start: {meta_sel[probestartcolumn]} og end: {meta_sel[probeendcolumn]}')
 
+        print(f'start: {start}, end: {end} og debug_range_info: {debug_info}')
     
-    print('start, end og debug(range)_info',start,end, debug_info )
+    # ==========================================================
+    # 3. Kjøre compute_simple_amplitudes, basert på computed range i meta_sel
+    # ==========================================================
+    #putte de inn i meta-sel probe 1 amplitude
+    amplituder = compute_simple_amplitudes(processed_dfs, meta_sel)
+    print("="*44)
+
+    meta_sel = meta_sel.merge(amplituder, on=["path"], how="left")
+
     
     # 3. Make sure meta_sel has the stillwater columns too (for plotting later)
     for i in range(1, 5):
@@ -430,26 +474,13 @@ def process_selected_data(
 
     # 5. Save updated metadata (now with stillwater columns)
     update_processed_metadata(meta_sel)
+    # after all probes processed, then we drop the Raw Probe data
+    cols_to_drop = ["Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]
+    processed_dfs = {
+        path: df.drop(columns=cols_to_drop, errors="ignore").copy()
+        for path, df in processed_dfs.items()
+    }
 
     print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
     return processed_dfs, meta_sel
-
-
-
-
-
-def remove_outliers():
-    #lag noe basert på steepness, kanskje tilogmed ak. Hvis ak er for bratt
-    # og datapunktet for høyt, så må den markeres, og så fjernes.
-    #se Karens script
-    return
-    
-# ------------------------------------------------------------
-# Ny funksjon
-# ------------------------------------------------------------
-def compute_simple_amplitudes(df_ma, chosenprobe, n):
-    top_n = df_ma[chosenprobe].nlargest(n)
-    bottom_n = df_ma[chosenprobe].nsmallest(n)
-    average = (top_n.sum()-bottom_n.sum())/(len(top_n))
-    return average #top_n, bottom_n
 
