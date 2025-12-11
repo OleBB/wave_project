@@ -246,12 +246,10 @@ def find_wave_range(
 
 
 
-# =============================================== 
-# === Stillwater === #
-# ===============================================
-
+# ========================================================== #
+# === Make sure stillwater levels are computed and valid === #
+# ========================================================== #
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
-
 def ensure_stillwater_columns(
     dfs: dict[str, pd.DataFrame],
     meta: pd.DataFrame,
@@ -323,9 +321,11 @@ def ensure_stillwater_columns(
     return meta
 
 
-# =============================================== 
-# === Take in a filtered subset then process === #
-# ===============================================
+# ================================================== #
+# === Take in a filtered subset then process     === #
+# === using functions: ensure_stillwater_columns === #
+# === using functions: find_wave_range           === #
+# ================================================== #
 def process_selected_data(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
@@ -438,21 +438,12 @@ def process_selected_data(
 
 
 
-
 def remove_outliers():
     #lag noe basert på steepness, kanskje tilogmed ak. Hvis ak er for bratt
     # og datapunktet for høyt, så må den markeres, og så fjernes.
+    #se Karens script
     return
     
-# ------------------------------------------------------------
-# Moving average helper
-# ------------------------------------------------------------
-def apply_moving_average(df, data_col, win=1):
-    df_ma = df.copy()
-    #print('inside moving average: ', df_ma.head())
-    df_ma[data_col] = df[data_col].rolling(window=win, min_periods=win).mean()
-    return df_ma
-
 # ------------------------------------------------------------
 # Ny funksjon
 # ------------------------------------------------------------

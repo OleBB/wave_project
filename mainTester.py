@@ -60,7 +60,6 @@ meta_sel = filter_chosen_files(meta,
                              chooseAll=False)
 #nå har vi de utvalgte: meta_sel altså metadataframes_selected
 
-
 print('# === Process ===')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
 # - and optional check: DEBUG gir noen ekstra printa linjer
@@ -72,12 +71,11 @@ processed_dfs, meta_sel = process_selected_data(dfs,
                                                 find_range=True,
                                                 range_plot=True)
 
-#%%
+#%% - 
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis
-
+#window ms må være en optional plotte/behandle-feature. 
 window_ms = (6000,7000)# TK, må få funksjonene til å ta inn wave range,mao, startverdi og rangeverdi
 #... fra meta_sel, evt fra en reloadet meta. 
-#%%
 summary_df = wind_damping_analysis(processed_dfs, meta_sel, window_ms)
 
 summary = full_tank_diagnostics(processed_dfs, window_ms)
