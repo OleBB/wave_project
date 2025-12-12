@@ -300,8 +300,6 @@ def ensure_stillwater_columns(
         stillwater_values[f"Stillwater Probe {i}"] = float(level)
         print(f"  Stillwater Probe {i}: {level:.3f} mm  (from {len(all_values):,} samples)")
 
-    # Robust median
-
     # Write the same value into EVERY row (this is correct!)
     for col, value in stillwater_values.items():
         meta[col] = value
@@ -333,14 +331,42 @@ def compute_simple_amplitudes(processed_dfs: dict, meta_sel: pd.DataFrame) -> pd
             row_out = {"path": path}
             for i in range(1, 5):
                 col = f"eta_{i}"
-                s_idx = int(row[f"Computed Probe {i} start"])
-                e_idx = int(row[f"Computed Probe {i} end"])
-                print(f'start idx er {s_idx}')
+                
+                start_val = row.get(f"Computed Probe {i} start")
+                end_val   = row.get(f"Computed Probe {i} end")
+                
+                # skip if missing/NaN
+                if pd.isna(start_val) or pd.isna(end_val):
+                    continue
+                
+                try:
+                    s_idx = int(start_val)
+                    e_idx = int(end_val)
+                except (TypeError, ValueError):
+                    continue
+                
+                # require start strictly before end
+                if s_idx >= e_idx:
+                    continue
+                
+                col = f"eta_{i}"
+                if col not in df.columns:
+                    continue
+                
+                n = len(df)
+                # clamp indices to valid range
+                s_idx = max(0, s_idx)
+                e_idx = min(n - 1, e_idx)
                 if s_idx > e_idx:
-                    s_idx, e_idx = e_idx, s_idx
-                s = df[col].iloc[s_idx:e_idx+1]
+                    continue
+                
+                s = df[col].iloc[s_idx:e_idx+1].dropna().to_numpy()
+                if s.size == 0:
+                    continue
+                
                 amp = (np.percentile(s, 99.5) - np.percentile(s, 0.5)) / 2.0
-                row_out[f"P{i} Amplitude"] = float(amp)
+                row_out[f"Probe {i} Amplitude"] = float(amp)
+
             records.append(row_out)
             print(f"appended records: {records}")
     return pd.DataFrame.from_records(records)
@@ -429,7 +455,7 @@ def process_selected_data(
           
             for i in range(1,5):
                 probe = f"Probe {i}"
-                print('nu kjøres indre loop i 2.b) i process_selected_data')
+                print('nu kjøres FIND_WAVE_RANGE, i indre loop i 2.b) i process_selected_data')
                 start, end, debug_info = find_wave_range(df, 
                                                          row,#pass single row
                                                          data_col=probe, 
@@ -447,20 +473,24 @@ def process_selected_data(
     # ==========================================================
     # 3. Kjøre compute_simple_amplitudes, basert på computed range i meta_sel
     # ==========================================================
-    #putte de inn i meta-sel probe 1 amplitude
+    #DataFrame.update aligns on index and columns and then in-place replaces values 
+    #in meta_sel with the corresponding non-NA values from the other frame. 
+    #It uses index+column labels for alignment.
     amplituder = compute_simple_amplitudes(processed_dfs, meta_sel)
-    print("="*44)
-    print("debug amplituder nu")
-    print(amplituder.to_string())
-    #meta_sel = meta_sel.merge(amplituder, on=["path"], how="left")
+    cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
+    meta_sel = meta_sel.set_index("path")
+    meta_sel.update(amplituder.set_index("path")[cols])
+    meta_sel = meta_sel.reset_index()
 
-        
     # 3. Make sure meta_sel has the stillwater columns too (for plotting later)
+    #The stillwater assignment uses scalar broadcasting to create or 
+    #fill an entire column with the same value for every row.
     for i in range(1, 5):
         col = f"Stillwater Probe {i}"
         if col not in meta_sel.columns:
+            print(f"stillwater av i er {stillwater[i]}")
             meta_sel[col] = stillwater[i]
-
+            
     # 4. Make sure meta_sel knows where to save
     if "PROCESSED_folder" not in meta_sel.columns:
         if "PROCESSED_folder" in meta_full.columns:

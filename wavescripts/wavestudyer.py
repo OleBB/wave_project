@@ -273,15 +273,20 @@ def wind_damping_analysis(processed_dfs, meta_sel):
             wind = str(metarows["WindCondition"].iloc[0]).lower().strip()
             wind = wind if wind in ["full", "no", "lowest"] else "other"
         
+        for row in metarows:
+            print('loopen kjøres ')
+            P0 = meta_sel["Probe 1 Amplitude"]
+            print(f"P1 er {P0}")
+            P1 = pd.to_numeric(meta_sel["Probe 1 Amplitude"])
+            print(P1)
+            P2 = pd.to_numeric(meta_sel["Probe 2 Amplitude"])
+            P3 = pd.to_numeric(meta_sel["Probe 3 Amplitude"])
+            P4 = pd.to_numeric(meta_sel["Probe 4 Amplitude"])
+            
         
-        P1 = meta_sel["P1 Amplitude"]
-        P2 = meta_sel["P2 Amplitude"]
-        P3 = meta_sel["P3 Amplitude"]
-        P4 = meta_sel["P4 Amplitude"]
-        
-        P2toP1 = round(P2/P1)
-        P3toP2 = round(P3/P2)
-        P4toP3 = round(P4/P3)
+            P2toP1 = round(P2/P1)
+            P3toP2 = round(P3/P2)
+            P4toP3 = round(P4/P3)
         
         """
         # Lag P1→P2 (30 cm)
