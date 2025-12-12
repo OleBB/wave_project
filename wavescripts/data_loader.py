@@ -166,7 +166,7 @@ def load_or_update(
                     "Stillwater Probe 1": None, "Stillwater Probe 2": None, "Stillwater Probe 3": None, "Stillwater Probe 4": None,
                     "Computed Probe 1 start": None, "Computed Probe 2 start": None, "Computed Probe 3 start": None, "Computed Probe 4 start": None,
                     "Computed Probe 1 end": None, "Computed Probe 2 end": None, "Computed Probe 3 end": None, "Computed Probe 4 end": None, 
-                    "P1 Amplitude": None, "P2 Amplitude": None, "P3 Amplitude": None, "P4 Amplitude": None,
+                    "Probe 1 Amplitude": None, "Probe 2 Amplitude": None, "Probe 3 Amplitude": None, "Probe 4 Amplitude": None,
                     "experiment_folder": experiment_name
                 }
 

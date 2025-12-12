@@ -17,7 +17,7 @@ column_map = {
     "mooring": "Mooring",
 }
 
-def filter_chosen_files(meta, plotvariables,chooseAll=False):
+def filter_chosen_files(meta, plotvariables,chooseAll=True):
     """
     meta: pd.DataFrame with columns referenced in column_map
     plotvariables: dict with nested "filters" mapping short keys -> value or list-of-values

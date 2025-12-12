@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 18 08:41:03 2025
+fredag 12.des 2025
 @author: ole
 """
 import os
@@ -23,7 +23,7 @@ print("Loaded:", len(dfs), "dataframes")
 from wavescripts.processor import remove_outliers, compute_simple_amplitudes
 #%%
 # === Config ===
-chooseAll = True
+chooseAll = False
 plotvariables = {
     "filters": {
         "amp": 0.1, #0.1, 0.2, 0.3 
@@ -57,7 +57,7 @@ print('# === Filter ===')
 from wavescripts.filters import filter_chosen_files
 meta_sel = filter_chosen_files(meta,
                              plotvariables,
-                             chooseAll=True)
+                             chooseAll=False)
 #nå har vi de utvalgte: meta_sel altså metadataframes_selected
 
 print('# === Process ===')
@@ -78,12 +78,10 @@ processed_dfs, meta_sel = process_selected_data(dfs,
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis
 #window ms må være en optional plotte/behandle-feature. 
 
-#TODO FINNE k!
 #... fra meta_sel, evt fra en reloadet meta. 
 summary_df = wind_damping_analysis(processed_dfs, meta_sel)
 
-#%%
-summary = full_tank_diagnostics(processed_dfs)
+summary = full_tank_diagnostics(processed_dfs, window_ms)
 #TODO få resultater fra disse over i run_and_save_report.py
 #%%
 overview = amplitude_overview(processed_dfs, window_ms)
