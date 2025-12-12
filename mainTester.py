@@ -68,7 +68,7 @@ processed_dfs, meta_sel = process_selected_data(dfs,
                                                 meta, 
                                                 debug=True, 
                                                 win=10, 
-                                                find_range=False,
+                                                find_range=True,
                                                 range_plot=False)
 #TODO fiks slik at find_wave_range starter ved null eller ved en topp?
 # nå tar den first_motion_idx+ gitt antall bølger.
