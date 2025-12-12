@@ -342,6 +342,7 @@ def compute_simple_amplitudes(processed_dfs: dict, meta_sel: pd.DataFrame) -> pd
                 amp = (np.percentile(s, 99.5) - np.percentile(s, 0.5)) / 2.0
                 row_out[f"P{i} Amplitude"] = float(amp)
             records.append(row_out)
+            print(f"appended records: {records}")
     return pd.DataFrame.from_records(records)
 
 
@@ -449,10 +450,11 @@ def process_selected_data(
     #putte de inn i meta-sel probe 1 amplitude
     amplituder = compute_simple_amplitudes(processed_dfs, meta_sel)
     print("="*44)
+    print("debug amplituder nu")
+    print(amplituder.to_string())
+    #meta_sel = meta_sel.merge(amplituder, on=["path"], how="left")
 
-    meta_sel = meta_sel.merge(amplituder, on=["path"], how="left")
-
-    
+        
     # 3. Make sure meta_sel has the stillwater columns too (for plotting later)
     for i in range(1, 5):
         col = f"Stillwater Probe {i}"

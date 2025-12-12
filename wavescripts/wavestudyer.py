@@ -282,6 +282,8 @@ def wind_damping_analysis(processed_dfs, meta_sel):
         P2toP1 = round(P2/P1)
         P3toP2 = round(P3/P2)
         P4toP3 = round(P4/P3)
+        
+        """
         # Lag P1→P2 (30 cm)
         for _, row in metarows:
             
@@ -306,8 +308,10 @@ def wind_damping_analysis(processed_dfs, meta_sel):
     
             lag12_ms = get_lag_ms("eta_1", "eta_2")
             celerity = round(0.30 / (abs(lag12_ms)/1000), 2) if lag12_ms and abs(lag12_ms) > 20 else np.nan
-
+        """
+        celerity = 123456789
         # Verdict
+        
         verdict = []
         if not (0.8 <= P2toP1 <= 1.3):
             verdict.append("P2 CALIB?")
