@@ -32,7 +32,7 @@ def find_wave_range(
     sigma_factor=5.0,
     skip_periods=None,
     keep_periods=None,
-    range_plot=True,
+    range_plot: bool = False,
     min_ramp_peaks=5,
     max_ramp_peaks=15,
     max_dips_allowed=2,
@@ -368,7 +368,7 @@ def compute_simple_amplitudes(processed_dfs: dict, meta_sel: pd.DataFrame) -> pd
                 row_out[f"Probe {i} Amplitude"] = float(amp)
 
             records.append(row_out)
-            print(f"appended records: {records}")
+            #print(f"appended records: {records}")
     return pd.DataFrame.from_records(records)
 
 
@@ -460,13 +460,13 @@ def process_selected_data(
                                                          row,#pass single row
                                                          data_col=probe, 
                                                          detect_win=win, 
-                                                         range_plot=True
+                                                         range_plot=range_plot
                                                          )
                 probestartcolumn  = f'Computed Probe {i} start'
                 meta_sel.loc[idx, probestartcolumn] = start
                 probeendcolumn = f'Computed Probe {i} end'
                 meta_sel.loc[idx, probeendcolumn] = end
-                print(f'meta_sel sin Computed probe {i} start: {meta_sel[probestartcolumn]} og end: {meta_sel[probeendcolumn]}')
+                #print(f'meta_sel sin Computed probe {i} start: {meta_sel[probestartcolumn]} og end: {meta_sel[probeendcolumn]}')
 
         print(f'start: {start}, end: {end} og debug_range_info: {debug_info}')
     
