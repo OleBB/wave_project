@@ -248,106 +248,129 @@ def full_tank_diagnostics(processed_dfs,window_ms):
 
 
 
+
+def _to_scalar_numeric(v):
+    """Normalize a metadata cell to a single float or np.nan.
+
+    - If v is a pd.Series/list/ndarray, take the first element.
+    - Coerce to numeric, return float or np.nan.
+    """
+    # If it's a pandas Series or list-like, take first element
+    if isinstance(v, (pd.Series, list, tuple, np.ndarray)):
+        # if empty -> NaN
+        if len(v) == 0:
+            return np.nan
+        v = v[0]
+    # coerce to numeric
+    try:
+        return float(pd.to_numeric(v, errors="coerce"))
+    except Exception:
+        return np.nan
+
+
+def _safe_round_ratio(a, b):
+    """Return  a/b or np.nan if invalid."""
+    try:
+        a = float(a)
+        b = float(b)
+    except Exception:
+        return np.nan
+    if np.isnan(a) or np.isnan(b) or b == 0:
+        return np.nan
+    return a / b
+
+def newtons_metode():
+    return
+
+
 def wind_damping_analysis(processed_dfs, meta_sel):
     """
     Full analysis of wave damping (P3/P2) vs wind condition.
-    Your tank: 250 Hz, P1→P2 = 30 cm, P2→P3 = 3.0 m
+    Returns a DataFrame of results.
     """
-    dt_ms = 4.0  # 250 Hz → 4 ms per sample
     results = []
 
-    print(f"\nWAVE DAMPING vs WIND CONDITION in") #Window: {window_ms[0]}–{window_ms[1]}")
+    print(f"\nWAVE DAMPING vs WIND CONDITION")
     print("="*130)
     print(f"{'File':<28} {'Wind':<8} {'P1':>6} {'P2':>6} {'P3':>6} {'P4':>6}  "
-          f"{'P2/P1':>6} {'P3/P2':>7} {'P4/P3':>6}  {'Lag12':>6}  {'Celerity':>7}  Verdict")
+          f"{'P2/P1':>6} {'P3/P2':>7} {'P4/P3':>6}  Verdict")
     print("-"*130)
 
-    # Group by wind condition for summary later
     wind_groups = {"full": [], "no": [], "lowest": [], "other": []}
 
     for path, df in processed_dfs.items():
         metarows = meta_sel[meta_sel["path"] == path]
-        if metarows.empty:
-            wind = "unknown"
-        else:
-            wind = str(metarows["WindCondition"].iloc[0]).lower().strip()
-            wind = wind if wind in ["full", "no", "lowest"] else "other"
+        meta_row = metarows.squeeze() 
+
+        wind = str(meta_row.get("WindCondition", "")).lower().strip()
+        wind = wind if wind in ["full", "no", "lowest"] else "other"
+
+        # extract amplitudes as scalars
+        P1 = _to_scalar_numeric(meta_row.get("Probe 1 Amplitude"))
+        P2 = _to_scalar_numeric(meta_row.get("Probe 2 Amplitude"))
+        P3 = _to_scalar_numeric(meta_row.get("Probe 3 Amplitude"))
+        P4 = _to_scalar_numeric(meta_row.get("Probe 4 Amplitude"))
+
+        # compute ratios 
+        P2toP1 = _safe_round_ratio(P2, P1)
+        P3toP2 = _safe_round_ratio(P3, P2)
+        P4toP3 = _safe_round_ratio(P4, P3)
         
-        for row in metarows:
-            print('loopen kjøres ')
-            P0 = meta_sel["Probe 1 Amplitude"]
-            print(f"P1 er {P0}")
-            P1 = pd.to_numeric(meta_sel["Probe 1 Amplitude"])
-            print(P1)
-            P2 = pd.to_numeric(meta_sel["Probe 2 Amplitude"])
-            P3 = pd.to_numeric(meta_sel["Probe 3 Amplitude"])
-            P4 = pd.to_numeric(meta_sel["Probe 4 Amplitude"])
-            
+        noWaveRun =  _to_scalar_numeric(meta_row.get("WaveAmplitudeInput [Volt]"))
+        if pd.isna(noWaveRun): 
+            #print("NO WAVEINPUT")
+            continue
         
-            P2toP1 = round(P2/P1)
-            P3toP2 = round(P3/P2)
-            P4toP3 = round(P4/P3)
-        
-        """
-        # Lag P1→P2 (30 cm)
-        for _, row in metarows:
-            
-            start = []
-            #end = []
-            for i in range(1,5):
-                start[i] = meta_sel[f"Probe {i} start"]
-                #end[i] = meta_sel[f"Probe {i} end"]
-            
-            
-                
-            #col = f"eta{i}"
-           #w = df[col]
-            def get_lag_ms(a_col, b_col):
-                 #   if a_col not in w or b_col not in w: return np.nan
-                 a = w[a_col].interpolate().values
-                 b = w[b_col].interpolate().values
-                if len(a) < 200: return np.nan
-                corr = correlate(a - a.mean(), b - b.mean(), mode='full')
-                lag_samples = np.argmax(corr) - (len(a) - 1)
-                #return round(lag_samples * dt_ms, 0)
-    
-            lag12_ms = get_lag_ms("eta_1", "eta_2")
-            celerity = round(0.30 / (abs(lag12_ms)/1000), 2) if lag12_ms and abs(lag12_ms) > 20 else np.nan
-        """
-        celerity = 123456789
-        # Verdict
-        
+        # verdict rules (guard against NaN comparisons)
         verdict = []
-        if not (0.8 <= P2toP1 <= 1.3):
-            verdict.append("P2 CALIB?")
-        if P3toP2 > 1.1:
-            verdict.append("Amplification!")
-        if abs(P4toP3 - 1) > 0.15:
-            verdict.append("P3≠P4")
+        if P2toP1 is np.nan or P2toP1 is None:
+            verdict.append("P2/P1?")   # cannot evaluate
+        else:
+            if not (0.8 <= P2toP1 <= 1.3):
+                verdict.append("?")
+
+        if P3toP2 is not np.nan and P3toP2 is not None:
+            if P3toP2 > 1.1:
+                verdict.append("Amplification!")
+            wind_groups[wind].append(P3toP2)
+        else:
+            # keep consistent grouping even if NaN: do not append
+            pass
+
+        if P4toP3 is not np.nan and P4toP3 is not None:
+            if abs(P4toP3 - 1) > 0.15:
+                verdict.append("P3≠P4")
+
         verdict_str = " | ".join(verdict) if verdict else "OK"
 
         filename = Path(path).name[:27]
         wind_label = {"full":"FULL", "no":"NO", "lowest":"LOW", "other":"??"}.get(wind, wind.upper())
+
+        # print line
         print(f"{filename:<28} {wind_label:<8} "
-              f"{amps.get(1,'—'):>6} {amps.get(2,'—'):>6} {amps.get(3,'—'):>6} {amps.get(4,'—'):>6}  "
-              f"{r21:>6} {r32:>7} {r43:>6}  "
-              f"{lag12_ms:>+6.0f}ms  {celerity:>6}  {verdict_str}")
+              f"{(f'{P1:.3f}' if not np.isnan(P1) else '—'):>6} "
+              f"{(f'{P2:.3f}' if not np.isnan(P2) else '—'):>6} "
+              f"{(f'{P3:.3f}' if not np.isnan(P3) else '—'):>6} "
+              f"{(f'{P4:.3f}' if not np.isnan(P4) else '—'):>6}  "
+              f"{(f'{P2toP1:.3f}' if not (P2toP1 is np.nan) and P2toP1 is not None else '—'):>6} "
+              f"{(f'{P3toP2:.3f}' if not (P3toP2 is np.nan) and P3toP2 is not None else '—'):>7} "
+              f"{(f'{P4toP3:.3f}' if not (P4toP3 is np.nan) and P4toP3 is not None else '—'):>6}  "
+              f"{verdict_str}")
 
         results.append({
             "file": Path(path).name,
             "wind": wind_label,
-            "P1 avg ampl": amps.get(1), "P2 avg ampl": amps.get(2), "P3 avg ampl": amps.get(3), "P4 avg ampl": amps.get(4),
-            "P2/P1": P2toP1, "P3/P2": P3toP2, "celerity_m_s": celerity
+            "P1 avg ampl": P1, "P2 avg ampl": P2, "P3 avg ampl": P3, "P4 avg ampl": P4,
+            "P2/P1": P2toP1, "P3/P2": P3toP2, "P4/P3": P4toP3
         })
-        wind_groups[wind].append(P3toP2)
 
     print("="*130)
 
     # SUMMARY BY WIND CONDITION
     print("\nDAMPING SUMMARY (P3/P2 over 3.0 m):")
     print("-" * 50)
-    for df in ["no", "lowest", "full"]:
-        ratios = [r for r in wind_groups[w] if not np.isnan(r)]
+    for w in ["no", "lowest", "full"]:
+        ratios = [r for r in wind_groups[w] if not (r is np.nan)]
         if ratios:
             mean_ratio = np.mean(ratios)
             std_ratio = np.std(ratios)
@@ -356,5 +379,6 @@ def wind_damping_analysis(processed_dfs, meta_sel):
             print(f"{w.upper():<8} → no valid runs")
 
     return pd.DataFrame(results)
+
 
 
