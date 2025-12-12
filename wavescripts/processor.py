@@ -455,7 +455,7 @@ def process_selected_data(
           
             for i in range(1,5):
                 probe = f"Probe {i}"
-                print('nu kjøres FIND_WAVE_RANGE, i indre loop i 2.b) i process_selected_data')
+                #print('nu kjøres FIND_WAVE_RANGE, i indre loop i 2.b) i process_selected_data')
                 start, end, debug_info = find_wave_range(df, 
                                                          row,#pass single row
                                                          data_col=probe, 

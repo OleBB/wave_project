@@ -280,6 +280,7 @@ def _safe_round_ratio(a, b):
     return a / b
 
 def newtons_metode():
+    
     return
 
 

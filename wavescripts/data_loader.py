@@ -139,12 +139,6 @@ def load_or_update(
                 suffix = path.suffix.lower()
                 if suffix == ".csv":
                     df = pd.read_csv(path, names=["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"])
-                elif suffix == ".parquet":
-                    df = pd.read_parquet(path)
-                elif suffix in (".h5", ".hdf5"):
-                    df = pd.read_hdf(path)
-                elif suffix == ".feather":
-                    df = pd.read_feather(path)
                 else:
                     print(f"   Skipping unsupported: {path.name}")
                     continue
