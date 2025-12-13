@@ -283,6 +283,34 @@ def newtons_metode():
     
     return
 
+from scipy.optimize import brentq
+def k_from_omega(omega, g=9.81, H=0.580):
+    f = lambda k: g*k*np.tanh(k*H) - omega**2
+    k0 = omega**2/g                 # deep‑water guess
+    k1 = omega/np.sqrt(g*H)         # shallow‑water guess
+    a, b = min(k0, k1)*0.1, max(k0, k1)*10
+    while f(a)*f(b) > 0:
+        a, b = a/2, b*2
+    return brentq(f, a, b)
+
+
+from scipy.optimize import brentq
+def calculate_wavenumber(freq, H):
+    """Tar inn frekvens og høyde
+    bruker BRENTQ fra scipy
+    """
+    g = 9.81
+    period = 1/freq
+    omega = 2*np.pi/period
+    f = lambda k: g*k*np.tanh(k*H) - omega**2
+    k0 = omega**2/g #deep water guess
+    k1 = omega/np.sqrt(g*H) #shallow water guess
+    a, b = min(k0, k1)*0.1, max(k0, k1)*10
+    while f(a)*f(b) >0:
+        a, b = a/2, b*2
+    
+    return brentq(f, a, b)
+    
 
 def wind_damping_analysis(processed_dfs, meta_sel):
     """
@@ -291,12 +319,7 @@ def wind_damping_analysis(processed_dfs, meta_sel):
     """
     results = []
 
-    print(f"\nWAVE DAMPING vs WIND CONDITION")
-    print("="*130)
-    print(f"{'File':<28} {'Wind':<8} {'P1':>6} {'P2':>6} {'P3':>6} {'P4':>6}  "
-          f"{'P2/P1':>6} {'P3/P2':>7} {'P4/P3':>6}  Verdict")
-    print("-"*130)
-
+    print("WAVE DAMPING vs WIND CONDITION")
     wind_groups = {"full": [], "no": [], "lowest": [], "other": []}
 
     for path, df in processed_dfs.items():
@@ -347,25 +370,12 @@ def wind_damping_analysis(processed_dfs, meta_sel):
         filename = Path(path).name[:27]
         wind_label = {"full":"FULL", "no":"NO", "lowest":"LOW", "other":"??"}.get(wind, wind.upper())
 
-        # print line
-        print(f"{filename:<28} {wind_label:<8} "
-              f"{(f'{P1:.3f}' if not np.isnan(P1) else '—'):>6} "
-              f"{(f'{P2:.3f}' if not np.isnan(P2) else '—'):>6} "
-              f"{(f'{P3:.3f}' if not np.isnan(P3) else '—'):>6} "
-              f"{(f'{P4:.3f}' if not np.isnan(P4) else '—'):>6}  "
-              f"{(f'{P2toP1:.3f}' if not (P2toP1 is np.nan) and P2toP1 is not None else '—'):>6} "
-              f"{(f'{P3toP2:.3f}' if not (P3toP2 is np.nan) and P3toP2 is not None else '—'):>7} "
-              f"{(f'{P4toP3:.3f}' if not (P4toP3 is np.nan) and P4toP3 is not None else '—'):>6}  "
-              f"{verdict_str}")
-
         results.append({
             "file": Path(path).name,
             "wind": wind_label,
             "P1 avg ampl": P1, "P2 avg ampl": P2, "P3 avg ampl": P3, "P4 avg ampl": P4,
             "P2/P1": P2toP1, "P3/P2": P3toP2, "P4/P3": P4toP3
         })
-
-    print("="*130)
 
     # SUMMARY BY WIND CONDITION
     print("\nDAMPING SUMMARY (P3/P2 over 3.0 m):")

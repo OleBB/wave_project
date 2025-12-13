@@ -164,7 +164,7 @@ def load_or_update(
                     "experiment_folder": experiment_name
                 }
 
-                stillwater_samples = 250
+                stillwater_samples = 250 #bruker æ fortsatt denne?
 
                 # Wind
                 wind_match = re.search(r'-([A-Za-z]+)wind-', filename)

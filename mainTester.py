@@ -81,6 +81,19 @@ from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_
 #TODO FINNE k!
 #... fra meta_sel, evt fra en reloadet meta. 
 summary_df = wind_damping_analysis(processed_dfs, meta_sel)
+#%%
+from wavescripts.wavestudyer import calculate_wavenumber
+#regne k per run. 
+# vel det må jo da inn i meta_sel
+
+H = meta_sel['WaterDepth [mm]'].iloc[0]
+freq = meta_sel["WaveFrequencyInput [Hz]"].iloc[0]
+calculate_wavenumber(freq, H)
+
+#%%
+from wavescripts.plotter import plot_amplitude_summary
+
+plot_amplitude_summary(meta_sel)
 
 #%%
 summary = full_tank_diagnostics(processed_dfs)
