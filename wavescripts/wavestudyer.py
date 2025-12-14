@@ -365,15 +365,12 @@ def wind_damping_analysis(processed_dfs, meta_sel):
             if abs(P4toP3 - 1) > 0.15:
                 verdict.append("P3≠P4")
 
-        verdict_str = " | ".join(verdict) if verdict else "OK"
-
-        filename = Path(path).name[:27]
         wind_label = {"full":"FULL", "no":"NO", "lowest":"LOW", "other":"??"}.get(wind, wind.upper())
 
         results.append({
-            "file": Path(path).name,
-            "wind": wind_label,
-            "P1 avg ampl": P1, "P2 avg ampl": P2, "P3 avg ampl": P3, "P4 avg ampl": P4,
+            "path": Path(path).name,
+            "WindCondition": wind_label,
+            "Probe 1 Amplitude": P1, "Probe 2 Amplitude": P2, "Probe 3 Amplitude": P3, "Probe 4 Amplitude": P4,
             "P2/P1": P2toP1, "P3/P2": P3toP2, "P4/P3": P4toP3
         })
 

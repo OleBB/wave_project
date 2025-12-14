@@ -24,7 +24,7 @@
     "Computed Probe 3 end": 8268,
     "Computed Probe 4 end": 8268,
     "Probe 1 Amplitude": 12.648799999999994,
-    "Probe 2 Amplitude": null,
+    "Probe 2 Amplitude": NaN,
     "Probe 3 Amplitude": 5.8799999999999955,
     "Probe 4 Amplitude": 6.664399999999999,
     "experiment_folder": "20251110-tett6roof-lowMooring",

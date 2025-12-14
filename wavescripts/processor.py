@@ -22,25 +22,21 @@ from scipy.signal import find_peaks
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
-
+"""start, end, debug_info = find_wave_range(df, 
+                                         row,#pass single row
+                                         data_col=probe, 
+                                         detect_win=win, 
+                                         range_plot=range_plot
+                                         )"""
 def find_wave_range(
     df,
-    df_sel,  # metadata for selected files
+    meta_row,  # metadata for selected files
     data_col,
     detect_win=1,
-    baseline_seconds=2.0,
-    sigma_factor=5.0,
-    skip_periods=None,
-    keep_periods=None,
     range_plot: bool = False,
-    min_ramp_peaks=5,
-    max_ramp_peaks=15,
-    max_dips_allowed=2,
-    min_growth_factor=2.0,   # final amp must be at least 2x first
 ):
     """
-    Intelligent detection of stable oscillation phase using peak amplitude ramp-up.
-    Replaces crude "skip 5s + 12 periods" with actual detection of monotonic increase.
+    detection of stable oscillation phase using peak amplitude ramp-up.
     """
     # ==========================================================
     # 1. Basic preprocessing
@@ -58,7 +54,7 @@ def find_wave_range(
     Fs = 1.0 / dt
     
     # ───────  FREQUENCY EXTRACTION ───────
-    freq_raw = df_sel["WaveFrequencyInput [Hz]"] if isinstance(df_sel, pd.Series) else df_sel["WaveFrequencyInput [Hz]"].iloc[0]
+    freq_raw = meta_row["WaveFrequencyInput [Hz]"] if isinstance(meta_row, pd.Series) else meta_row["WaveFrequencyInput [Hz]"].iloc[0]
     if pd.isna(freq_raw) or str(freq_raw).strip() in ["", "nan"]:
         importertfrekvens = 1.3
         print(f"Warning: No valid frequency found → using fallback {importertfrekvens} Hz")
@@ -66,14 +62,41 @@ def find_wave_range(
         importertfrekvens = float(freq_raw)
 
     samples_per_period = int(round(Fs / importertfrekvens))
-  
-# ─────────────────────────────────────────────────────────────
-    # Make ramp detection work on your real, gentle ramp-ups
-    min_ramp_peaks = 5
-    max_ramp_peaks = 20
-    max_dips_allowed = 2
-    min_growth_factor = 1.015   # 1.5% total growth is enough (your ramp is slow!)
-# ───────────────────────────────────────────────
+    
+    ###### 
+    #todo tilpasses input
+    # ==========================================================
+    #  1.b tilpasses innkommende bølge og vindforhold
+    # ==========================================================
+    if (meta_row["WaveFrequencyInput [Hz]"]) == 1.3:
+        baseline_seconds=2.0
+        sigma_factor=1.0
+        skip_periods=None
+        keep_periods=None
+        min_ramp_peaks=5
+        max_ramp_peaks=15
+        max_dips_allowed=2
+        min_growth_factor=2.0
+        min_ramp_peaks = 5
+        max_ramp_peaks = 20
+        max_dips_allowed = 2
+        min_growth_factor = 1.015   # 1.5% total growth is enough (your ramp is slow!)
+        # 
+    else:
+        #Todo
+        baseline_seconds=2.0
+        sigma_factor=1.0
+        skip_periods=None
+        keep_periods=None
+        min_ramp_peaks=5
+        max_ramp_peaks=15
+        max_dips_allowed=2
+        min_growth_factor=2.0
+        min_ramp_peaks = 5
+        max_ramp_peaks = 20
+        max_dips_allowed = 2
+        min_growth_factor = 1.015
+
     samples_per_period = int(round(Fs / importertfrekvens))
 
     # ==========================================================
@@ -84,10 +107,22 @@ def find_wave_range(
     baseline_mean = np.mean(baseline)
     baseline_std = np.std(baseline)
     threshold = baseline_mean + sigma_factor * baseline_std
-
+    
+    """ærbe
+    #print('threshold verdi: ', threshold)
+    #print('eexit')
+    #print('='*99)
+    
+    #voltgrense  = meta_row["WaveAmplitudeInput [Volt]"]
+    #grense = baseline_mean + (voltgrense*100)/3
+    #input volt på 0.1 gir omtrentelig <10mm amplitude.
+    #import sys; sys.exit()
+    """
+    
     above_noise = signal_smooth > threshold
+    
     first_motion_idx = np.argmax(above_noise) if np.any(above_noise) else 0
-
+    
     # ==========================================================
     # 3. Peak detection on absolute signal (handles both positive/negative swings)
     # ==========================================================
@@ -99,12 +134,41 @@ def find_wave_range(
         prominence=0.5 * baseline_std,  # ignore tiny noise peaks
         height=threshold
     )
+    
+    #    import sys; sys.exit()
+    #TODO
+    # ==========================================================
+    # ikke i bruk, TK , endret sigmafaktor i staden.
+    # ==========================================================
+    """
+    TODO: LAGE noe som fanger opp de med 15 perioder.
+    for der er signalet veldig kort.
+    lettest: FANGE OPP DE 10 største bølgene. starte fra den første.
+
+    """
+    # ta 10 største, så ta den første, så ta 10 perioder
+    numbaofpeaks = len(peaks)
+    if meta_row["WavePeriodInput"] <1 and numbaofpeaks >3 :
+        
+        largest_ampl = np.abs(signal_smooth[peaks])
+        kth = 3
+        largest_peaks = np.argpartition(peaks, kth)
+        good_start_idx = largest_peaks[0]
+        good_end_idx = largest_peaks[-1]
+        debug_info = None
+        print("="*99)
+        print(f'LESS THAN 20 periods, choosing largest peaks')
+        print("="*99)
+        return good_start_idx, good_end_idx, debug_info
+    #
+    # ==========================================================
+    #  
+    # ==========================================================
 
     if len(peaks) < min_ramp_peaks + 3:
         print("Not enough peaks detected – falling back to legacy method")
-        # Legacy fallback
         skip_periods = skip_periods or (5 + 12)
-        keep_periods = keep_periods or 8
+        keep_periods = keep_periods or 5
         good_start_idx = first_motion_idx + int(skip_periods * samples_per_period)
         good_range = int(keep_periods * samples_per_period)
         good_range = min(good_range, len(df) - good_start_idx)
@@ -209,7 +273,7 @@ def find_wave_range(
             # Build kwargs only with arguments your current function actually accepts
             plot_kwargs = {
                 "df": df,
-                "df_sel": df_sel,
+                "meta_sel": meta_row,
                 "data_col": data_col,
                 "signal": signal_smooth,
                 "baseline_mean": baseline_mean,
@@ -323,10 +387,10 @@ def ensure_stillwater_columns(
 # ------------------------------------------------------------
 # enkel utregning av amplituder
 # ------------------------------------------------------------
-def compute_simple_amplitudes(processed_dfs: dict, meta_sel: pd.DataFrame) -> pd.DataFrame:
+def compute_simple_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
     records = []
     for path, df in processed_dfs.items():
-        subset_meta = meta_sel[meta_sel["path"] == path]
+        subset_meta = meta_row[meta_row["path"] == path]
         for _, row in subset_meta.iterrows():
             row_out = {"path": path}
             for i in range(1, 5):
@@ -380,6 +444,10 @@ def remove_outliers():
     return
 
 
+
+
+
+
 # ================================================reco== #
 # === Take in a filtered subset then process     === #
 # === using functions: ensure_stillwater_columns === #
@@ -416,7 +484,6 @@ def process_selected_data(
 
     # 2.a) Process only the selected runs
     processed_dfs = {}
-
     for _, row in meta_sel.iterrows():
         path = row["path"]
         if path not in dfs:
@@ -435,7 +502,7 @@ def process_selected_data(
             sw = stillwater[i]
             eta_col = f"eta_{i}"
 
-            # This is the key line: subtract stillwater → zero mean
+            # subtract stillwater → zero mean
             df[eta_col] = df[probe_col] - sw
 
             # Optional: moving average of the zeroed signal

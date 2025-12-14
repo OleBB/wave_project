@@ -15,7 +15,12 @@ os.chdir(file_dir)
 #%%
 
 from wavescripts.data_loader import load_or_update
-dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
+#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
+#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"))
+#Denna er bare 15 perioder. ikke godt nok. (Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"))
+
+dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
+
 
 print(meta.tail())
 print("Loaded:", len(dfs), "dataframes")
@@ -23,7 +28,8 @@ print("Loaded:", len(dfs), "dataframes")
 from wavescripts.processor import remove_outliers, compute_simple_amplitudes
 #%%
 # === Config ===
-chooseAll = True
+chooseAll = False
+
 plotvariables = {
     "filters": {
         "amp": 0.1, #0.1, 0.2, 0.3 
@@ -69,7 +75,7 @@ processed_dfs, meta_sel = process_selected_data(dfs,
                                                 debug=True, 
                                                 win=10, 
                                                 find_range=True,
-                                                range_plot=False)
+                                                range_plot=True)
 #TODO fiks slik at find_wave_range starter ved null eller ved en topp?
 # nå tar den first_motion_idx+ gitt antall bølger.
 #from wavescripts.processor import cut_selected_data
@@ -90,10 +96,17 @@ H = meta_sel['WaterDepth [mm]'].iloc[0]
 freq = meta_sel["WaveFrequencyInput [Hz]"].iloc[0]
 calculate_wavenumber(freq, H)
 
-#%%
+#%% - Her plotter man en enkeltkjøring oppå en annen
 from wavescripts.plotter import plot_amplitude_summary
+from wavescripts.plotter import plot_amplitude_summary2
 
-plot_amplitude_summary(meta_sel)
+plot_amplitude_summary2(summary_df)
+
+
+
+
+
+
 
 #%%
 summary = full_tank_diagnostics(processed_dfs)
