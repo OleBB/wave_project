@@ -123,7 +123,6 @@ def plot_filtered(processed_dfs,
 
     for idx, row in df_sel.iterrows():
         
-
         path_key = row["path"]
         df_ma   = processed_dfs[path_key]
         print("Columns for", row["path"], df_ma.columns.tolist())
@@ -232,7 +231,7 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-def plot_ramp_detection(df, df_sel, data_col,
+def plot_ramp_detection(df, meta_sel, data_col,
                         signal,
                         baseline_mean,
                         threshold,
@@ -283,8 +282,8 @@ def plot_ramp_detection(df, df_sel, data_col,
     # ─────────────────────────────────────────────────────────────────────────────
 
     # Title from filename
-    # New – works whether df_sel is DataFrame or single row (Series)
-    path_value = df_sel["path"] if isinstance(df_sel, pd.Series) else df_sel["path"].iloc[0]
+    # New – works whether metadataframe is DataFrame or single row (Series)
+    path_value = meta_sel["path"] if isinstance(meta_sel, pd.Series) else meta_seø["path"].iloc[0]
     filename = str(path_value).split("/")[-1]
     plt.title(f"{filename}  →  {data_col}", fontsize=14, pad=20)
 
@@ -294,10 +293,104 @@ def plot_ramp_detection(df, df_sel, data_col,
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.show()
+#%%
+#tar inn en hel df og plotter alle i ett plott
+def plot_amplitude_summary(summary_df):
+       
+    df = summary_df
+    probelocations = [9200, 9500, 12444, 12455]
+    probelocations = [1, 1.1, 1.2, 1.25]
+    newsymbol = ["x","*",".","v","o","x"]
+    figsize = (10,6)
+    fig, ax = plt.subplots(figsize=figsize)
 
-def plot_amplitude_summary(meta_sel):
-    return
     
+    for idx, row in df.iterrows():
+        #rad = row["path"]
+        #print('row er',row)
+        # hente ut alle fire pr:obene
+        xliste = []
+        yliste = []
+        for i in range(1,5):
+            x = probelocations[i-1]
+            y = df[f"Probe {i} Amplitude"].iat[idx]
+            #print('size  av x', np.size(x))
+            #print('size y is', np.size(y))
+            print(f'x is {x} and y is: {y}')
+            #ax.scatter(x,y,marker=stil, linewidth=10)
+            xliste.append(x)
+            yliste.append(y)
+
+        ax.plot(xliste,yliste, linewidth=2)
+        print("="*10)
+        print(f"done with {row.iat[0]}")
+    ax.grid()
+    ax.set_xlabel("arbitrær x-akse")
+    ax.set_ylabel("amplitude (mm)")
+    #ax.legend(df["path"])
+plt.show()
+
+
+def plot_amplitude_summary2(summary_df, plot_ranges, plotvariables):
+
+    wind_colors = {
+        "full":"red",
+        "no":"blue",
+        "lowest":"green"
+    }
+    chosenprobe = plotvariables["processing"]["chosenprobe"]
+    #figsize     = plotvariables["plotting"]["figsize"] or (12, 6)
+    figsize = (10,6)
+    fig, ax = plt.subplots(figsize=figsize)
+
+
+    probelocations = [1, 1.1, 1.2, 1.25]
+
+    for idx, row in summary_df.iterrows():
+        path = row["path"]
+        
+        windcond = row["WindCondition"]
+        color = wind_colors.get(windcond, "black")
+        
+        label = make_label(row)
+        
+        xliste = []
+        yliste = []
+
+        for i in range(1,5):
+            x = probelocations[i-1]
+            y = summary_df[f"Probe {i} Amplitude"].iat[idx]
+            #print('size  av x', np.size(x))
+            #print('size y is', np.size(y))
+            print(f'x is {x} and y is: {y}')
+            #ax.scatter(x,y,marker=stil, linewidth=10)
+            xliste.append(x)
+            yliste.append(y)
+            
+    ax.set_xlabel("arbitrær")
+    ax.set_ylabel("amplitude in mm")
+    ax.set_title(f"hei {figsize}")
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
