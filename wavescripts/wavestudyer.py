@@ -312,37 +312,37 @@ def calculate_wavenumber(freq, H):
     return brentq(f, a, b)
     
 
-def wind_damping_analysis(processed_dfs, meta_sel):
+def wind_damping_analysis(meta_df):
     """
     Full analysis of wave damping (P3/P2) vs wind condition.
     Returns a DataFrame of results.
     """
-    
-    d = meta_sel.copy()
     results = []
+    
+    meta_sel = meta_df.copy()
 
     print("WAVE DAMPING vs WIND CONDITION")
     wind_groups = {"full": [], "no": [], "lowest": [], "other": []}
 
-    for path, df in processed_dfs.items():
-        metarows = meta_sel[meta_sel["path"] == path]
-        meta_row = metarows.squeeze() 
+    for idx, row in meta_sel.iterrows():
+        #metarows = meta_sel[meta_sel["path"] == path]
 
-        wind = str(meta_row.get("WindCondition", "")).lower().strip()
+
+        wind = str(row.get("WindCondition", "")).lower().strip()
         wind = wind if wind in ["full", "no", "lowest"] else "other"
 
         # extract amplitudes as scalars
-        P1 = _to_scalar_numeric(meta_row.get("Probe 1 Amplitude"))
-        P2 = _to_scalar_numeric(meta_row.get("Probe 2 Amplitude"))
-        P3 = _to_scalar_numeric(meta_row.get("Probe 3 Amplitude"))
-        P4 = _to_scalar_numeric(meta_row.get("Probe 4 Amplitude"))
+        P1 = _to_scalar_numeric(row.get("Probe 1 Amplitude"))
+        P2 = _to_scalar_numeric(row.get("Probe 2 Amplitude"))
+        P3 = _to_scalar_numeric(row.get("Probe 3 Amplitude"))
+        P4 = _to_scalar_numeric(row.get("Probe 4 Amplitude"))
 
         # compute ratios 
         P2toP1 = _safe_round_ratio(P2, P1)
         P3toP2 = _safe_round_ratio(P3, P2)
         P4toP3 = _safe_round_ratio(P4, P3)
         
-        noWaveRun =  _to_scalar_numeric(meta_row.get("WaveAmplitudeInput [Volt]"))
+        noWaveRun =  _to_scalar_numeric(row.get("WaveAmplitudeInput [Volt]"))
         if pd.isna(noWaveRun): 
             #print("NO WAVEINPUT")
             continue
@@ -370,14 +370,14 @@ def wind_damping_analysis(processed_dfs, meta_sel):
         wind_label = {"full":"full", "no":"no", "lowest":"lowest", "other":"??"}.get(wind, wind.upper())
 
         results.append({
-            "path": Path(path).name,
+            "path": row["path"],
             "WindCondition": wind_label,
             "Probe 1 Amplitude": P1, "Probe 2 Amplitude": P2, "Probe 3 Amplitude": P3, "Probe 4 Amplitude": P4,
             "P2/P1": P2toP1, "P3/P2": P3toP2, "P4/P3": P4toP3
         })
 
     # SUMMARY BY WIND CONDITION
-    print("\nDAMPING SUMMARY (P3/P2 over 3.0 m):")
+    print("\nDAMPING SUMMARY :")
     print("-" * 50)
     for w in ["no", "lowest", "full"]:
         ratios = [r for r in wind_groups[w] if not (r is np.nan)]
@@ -393,8 +393,8 @@ def wind_damping_analysis(processed_dfs, meta_sel):
 
 
 
-def wind_damping_study(meta_sel):
-    dataf = meta_sel.copy()
+def probe_comparisor(meta_df):
+    dataf = meta_df.copy()
 
     for idx, row, in dataf.iterrows():
         P1 = row["Probe 1 Amplitude"]
@@ -410,7 +410,8 @@ def wind_damping_study(meta_sel):
         
         if P3 != 0:
             dataf.at[idx, "P4/P3"] = P4/P3
-            
+          
+
     return dataf
     
 

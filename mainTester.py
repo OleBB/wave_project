@@ -98,10 +98,13 @@ calculate_wavenumber(freq, H)
 
 
 
-#%%
-from wavescripts.wavestudyer import wind_damping_study
+# %%
+from wavescripts.wavestudyer import wind_damping_analysis
 
-oppgradert_meta_sel = wind_damping_study(meta_sel)
+
+#%%
+from wavescripts.wavestudyer import probe_comparisor
+oppgradert_meta_sel = probe_comparisor(meta_sel)
 
 
 
@@ -115,7 +118,7 @@ amplitudeplotvariables = {
         "amp": 0.1, #0.1, 0.2, 0.3 
         "freq": 1.3, #bruk et tall  
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": None, #full, no, lowest, all
+        "wind": ["no", "lowest"], #full, no, lowest, all
         "tunnel": None,
         "mooring": "low",
         "panel": None #no, full, reverse
@@ -144,8 +147,6 @@ m_filtrert = filter_for_amplitude_plot(oppgradert_meta_sel, amplitudeplotvariabl
 """Plot amplitude summary plotter alt den tar inn"""
 from wavescripts.plotter import plot_amplitude_summary
 plot_amplitude_summary(m_filtrert, amplitudeplotvariables)
-
-
 
 
 
