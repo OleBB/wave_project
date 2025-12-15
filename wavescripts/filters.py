@@ -6,6 +6,7 @@ Created on Wed Nov 19 16:18:36 2025
 @author: ole
 """
 import pandas as pd
+import numpy as np
 #For å mappe dictionary fra input json(eller bare tilsvarende input rett i main)
 #denne mappingen sørger for at dictionaryen kan sjekkes mot metadataene
 #målet er å filtrere slik at jeg bare prosesserer og plotter utvalgte filer.
@@ -66,22 +67,77 @@ def filter_chosen_files(meta, plotvariables,chooseAll=True):
     return df_sel
 
 
-def filter_ampl_plot(meta_df, plotvar,chooseAll=True):
-    
-    
-    #unpack filters:
-    amp = plotvar["filters"]["amp"]
-    freq = plotvar["filters"]["freq"]
-    per = plotvar["filters"]["per"]
-        
-    
+
+
+
+def filter_for_amplitude_plot(meta_df :pd.DataFrame, amplotvars: dict, chooseAll: bool = False) -> pd.DataFrame:
     if chooseAll:
         return meta_df
     
     df = meta_df.copy()
+
+    filters = amplotvars.get("filters", {})
     
-    for idx, row in df.iterrows():
+    mask = pd.Series(True, index=df.index)
+    
+    col_map = {
+       "amp":   "WaveAmplitudeInput [Volt]",
+       "freq":  "WaveFrequencyInput [Hz]",
+       "per":   "WavePeriodInput",               # example – adjust if needed
+       "wind":  "WindCondition",                 # you must have such a column
+       "tunnel":"TunnelCondition",               # placeholder name
+       "mooring":"Mooring",
+       "panel": "PanelCondition" 
+   }
+    
+    for key, value in filters.items():
+        if value is None:
+            continue
+        col_name = col_map.get(key, key)
         
-        return
-    
-    return
+        if isinstance(value, (list, tuple, set, np.ndarray)):
+            mask &= df[col_name].isin(value)
+
+        elif callable(value):
+            # The callable must return a boolean Series of the same length
+            mask &= value(df[col_name])
+
+        else:   # scalar → exact match
+            # Special handling for the “wind” and “mooring” strings you mentioned
+            if key == "wind":
+                # Example: you store the wind condition as a string column.
+                # Allowed values: "full", "no", "lowest", "all"
+                # If the user passes "all" we *do not filter* on this column.
+                if value == "all":
+                    continue          # skip – keep current mask unchanged
+                mask &= df[col_name] == value
+
+            elif key == "mooring":
+                # Same idea as wind – you can add more complex logic here.
+                if value == "all":
+                    continue
+                mask &= df[col_name] == value
+
+            else:
+                mask &= df[col_name] == value
+            
+            
+    return df[mask].copy()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
