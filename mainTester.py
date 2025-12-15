@@ -112,13 +112,13 @@ oppgradert_meta_sel = wind_damping_study(meta_sel)
 chooseAll = False
 amplitudeplotvariables = {
     "filters": {
-        "amp": 0.2, #0.1, 0.2, 0.3 
+        "amp": 0.1, #0.1, 0.2, 0.3 
         "freq": 1.3, #bruk et tall  
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": "full", #full, no, lowest, all
+        "wind": None, #full, no, lowest, all
         "tunnel": None,
         "mooring": "low",
-        "panel": "reverse" #no, full, reverse
+        "panel": None #no, full, reverse
         
     },
     "processing": {
