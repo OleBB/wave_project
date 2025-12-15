@@ -19,7 +19,8 @@ from wavescripts.data_loader import load_or_update
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"))
 #Denna er bare 15 perioder. ikke godt nok. (Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"))
 
-dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
+#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
+dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
 
 
 print(meta.tail())
@@ -33,7 +34,7 @@ chooseAll = False
 plotvariables = {
     "filters": {
         "amp": 0.1, #0.1, 0.2, 0.3 
-        "freq": 1.3, #bruk et tall  
+        "freq": 0.65, #bruk et tall  
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "wind": "lowest", #full, no, lowest
         "tunnel": None,
@@ -63,7 +64,7 @@ print('# === Filter ===')
 from wavescripts.filters import filter_chosen_files
 meta_sel = filter_chosen_files(meta,
                              plotvariables,
-                             chooseAll=True)
+                             chooseAll)
 #nå har vi de utvalgte: meta_sel altså metadataframes_selected
 
 print('# === Process ===')
@@ -86,7 +87,7 @@ from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_
 
 #TODO FINNE k!
 #... fra meta_sel, evt fra en reloadet meta. 
-summary_df = wind_damping_analysis(processed_dfs, meta_sel)
+summary_df = wind_damping_analysis(meta_sel)
 #%%
 from wavescripts.wavestudyer import calculate_wavenumber
 #regne k per run. 
@@ -100,6 +101,7 @@ calculate_wavenumber(freq, H)
 
 # %%
 from wavescripts.wavestudyer import wind_damping_analysis
+damping_analysis_results = wind_damping_analysis(meta_sel)
 
 
 #%%

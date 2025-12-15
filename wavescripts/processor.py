@@ -62,40 +62,54 @@ def find_wave_range(
         importertfrekvens = float(freq_raw)
 
     samples_per_period = int(round(Fs / importertfrekvens))
-    
+        
+    #import sys; print('exit'); sys.exit()
+
     ###### 
     #todo tilpasses input
     # ==========================================================
     #  1.b tilpasses innkommende bølge og vindforhold
     # ==========================================================
-    if (meta_row["WaveFrequencyInput [Hz]"]) == 1.3:
+    if (meta_row["WindCondition"]) == "full":
         baseline_seconds=2.0
         sigma_factor=1.0
         skip_periods=None
-        keep_periods=None
+
         min_ramp_peaks=5
         max_ramp_peaks=15
         max_dips_allowed=2
         min_growth_factor=2.0
-        min_ramp_peaks = 5
-        max_ramp_peaks = 20
-        max_dips_allowed = 2
         min_growth_factor = 1.015   # 1.5% total growth is enough (your ramp is slow!)
         # 
+    elif (meta_row["WaveFrequencyInput [Hz]"]) == 0.65:
+        print('vellyket ELIF !!! 0.65')
+        baseline_seconds=1.0
+        sigma_factor=1.0
+        skip_periods=None
+
+        min_ramp_peaks=1
+        max_ramp_peaks=15
+        max_dips_allowed=2
+        min_growth_factor=1.1
+
+
     else:
-        #Todo
         baseline_seconds=2.0
         sigma_factor=1.0
         skip_periods=None
-        keep_periods=None
+
         min_ramp_peaks=5
         max_ramp_peaks=15
         max_dips_allowed=2
         min_growth_factor=2.0
-        min_ramp_peaks = 5
-        max_ramp_peaks = 20
-        max_dips_allowed = 2
         min_growth_factor = 1.015
+
+    per = (meta_row["WavePeriodInput"])
+    keep_periods= per/3
+    
+    
+
+    
 
     samples_per_period = int(round(Fs / importertfrekvens))
 
@@ -135,7 +149,6 @@ def find_wave_range(
         height=threshold
     )
     
-    #    import sys; sys.exit()
     #TODO
     # ==========================================================
     # ikke i bruk, TK , endret sigmafaktor i staden.
