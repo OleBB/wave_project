@@ -5,10 +5,87 @@ Created on Fri Nov 21 15:25:36 2025
 
 @author: ole
 """
+chooseAll = False
+plotvar = {
+    "filters": {
+        "amp": 0.1, #0.1, 0.2, 0.3 
+        "freq": 1.3, #bruk et tall  
+        "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "wind": "lowest", #full, no, lowest, all
+        "tunnel": None,
+        "mooring": "low"
+    },
+    "processing": {
+        "chosenprobe": "Probe 2",
+        "rangestart": None,
+        "rangeend": None,
+        "data_cols": ["Probe 2"],#her kan jeg velge fler, må huske [listeformat]
+        "win": 11
+    },
+    "plotting": {
+        "figsize": None,
+        "separate":True,
+        "overlay": False
+        
+    }
+    
+}
+
+#unpack filters:
+amp = plotvar["filters"]["amp"]
+freq = plotvar["filters"]["freq"]
+per = plotvar["filters"]["per"]
+
+print(amp,freq)
+print(amp+freq)
 
 
+
+
+
+df = meta_sel.copy()
+
+
+amp_rows = df[df["WaveAmplitudeInput [Volt]"] == amp]
+freq_rows = df[df["WaveFrequencyInput [Hz]"] == freq]
+both = df[(df["WaveAmplitudeInput [Volt]"] == amp) & (df["WaveFrequencyInput [Hz]"] == freq)]
+
+
+# rows where col == "apple"
+print(both)
+
+#%%
+
+def filter_for_amplitude_plot2(meta_df, plotvar,chooseAll=True):
+    
+    if chooseAll:
+        return meta_df
+    
+    #unpack filters:
+    amp = plotvar["filters"]["amp"]
+    freq = plotvar["filters"]["freq"]
+    per = plotvar["filters"]["per"]
+        
+    wanted = "amp"
+    df = meta_df.copy()
+    
+    for idx, row in df.iterrows():
+        
+        if row["WaveAmplitudeInput [Volt]"] == amp:
+            #add row to filtered df
+            df[df["c"]]
+    
+    return filtered_df
+
+
+# rows where col == "apple"
+apple_rows = df[df["col"] == "apple"]
+print(apple_rows)
+
+
+
+#%%
 fr = meta_sel.copy()
-
 for idx, row, in fr.iterrows():
     P1 = row["Probe 1 Amplitude"]
     P2 = row["Probe 2 Amplitude"]
@@ -16,10 +93,13 @@ for idx, row, in fr.iterrows():
     P4 = row["Probe 4 Amplitude"]
     
     if P1 != 0:
-        fr.at[idx, "P3/P2"]
+        fr.at[idx, "P2/P1"] = P2/P1
         
     if P2 != 0:
-        fr.at[idx, "P3/P2"]
+        fr.at[idx, "P3/P2"] = P3/P2
+    
+    if P3 != 0:
+        fr.at[idx, "P4/P3"] = P4/P3
 
 
 

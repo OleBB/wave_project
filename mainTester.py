@@ -101,7 +101,7 @@ calculate_wavenumber(freq, H)
 #%%
 from wavescripts.wavestudyer import wind_damping_study
 
-opp_meta_sel = wind_damping_study(meta_sel)
+oppgradert_meta_sel = wind_damping_study(meta_sel)
 
 
 
@@ -109,16 +109,17 @@ opp_meta_sel = wind_damping_study(meta_sel)
 #%% - Her plotter man en enkeltkjøring oppå en annen
 
 
-from wavescripts.plotter import plot_amplitude_summary
 chooseAll = False
 amplitudeplotvariables = {
     "filters": {
-        "amp": 0.1, #0.1, 0.2, 0.3 
+        "amp": 0.2, #0.1, 0.2, 0.3 
         "freq": 1.3, #bruk et tall  
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": "lowest", #full, no, lowest, all
+        "wind": "full", #full, no, lowest, all
         "tunnel": None,
-        "mooring": "low"
+        "mooring": "low",
+        "panel": "reverse" #no, full, reverse
+        
     },
     "processing": {
         "chosenprobe": "Probe 2",
@@ -136,14 +137,27 @@ amplitudeplotvariables = {
     
 }
 
-m_filtrert = filter_chosen_files(opp_meta_sel, amplitudeplotvariables, chooseAll=False)
+from wavescripts.filters import filter_for_amplitude_plot
+m_filtrert = filter_for_amplitude_plot(oppgradert_meta_sel, amplitudeplotvariables, chooseAll=False)
 
+#%%
+"""Plot amplitude summary plotter alt den tar inn"""
+from wavescripts.plotter import plot_amplitude_summary
 plot_amplitude_summary(m_filtrert, amplitudeplotvariables)
 
 
 
 
-#%%
+
+
+
+
+
+
+
+
+
+#%%æ
 summary = full_tank_diagnostics(processed_dfs)
 #TODO få resultater fra disse over i run_and_save_report.py
 #%%

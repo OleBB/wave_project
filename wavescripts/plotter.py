@@ -298,11 +298,9 @@ def plot_ramp_detection(df, meta_sel, data_col,
 
 def plot_amplitude_summary(meta_df, ampvar):
     
-    amp = ampvar["filters"]["amp"]
-    freq = ampvar["filters"]["freq"]
-    per = ampvar["filters"]["per"]
-    
-    
+    #amp = ampvar["filters"]["amp"]
+    #freq = ampvar["filters"]["freq"]
+    #per = ampvar["filters"]["per"]
     #chosenprobe = ampvar["processing"]["chosenprobe"]
     #rangestart  = ampvar["rangestart"]
     #rangeend    = ampvar["rangeend"]
@@ -313,6 +311,11 @@ def plot_amplitude_summary(meta_df, ampvar):
         "no": "blue",
         "lowest":"green"
     }
+    panel_styles = {
+        "no": "solid",
+        "full:": "dashed",
+        "reverse":"dashdot"
+        }
 
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -324,16 +327,16 @@ def plot_amplitude_summary(meta_df, ampvar):
     probelocations = [1, 1.1, 1.2, 1.25]
 
     for idx, row in meta_df.iterrows():
-        path = row["path"]
-        
-        """if summary_df['WaveFre']
-        
-        SUMMARY DF er veldig begrenset
-        """
-        
+        #path = row["path"]
+
         windcond = row["WindCondition"]
-        print('wind from row', windcond)
+        print('wind condition er :', windcond)
         colla = wind_colors.get(windcond, "black")
+        
+        panelcond = row["PanelCondition"]
+        linjestil = panel_styles.get(panelcond)
+        
+        marker = "o"
 
         label = make_label(row)
         
@@ -342,20 +345,22 @@ def plot_amplitude_summary(meta_df, ampvar):
 
         for i in range(1,5):
             x = probelocations[i-1]
-            y = meta_df[f"Probe {i} Amplitude"].iat[idx]
-            #print('size  av x', np.size(x))
-            #print('size y is', np.size(y))
+            y = row[f"Probe {i} Amplitude"]
             print(f'x is {x} and y is: {y}')
-            #ax.scatter(x,y,marker=stil, linewidth=10)
             xliste.append(x)
             yliste.append(y)
-        ax.plot(xliste,yliste, linewidth=2, label=label, color=colla)
+        
+        # --- her plottes --- #
+        ax.plot(xliste,yliste, linewidth=2, label=label, linestyle=linjestil,marker=marker, color=colla)
 
-    ax.set_xlabel("arbitrær")
+    ax.set_xlabel("arbitrær x-akse")
     ax.set_ylabel("amplitude in mm")
-    ax.set_title(f"titel {figsize}")
-    #ax.legend()
+    ax.set_title(f"tittel ")
+    ax.legend()
     plt.tight_layout()
+    ax.grid()
+    ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
+    ax.minorticks_on()
     plt.show()
 
 
