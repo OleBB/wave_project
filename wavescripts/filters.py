@@ -64,3 +64,24 @@ def filter_chosen_files(meta, plotvariables,chooseAll=True):
     print(df_sel["path"])
     
     return df_sel
+
+
+def filter_ampl_plot(meta_df, plotvar,chooseAll=True):
+    
+    
+    #unpack filters:
+    amp = plotvar["filters"]["amp"]
+    freq = plotvar["filters"]["freq"]
+    per = plotvar["filters"]["per"]
+        
+    
+    if chooseAll:
+        return meta_df
+    
+    df = meta_df.copy()
+    
+    for idx, row in df.iterrows():
+        
+        return
+    
+    return

@@ -6,6 +6,24 @@ Created on Fri Nov 21 15:25:36 2025
 @author: ole
 """
 
+
+fr = meta_sel.copy()
+
+for idx, row, in fr.iterrows():
+    P1 = row["Probe 1 Amplitude"]
+    P2 = row["Probe 2 Amplitude"]
+    P3 = row["Probe 3 Amplitude"]
+    P4 = row["Probe 4 Amplitude"]
+    
+    if P1 != 0:
+        fr.at[idx, "P3/P2"]
+        
+    if P2 != 0:
+        fr.at[idx, "P3/P2"]
+
+
+
+#%%
 for path, (start, end) in auto_ranges.items():
     mask = meta["path"] == path
     meta.loc[mask, "auto_start"] = good_start_idx

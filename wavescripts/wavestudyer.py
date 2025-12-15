@@ -317,6 +317,8 @@ def wind_damping_analysis(processed_dfs, meta_sel):
     Full analysis of wave damping (P3/P2) vs wind condition.
     Returns a DataFrame of results.
     """
+    
+    d = meta_sel.copy()
     results = []
 
     print("WAVE DAMPING vs WIND CONDITION")
@@ -365,7 +367,7 @@ def wind_damping_analysis(processed_dfs, meta_sel):
             if abs(P4toP3 - 1) > 0.15:
                 verdict.append("P3≠P4")
 
-        wind_label = {"full":"FULL", "no":"NO", "lowest":"LOW", "other":"??"}.get(wind, wind.upper())
+        wind_label = {"full":"full", "no":"no", "lowest":"lowest", "other":"??"}.get(wind, wind.upper())
 
         results.append({
             "path": Path(path).name,
@@ -387,6 +389,59 @@ def wind_damping_analysis(processed_dfs, meta_sel):
             print(f"{w.upper():<8} → no valid runs")
 
     return pd.DataFrame(results)
+
+
+
+
+def wind_damping_study(meta_sel):
+    dataf = meta_sel.copy()
+
+    for idx, row, in dataf.iterrows():
+        P1 = row["Probe 1 Amplitude"]
+        P2 = row["Probe 2 Amplitude"]
+        P3 = row["Probe 3 Amplitude"]
+        P4 = row["Probe 4 Amplitude"]
+        
+        if P1 != 0:
+            dataf.at[idx, "P2/P1"] = P2/P1
+            
+        if P2 != 0:
+            dataf.at[idx, "P3/P2"] = P3/P2
+        
+        if P3 != 0:
+            dataf.at[idx, "P4/P3"] = P4/P3
+            
+    return dataf
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
