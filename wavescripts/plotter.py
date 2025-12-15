@@ -293,65 +293,48 @@ def plot_ramp_detection(df, meta_sel, data_col,
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.show()
+
 #%%
-#tar inn en hel df og plotter alle i ett plott
-def plot_amplitude_summary(summary_df):
-       
-    df = summary_df
+
+def plot_amplitude_summary(meta_df, ampvar):
+    
+    amp = ampvar["filters"]["amp"]
+    freq = ampvar["filters"]["freq"]
+    per = ampvar["filters"]["per"]
+    
+    
+    #chosenprobe = ampvar["processing"]["chosenprobe"]
+    #rangestart  = ampvar["rangestart"]
+    #rangeend    = ampvar["rangeend"]
+    figsize     = ampvar["plotting"]["figsize"] or (10,6)
+    
+    wind_colors = {
+        "full":"red",
+        "no": "blue",
+        "lowest":"green"
+    }
+
+    fig, ax = plt.subplots(figsize=figsize)
+
     probelocations = [9200, 9500, 12444, 12455]
     probelocations = [1, 1.1, 1.2, 1.25]
     newsymbol = ["x","*",".","v","o","x"]
     figsize = (10,6)
-    fig, ax = plt.subplots(figsize=figsize)
-
-    
-    for idx, row in df.iterrows():
-        #rad = row["path"]
-        #print('row er',row)
-        # hente ut alle fire pr:obene
-        xliste = []
-        yliste = []
-        for i in range(1,5):
-            x = probelocations[i-1]
-            y = df[f"Probe {i} Amplitude"].iat[idx]
-            #print('size  av x', np.size(x))
-            #print('size y is', np.size(y))
-            print(f'x is {x} and y is: {y}')
-            #ax.scatter(x,y,marker=stil, linewidth=10)
-            xliste.append(x)
-            yliste.append(y)
-
-        ax.plot(xliste,yliste, linewidth=2)
-        print("="*10)
-        print(f"done with {row.iat[0]}")
-    ax.grid()
-    ax.set_xlabel("arbitrær x-akse")
-    ax.set_ylabel("amplitude (mm)")
-    #ax.legend(df["path"])
-plt.show()
-
-
-def plot_amplitude_summary2(summary_df, plot_ranges, plotvariables):
-
-    wind_colors = {
-        "full":"red",
-        "no":"blue",
-        "lowest":"green"
-    }
-    chosenprobe = plotvariables["processing"]["chosenprobe"]
-    #figsize     = plotvariables["plotting"]["figsize"] or (12, 6)
-    figsize = (10,6)
-    fig, ax = plt.subplots(figsize=figsize)
-
 
     probelocations = [1, 1.1, 1.2, 1.25]
 
-    for idx, row in summary_df.iterrows():
+    for idx, row in meta_df.iterrows():
         path = row["path"]
         
-        windcond = row["WindCondition"]
-        color = wind_colors.get(windcond, "black")
+        """if summary_df['WaveFre']
         
+        SUMMARY DF er veldig begrenset
+        """
+        
+        windcond = row["WindCondition"]
+        print('wind from row', windcond)
+        colla = wind_colors.get(windcond, "black")
+
         label = make_label(row)
         
         xliste = []
@@ -359,18 +342,19 @@ def plot_amplitude_summary2(summary_df, plot_ranges, plotvariables):
 
         for i in range(1,5):
             x = probelocations[i-1]
-            y = summary_df[f"Probe {i} Amplitude"].iat[idx]
+            y = meta_df[f"Probe {i} Amplitude"].iat[idx]
             #print('size  av x', np.size(x))
             #print('size y is', np.size(y))
             print(f'x is {x} and y is: {y}')
             #ax.scatter(x,y,marker=stil, linewidth=10)
             xliste.append(x)
             yliste.append(y)
-            
+        ax.plot(xliste,yliste, linewidth=2, label=label, color=colla)
+
     ax.set_xlabel("arbitrær")
     ax.set_ylabel("amplitude in mm")
-    ax.set_title(f"hei {figsize}")
-    ax.legend()
+    ax.set_title(f"titel {figsize}")
+    #ax.legend()
     plt.tight_layout()
     plt.show()
 

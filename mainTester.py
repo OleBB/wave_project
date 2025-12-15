@@ -96,14 +96,49 @@ H = meta_sel['WaterDepth [mm]'].iloc[0]
 freq = meta_sel["WaveFrequencyInput [Hz]"].iloc[0]
 calculate_wavenumber(freq, H)
 
+
+
+#%%
+from wavescripts.wavestudyer import wind_damping_study
+
+opp_meta_sel = wind_damping_study(meta_sel)
+
+
+
+
 #%% - Her plotter man en enkeltkjøring oppå en annen
+
+
 from wavescripts.plotter import plot_amplitude_summary
-from wavescripts.plotter import plot_amplitude_summary2
+chooseAll = False
+amplitudeplotvariables = {
+    "filters": {
+        "amp": 0.1, #0.1, 0.2, 0.3 
+        "freq": 1.3, #bruk et tall  
+        "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "wind": "lowest", #full, no, lowest, all
+        "tunnel": None,
+        "mooring": "low"
+    },
+    "processing": {
+        "chosenprobe": "Probe 2",
+        "rangestart": None,
+        "rangeend": None,
+        "data_cols": ["Probe 2"],#her kan jeg velge fler, må huske [listeformat]
+        "win": 11
+    },
+    "plotting": {
+        "figsize": None,
+        "separate":True,
+        "overlay": False
+        
+    }
+    
+}
 
-plot_amplitude_summary2(summary_df)
+m_filtrert = filter_chosen_files(opp_meta_sel, amplitudeplotvariables, chooseAll=False)
 
-
-
+plot_amplitude_summary(m_filtrert, amplitudeplotvariables)
 
 
 
