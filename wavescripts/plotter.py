@@ -297,15 +297,6 @@ def plot_ramp_detection(df, meta_sel, data_col,
 #%%
 
 def plot_amplitude_summary(meta_df, ampvar):
-    
-    #amp = ampvar["filters"]["amp"]
-    #freq = ampvar["filters"]["freq"]
-    #per = ampvar["filters"]["per"]
-    #chosenprobe = ampvar["processing"]["chosenprobe"]
-    #rangestart  = ampvar["rangestart"]
-    #rangeend    = ampvar["rangeend"]
-    figsize     = ampvar["plotting"]["figsize"] or (10,6)
-    
     wind_colors = {
         "full":"red",
         "no": "blue",
@@ -316,13 +307,13 @@ def plot_amplitude_summary(meta_df, ampvar):
         "full:": "dashed",
         "reverse":"dashdot"
         }
-
+    
+    figsize = (10,6)
     fig, ax = plt.subplots(figsize=figsize)
 
     probelocations = [9200, 9500, 12444, 12455]
     probelocations = [1, 1.1, 1.2, 1.25]
     newsymbol = ["x","*",".","v","o","x"]
-    figsize = (10,6)
 
     probelocations = [1, 1.1, 1.2, 1.25]
 
@@ -352,6 +343,17 @@ def plot_amplitude_summary(meta_df, ampvar):
         
         # --- her plottes --- #
         ax.plot(xliste,yliste, linewidth=2, label=label, linestyle=linjestil,marker=marker, color=colla)
+        
+        # annotate each point with its value (formatted)
+        for x, y in zip(xliste, yliste):
+            ax.annotate(
+                f"{y:.2f}",          # format as needed
+                xy=(x, y),
+                xytext=(6, 6),       # offset in points to avoid overlapping the marker
+                textcoords="offset points",
+                fontsize=8,
+                color=colla
+            )
 
     ax.set_xlabel("arbitrær x-akse")
     ax.set_ylabel("amplitude in mm")
