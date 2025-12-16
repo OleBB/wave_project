@@ -10,15 +10,18 @@ import numpy as np
 #For å mappe dictionary fra input json(eller bare tilsvarende input rett i main)
 #denne mappingen sørger for at dictionaryen kan sjekkes mot metadataene
 #målet er å filtrere slik at jeg bare prosesserer og plotter utvalgte filer.
+
 column_map = {
-    "amp": "WaveAmplitudeInput [Volt]",
-    "freq": "WaveFrequencyInput [Hz]",
-    "wind": "WindCondition",
-    "tunnel": "TunnelCondition",
-    "mooring": "Mooring",
+    "amp":   "WaveAmplitudeInput [Volt]",
+    "freq":  "WaveFrequencyInput [Hz]",
+    "per":   "WavePeriodInput",               # 
+    "wind":  "WindCondition",                 # 
+    "tunnel":"TunnelCondition",               # 
+    "mooring":"Mooring",
+    "panel": "PanelCondition" 
 }
 
-def filter_chosen_files(meta, plotvariables,chooseAll=True):
+def filter_chosen_files(meta, plotvariables,chooseAll,chooseFirst):
     """
     meta: pd.DataFrame with columns referenced in column_map
     plotvariables: dict with nested "filters" mapping short keys -> value or list-of-values
@@ -31,6 +34,8 @@ def filter_chosen_files(meta, plotvariables,chooseAll=True):
     # === Førstemann til mølla! This one overrides === #
     if chooseAll:
         return meta
+    elif chooseFirst:
+        return meta.iloc[0:1]
     # === === === #
     df_sel = meta.copy()
     filter_values = plotvariables.get("filters", {})
@@ -67,9 +72,6 @@ def filter_chosen_files(meta, plotvariables,chooseAll=True):
     return df_sel
 
 
-
-
-
 def filter_for_amplitude_plot(meta_df :pd.DataFrame, amplotvars: dict, chooseAll: bool = False) -> pd.DataFrame:
     if chooseAll:
         return meta_df
@@ -79,21 +81,11 @@ def filter_for_amplitude_plot(meta_df :pd.DataFrame, amplotvars: dict, chooseAll
     filters = amplotvars.get("filters", {})
     
     mask = pd.Series(True, index=df.index)
-    
-    col_map = {
-       "amp":   "WaveAmplitudeInput [Volt]",
-       "freq":  "WaveFrequencyInput [Hz]",
-       "per":   "WavePeriodInput",               # example – adjust if needed
-       "wind":  "WindCondition",                 # you must have such a column
-       "tunnel":"TunnelCondition",               # placeholder name
-       "mooring":"Mooring",
-       "panel": "PanelCondition" 
-   }
-    
+        
     for key, value in filters.items():
         if value is None:
             continue
-        col_name = col_map.get(key, key)
+        col_name = column_map.get(key, key)
         
         if isinstance(value, (list, tuple, set, np.ndarray)):
             mask &= df[col_name].isin(value)

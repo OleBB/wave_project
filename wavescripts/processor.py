@@ -21,13 +21,6 @@ from scipy.signal import find_peaks
 
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
-
-"""start, end, debug_info = find_wave_range(df, 
-                                         row,#pass single row
-                                         data_col=probe, 
-                                         detect_win=win, 
-                                         range_plot=range_plot
-                                         )"""
 def find_wave_range(
     df,
     meta_row,  # metadata for selected files
@@ -49,20 +42,53 @@ def find_wave_range(
         .values
     )
     
+    debug_info = {
+        "baseline_mean": None,
+        "baseline_std": None,
+        "first_motion_idx": None,
+        "samples_per_period": None,
+        "detected_peaks": None,
+        "ramp_found": None,
+        "ramp_length_peaks": None,
+        "keep_periods_used": None,
+    }
+    
    
     dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
     Fs = 1.0 / dt
     
+
     # ───────  FREQUENCY EXTRACTION ───────
-    freq_raw = meta_row["WaveFrequencyInput [Hz]"] if isinstance(meta_row, pd.Series) else meta_row["WaveFrequencyInput [Hz]"].iloc[0]
-    if pd.isna(freq_raw) or str(freq_raw).strip() in ["", "nan"]:
+    input_freq = meta_row["WaveFrequencyInput [Hz]"] if isinstance(meta_row, pd.Series) else meta_row["WaveFrequencyInput [Hz]"].iloc[0]
+    if pd.isna(input_freq) or str(input_freq).strip() in ["", "nan"]:
         importertfrekvens = 1.3
         print(f"Warning: No valid frequency found → using fallback {importertfrekvens} Hz")
     else:
-        importertfrekvens = float(freq_raw)
+        importertfrekvens = float(input_freq)
 
     samples_per_period = int(round(Fs / importertfrekvens))
-        
+    
+    input_period = (meta_row["WavePeriodInput"])
+    keep_periods= input_period/3
+    keep_seconds= keep_periods/input_freq
+    keep_idx = keep_seconds*250 
+    
+    baseline_seconds = 2
+
+    sigma_factor=1.0
+    skip_periods=None
+
+    min_ramp_peaks=5
+    max_ramp_peaks=15
+    max_dips_allowed=2
+    min_growth_factor = 1.015
+
+    P1amp01frwq13eyeball = 4500
+    P2handcalc = P1amp01frwq13eyeball+62.5 #250målinger på ett sekund, ganget et kvart sekund.  
+    P3handcalc = P2handcalc+2.5*250
+    
+    #print(keep_periods, keep_seconds, keep_idx)
+    #print('og:', P1amp01frwq13eyeball, P2handcalc)
     #import sys; print('exit'); sys.exit()
 
     ###### 
@@ -70,27 +96,49 @@ def find_wave_range(
     # ==========================================================
     #  1.b tilpasses innkommende bølge og vindforhold
     # ==========================================================
-    if (meta_row["WindCondition"]) == "full":
-        baseline_seconds=2.0
-        sigma_factor=1.0
-        skip_periods=None
 
-        min_ramp_peaks=5
-        max_ramp_peaks=15
-        max_dips_allowed=2
-        min_growth_factor=2.0
-        min_growth_factor = 1.015   # 1.5% total growth is enough (your ramp is slow!)
-        # 
+    if (meta_row["WindCondition"]) == "full" and input_freq == 1.3:
+        print('fullwind og 1.3')
+        if data_col == "Probe 1": 
+                good_start_idx = P1amp01frwq13eyeball 
+                good_end_idx = good_start_idx+keep_idx
+                return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 2" : 
+                good_start_idx = P2handcalc
+                good_end_idx = P2handcalc + keep_idx
+                return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 3" : 
+                good_start_idx = P3handcalc
+                good_end_idx = P3handcalc + keep_idx
+                return good_start_idx, good_end_idx, debug_info
+
+        
+
+    elif (meta_row["WindCondition"]) == "lowest" and input_freq == 1.3:
+        print('lowestwind og 1.3')
+        if data_col == "Probe 1": 
+                good_start_idx = P1amp01frwq13eyeball 
+                good_end_idx = good_start_idx+keep_idx
+                return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 2" : 
+                good_start_idx = P2handcalc
+                good_end_idx = P2handcalc + keep_idx
+                return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 3" : 
+                good_start_idx = P3handcalc
+                good_end_idx = P3handcalc + keep_idx
+                return good_start_idx, good_end_idx, debug_info
+        
     elif (meta_row["WaveFrequencyInput [Hz]"]) == 0.65:
-        print('vellyket ELIF !!! 0.65')
+        print('vellyket ELIF 0.65')
         baseline_seconds=1.0
-        sigma_factor=1.0
+        sigma_factor=4.0
         skip_periods=None
 
         min_ramp_peaks=1
         max_ramp_peaks=15
         max_dips_allowed=2
-        min_growth_factor=1.1
+        min_growth_factor=1
 
 
     else:
@@ -101,16 +149,9 @@ def find_wave_range(
         min_ramp_peaks=5
         max_ramp_peaks=15
         max_dips_allowed=2
-        min_growth_factor=2.0
         min_growth_factor = 1.015
-
-    per = (meta_row["WavePeriodInput"])
-    keep_periods= per/3
-    
-    
-
-    
-
+        
+    #import sys; print('exit'); sys.exit()
     samples_per_period = int(round(Fs / importertfrekvens))
 
     # ==========================================================
@@ -120,7 +161,11 @@ def find_wave_range(
     baseline = signal_smooth[:baseline_samples]
     baseline_mean = np.mean(baseline)
     baseline_std = np.std(baseline)
-    threshold = baseline_mean + sigma_factor * baseline_std
+    threshold = baseline_mean + sigma_factor*baseline_std
+    
+    print('baselines:')
+    print(baseline_samples, baseline_mean, baseline_seconds, baseline_std)
+    #import sys; print('exit'); sys.exit()
     
     """ærbe
     #print('threshold verdi: ', threshold)
@@ -141,11 +186,11 @@ def find_wave_range(
     # 3. Peak detection on absolute signal (handles both positive/negative swings)
     # ==========================================================
     # Use prominence and distance tuned to your frequency
-    min_distance = max(3, samples_per_period // 3)  # at least 1/3 period apart
+    min_distance = max(3, input_period *0.9 )  # at least 0.9 period apart
     peaks, properties = find_peaks(
         np.abs(signal_smooth),
         distance=min_distance,
-        prominence=0.5 * baseline_std,  # ignore tiny noise peaks
+        prominence=3 * baseline_std,  # ignore noise peaks
         height=threshold
     )
     
@@ -226,6 +271,7 @@ def find_wave_range(
         max_dips=max_dips_allowed,
         min_growth=min_growth_factor
     )
+    
 
     if ramp_result is None:
         print("No clear ramp-up found – using legacy timing")
@@ -448,6 +494,50 @@ def compute_simple_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd
             #print(f"appended records: {records}")
     return pd.DataFrame.from_records(records)
 
+def calculate_simple_wavenumbers(meta_df):
+    g = 9.81
+    df = meta_df.copy()
+    results = {}
+    
+    for row in df.itertuples(index=False):
+        path = row["path"]
+ 
+        freq = row["WaveFrequencyInput [Hz]"]
+        H = row["WaterDepth [mm]"]
+
+        period = 1/freq
+        omega = 2*np.pi/period
+        f = lambda k: g*k*np.tanh(k*H) - omega**2
+        k0 = omega**2/g #deep water guess
+        k1 = omega/np.sqrt(g*H) #shallow water guess
+        a, b = min(k0, k1)*0.1, max(k0, k1)*10
+        while f(a)*f(b) >0:
+            a, b = a/2, b*2
+        K = brentq(f,a,b)
+
+        
+
+from scipy.optimize import brentq
+def calculate_simple_wavenumber(meta_row):
+    """Tar inn metadata 
+    bruker BRENTQ fra scipy
+    """
+    g = 9.81
+    freq = meta_row["WaveFrequencyInput [Hz]"]
+    H = meta_row["WaterDepth [mm]"]
+    print('frq og H : ', freq, H)
+
+    period = 1/freq
+    omega = 2*np.pi/period
+    f = lambda k: g*k*np.tanh(k*H) - omega**2
+    k0 = omega**2/g #deep water guess
+    k1 = omega/np.sqrt(g*H) #shallow water guess
+    a, b = min(k0, k1)*0.1, max(k0, k1)*10
+    while f(a)*f(b) >0:
+        a, b = a/2, b*2
+    
+    return brentq(f, a, b)
+
 
 
 def remove_outliers():
@@ -459,12 +549,12 @@ def remove_outliers():
 
 
 
-
-
-# ================================================reco== #
+# ================================================== #
 # === Take in a filtered subset then process     === #
 # === using functions: ensure_stillwater_columns === #
 # === using functions: find_wave_range           === #
+# === using functions: compute_simple_amplitudes === #
+# === using functions: update_processed_metadata === #
 # ================================================== #
 def process_selected_data(
     dfs: dict[str, pd.DataFrame],
@@ -495,7 +585,7 @@ def process_selected_data(
     if debug:
         print(f"Using stillwater levels: {stillwater}")
 
-    # 2.a) Process only the selected runs
+    # 2.a) Ta utvalgte kjøringer og sett null ved "stillwater"
     processed_dfs = {}
     for _, row in meta_sel.iterrows():
         path = row["path"]
@@ -507,7 +597,7 @@ def process_selected_data(
 
         # Zero each probe
         for i in range(1, 5):
-            probe_col = f"Probe {i}"           # ← your actual column name
+            probe_col = f"Probe {i}"           
             if probe_col not in df.columns:
                 print(f"  Missing column {probe_col} in {Path(path).name}")
                 continue
@@ -516,8 +606,8 @@ def process_selected_data(
             eta_col = f"eta_{i}"
 
             # subtract stillwater → zero mean
-            df[eta_col] = df[probe_col] - sw
-
+            df[eta_col] = -(df[probe_col] - sw) #bruk  MINUS for å snu signalet!
+            #print(df[eta_col].iloc[0:10]) sjekk om den flipper
             # Optional: moving average of the zeroed signal
             df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
             
@@ -551,7 +641,8 @@ def process_selected_data(
         print(f'start: {start}, end: {end} og debug_range_info: {debug_info}')
     
     # ==========================================================
-    # 3. Kjøre compute_simple_amplitudes, basert på computed range i meta_sel
+    # 3.a Kjøre compute_simple_amplitudes, basert på computed range i meta_sel
+    # Oppdaterer meta_sel
     # ==========================================================
     #DataFrame.update aligns on index and columns and then in-place replaces values 
     #in meta_sel with the corresponding non-NA values from the other frame. 
@@ -561,21 +652,34 @@ def process_selected_data(
     meta_sel = meta_sel.set_index("path")
     meta_sel.update(amplituder.set_index("path")[cols])
     meta_sel = meta_sel.reset_index()
+    
+    
+    # ==========================================================
+    # 3.b Kjøre calculate_simple_wavenember, basert på inputfrekvens i meta_sel
+    # ==========================================================
+    for idx, row in meta_sel.iterrows():
+        
+            simple_wavenumber = calculate_simple_wavenumber(meta_sel)
+            meta_sel["Wavenumber"] = simple_wavenumber
 
-    # 3. Make sure meta_sel has the stillwater columns too (for plotting later)
-    #The stillwater assignment uses scalar broadcasting to create or 
-    #fill an entire column with the same value for every row.
+     
+    
+
+    # ==========================================================
+    # 4. Hvis StillwaterKollonen ikke... 
+    # så fylles HELE stillwater-kolonnen med samme verdi
+    # ==========================================================
     for i in range(1, 5):
         col = f"Stillwater Probe {i}"
         if col not in meta_sel.columns:
             print(f"stillwater av i er {stillwater[i]}")
             meta_sel[col] = stillwater[i]
             
-    # 4. Make sure meta_sel knows where to save
+    # 5.a Make sure meta_sel knows where to save
     if "PROCESSED_folder" not in meta_sel.columns:
         if "PROCESSED_folder" in meta_full.columns:
             folder = meta_full["PROCESSED_folder"].iloc[0]
-        elif "experiment_folder" in meta_full.columns:
+        # elif "experiment_folder" in meta_full.columns:
             folder = "PROCESSED-" + meta_full["experiment_folder"].iloc[0]
         else:
             raw_folder = Path(meta_full["path"].iloc[0]).parent.name
@@ -584,7 +688,7 @@ def process_selected_data(
         if debug:
             print(f"Set PROCESSED_folder = {folder}")
 
-    # 5. Save updated metadata (now with stillwater columns)
+    # 5.b Save updated metadata (now with stillwater columns)
     update_processed_metadata(meta_sel)
     # after all probes processed, then we drop the Raw Probe data
     cols_to_drop = ["Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]

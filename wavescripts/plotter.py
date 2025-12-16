@@ -321,7 +321,6 @@ def plot_amplitude_summary(meta_df, ampvar):
         #path = row["path"]
 
         windcond = row["WindCondition"]
-        print('wind condition er :', windcond)
         colla = wind_colors.get(windcond, "black")
         
         panelcond = row["PanelCondition"]
@@ -337,7 +336,7 @@ def plot_amplitude_summary(meta_df, ampvar):
         for i in range(1,5):
             x = probelocations[i-1]
             y = row[f"Probe {i} Amplitude"]
-            print(f'x is {x} and y is: {y}')
+            #print(f'x is {x} and y is: {y}')
             xliste.append(x)
             yliste.append(y)
         
@@ -357,7 +356,7 @@ def plot_amplitude_summary(meta_df, ampvar):
 
     ax.set_xlabel("arbitrær x-akse")
     ax.set_ylabel("amplitude in mm")
-    ax.set_title(f"tittel ")
+    ax.set_title(f"Utkast: Prober 1,2,3,4, (merk: arbitrær x-akse.)avstand P1-P2=30cm, avstand P2-P3/P4= 3,04m ")
     ax.legend()
     plt.tight_layout()
     ax.grid()
