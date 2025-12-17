@@ -15,6 +15,38 @@ import os
 from datetime import datetime
 
 
+dtype_map = {
+
+    "WindCondition": str,
+    "TunnelCondition": str,
+    "PanelCondition": str,
+    "Mooring": str,
+    "WaveAmplitudeInput [Volt]": "float64",
+    "WaveFrequencyInput [Hz]": "float64",
+    "WavePeriodInput": "float64",
+    "WaterDepth [mm]": "float64",
+    "Extra seconds": "float64",
+    "Run number": str,
+    "Stillwater Probe 1": "float64",
+    "Stillwater Probe 2": "float64",
+    "Stillwater Probe 3": "float64",
+    "Stillwater Probe 4": "float64",
+    "Computed Probe 1 start": "float64",
+    "Computed Probe 2 start": "float64",
+    "Computed Probe 3 start": "float64",
+    "Computed Probe 4 start": "float64",
+    "Computed Probe 1 end": "float64",
+    "Computed Probe 2 end": "float64",
+    "Computed Probe 3 end": "float64",
+    "Computed Probe 4 end": "float64",
+    "Probe 1 Amplitude": "float64",
+    "Probe 2 Amplitude": "float64",
+    "Probe 3 Amplitude": "float64",
+    "Probe 4 Amplitude": "float64",
+    "Wavenumber": "float64",
+    "experiment_folder": str
+}
+
 # -------------------------------------------------
 # File discovery
 # -------------------------------------------------
@@ -154,15 +186,40 @@ def load_or_update(
                 filename = path.name
                 metadata = {
                     "path": key,
-                    "WindCondition": "", "TunnelCondition": "", "PanelCondition": "", "Mooring": "",
-                    "WaveAmplitudeInput [Volt]": "", "WaveFrequencyInput [Hz]": "", "WavePeriodInput": "",
-                    "WaterDepth [mm]": "", "Extra seconds": None, "Run number": "",
-                    "Stillwater Probe 1": None, "Stillwater Probe 2": None, "Stillwater Probe 3": None, "Stillwater Probe 4": None,
-                    "Computed Probe 1 start": None, "Computed Probe 2 start": None, "Computed Probe 3 start": None, "Computed Probe 4 start": None,
-                    "Computed Probe 1 end": None, "Computed Probe 2 end": None, "Computed Probe 3 end": None, "Computed Probe 4 end": None, 
-                    "Probe 1 Amplitude": None, "Probe 2 Amplitude": None, "Probe 3 Amplitude": None, "Probe 4 Amplitude": None,
-                    "experiment_folder": experiment_name
+                    "WindCondition": str,
+                    "TunnelCondition": str,
+                    "PanelCondition": str,
+                    "Mooring": str,
+                    "WaveAmplitudeInput [Volt]": float,
+                    "WaveFrequencyInput [Hz]": float,
+                    "WavePeriodInput": float,
+                    "WaterDepth [mm]": float,
+                    "Extra seconds": float,
+                    "Run number": str,
+                    "Stillwater Probe 1": float,
+                    "Stillwater Probe 2": float,
+                    "Stillwater Probe 3": float,
+                    "Stillwater Probe 4": float,
+                    "Computed Probe 1 start": float,
+                    "Computed Probe 2 start": float,
+                    "Computed Probe 3 start": float,
+                    "Computed Probe 4 start": float,
+                    "Computed Probe 1 end": float,
+                    "Computed Probe 2 end": float,
+                    "Computed Probe 3 end": float,
+                    "Computed Probe 4 end": float,
+                    "Probe 1 Amplitude": float,
+                    "Probe 2 Amplitude": float,
+                    "Probe 3 Amplitude": float,
+                    "Probe 4 Amplitude": float,
+                    "Wavenumber": float,
+                    "experiment_folder": str
                 }
+                metadata = {k: "" if dtype is str else None for k, dtype in metadata.items()}
+                metadata.update({
+                    "path": key,
+                    "experiment_folder": experiment_name
+                })
 
                 stillwater_samples = 250 #bruker æ fortsatt denne?
 
@@ -188,14 +245,16 @@ def load_or_update(
                 modtime = os.path.getmtime(path)
                 file_date = datetime.fromtimestamp(modtime)
                 date_match = re.search(r'(\d{8})', filename)
+                mooring_cutoff = datetime(2025, 11, 6)
+                metadata["Mooring"] = "high" if file_date < mooring_cutoff else "low"
                 if date_match:
                     metadata["Date"] = date_match.group(1)
                     if metadata["Date"] < "20251106":
                         metadata["Mooring"] = "high"
                     else:
                         metadata["Mooring"] = "low"
-                mooring_cutoff = datetime(2025, 11, 6)
-                metadata["Mooring"] = "high" if file_date < mooring_cutoff else "low"
+               
+                
 
                 # Wave parameters
                 if m := re.search(r'-amp([A-Za-z0-9]+)-', filename):
@@ -229,6 +288,8 @@ def load_or_update(
 
     # Final metadata DataFrame
     meta_df = pd.DataFrame(all_meta_list)
+
+    meta_df = meta_df.astype(dtype_map)
     print(f"\nFinished! Total {len(all_dfs)} files from {len(folders)} experiment(s)")
     return all_dfs, meta_df
 ################
@@ -276,6 +337,7 @@ def update_processed_metadata(
                 with open(meta_path, "r", encoding="utf-8") as f:
                     old_records = json.load(f)
                 old_df = pd.DataFrame(old_records)
+                old_df = old_df.astype(dtype_map)
                 print(f"Loaded {len(old_df)} existing entries from {meta_path.name}")
             except Exception as e:
                 print(f"Could not read existing {meta_path} → starting fresh: {e}")
@@ -338,71 +400,7 @@ def save_processed_dataframes(dfs: dict, meta_df: pd.DataFrame, processed_root=N
         cache_dir = Path(processed_root or "waveprocessed") / processed_folder
         pd.to_pickle(dfs, cache_dir / "dfs.pkl")
 
-def Min_ubrukte_update_metadata_kan_slettes(df_sel, skip_empty_strings=True):
-    #nå har vi tatt inn en df der rett row må svare til rett json-entry 
-    #we now have a small dataframe "df_sel" that contains only the few 
-    #paths we want to update. 
-    """df_sel.dtypes
-    Out[9]: 
-    path                         object
-    WindCondition                object
-    TunnelCondition              object
-    PanelCondition               object
-    Mooring                      object
-    WaveAmplitudeInput [Volt]    object
-    WaveFrequencyInput [Hz]      object
-    WavePeriodInput              object
-    WaterDepth [mm]              object
-    Extra seconds                object
-    Run number                   object
-    Stillwater Probe 1           object
-    Stillwater Probe 2           object
-    Stillwater Probe 3           object
-    Stillwater Probe 4           object
-    Computed Probe 1 start        int64
-    Computed Probe 2 start        int64
-    Computed Probe 3 start        int64
-    Computed Probe 4 start        int64
-    Computed range               object
-    dtype: object"""
-    #JSON file style:
-    """{
-    "path": "/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring/fullpanel-fullwind-amp0100-freq1300-per30-depth580-mstop10-run1.csv",
-    "WindCondition": "full",
-    "TunnelCondition": "",
-    "PanelCondition": "full",
-    "Mooring": "low",
-    "WaveAmplitudeInput [Volt]": 0.1,
-    "WaveFrequencyInput [Hz]": 1.3,
-    "WavePeriodInput": 30,
-    "WaterDepth [mm]": "580",
-    "Extra seconds": "10",
-    "Run number": "1",
-    "Stillwater Probe 1": "",
-    "Stillwater Probe 2": "",
-    "Stillwater Probe 3": "",
-    "Stillwater Probe 4": "",
-    "Computed Probe 1 start": "",
-    "Computed Probe 2 start": "",
-    "Computed Probe 3 start": "",
-    "Computed Probe 4 start": "",
-    "Computed range": ""
-  },"""
-    all_updates = {}
-    for _, row in df_sel.iterrows():
-        paf = row["path"]
-        update = {}
-        for column, value in row.items():
-            if column == paf:
-                continue
-            if pd.isna(value):
-                continue
-            if skip_empty_strings==True and isinstance(value, str) and value == "":
-                continue
-            update[column] = value
-        if update:
-            all_updates[paf] = update
-    return all_updates
+
 
 
 def apply_updates_to_metadata(metadata_list, updates):

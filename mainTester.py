@@ -15,24 +15,24 @@ file_dir = Path(__file__).resolve().parent
 os.chdir(file_dir)
 # ------------------------------------------------------------------
 #%%
-
 from wavescripts.data_loader import load_or_update
-#dfs, meta = load_or_(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
-#dfs, meta = load_or_(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"))
+#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
+dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"))
 #Denna er bare 15 perioder. ikke godt nok. (Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"))
 
-dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
-
-dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
-
-#%%
-print(meta.tail())
-print("Loaded:", len(dfs), "dataframes")
+#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
+#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
 #%%
 # === Config ===
-chooseAll = False
-chooseFirst = True
-plotvariables = {
+chooseAll = True
+chooseFirst = False
+# range debug and plot
+debug=True
+win=10
+find_range = True
+range_plot = True
+
+processvariables = {
     "filters": {
         "amp": 0.1, #0.1, 0.2, 0.3 
         "freq": 1.3, #bruk et tall  
@@ -42,130 +42,45 @@ plotvariables = {
         "mooring": "low"
     },
     "processing": {
-        "chosenprobe": "Probe 2",
-        "rangestart": None,
-        "rangeend": None,
-        "data_cols": ["Probe 2"],#her kan jeg velge fler, må huske [listeformat]
-        "win": 11
+        "chosenprobe": "Probe 3", #ikkje i bruk
+        "rangestart": None, #ikkje i bruk
+        "rangeend": None, #ikkje i bruk
+        "data_cols": ["Probe 2"],#ikkje i bruk
+        "win": 11 #ikkje i bruk
     },
     "plotting": {
         "figsize": None,
         "separate":True,
-        "overlay": False
-        
+        "overlay": False   
     }
-    
 }
 # alternativt importere plotvariabler
 #import json
 #with open("plotsettings.json") as f:_
 #      plotvariables = json.load(f)
-
-print('# === Filter ===')
+print('# === Filter === #')
 from wavescripts.filters import filter_chosen_files
 meta_sel = filter_chosen_files(meta,
-                             plotvariables,
+                             processvariables,
                              chooseAll,chooseFirst)
 #nå har vi de utvalgte: meta_sel altså metadataframes_selected
 #%%
-print('# === Process ===')
+print('# === Process === #')
 from wavescripts.processor import process_selected_data#, plot_ramp_debug
 # - and optional check: DEBUG gir noen ekstra printa linjer
 processed_dfs, meta_sel = process_selected_data(dfs, 
                                                 meta_sel, 
                                                 meta, 
-                                                debug=True, 
-                                                win=10, 
-                                                find_range=True,
-                                                range_plot=True)
+                                                debug, 
+                                                win, 
+                                                find_range,
+                                                range_plot)
 #TODO fiks slik at find_wave_range starter ved null eller ved en topp?
 # nå tar den first_motion_idx+ gitt antall bølger.
 
 #%% - 
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis 
 summary_df = wind_damping_analysis(meta_sel)
-#%%
-from wavescripts.wavestudyer import calculate_wavenumber
-H = meta_sel['WaterDepth [mm]'].iloc[0]
-freq = meta_sel["WaveFrequencyInput [Hz]"].iloc[0]
-Wavenumber_K = calculate_wavenumber(freq, H)
-
-# %%
-
-
-labels = meta.index[2:4]            # slice of labels for positions 2..3
-new_df = meta.loc[labels].copy()
-
-#%%
-from scipy.optimize import brentq
-def calculate_simple_wavenumbers(meta_df):
-    g = 9.81
-    df = meta_df.copy()
-    cols = ["path", "WaveFrequencyInput [Hz]", "WaterDepth [mm]"]
-    sub_df = df[cols]
-    results = {}
-    sub_df.head()
-    
-    for row in sub_df.itertuples(index=False):
-        path = row["path"]
-        print('hellooo')
-        freq = row["WaveFrequencyInput [Hz]"]
-        H = row["WaterDepth [mm]"]
-
-        period = 1/freq
-        omega = 2*np.pi/period
-        f = lambda k: g*k*np.tanh(k*H) - omega**2
-        k0 = omega**2/g #deep water guess
-        k1 = omega/np.sqrt(g*H) #shallow water guess
-        a, b = min(k0, k1)*0.1, max(k0, k1)*10
-        while f(a)*f(b) >0:
-            a, b = a/2, b*2
-        K = brentq(f,a,b)
-        
-calculate_simple_wavenumbers(new_df)
-# %%
-
-
-def calculate_wavenumber(freq, H):
-    """Tar inn frekvens og høyde
-    bruker BRENTQ fra scipy
-    """
-    g = 9.81
-    period = 1/freq
-    omega = 2*np.pi/period
-    f = lambda k: g*k*np.tanh(k*H) - omega**2
-    k0 = omega**2/g #deep water guess
-    k1 = omega/np.sqrt(g*H) #shallow water guess
-    a, b = min(k0, k1)*0.1, max(k0, k1)*10
-    while f(a)*f(b) >0:
-        a, b = a/2, b*2
-    
-    return brentq(f, a, b)
-
-labels = meta.index[2:4]            # slice of labels for positions 2..3
-new_df = meta.loc[labels].copy()
-
-cols = ["path", "WaveFrequencyInput [Hz]", "WaterDepth [mm]"]
-sub_df = new_df[cols]
-
-sub_df.head()
- 
-
-
-
-
-
-# %%
-import numpy as np
-import matplotlib.pyplot as plt
-x = np.linspace(1,10,100)
-ss = np.sin(x)
-
-plt.plot(ss)
-plt.plot(-ss)
-plt.show()
-
-
 
 # %%
 from wavescripts.wavestudyer import wind_damping_analysis
@@ -182,7 +97,8 @@ oppgradert_meta_sel = probe_comparisor(meta_sel)
 #%% - Her plotter man en enkeltkjøring oppå en annen
 
 
-chooseAll = True
+chooseAll = False
+
 amplitudeplotvariables = {
     "filters": {
         "amp": 0.1, #0.1, 0.2, 0.3 
@@ -191,7 +107,7 @@ amplitudeplotvariables = {
         "wind": ["no", "lowest", "full"], #full, no, lowest, all
         "tunnel": None,
         "mooring": "low",
-        "panel": "reverse" #no, full, reverse
+        "panel": ["full", "no"], # no, full, reverse, 
         
     },
     "processing": {
@@ -211,19 +127,11 @@ amplitudeplotvariables = {
 }
 
 from wavescripts.filters import filter_for_amplitude_plot
-m_filtrert = filter_for_amplitude_plot(oppgradert_meta_sel, amplitudeplotvariables, chooseAll=False)
+m_filtrert = filter_for_amplitude_plot(oppgradert_meta_sel, amplitudeplotvariables, chooseAll)
 
-#%%
 """Plot amplitude summary plotter alt den tar inn"""
 from wavescripts.plotter import plot_amplitude_summary
 plot_amplitude_summary(m_filtrert, amplitudeplotvariables)
-
-
-
-
-
-
-
 
 
 
