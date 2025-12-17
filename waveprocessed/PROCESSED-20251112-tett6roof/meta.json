@@ -27,6 +27,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -57,6 +58,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -65,8 +67,8 @@
     "TunnelCondition": "",
     "PanelCondition": "no",
     "Mooring": "low",
-    "WaveAmplitudeInput [Volt]": "",
-    "WaveFrequencyInput [Hz]": "",
+    "WaveAmplitudeInput [Volt]": null,
+    "WaveFrequencyInput [Hz]": null,
     "WavePeriodInput": 40,
     "WaterDepth [mm]": 580,
     "Extra seconds": 30,
@@ -87,6 +89,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -117,6 +120,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -147,6 +151,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -177,6 +182,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -207,6 +213,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -216,7 +223,7 @@
     "PanelCondition": "no",
     "Mooring": "low",
     "WaveAmplitudeInput [Volt]": 0.3,
-    "WaveFrequencyInput [Hz]": "",
+    "WaveFrequencyInput [Hz]": null,
     "WavePeriodInput": 40,
     "WaterDepth [mm]": 580,
     "Extra seconds": 30,
@@ -237,6 +244,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -267,6 +275,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -297,6 +306,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -327,6 +337,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -357,6 +368,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -387,6 +399,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -417,6 +430,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -447,6 +461,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -455,8 +470,8 @@
     "TunnelCondition": "",
     "PanelCondition": "no",
     "Mooring": "low",
-    "WaveAmplitudeInput [Volt]": "",
-    "WaveFrequencyInput [Hz]": "",
+    "WaveAmplitudeInput [Volt]": null,
+    "WaveFrequencyInput [Hz]": null,
     "WavePeriodInput": 40,
     "WaterDepth [mm]": 580,
     "Extra seconds": 30,
@@ -477,6 +492,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -507,6 +523,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -537,6 +554,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -567,6 +585,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -597,6 +616,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -606,7 +626,7 @@
     "PanelCondition": "no",
     "Mooring": "low",
     "WaveAmplitudeInput [Volt]": 0.2,
-    "WaveFrequencyInput [Hz]": "",
+    "WaveFrequencyInput [Hz]": null,
     "WavePeriodInput": 40,
     "WaterDepth [mm]": 580,
     "Extra seconds": 30,
@@ -627,6 +647,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -657,6 +678,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -687,6 +709,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -717,6 +740,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -747,6 +771,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -777,6 +802,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -807,6 +833,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -837,6 +864,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -867,6 +895,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -897,6 +926,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -927,6 +957,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -957,6 +988,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -987,6 +1019,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1017,6 +1050,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1047,6 +1081,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1077,6 +1112,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1107,6 +1143,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1137,6 +1174,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1167,6 +1205,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1197,6 +1236,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1227,6 +1267,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1257,6 +1298,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   },
   {
@@ -1287,6 +1329,7 @@
     "Probe 2 Amplitude": null,
     "Probe 3 Amplitude": null,
     "Probe 4 Amplitude": null,
+    "Wavenumber": null,
     "experiment_folder": "20251112-tett6roof"
   }
 ]

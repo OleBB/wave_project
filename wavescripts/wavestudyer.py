@@ -279,37 +279,25 @@ def _safe_round_ratio(a, b):
         return np.nan
     return a / b
 
-def newtons_metode():
+
+
+
+# from scipy.optimize import brentq
+# def calculate_wavenumber(freq, H):
+#     """Tar inn frekvens og høyde
+#     bruker BRENTQ fra scipy
+#     """
+#     g = 9.81
+#     period = 1/freq
+#     omega = 2*np.pi/period
+#     f = lambda k: g*k*np.tanh(k*H) - omega**2
+#     k0 = omega**2/g #deep water guess
+#     k1 = omega/np.sqrt(g*H) #shallow water guess
+#     a, b = min(k0, k1)*0.1, max(k0, k1)*10
+#     while f(a)*f(b) >0:
+#         a, b = a/2, b*2
     
-    return
-
-from scipy.optimize import brentq
-def k_from_omega(omega, g=9.81, H=0.580):
-    f = lambda k: g*k*np.tanh(k*H) - omega**2
-    k0 = omega**2/g                 # deep‑water guess
-    k1 = omega/np.sqrt(g*H)         # shallow‑water guess
-    a, b = min(k0, k1)*0.1, max(k0, k1)*10
-    while f(a)*f(b) > 0:
-        a, b = a/2, b*2
-    return brentq(f, a, b)
-
-
-from scipy.optimize import brentq
-def calculate_wavenumber(freq, H):
-    """Tar inn frekvens og høyde
-    bruker BRENTQ fra scipy
-    """
-    g = 9.81
-    period = 1/freq
-    omega = 2*np.pi/period
-    f = lambda k: g*k*np.tanh(k*H) - omega**2
-    k0 = omega**2/g #deep water guess
-    k1 = omega/np.sqrt(g*H) #shallow water guess
-    a, b = min(k0, k1)*0.1, max(k0, k1)*10
-    while f(a)*f(b) >0:
-        a, b = a/2, b*2
-    
-    return brentq(f, a, b)
+#     return brentq(f, a, b)
     
 
 def wind_damping_analysis(meta_df):

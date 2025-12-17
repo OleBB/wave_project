@@ -33,6 +33,7 @@ def filter_chosen_files(meta, plotvariables,chooseAll,chooseFirst):
     """
     # === Førstemann til mølla! This one overrides === #
     if chooseAll:
+        print("Alle valgt, fordi chooseAll=True")
         return meta
     elif chooseFirst:
         return meta.iloc[0:1]
@@ -94,22 +95,23 @@ def filter_for_amplitude_plot(meta_df :pd.DataFrame, amplotvars: dict, chooseAll
             # The callable must return a boolean Series of the same length
             mask &= value(df[col_name])
 
-        else:   # scalar → exact match
-            # Special handling for the “wind” and “mooring” strings you mentioned
+        else:   
             if key == "wind":
-                # Example: you store the wind condition as a string column.
                 # Allowed values: "full", "no", "lowest", "all"
-                # If the user passes "all" we *do not filter* on this column.
+                # "all" = no windfilter on this column.
                 if value == "all":
                     continue          # skip – keep current mask unchanged
                 mask &= df[col_name] == value
 
             elif key == "mooring":
-                # Same idea as wind – you can add more complex logic here.
                 if value == "all":
                     continue
                 mask &= df[col_name] == value
-
+            elif key == "panel":
+                if value == "all":
+                    continue
+                mask &= df[col_name] == value
+            #TK - denne logikken klarer ikke listen ["all"] 
             else:
                 mask &= df[col_name] == value
             

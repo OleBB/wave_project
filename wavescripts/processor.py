@@ -41,7 +41,7 @@ def find_wave_range(
         .bfill().ffill()
         .values
     )
-    
+
     debug_info = {
         "baseline_mean": None,
         "baseline_std": None,
@@ -52,11 +52,9 @@ def find_wave_range(
         "ramp_length_peaks": None,
         "keep_periods_used": None,
     }
-    
-   
+
     dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
     Fs = 1.0 / dt
-    
 
     # ───────  FREQUENCY EXTRACTION ───────
     input_freq = meta_row["WaveFrequencyInput [Hz]"] if isinstance(meta_row, pd.Series) else meta_row["WaveFrequencyInput [Hz]"].iloc[0]
@@ -67,6 +65,8 @@ def find_wave_range(
         importertfrekvens = float(input_freq)
 
     samples_per_period = int(round(Fs / importertfrekvens))
+    print('samples per period !EXIT:',samples_per_period)
+    import sys; sys.exit()
     
     input_period = (meta_row["WavePeriodInput"])
     keep_periods= input_period/3
@@ -90,13 +90,36 @@ def find_wave_range(
     #print(keep_periods, keep_seconds, keep_idx)
     #print('og:', P1amp01frwq13eyeball, P2handcalc)
     #import sys; print('exit'); sys.exit()
-
-    ###### 
+    
+    #fullpanel-fullwind-amp02-freq13- correct @5780
+    #no panel, amp03, freq0650: 2300? probe=??
+    #fullpanel-fullwind-amp01-freq0650-per15-probe3: 4000 korrekt
+    
+    """
+    Først: sjekke paneltilstand:
+        hvis ingen panel
+    
+    Neste: sjekke vindforhold: 
+        hvis sterk vind
+        
+    Hvis lav frekvens: da er det kortere (nesten ingen) ramp.
+    
+    Ramp må tape for høyeste peaks, i hvertfall når panel
+        
+    Så, enkelt basere probe 2 på 1 , og 34 på 2?
+    """
+    
+    #nesten så jeg vil lage en teoretisk utregnign... 
+    #må jo få tildet. en predikering! 
+    #hva sier teorien!
+    
+    #TODO forstå phase-speed og 
+    
     #todo tilpasses input
     # ==========================================================
     #  1.b tilpasses innkommende bølge og vindforhold
     # ==========================================================
-
+    """ELIF RETURN SNARVEI"""
     if (meta_row["WindCondition"]) == "full" and input_freq == 1.3:
         print('fullwind og 1.3')
         if data_col == "Probe 1": 
@@ -112,8 +135,6 @@ def find_wave_range(
                 good_end_idx = P3handcalc + keep_idx
                 return good_start_idx, good_end_idx, debug_info
 
-        
-
     elif (meta_row["WindCondition"]) == "lowest" and input_freq == 1.3:
         print('lowestwind og 1.3')
         if data_col == "Probe 1": 
@@ -128,9 +149,8 @@ def find_wave_range(
                 good_start_idx = P3handcalc
                 good_end_idx = P3handcalc + keep_idx
                 return good_start_idx, good_end_idx, debug_info
-        
     elif (meta_row["WaveFrequencyInput [Hz]"]) == 0.65:
-        print('vellyket ELIF 0.65')
+        #print('vellyket ELIF 0.65')
         baseline_seconds=1.0
         sigma_factor=4.0
         skip_periods=None
@@ -139,8 +159,6 @@ def find_wave_range(
         max_ramp_peaks=15
         max_dips_allowed=2
         min_growth_factor=1
-
-
     else:
         baseline_seconds=2.0
         sigma_factor=1.0
@@ -282,10 +300,8 @@ def find_wave_range(
         ramp_start_peak_idx, ramp_end_peak_idx, ramp_seq = ramp_result
         print(f"RAMP-UP DETECTED: {len(ramp_seq)} peaks, "
               f"from {ramp_seq[0]:.2f} → {ramp_seq[-1]:.2f} (x{ramp_seq[-1]/ramp_seq[0]:.1f})")
-
         # Convert last ramp peak → sample index
         last_ramp_sample_idx = peaks[ramp_end_peak_idx]
-
         # Stable phase starts right after ramp-up
         good_start_idx = last_ramp_sample_idx + samples_per_period // 4  # small safety margin
         keep_periods = keep_periods or 10
@@ -494,49 +510,64 @@ def compute_simple_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd
             #print(f"appended records: {records}")
     return pd.DataFrame.from_records(records)
 
-def calculate_simple_wavenumbers(meta_df):
-    g = 9.81
-    df = meta_df.copy()
-    results = {}
-    
-    for row in df.itertuples(index=False):
-        path = row["path"]
- 
-        freq = row["WaveFrequencyInput [Hz]"]
-        H = row["WaterDepth [mm]"]
-
-        period = 1/freq
-        omega = 2*np.pi/period
-        f = lambda k: g*k*np.tanh(k*H) - omega**2
-        k0 = omega**2/g #deep water guess
-        k1 = omega/np.sqrt(g*H) #shallow water guess
-        a, b = min(k0, k1)*0.1, max(k0, k1)*10
-        while f(a)*f(b) >0:
-            a, b = a/2, b*2
-        K = brentq(f,a,b)
-
         
-
 from scipy.optimize import brentq
-def calculate_simple_wavenumber(meta_row):
-    """Tar inn metadata 
+# def calculate_simple_wavenumber(meta_row):
+#     """Tar inn metadata 
+#     bruker BRENTQ fra scipy
+#     """
+#     g = 9.81
+#     freq = meta_row["WaveFrequencyInput [Hz]"]
+#     H = meta_row["WaterDepth [mm]"]
+#     print('frq og H : ', freq, H)
+
+#     period = 1/freq
+#     omega = 2*np.pi/period
+#     f = lambda k: g*k*np.tanh(k*H) - omega**2
+#     k0 = omega**2/g #deep water guess
+#     k1 = omega/np.sqrt(g*H) #shallow water guess
+#     a, b = min(k0, k1)*0.1, max(k0, k1)*10
+#     while f(a)*f(b) >0:
+#         a, b = a/2, b*2
+    
+#     return brentq(f, a, b)
+
+def calculate_wavenumbers(frequencies, heights):
+    """Tar inn frekvens og høyde
     bruker BRENTQ fra scipy
     """
-    g = 9.81
-    freq = meta_row["WaveFrequencyInput [Hz]"]
-    H = meta_row["WaterDepth [mm]"]
-    print('frq og H : ', freq, H)
-
-    period = 1/freq
-    omega = 2*np.pi/period
-    f = lambda k: g*k*np.tanh(k*H) - omega**2
-    k0 = omega**2/g #deep water guess
-    k1 = omega/np.sqrt(g*H) #shallow water guess
-    a, b = min(k0, k1)*0.1, max(k0, k1)*10
-    while f(a)*f(b) >0:
-        a, b = a/2, b*2
+    freq = np.asarray(frequencies)
+    H = np.broadcast_to(np.asarray(heights), freq.shape)
+    k = np.zeros_like(freq, dtype=float)
     
-    return brentq(f, a, b)
+    valid = freq>0
+    i_valid = np.flatnonzero(valid)
+    if i_valid.size ==0:
+        return k
+    g = 9.81
+    for idx in i_valid:
+        fr = freq.flat[idx]
+        h = H.flat[idx]/1000 #konverter til millimeter
+        omega = 2 * np.pi * fr
+        
+        def disp(k_wave):
+            return g*k_wave* np.tanh(k_wave * h) - omega**2
+        
+        k_deep = omega**2 / g
+        k_shallow = omega / np.sqrt(g * h) if h >0 else k_deep
+        
+        a = min(k_deep, k_shallow) *0.1
+        b = max(k_deep, k_shallow) *10
+        
+        fa = disp(a)
+        fb = disp(b)
+        while fa * fb > 0:
+            a /= 2
+            b *= 2
+            fa = disp(a)
+            fb = disp(b)
+        k.flat[idx] = brentq(disp, a, b)
+    return k
 
 
 
@@ -649,20 +680,22 @@ def process_selected_data(
     #It uses index+column labels for alignment.
     amplituder = compute_simple_amplitudes(processed_dfs, meta_sel)
     cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
-    meta_sel = meta_sel.set_index("path")
-    meta_sel.update(amplituder.set_index("path")[cols])
-    meta_sel = meta_sel.reset_index()
+    meta_sel_indexed = meta_sel.set_index("path")
+    meta_sel_indexed.update(amplituder.set_index("path")[cols])
+    meta_sel = meta_sel_indexed.reset_index()
     
     
     # ==========================================================
     # 3.b Kjøre calculate_simple_wavenember, basert på inputfrekvens i meta_sel
+    #     Oppdaterer meta_sel
     # ==========================================================
-    for idx, row in meta_sel.iterrows():
-        
-            simple_wavenumber = calculate_simple_wavenumber(meta_sel)
-            meta_sel["Wavenumber"] = simple_wavenumber
-
-     
+    columnz = ["path", "WaveFrequencyInput [Hz]", "WaterDepth [mm]"]
+    sub_df = meta_sel[columnz].copy()
+    sub_df["Wavenumber"] = calculate_wavenumbers(sub_df["WaveFrequencyInput [Hz]"], sub_df["WaterDepth [mm]"])
+    m_s_indexed = meta_sel.set_index("path")
+    w_s = sub_df.set_index("path")["Wavenumber"]
+    m_s_indexed["Wavenumber"] = w_s
+    meta_sel = m_s_indexed.reset_index()
     
 
     # ==========================================================
