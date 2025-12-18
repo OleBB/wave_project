@@ -34,11 +34,10 @@ def find_wave_range(
     if (meta_row["WindCondition"]) == "full":
         detect_win = 15
     if (meta_row["WindCondition"]) == "low":
-        detect_win = 15
-    
+        detect_win = 10
 
     # ==========================================================
-    # 1. Basic preprocessing
+    # 1. smoothe signalet med moving average vindu: detect_win
     # ==========================================================
     signal_smooth = (
         df[data_col]
@@ -59,6 +58,7 @@ def find_wave_range(
         "keep_periods_used": None,
     }
 
+    # ─────── finne tidsstegene ─────── 
     dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
     Fs = 1.0 / dt
 
@@ -73,9 +73,11 @@ def find_wave_range(
     samples_per_period = int(round(Fs / importertfrekvens))
     
     input_period = (meta_row["WavePeriodInput"])
-    keep_periods= input_period/3
+    keep_periods= round((input_period-13)*1.0) #trekke fra perioder, 15 per er det bare 4 gode, mens på 40 per er ish 30 gode. TK todo velge en bedre skalering
     keep_seconds= keep_periods/input_freq
     keep_idx = keep_seconds*250 
+    good_range = keep_idx
+    
     
     baseline_seconds = 2
 
@@ -86,17 +88,18 @@ def find_wave_range(
     max_ramp_peaks=15
     max_dips_allowed=2
     min_growth_factor = 1.015
-
+    
+    # MANUELL CALCULERING
     P1amp01frwq13eyeball = 4500
-    P2handcalc = P1amp01frwq13eyeball+62.5 #250målinger på ett sekund, ganget et kvart sekund.  
-    P3handcalc = P2handcalc+2.5*250
+    P2handcalc = P1amp01frwq13eyeball+62.5 #250målinger på ett sekund, ganget et kvart sekund, estimert reisetid for bølgen på 1.3hz  
+    P3handcalc = P2handcalc+7*250 #en 1.3hz gir periode på 700idx? 250 målinger per sek
     
     #print(keep_periods, keep_seconds, keep_idx)
     #print('og:', P1amp01frwq13eyeball, P2handcalc)
     #import sys; print('exit'); sys.exit()
     
     #fullpanel-fullwind-amp02-freq13- correct @5780
-    #no panel, amp03, freq0650: 2300? probe=??
+    # no panel, amp03, freq0650: 2300? probe=??
     #fullpanel-fullwind-amp01-freq0650-per15-probe3: 4000 korrekt
     
     """
@@ -119,40 +122,43 @@ def find_wave_range(
     
     #TODO forstå phase-speed og 
     
+    """Setter basis idx basert på probe """
+    if data_col == "Probe 1": 
+            good_start_idx = P1amp01frwq13eyeball 
+            good_end_idx = good_start_idx+keep_idx
+            #return good_start_idx, good_end_idx, debug_info
+    elif data_col == "Probe 2" : 
+            good_start_idx = P2handcalc
+            good_end_idx = P2handcalc + keep_idx
+            #return good_start_idx, good_end_idx, debug_info
+    elif data_col == "Probe 3" or "Probe 4": 
+            good_start_idx = P3handcalc
+            good_end_idx = P3handcalc + keep_idx
+ 
+    
     #todo tilpasses input
     # ==========================================================
     #  1.b tilpasses innkommende bølge og vindforhold
     # ==========================================================
     """ELIF RETURN SNARVEI"""
-    if (meta_row["WindCondition"]) == "full" and input_freq == 1.3:
+    if input_freq == 1.3:
         print('fullwind og 1.3')
         if data_col == "Probe 1": 
                 good_start_idx = P1amp01frwq13eyeball 
                 good_end_idx = good_start_idx+keep_idx
-                return good_start_idx, good_end_idx, debug_info
+                #return good_start_idx, good_end_idx, debug_info
         elif data_col == "Probe 2" : 
                 good_start_idx = P2handcalc
                 good_end_idx = P2handcalc + keep_idx
-                return good_start_idx, good_end_idx, debug_info
+                #return good_start_idx, good_end_idx, debug_info
         elif data_col == "Probe 3" : 
                 good_start_idx = P3handcalc
                 good_end_idx = P3handcalc + keep_idx
-                return good_start_idx, good_end_idx, debug_info
-
-    elif (meta_row["WindCondition"]) == "lowest" and input_freq == 1.3:
-        print('lowestwind og 1.3')
-        if data_col == "Probe 1": 
-                good_start_idx = P1amp01frwq13eyeball 
-                good_end_idx = good_start_idx+keep_idx
-                return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 2" : 
-                good_start_idx = P2handcalc
-                good_end_idx = P2handcalc + keep_idx
-                return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 3" : 
+        elif data_col == "Probe 4" : 
                 good_start_idx = P3handcalc
                 good_end_idx = P3handcalc + keep_idx
-                return good_start_idx, good_end_idx, debug_info
+                # return good_start_idx, good_end_idx, debug_info
+   
     elif (meta_row["WaveFrequencyInput [Hz]"]) == 0.65:
         #print('vellyket ELIF 0.65')
         baseline_seconds=1.0
@@ -163,7 +169,10 @@ def find_wave_range(
         max_ramp_peaks=15
         max_dips_allowed=2
         min_growth_factor=1
+        good_start_idx = 4000
+        good_end_idx = 5000
     else:
+        print("ingen if-statments traff, ELSE basics kjøres:")
         baseline_seconds=2.0
         sigma_factor=1.0
         skip_periods=None
@@ -172,6 +181,29 @@ def find_wave_range(
         max_ramp_peaks=15
         max_dips_allowed=2
         min_growth_factor = 1.015
+        
+        good_start_idx = 4000
+        good_end_idx = 5000
+    
+    """elif (meta_row["WindCondition"]) == "lowest" and input_freq == 1.3:
+        print('lowestwind og 1.3')
+        if data_col == "Probe 1": 
+                good_start_idx = P1amp01frwq13eyeball 
+                good_end_idx = good_start_idx+keep_idx
+                #return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 2" : 
+                good_start_idx = P2handcalc
+                good_end_idx = P2handcalc + keep_idx
+                #return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 3" : 
+                good_start_idx = P3handcalc
+                good_end_idx = P3handcalc + keep_idx
+                #return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 4" : 
+                good_start_idx = P3handcalc
+                good_end_idx = P3handcalc + keep_idx
+                #return good_start_idx, good_end_idx, debug_info"""
+
         
     #import sys; print('exit'); sys.exit()
     samples_per_period = int(round(Fs / importertfrekvens))
@@ -226,6 +258,7 @@ def find_wave_range(
     lettest: FANGE OPP DE 10 største bølgene. starte fra den første.
 
     """
+    """
     # ta 10 største, så ta den første, så ta 10 perioder
     numbaofpeaks = len(peaks)
     if meta_row["WavePeriodInput"] <16 and numbaofpeaks >3 :
@@ -240,11 +273,13 @@ def find_wave_range(
         print(f'LESS THAN 16 periods, choosing largest peaks')
         print("="*99)
         return good_start_idx, good_end_idx, debug_info
+    
+    """
     #
     # ==========================================================
     #  
     # ==========================================================
-
+    """
     if len(peaks) < min_ramp_peaks + 3:
         print("Not enough peaks detected – falling back to legacy method")
         skip_periods = skip_periods or (5 + 12)
@@ -294,7 +329,7 @@ def find_wave_range(
         min_growth=min_growth_factor
     )
     
-
+    
     if ramp_result is None:
         print("No clear ramp-up found – using legacy timing")
         skip_periods = skip_periods or (5 + 12)
@@ -315,7 +350,7 @@ def find_wave_range(
     good_start_idx = min(good_start_idx, len(df) - good_range - 1)
     good_range     = min(good_range, len(df) - good_start_idx)
     good_end_idx   = good_start_idx + good_range
-
+    """
     # ==========================================================
     # 5.a Få hjelp av grok
     # ==========================================================
@@ -364,12 +399,13 @@ def find_wave_range(
             }
 
             # Only add new arguments if we have them and ramp was found
+            """
             if 'peaks' in locals() and ramp_result is not None:
                 plot_kwargs["peaks"] = peaks
                 plot_kwargs["peak_amplitudes"] = peak_amplitudes
                 ramp_peak_samples = peaks[ramp_result[0]:ramp_result[1]+1]
                 plot_kwargs["ramp_peak_indices"] = ramp_peak_samples
-
+            """
             plot_ramp_detection(**plot_kwargs)
 
         except Exception as e:
@@ -381,8 +417,8 @@ def find_wave_range(
         "first_motion_idx": first_motion_idx,
         "samples_per_period": samples_per_period,
         "detected_peaks": len(peaks),
-        "ramp_found": ramp_result is not None,
-        "ramp_length_peaks": len(ramp_result[2]) if ramp_result else None,
+        #"ramp_found": ramp_result is not None,
+        #"ramp_length_peaks": len(ramp_result[2]) if ramp_result else None,
         "keep_periods_used": keep_periods,
     }
 

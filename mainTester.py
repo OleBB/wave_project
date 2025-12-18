@@ -8,6 +8,7 @@ Created on Tue Nov 18 08:41:03 2025
 #TODO: 
 import os
 from pathlib import Path
+
 # ------------------------------------------------------------------
 # Make the script always run from the folder where THIS file lives
 # ------------------------------------------------------------------
@@ -17,15 +18,15 @@ os.chdir(file_dir)
 #%%
 from wavescripts.data_loader import load_or_update
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
-dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"))
+# dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")) #per15
 #Denna er bare 15 perioder. ikke godt nok. (Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"))
 
-#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
+dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
 #%%
 # === Config ===
 chooseAll = False
-chooseFirst = True
+chooseFirst = False
 # range debug and plot
 debug=True
 win=10
@@ -39,7 +40,8 @@ processvariables = {
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "wind": None, #full, no, lowest
         "tunnel": None,
-        "mooring": "low"
+        "mooring": "low",
+        "panel": ["full", "reverse"], # no, full, reverse, 
     },
     "processing": {
         "chosenprobe": "Probe 3", #ikkje i bruk
