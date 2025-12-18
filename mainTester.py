@@ -24,8 +24,8 @@ dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/202511
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
 #%%
 # === Config ===
-chooseAll = True
-chooseFirst = False
+chooseAll = False
+chooseFirst = True
 # range debug and plot
 debug=True
 win=10

@@ -43,7 +43,16 @@ dtype_map = {
     "Probe 2 Amplitude": "float64",
     "Probe 3 Amplitude": "float64",
     "Probe 4 Amplitude": "float64",
+    "Wavefrequency": "float64",
+    "Waveperiod": "float64",
     "Wavenumber": "float64",
+    "Wavelength": "float64",
+    "kH": "float64",
+    "tanh(kH)": "float64",
+    "Celerity": "float64",
+    "Significant Wave Height Hs": "float64",
+    "Significant Wave Height Hm0": "float64",
+    "Windspeed": "float64",
     "experiment_folder": str
 }
 
@@ -196,6 +205,10 @@ def load_or_update(
                     "WaterDepth [mm]": float,
                     "Extra seconds": float,
                     "Run number": str,
+                    "Probe 1 mm from paddle": float,
+                    "Probe 2 mm from paddle": float,
+                    "Probe 3 mm from paddle": float,
+                    "Probe 4 mm from paddle": float,
                     "Stillwater Probe 1": float,
                     "Stillwater Probe 2": float,
                     "Stillwater Probe 3": float,
@@ -212,7 +225,16 @@ def load_or_update(
                     "Probe 2 Amplitude": float,
                     "Probe 3 Amplitude": float,
                     "Probe 4 Amplitude": float,
+                    "Wavefrequency": float,
+                    "Waveperiod": float,
                     "Wavenumber": float,
+                    "Wavelength": float,
+                    "kH": float,
+                    "tanh(kH)": float,
+                    "Celerity": float,
+                    "Significant Wave Height Hs": float,
+                    "Significant Wave Height Hm0": float,
+                    "Windspeed": float,
                     "experiment_folder": str
                 }
                 metadata = {k: "" if dtype is str else None for k, dtype in metadata.items()}
@@ -253,7 +275,18 @@ def load_or_update(
                         metadata["Mooring"] = "high"
                     else:
                         metadata["Mooring"] = "low"
-               
+                        
+                #Probe distance logic
+                "Probe 1 mm from paddle"
+                modtime = os.path.getmtime(path)
+                file_date = datetime.fromtimestamp(modtime)
+                date_match = re.search(r'(\d{8})', filename)
+                distance_cutoff = datetime(2025, 11, 14) #siste kjøring var 13nov
+                metadata["Probe 1 mm from paddle"] = 9000 if file_date < distance_cutoff else None
+                metadata["Probe 2 mm from paddle"] = 9455 if file_date < distance_cutoff else None
+                metadata["Probe 3 mm from paddle"] = 12544 if file_date < distance_cutoff else None
+                metadata["Probe 4 mm from paddle"] = 12545 if file_date < distance_cutoff else None
+             
                 
 
                 # Wave parameters

@@ -242,8 +242,9 @@ def plot_ramp_detection(df, meta_sel, data_col,
                         peak_amplitudes=None,
                         ramp_peak_indices=None,
                         title="Ramp Detection Debug"):
-    time = df["Date"].values
-    raw = df[data_col].values
+    t0 = df["Date"].iat[0]
+    time = (df["Date"]-t0).dt.total_seconds() *1000
+    raw = df[data_col].values #bør jeg sette minus for å flippe hele greien?
 
     plt.figure(figsize=(15, 7))
 
@@ -283,14 +284,14 @@ def plot_ramp_detection(df, meta_sel, data_col,
 
     # Title from filename
     # New – works whether metadataframe is DataFrame or single row (Series)
-    path_value = meta_sel["path"] if isinstance(meta_sel, pd.Series) else meta_seø["path"].iloc[0]
+    path_value = meta_sel["path"] if isinstance(meta_sel, pd.Series) else meta_sel["path"].iloc[0]
     filename = str(path_value).split("/")[-1]
     plt.title(f"{filename}  →  {data_col}", fontsize=14, pad=20)
 
-    plt.xlabel("Time")
+    plt.xlabel("Time [ms]")
     plt.ylabel("Water level [mm]")
     plt.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
-    plt.grid(True, alpha=0.3)
+    plt.grid(True, alpha=0.1)
     plt.tight_layout()
     plt.show()
 

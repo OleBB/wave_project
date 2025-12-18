@@ -31,6 +31,12 @@ def find_wave_range(
     """
     detection of stable oscillation phase using peak amplitude ramp-up.
     """
+    if (meta_row["WindCondition"]) == "full":
+        detect_win = 15
+    if (meta_row["WindCondition"]) == "low":
+        detect_win = 15
+    
+
     # ==========================================================
     # 1. Basic preprocessing
     # ==========================================================
@@ -65,8 +71,6 @@ def find_wave_range(
         importertfrekvens = float(input_freq)
 
     samples_per_period = int(round(Fs / importertfrekvens))
-    print('samples per period !EXIT:',samples_per_period)
-    import sys; sys.exit()
     
     input_period = (meta_row["WavePeriodInput"])
     keep_periods= input_period/3
@@ -164,7 +168,7 @@ def find_wave_range(
         sigma_factor=1.0
         skip_periods=None
 
-        min_ramp_peaks=5
+        min_ramp_peaks=1
         max_ramp_peaks=15
         max_dips_allowed=2
         min_growth_factor = 1.015
@@ -224,7 +228,7 @@ def find_wave_range(
     """
     # ta 10 største, så ta den første, så ta 10 perioder
     numbaofpeaks = len(peaks)
-    if meta_row["WavePeriodInput"] <1 and numbaofpeaks >3 :
+    if meta_row["WavePeriodInput"] <16 and numbaofpeaks >3 :
         
         largest_ampl = np.abs(signal_smooth[peaks])
         kth = 3
@@ -233,7 +237,7 @@ def find_wave_range(
         good_end_idx = largest_peaks[-1]
         debug_info = None
         print("="*99)
-        print(f'LESS THAN 20 periods, choosing largest peaks')
+        print(f'LESS THAN 16 periods, choosing largest peaks')
         print("="*99)
         return good_start_idx, good_end_idx, debug_info
     #
@@ -569,6 +573,21 @@ def calculate_wavenumbers(frequencies, heights):
         k.flat[idx] = brentq(disp, a, b)
     return k
 
+def calculate_celerity(wavenumbers,heights):
+    k = np.asarray(wavenumbers)
+    H = np.broadcast_to(np.asarray(heights), k.shape)
+    c = np.zeros_like(k,dtype=float)
+    
+    g = 9.81
+    sigma = 0.074 #ved 20celcius
+    rho = 1000 #10^3 kg/m^3
+    
+    c = np.sqrt( g/ k * np.tanh(k*H))
+    
+    
+    return c
+ #   for idx 
+
 
 
 def remove_outliers():
@@ -697,7 +716,19 @@ def process_selected_data(
     m_s_indexed["Wavenumber"] = w_s
     meta_sel = m_s_indexed.reset_index()
     
+    # ==========================================================
+    # 3.c Kjøre calculate_celerity, basert på wavenumber i meta_sel
+    #     Oppdaterer meta_sel
+    # ==========================================================
+    columnz3 = ["path", "WaterDepth [mm]", "Wavenumber"]
+    sub_df3 = meta_sel[columnz3].copy()
+    sub_df3["Celerity"] = calculate_celerity(sub_df3["Wavenumber"], sub_df3["WaterDepth [mm]"])
+    m_s_indexed3 = meta_sel.set_index("path")
+    w_s3 = sub_df3.set_index("path")["Celerity"]
+    m_s_indexed3["Celerity"] = w_s3
+    meta_sel = m_s_indexed3.reset_index()
 
+    
     # ==========================================================
     # 4. Hvis StillwaterKollonen ikke... 
     # så fylles HELE stillwater-kolonnen med samme verdi
