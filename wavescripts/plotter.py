@@ -317,6 +317,7 @@ def plot_amplitude_summary(meta_df, ampvar):
     newsymbol = ["x","*",".","v","o","x"]
 
     probelocations = [1, 1.1, 1.2, 1.25]
+    xlabels = ["P1", "P2", "P3", "P4"]
 
     for idx, row in meta_df.iterrows():
         #path = row["path"]
@@ -355,7 +356,7 @@ def plot_amplitude_summary(meta_df, ampvar):
                 color=colla
             )
 
-    ax.set_xlabel("arbitrær x-akse")
+    ax.set_xlabel("Probenes avstand er ikke representert korrekt visuelt")
     ax.set_ylabel("amplitude in mm")
     ax.set_title(f"Utkast: Prober 1,2,3,4, (merk: arbitrær x-akse.)avstand P1-P2=30cm, avstand P2-P3/P4= 3,04m ")
     ax.legend()
@@ -363,6 +364,8 @@ def plot_amplitude_summary(meta_df, ampvar):
     ax.grid()
     ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
     ax.minorticks_on()
+    ax.set_xticks(probelocations)
+    ax.set_xticklabels(xlabels)
     plt.show()
 
 

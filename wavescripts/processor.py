@@ -28,13 +28,13 @@ def find_wave_range(
     detect_win=1,
     range_plot: bool = False,
 ):
-    """
-    detection of stable oscillation phase using peak amplitude ramp-up.
-    """
+    
     if (meta_row["WindCondition"]) == "full":
         detect_win = 15
     if (meta_row["WindCondition"]) == "low":
         detect_win = 10
+    if (meta_row["WindCondition"]) == "low":
+        detect_win = 1
 
     # ==========================================================
     # 1. smoothe signalet med moving average vindu: detect_win
@@ -62,41 +62,67 @@ def find_wave_range(
     dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
     Fs = 1.0 / dt
 
-    # ───────  FREQUENCY EXTRACTION ───────
+    # ─────── hente ut input-frekvens ─────── TK bytte ut med ekte frekven senere?
     input_freq = meta_row["WaveFrequencyInput [Hz]"] if isinstance(meta_row, pd.Series) else meta_row["WaveFrequencyInput [Hz]"].iloc[0]
-    if pd.isna(input_freq) or str(input_freq).strip() in ["", "nan"]:
-        importertfrekvens = 1.3
-        print(f"Warning: No valid frequency found → using fallback {importertfrekvens} Hz")
-    else:
-        importertfrekvens = float(input_freq)
-
+    importertfrekvens = float(input_freq)
     samples_per_period = int(round(Fs / importertfrekvens))
     
-    input_period = (meta_row["WavePeriodInput"])
-    keep_periods= round((input_period-13)*1.0) #trekke fra perioder, 15 per er det bare 4 gode, mens på 40 per er ish 30 gode. TK todo velge en bedre skalering
+    # ─────── velge antall perioder ─────── 
+    input_periods = (meta_row["WavePeriodInput"])
+    keep_periods= round((input_periods-13)*1.0) #trekke fra perioder, -per15- er det bare 4 gode, mens på -per40- per er ish 30 gode. TK todo velge en bedre skalering
     keep_seconds= keep_periods/input_freq
-    keep_idx = keep_seconds*250 
+    keep_idx = keep_seconds*250 # 1 sek = 250 målinger
     good_range = keep_idx
-    
-    
-    baseline_seconds = 2
 
-    sigma_factor=1.0
-    skip_periods=None
-
-    min_ramp_peaks=5
-    max_ramp_peaks=15
-    max_dips_allowed=2
-    min_growth_factor = 1.015
-    
-    # MANUELL CALCULERING
+    # MANUELL CALCULERING for 1.3 Hz
     P1amp01frwq13eyeball = 4500
-    P2handcalc = P1amp01frwq13eyeball+62.5 #250målinger på ett sekund, ganget et kvart sekund, estimert reisetid for bølgen på 1.3hz  
-    P3handcalc = P2handcalc+7*250 #en 1.3hz gir periode på 700idx? 250 målinger per sek
+    P2handcalc = P1amp01frwq13eyeball+100 #tidligere: 62.5 fra 250målinger på ett sekund, ganget et kvart sekund, estimert reisetid for bølgen på 1.3hz  
+    P3handcalc = P2handcalc+1700 #tidligere: en 1.3hz gir periode på 700idx? 250 målinger per sek
     
-    #print(keep_periods, keep_seconds, keep_idx)
-    #print('og:', P1amp01frwq13eyeball, P2handcalc)
+    P1amp01f065eyeball = 3950
+    P2_f065_handcalc = P1amp01f065eyeball+50 #
+    P3_f065_handcalc = P2_f065_handcalc+500 #
+
+
+
+    # ==========================================================
+    #  1.b Start og slutt på signalet tilpasset innkommende bølge og vindforhold
+    # ==========================================================
+    """ELIF RETURN SNARVEI"""
+    if input_freq == 1.3:
+        if data_col == "Probe 1": 
+                good_start_idx = P1amp01frwq13eyeball 
+                good_end_idx = good_start_idx+keep_idx
+                #return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 2" : 
+                good_start_idx = P2handcalc
+                good_end_idx = P2handcalc + keep_idx
+                #return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 3" : 
+                good_start_idx = P3handcalc
+                good_end_idx = good_start_idx + keep_idx
+        elif data_col == "Probe 4" : 
+                good_start_idx = P3handcalc
+                good_end_idx = good_start_idx + keep_idx
+                # return good_start_idx, good_end_idx, debug_info
+    if input_freq == 0.65:
+        if data_col == "Probe 1": 
+                good_start_idx = P1amp01f065eyeball 
+                good_end_idx = good_start_idx+keep_idx
+                #return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 2" : 
+                good_start_idx = P2_f065_handcalc
+                good_end_idx = good_start_idx + keep_idx
+                #return good_start_idx, good_end_idx, debug_info
+        elif data_col == "Probe 3" : 
+                good_start_idx = P3_f065_handcalc
+                good_end_idx = good_start_idx + keep_idx
+        elif data_col == "Probe 4" : 
+                good_start_idx = P3_f065_handcalc
+                good_end_idx = good_start_idx + keep_idx
+                # return good_start_idx, good_end_idx, debug_info
     #import sys; print('exit'); sys.exit()
+     
     
     #fullpanel-fullwind-amp02-freq13- correct @5780
     # no panel, amp03, freq0650: 2300? probe=??
@@ -115,75 +141,6 @@ def find_wave_range(
         
     Så, enkelt basere probe 2 på 1 , og 34 på 2?
     """
-    
-    #nesten så jeg vil lage en teoretisk utregnign... 
-    #må jo få tildet. en predikering! 
-    #hva sier teorien!
-    
-    #TODO forstå phase-speed og 
-    
-    """Setter basis idx basert på probe """
-    if data_col == "Probe 1": 
-            good_start_idx = P1amp01frwq13eyeball 
-            good_end_idx = good_start_idx+keep_idx
-            #return good_start_idx, good_end_idx, debug_info
-    elif data_col == "Probe 2" : 
-            good_start_idx = P2handcalc
-            good_end_idx = P2handcalc + keep_idx
-            #return good_start_idx, good_end_idx, debug_info
-    elif data_col == "Probe 3" or "Probe 4": 
-            good_start_idx = P3handcalc
-            good_end_idx = P3handcalc + keep_idx
- 
-    
-    #todo tilpasses input
-    # ==========================================================
-    #  1.b tilpasses innkommende bølge og vindforhold
-    # ==========================================================
-    """ELIF RETURN SNARVEI"""
-    if input_freq == 1.3:
-        print('fullwind og 1.3')
-        if data_col == "Probe 1": 
-                good_start_idx = P1amp01frwq13eyeball 
-                good_end_idx = good_start_idx+keep_idx
-                #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 2" : 
-                good_start_idx = P2handcalc
-                good_end_idx = P2handcalc + keep_idx
-                #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 3" : 
-                good_start_idx = P3handcalc
-                good_end_idx = P3handcalc + keep_idx
-        elif data_col == "Probe 4" : 
-                good_start_idx = P3handcalc
-                good_end_idx = P3handcalc + keep_idx
-                # return good_start_idx, good_end_idx, debug_info
-   
-    elif (meta_row["WaveFrequencyInput [Hz]"]) == 0.65:
-        #print('vellyket ELIF 0.65')
-        baseline_seconds=1.0
-        sigma_factor=4.0
-        skip_periods=None
-
-        min_ramp_peaks=1
-        max_ramp_peaks=15
-        max_dips_allowed=2
-        min_growth_factor=1
-        good_start_idx = 4000
-        good_end_idx = 5000
-    else:
-        print("ingen if-statments traff, ELSE basics kjøres:")
-        baseline_seconds=2.0
-        sigma_factor=1.0
-        skip_periods=None
-
-        min_ramp_peaks=1
-        max_ramp_peaks=15
-        max_dips_allowed=2
-        min_growth_factor = 1.015
-        
-        good_start_idx = 4000
-        good_end_idx = 5000
     
     """elif (meta_row["WindCondition"]) == "lowest" and input_freq == 1.3:
         print('lowestwind og 1.3')
@@ -204,9 +161,16 @@ def find_wave_range(
                 good_end_idx = P3handcalc + keep_idx
                 #return good_start_idx, good_end_idx, debug_info"""
 
-        
+    
+    baseline_seconds = 2
+    sigma_factor=1.0
+    skip_periods=None
+
+    min_ramp_peaks=5
+    max_ramp_peaks=15
+    max_dips_allowed=2
+    min_growth_factor = 1.015
     #import sys; print('exit'); sys.exit()
-    samples_per_period = int(round(Fs / importertfrekvens))
 
     # ==========================================================
     # 2. Baseline & first motion (still useful for rough start)
@@ -240,7 +204,7 @@ def find_wave_range(
     # 3. Peak detection on absolute signal (handles both positive/negative swings)
     # ==========================================================
     # Use prominence and distance tuned to your frequency
-    min_distance = max(3, input_period *0.9 )  # at least 0.9 period apart
+    min_distance = max(3, input_periods *0.9 )  # at least 0.9 period apart
     peaks, properties = find_peaks(
         np.abs(signal_smooth),
         distance=min_distance,
@@ -552,26 +516,6 @@ def compute_simple_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd
 
         
 from scipy.optimize import brentq
-# def calculate_simple_wavenumber(meta_row):
-#     """Tar inn metadata 
-#     bruker BRENTQ fra scipy
-#     """
-#     g = 9.81
-#     freq = meta_row["WaveFrequencyInput [Hz]"]
-#     H = meta_row["WaterDepth [mm]"]
-#     print('frq og H : ', freq, H)
-
-#     period = 1/freq
-#     omega = 2*np.pi/period
-#     f = lambda k: g*k*np.tanh(k*H) - omega**2
-#     k0 = omega**2/g #deep water guess
-#     k1 = omega/np.sqrt(g*H) #shallow water guess
-#     a, b = min(k0, k1)*0.1, max(k0, k1)*10
-#     while f(a)*f(b) >0:
-#         a, b = a/2, b*2
-    
-#     return brentq(f, a, b)
-
 def calculate_wavenumbers(frequencies, heights):
     """Tar inn frekvens og høyde
     bruker BRENTQ fra scipy
@@ -619,10 +563,19 @@ def calculate_celerity(wavenumbers,heights):
     rho = 1000 #10^3 kg/m^3
     
     c = np.sqrt( g/ k * np.tanh(k*H))
-    
-    
     return c
- #   for idx 
+
+def calculate_windspeed(windcond: pd.Series) -> pd.Series:
+    # normalize labels to avoid casing/whitespace issues
+    wc = windcond.astype(str).str.lower().str.strip()
+    speed_map = {
+        "no": 0.0,
+        "lowest": 3.8,
+        "low": 3.8,   # if you also use "low"
+        "full": 5.8,
+    }
+    return wc.map(speed_map)
+
 
 
 
@@ -657,7 +610,6 @@ def process_selected_data(
     """
     # 1. Make sure stillwater levels are computed and valid
     meta_full = ensure_stillwater_columns(dfs, meta_full)
-
     # Extract the four stillwater values (same for whole experiment)
     stillwater = {}
     for i in range(1, 5):
@@ -671,7 +623,9 @@ def process_selected_data(
     if debug:
         print(f"Using stillwater levels: {stillwater}")
 
-    # 2.a) Ta utvalgte kjøringer og sett null ved "stillwater"
+    # ==========================================================
+    # 2.a Ta utvalgte kjøringer, lag en ny dataframe, og sett null ved "stillwater"
+    # ==========================================================
     processed_dfs = {}
     for _, row in meta_sel.iterrows():
         path = row["path"]
@@ -702,7 +656,7 @@ def process_selected_data(
         processed_dfs[path] = df
     
     # ==========================================================
-    # 2. b) Optional- kjører FIND_WAVE_RANGE(...)
+    # 2.b Optional - kjører FIND_WAVE_RANGE(...)
     # ==========================================================
     if find_range:
         for idx, row in meta_sel.iterrows():
@@ -723,8 +677,11 @@ def process_selected_data(
                 probeendcolumn = f'Computed Probe {i} end'
                 meta_sel.loc[idx, probeendcolumn] = end
                 #print(f'meta_sel sin Computed probe {i} start: {meta_sel[probestartcolumn]} og end: {meta_sel[probeendcolumn]}')
-
-        print(f'start: {start}, end: {end} og debug_range_info: {debug_info}')
+            if start: 
+                try:
+                    print(f'start: {start}, end: {end} og debug_range_info: {debug_info}')
+                except Exception as e:
+                    print(f"after find wave range, no start found? {e}")
     
     # ==========================================================
     # 3.a Kjøre compute_simple_amplitudes, basert på computed range i meta_sel
@@ -763,11 +720,23 @@ def process_selected_data(
     w_s3 = sub_df3.set_index("path")["Celerity"]
     m_s_indexed3["Celerity"] = w_s3
     meta_sel = m_s_indexed3.reset_index()
-
     
     # ==========================================================
-    # 4. Hvis StillwaterKollonen ikke... 
-    # så fylles HELE stillwater-kolonnen med samme verdi
+    # 3.d Kjøre calculate_windspeed, basert på "windcondition" i meta_sel
+    #     Oppdaterer meta_sel
+    # ==========================================================
+    columnz4 = ["path", "WindCondition", "Windspeed", "WaterDepth [mm]"]
+    sub_df4 = meta_sel[columnz4].copy()
+    sub_df4["Windspeed"] = calculate_windspeed(sub_df4["WindCondition"])
+    m_s_indexed4 = meta_sel.set_index("path")
+    w_s4 = sub_df4.set_index("path")["Windspeed"]
+    m_s_indexed4["Windspeed"] = w_s4
+    meta_sel = m_s_indexed4.reset_index()
+    
+    
+    # ==========================================================
+    # 4. Hvis ikke...  så fylles HELE stillwater-kolonnen med samme verdi
+    #       oppdaterer meta_sel
     # ==========================================================
     for i in range(1, 5):
         col = f"Stillwater Probe {i}"
