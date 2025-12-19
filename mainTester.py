@@ -36,9 +36,9 @@ range_plot = True
 processvariables = {
     "filters": {
         "amp": 0.1, #0.1, 0.2, 0.3 
-        "freq": 1.3, #bruk et tall  
+        "freq": 0.65, #bruk et tall  
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": None, #full, no, lowest
+        "wind": "no", #full, no, lowest
         "tunnel": None,
         "mooring": "low",
         "panel": ["full", "reverse"], # no, full, reverse, 
@@ -68,7 +68,7 @@ meta_sel = filter_chosen_files(meta,
 #nå har vi de utvalgte: meta_sel altså metadataframes_selected
 #%%
 print('# === Process === #')
-from wavescripts.processor import process_selected_data#, plot_ramp_debug
+from wavescripts.processor import process_selected_data
 # - and optional check: DEBUG gir noen ekstra printa linjer
 processed_dfs, meta_sel = process_selected_data(dfs, 
                                                 meta_sel, 
@@ -79,6 +79,27 @@ processed_dfs, meta_sel = process_selected_data(dfs,
                                                 range_plot)
 #TODO fiks slik at find_wave_range starter ved null eller ved en topp?
 # nå tar den first_motion_idx+ gitt antall bølger.
+# %%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# %% - OBS OBS koden over lagrer greier. nå vil jeg jo sammenlikne flere datasett uten å lagre.
+
+np.correlate()
+
+
 
 #%% - 
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis 
@@ -99,7 +120,7 @@ oppgradert_meta_sel = probe_comparisor(meta_sel)
 #%% - Her plotter man en enkeltkjøring oppå en annen
 
 
-chooseAll = False
+chooseAll = True
 
 amplitudeplotvariables = {
     "filters": {
