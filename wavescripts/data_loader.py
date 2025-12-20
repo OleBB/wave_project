@@ -47,12 +47,17 @@ dtype_map = {
     "Waveperiod": "float64",
     "Wavenumber": "float64",
     "Wavelength": "float64",
+    "kL": "float64",
+    "ak": "float64",
     "kH": "float64",
     "tanh(kH)": "float64",
     "Celerity": "float64",
     "Significant Wave Height Hs": "float64",
     "Significant Wave Height Hm0": "float64",
     "Windspeed": "float64",
+    "P2/P1": "float64",
+    "P3/P2": "float64",
+    "P4/P3": "float64",
     "experiment_folder": str
 }
 
@@ -229,12 +234,17 @@ def load_or_update(
                     "Waveperiod": float,
                     "Wavenumber": float,
                     "Wavelength": float,
+                    "kL": float,
+                    "ak": float,
                     "kH": float,
                     "tanh(kH)": float,
                     "Celerity": float,
                     "Significant Wave Height Hs": float,
                     "Significant Wave Height Hm0": float,
                     "Windspeed": float,
+                    "P2/P1": float,
+                    "P3/P2": float,
+                    "P4/P3": float,
                     "experiment_folder": str
                 }
                 metadata = {k: "" if dtype is str else None for k, dtype in metadata.items()}
@@ -407,6 +417,10 @@ def update_processed_metadata(
         print(f"Updated {meta_path.relative_to(project_root)} → {len(final_df)} entries (+{added} new)")
     
     print(f"\nMetadata safely updated and preserved across {meta_df['__group_key'].nunique()} experiment(s)!")
+
+
+
+
 
 
 def load_meta_from_processed(folder_name: str) -> pd.DataFrame:
