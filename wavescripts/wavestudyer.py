@@ -314,7 +314,6 @@ def wind_damping_analysis(meta_df):
     for idx, row in meta_sel.iterrows():
         #metarows = meta_sel[meta_sel["path"] == path]
 
-
         wind = str(row.get("WindCondition", "")).lower().strip()
         wind = wind if wind in ["full", "no", "lowest"] else "other"
 
@@ -378,50 +377,33 @@ def wind_damping_analysis(meta_df):
     return pd.DataFrame(results)
 
 
-def probe_comparisor(meta_df):
-    dataf = meta_df.copy()
 
-    for idx, row, in dataf.iterrows():
-        P1 = row["Probe 1 Amplitude"]
-        P2 = row["Probe 2 Amplitude"]
-        P3 = row["Probe 3 Amplitude"]
-        P4 = row["Probe 4 Amplitude"]
-        
-        if P1 != 0:
-            dataf.at[idx, "P2/P1"] = P2/P1
-            
-        if P2 != 0:
-            dataf.at[idx, "P3/P2"] = P3/P2
-        
-        if P3 != 0:
-            dataf.at[idx, "P4/P3"] = P4/P3
-          
 
-    return dataf
+
+
+def damping(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    tar inn meta_df og gir ut mean, std, for P3/P2
+    """
+    cmdf = combined_meta_df.copy()
+    
+    columns = ["path", "WindCondition", "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
+               "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude",
+               "P2/P1", "P3/P2", "P4/P3" ]
+    
+    rmdf = cmdf[columns].copy()
+    
+    #velg alle rader med sammme hz og volt-verdi. 
+    gruppert = rmdf.groupby(["WaveAmplitudeInput [Volt]",  "WaveFrequencyInput [Hz]"])
+
+    # Then within each group, compare P3/P2 by WindCondition
+    comparison = gruppert.apply(lambda x: x.groupby('WindCondition')['P3/P2'].describe(), include_groups=False)
+
+    return comparison 
     
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    
 
 
 

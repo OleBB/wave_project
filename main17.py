@@ -21,7 +21,7 @@ from wavescripts.processor2nd import process_processed_data
 # List of dataset paths you want to process
 dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
+    #Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped")
 ]
@@ -32,13 +32,12 @@ all_meta_sel = []
 all_processed_dfs = []
 
 # === Config ===
-chooseAll = False
+chooseAll = True
 chooseFirst = False
-# range debug and plot
-debug = True
+debug = False
 win = 10
 find_range = True
-range_plot = True
+range_plot = False
 
 processvariables = {
     "filters": {
@@ -49,18 +48,6 @@ processvariables = {
         "tunnel": None,
         "mooring": "low",
         "panel": ["full", "reverse"],  # no, full, reverse, 
-    },
-    "processing": {
-        "chosenprobe": "Probe 3",  # ikkje i bruk
-        "rangestart": None,  # ikkje i bruk
-        "rangeend": None,  # ikkje i bruk
-        "data_cols": ["Probe 2"],  # ikkje i bruk
-        "win": 11  # ikkje i bruk
-    },
-    "plotting": {
-        "figsize": None,
-        "separate": True,
-        "overlay": False   
     }
 }
 
@@ -69,45 +56,29 @@ for i, data_path in enumerate(dataset_paths):
     print(f"\n{'='*50}")
     print(f"Processing dataset {i+1}/{len(dataset_paths)}: {data_path.name}")
     print(f"{'='*50}")
-    
     try:
-        # Load data
         dfs, meta = load_or_update(data_path)
         
-        # === Filter ===
         print('# === Filter === #')
         meta_sel = filter_chosen_files(meta, processvariables, chooseAll, chooseFirst)
         
         print('# === Single probe process === #')
-        processed_dfs, meta_sel = process_selected_data(
-            dfs, meta_sel, meta, debug, win, find_range, range_plot
-        )
+        processed_dfs, meta_sel = process_selected_data( dfs, meta_sel, meta, debug, win, find_range, range_plot)
     
         print('# === Probe comparison processing === #')
-        processed_dfs, meta_sel = process_processed_data(
-            dfs, meta_sel
-        )
-        
-        
-        
-        # Store results
+        meta_sel = process_processed_data(dfs, meta_sel)
         all_meta_sel.append(meta_sel)
         all_processed_dfs.append(processed_dfs)
-        
         print(f"Successfully processed {len(meta_sel)} selections from {data_path.name}")
         
     except Exception as e:
         print(f"Error processing {data_path.name}: {str(e)}")
         continue
-
-# After the loop, you can analyze all meta_sel together
 print(f"\n{'='*50}")
-print("Processing complete!")
-print(f"Total datasets processed: {len(all_meta_sel)}")
+print(f"PROCESSING COMPLETE - Total datasets processed: {len(all_meta_sel)}")
 print(f"Total selections across all datasets: {sum(len(sel) for sel in all_meta_sel)}")
 print(f"{'='*50}")
 
-# Example: Combine all meta_sel into a single DataFrame for analysis
 if all_meta_sel:
     combined_meta_sel = pd.concat(all_meta_sel, ignore_index=True)
     print("\nCombined meta_selections ready for analysis:")
@@ -129,9 +100,68 @@ summary_df = wind_damping_analysis(combined_meta_sel)
 from wavescripts.wavestudyer import wind_damping_analysis
 damping_analysis_results = wind_damping_analysis(combined_meta_sel)
 
+# %%
+
+
+from wavescripts.wavestudyer import damping
+damping_comparison_df = damping(combined_meta_sel)
 
 
 
+import matplotlib.pyplot as plt
+
+# Extract mean values and reset index
+mean_p3p2 = damping_comparison_df['mean'].reset_index()
+
+# Simple plot
+plt.figure(figsize=(10, 6))
+for condition in ['no', 'lowest', 'full']:
+    subset = mean_p3p2[mean_p3p2['WindCondition'] == condition]
+    plt.scatter(subset['WaveFrequencyInput [Hz]'], subset['mean'], label=condition)
+
+plt.xlabel('Wave Freq [Hz]')
+plt.ylabel('Mean P3/P2')
+plt.legend()
+plt.grid()
+plt.minorticks_on()
+plt.show()
+
+# %%
+
+chooseAll = False
+amplitudeplotvariables = {
+    "filters": {
+        "amp": 0.3, #0.1, 0.2, 0.3 
+        "freq": 1.3, #bruk et tall  
+        "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "wind": ["no", "lowest", "full"], #full, no, lowest, all
+        "tunnel": None,
+        "mooring": "low",
+        "panel": ["full", "reverse"], # no, full, reverse, 
+        
+    },
+    "processing": {
+        "chosenprobe": "Probe 2",
+        "rangestart": None,
+        "rangeend": None,
+        "data_cols": ["Probe 2"],#her kan jeg velge fler, må huske [listeformat]
+        "win": 11
+    },
+    "plotting": {
+        "figsize": None,
+        "separate":True,
+        "overlay": False
+        
+    }
+    
+}
+
+from wavescripts.filters import filter_for_amplitude_plot
+m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables, chooseAll)
+
+"""Plot amplitude summary plotter alt den tar inn"""
+from wavescripts.plotter import plot_amplitude_summary
+plot_amplitude_summary(m_filtrert, amplitudeplotvariables)
 
 
 
