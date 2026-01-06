@@ -64,6 +64,9 @@ def find_wave_range(
 
     # ─────── hente ut input-frekvens ─────── TK bytte ut med ekte frekven senere?
     input_freq = meta_row["WaveFrequencyInput [Hz]"] if isinstance(meta_row, pd.Series) else meta_row["WaveFrequencyInput [Hz]"].iloc[0]
+    if meta_row.isna(input_freq):
+        print("no freq found, assuming no wave")
+        return
     importertfrekvens = float(input_freq)
     samples_per_period = int(round(Fs / importertfrekvens))
     
