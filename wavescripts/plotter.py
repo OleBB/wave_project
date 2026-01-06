@@ -297,7 +297,7 @@ def plot_ramp_detection(df, meta_sel, data_col,
 
 #%%
 
-def plot_amplitude_summary(meta_df, ampvar):
+def plot_all_probes(meta_df, ampvar):
     wind_colors = {
         "full":"red",
         "no": "blue",
@@ -305,7 +305,7 @@ def plot_amplitude_summary(meta_df, ampvar):
     }
     panel_styles = {
         "no": "solid",
-        "full:": "dashed",
+        "full": "dashed",
         "reverse":"dashdot"
         }
     

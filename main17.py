@@ -101,8 +101,6 @@ from wavescripts.wavestudyer import wind_damping_analysis
 damping_analysis_results = wind_damping_analysis(combined_meta_sel)
 
 # %%
-
-
 from wavescripts.wavestudyer import damping
 damping_comparison_df = damping(combined_meta_sel)
 
@@ -160,8 +158,8 @@ from wavescripts.filters import filter_for_amplitude_plot
 m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables, chooseAll)
 
 """Plot amplitude summary plotter alt den tar inn"""
-from wavescripts.plotter import plot_amplitude_summary
-plot_amplitude_summary(m_filtrert, amplitudeplotvariables)
+from wavescripts.plotter import plot_all_probes
+plot_all_probes(m_filtrert, amplitudeplotvariables)
 
 
 
