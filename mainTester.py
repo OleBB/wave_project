@@ -25,8 +25,8 @@ dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/202511
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
 #%%
 # === Config ===
-chooseAll = False
-chooseFirst = False
+chooseAll = True
+chooseFirst = True
 # range debug and plot
 debug=True
 win=10
@@ -105,14 +105,15 @@ np.correlate()
 from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis 
 summary_df = wind_damping_analysis(meta_sel)
 
-# %%
+# %% 
+"""skriver et sammendrag av dempningen i """
 from wavescripts.wavestudyer import wind_damping_analysis
 damping_analysis_results = wind_damping_analysis(meta_sel)
 
 
 #%%
-from wavescripts.wavestudyer import probe_comparisor
-oppgradert_meta_sel = probe_comparisor(meta_sel)
+from wavescripts.wavestudyer import damping
+oppgradert_meta_sel = damping(meta_sel)
 
 
 
@@ -153,8 +154,8 @@ from wavescripts.filters import filter_for_amplitude_plot
 m_filtrert = filter_for_amplitude_plot(oppgradert_meta_sel, amplitudeplotvariables, chooseAll)
 
 """Plot amplitude summary plotter alt den tar inn"""
-from wavescripts.plotter import plot_amplitude_summary
-plot_amplitude_summary(m_filtrert, amplitudeplotvariables)
+from wavescripts.plotter import plot_all_probes
+plot_all_probes(m_filtrert, amplitudeplotvariables)
 
 
 
