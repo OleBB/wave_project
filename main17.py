@@ -123,7 +123,7 @@ plt.xlabel('Wave Freq [Hz]')
 plt.ylabel('Mean P3/P2')
 plt.legend()
 plt.grid()
-plt.minorticks_on()
+plt.minorticks_on() 
 plt.show()
 
 # %%
@@ -131,8 +131,8 @@ plt.show()
 chooseAll = False
 amplitudeplotvariables = {
     "filters": {
-        "amp": 0.3, #0.1, 0.2, 0.3 
-        "freq": 1.3, #bruk et tall  
+        "amp": 0.1, #0.1, 0.2, 0.3 
+        "freq": None, #bruk et tall  
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "wind": ["no", "lowest", "full"], #full, no, lowest, all
         "tunnel": None,
