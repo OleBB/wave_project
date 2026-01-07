@@ -380,26 +380,107 @@ def wind_damping_analysis(meta_df):
 
 
 
+# %%
 
-def damping(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
+
+def damping_old(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
     """
     tar inn meta_df og gir ut mean, std, for P3/P2
     """
     cmdf = combined_meta_df.copy()
     
-    columns = ["path", "WindCondition", "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
-               "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude",
+    columns = ["path", "WindCondition", "PanelCondition", "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]", "WavePeriodInput",
+               "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude", "kL",
                "P2/P1", "P3/P2", "P4/P3" ]
     
     rmdf = cmdf[columns].copy()
     
     #velg alle rader med sammme hz og volt-verdi. 
-    gruppert = rmdf.groupby(["WaveAmplitudeInput [Volt]",  "WaveFrequencyInput [Hz]"])
+    gruppert = rmdf.groupby(["WaveAmplitudeInput [Volt]",  "kL", "PanelCondition"])
 
     # Then within each group, compare P3/P2 by WindCondition
     comparison = gruppert.apply(lambda x: x.groupby('WindCondition')['P3/P2'].describe(), include_groups=False)
 
     return comparison 
+# %%
+
+
+
+
+def damping(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Returns a DataFrame with one row per
+    (WaveAmplitudeInput [Volt], WaveFrequencyInput [Hz],
+    PanelCondition, WindCondition).
+
+    For each group the function provides:
+      * the first occurrence of the non‑numeric metadata columns
+      * mean_P3P2, std_P3P2                         – statistics for P3/P2
+      * mean_Probe1, mean_Probe2, mean_Probe3,
+        mean_Probe4                                 – average probe amplitudes
+    """
+    # Work on a copy so the original DataFrame is never modified
+    df = combined_meta_df.copy()
+
+    # ------------------------------------------------------------------
+    # Columns that are not part of the aggregation – we keep the first
+    # value of each group for them.
+    # ------------------------------------------------------------------
+    meta_cols = [
+        "path", "WindCondition", "PanelCondition", "Mooring",
+        "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
+        "WavePeriodInput", "kL"
+    ]
+
+    # ------------------------------------------------------------------
+    # Compute the required statistics per group.
+    # ------------------------------------------------------------------
+    grouping_keys = [
+        "WaveAmplitudeInput [Volt]",
+        "WaveFrequencyInput [Hz]",
+        "PanelCondition",
+        "WindCondition",
+    ]
+
+    stats = (
+        df.groupby(grouping_keys)
+        .agg(
+            mean_P3P2=("P3/P2", "mean"),
+            std_P3P2=("P3/P2", "std"),
+            mean_A_Probe1=("Probe 1 Amplitude", "mean"),
+            mean_A_Probe2=("Probe 2 Amplitude", "mean"),
+            mean_A_Probe3=("Probe 3 Amplitude", "mean"),
+            mean_A_Probe4=("Probe 4 Amplitude", "mean"),
+        )
+        .reset_index()
+    )
+
+    # ------------------------------------------------------------------
+    # Keep the first occurrence of the metadata columns for each group.
+    # (All rows in a group share the same values for these columns,
+    #  so dropping duplicates is safe.)
+    # ------------------------------------------------------------------
+    meta = (
+        df[meta_cols]   # make sure the grouping keys are present
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
+
+    # ------------------------------------------------------------------
+    # Merge the metadata with the aggregated statistics.
+    # ------------------------------------------------------------------
+    out = pd.merge(
+        meta,
+        stats,
+        on=grouping_keys,
+        how="inner",
+    )
+
+    
+
+    return out
+
+
     
 
 

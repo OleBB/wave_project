@@ -285,7 +285,7 @@ def load_or_update(
                         metadata["Mooring"] = "high"
                     else:
                         metadata["Mooring"] = "low"
-                        
+                
                 #Probe distance logic
                 "Probe 1 mm from paddle"
                 modtime = os.path.getmtime(path)

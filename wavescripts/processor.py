@@ -539,7 +539,7 @@ def calculate_wavenumbers(frequencies, heights):
     g = 9.81
     for idx in i_valid:
         fr = freq.flat[idx]
-        h = H.flat[idx]/1000 #konverter til millimeter
+        h = H.flat[idx]/1000.0 #konverter fra millimeter
         omega = 2 * np.pi * fr
         
         def disp(k_wave):
@@ -573,6 +573,7 @@ def calculate_celerity(wavenumbers,heights):
     c = np.sqrt( g/ k * np.tanh(k*H))
     return c
 
+
 def calculate_windspeed(windcond: pd.Series) -> pd.Series:
     # normalize labels to avoid casing/whitespace issues
     wc = windcond.astype(str).str.lower().str.strip()
@@ -585,6 +586,71 @@ def calculate_windspeed(windcond: pd.Series) -> pd.Series:
     return wc.map(speed_map)
 
 
+def calculate_wavedimensions(k: pd.Series, 
+                             H: pd.Series, 
+                             PC: pd.Series,
+                             P2A: pd.Series,
+                             ) -> pd.DataFrame:
+    panel_length_map = {
+            "purple": 1.048,
+            "yellow": 1.572,
+            "full": 2.62,
+            "reverse": 2.62,
+        }
+    
+    # Align (inner) on indices to keep only rows present in both k and H
+    k_aligned, H_aligned = k.align(H, join="inner")
+    idx = k_aligned.index
+    P2A_aligned = None if P2A is None else P2A.reindex(idx)
+    PC_aligned = None if PC is None else PC.reindex(idx)
+
+    k_arr = k_aligned.to_numpy(dtype=float)
+    Hm = H_aligned.to_numpy(dtype=float)/1000.0 #fra millimeter
+     
+    valid_k = k_arr > 0.0 # Mask for valid k values
+    g = 9.81
+    
+    kH = np.full_like(k_arr, np.nan, dtype=float)
+    kH[valid_k] = k_arr[valid_k] * Hm[valid_k]
+     
+    tanhkh = np.full_like(k_arr, np.nan, dtype=float)
+    tanhkh[valid_k] = np.tanh(kH[valid_k])
+    
+    wavelength = np.full_like(k_arr, np.nan, dtype=float)
+    wavelength[valid_k] = 2.0 * np.pi / k_arr[valid_k]
+    
+    L_arr = np.full_like(k_arr, np.nan, dtype=float)
+    if PC_aligned is not None:
+        pc_norm = PC_aligned.astype(str).str.strip().str.lower()
+        L_char = pc_norm.map(panel_length_map)
+        L_arr = L_char.to_numpy(dtype=float)
+    else:
+        print('PanelCondition missing - no kL to calculate')
+    kL = np.full_like(k_arr, np.nan, dtype=float)
+    mask_kL = valid_k & np.isfinite(L_arr)
+    kL[mask_kL] = k_arr[mask_kL] * L_arr[mask_kL]
+    
+    ak = np.full_like(k_arr, np.nan, dtype=float)
+    if P2A_aligned is not None:
+        a_arr = P2A_aligned.to_numpy(dtype=float) / 1000.0  #fra millimeter
+        ak[valid_k] = a_arr[valid_k] * k_arr[valid_k]
+    else:
+        print('No probe 2 amplitude - no ak to calculate')
+    
+    c = np.full_like(k_arr, np.nan, dtype=float)
+    c[valid_k] = np.sqrt((g / k_arr[valid_k]) * tanhkh[valid_k])
+    
+    out = pd.DataFrame(
+        {"Wavelength": wavelength, 
+         "kL": kL, 
+         "ak": ak, 
+         "kH": kH, 
+         "tanh(kH)": tanhkh, 
+         "Celerity": c,
+             }, 
+            index=idx
+        )
+    return out
 
 
 def remove_outliers():
@@ -718,16 +784,24 @@ def process_selected_data(
     meta_sel = m_s_indexed.reset_index()
     
     # ==========================================================
-    # 3.c Kjøre calculate_celerity, basert på wavenumber i meta_sel
+    # 3.c Kjøre calculate_wavedimensions, basert på wavenumber, dypet,
+    # probe 2, i meta_sel
     #     Oppdaterer meta_sel
     # ==========================================================
-    columnz3 = ["path", "WaterDepth [mm]", "Wavenumber"]
-    sub_df3 = meta_sel[columnz3].copy()
-    sub_df3["Celerity"] = calculate_celerity(sub_df3["Wavenumber"], sub_df3["WaterDepth [mm]"])
+    columnz3 = ['path', 'PanelCondition', 'WaveFrequencyInput [Hz]', 'WaterDepth [mm]', 'Probe 2 Amplitude',
+                'Wavefrequency', 'Waveperiod', 'Wavenumber',
+                'Wavelength', 'kL', 'ak', 'kH', 'tanh(kH)', 'Celerity',]
+    sub_df3 = meta_sel[columnz3].copy().set_index("path")
+    calc = calculate_wavedimensions(
+        k=sub_df3["Wavenumber"],
+        H=sub_df3["WaterDepth [mm]"],
+        PC=sub_df3["PanelCondition"],
+        P2A=sub_df3["Probe 2 Amplitude"],
+    )
     m_s_indexed3 = meta_sel.set_index("path")
-    w_s3 = sub_df3.set_index("path")["Celerity"]
-    m_s_indexed3["Celerity"] = w_s3
+    m_s_indexed3[["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]] = calc  # vectorized, aligned by index
     meta_sel = m_s_indexed3.reset_index()
+
     
     # ==========================================================
     # 3.d Kjøre calculate_windspeed, basert på "windcondition" i meta_sel
@@ -741,6 +815,7 @@ def process_selected_data(
     m_s_indexed4["Windspeed"] = w_s4
     meta_sel = m_s_indexed4.reset_index()
     
+   
     
     # ==========================================================
     # 4. Hvis ikke...  så fylles HELE stillwater-kolonnen med samme verdi
