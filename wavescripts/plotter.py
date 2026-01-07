@@ -296,7 +296,6 @@ def plot_ramp_detection(df, meta_sel, data_col,
     plt.show()
 
 #%%
-
 def plot_all_probes(meta_df, ampvar):
     wind_colors = {
         "full":"red",
@@ -368,13 +367,322 @@ def plot_all_probes(meta_df, ampvar):
     ax.set_xticklabels(xlabels)
     plt.show()
 
+def plot_damping_2(meta_df, ampvar):
+    wind_colors = {
+        "full":"red",
+        "no": "blue",
+        "lowest":"green"
+    }
+    panel_styles = {
+        "no": "solid",
+        "full": "dashed",
+        "reverse":"dashdot"
+        }
+    
+    figsize = (10,6)
+    fig, ax = plt.subplots(figsize=figsize)
+
+    probelocations = [9200, 9500, 12444, 12455]
+    probelocations = [1, 1.1, 1.2, 1.25]
+    newsymbol = ["x","*",".","v","o","x"]
+
+    # probelocations = [1, 1.1, 1.2, 1.25]
+    # xlabels = ["P1", "P2", "P3", "P4"]
+
+    
+
+   
+
+    for idx, row in meta_df.iterrows():
+        #path = row["path"]
+
+        windcond = row["WindCondition"]
+        colla = wind_colors.get(windcond, "black")
+        
+        panelcond = row["PanelCondition"]
+        linjestil = panel_styles.get(panelcond)
+        
+        marker = "o"
+
+        label = make_label(row)
+        
+        xliste = []
+        yliste = []
+
+        
+        # --- her plottes --- #
+        ax.scatter(meta_df['kL'], meta_df['mean'], linewidth=2, label=label, linestyle=linjestil,marker=marker, color=colla)
+        
+        # annotate each point with its value (formatted)
+        for x, y in zip(xliste, yliste):
+            ax.annotate(
+                f"{y:.2f}",          # format as needed
+                xy=(x, y),
+                xytext=(6, 6),       # offset in points to avoid overlapping the marker
+                textcoords="offset points",
+                fontsize=8,
+                color=colla
+            )
+
+    ax.set_xlabel("kL (wavenumber x geometry length")
+    ax.set_ylabel("Mean P3/P2 in mm")
+    ax.set_title(f"dempning")
+    ax.legend()
+    plt.tight_layout()
+    ax.grid()
+    ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
+    ax.minorticks_on()
+    ax.set_xticks(probelocations)
+    #ax.set_xticklabels()
+    plt.show()
 
 
+def plot_damping(filtered_df: pd.DataFrame,
+                 ampvar: dict[str, any],
+                 value_col: str = "P3/P2",
+                 ):
+    """
+    Plot mean +/- std errorbars of `value_col` vs kL using a DataFrame already filtered
+    by filter_meta_df.
+
+    Parameters
+    - filtered_df: DataFrame already filtered (use filter_meta_df)
+    - ampvar: used only to read plotting.figsize or to choose amplitude grouping if needed
+    - value_col: name of the column to aggregate & plot (default "P3/P2")
+    - annotate: whether to annotate points with their mean value
+    """
+    # default style maps
+
+    wind_colors = {"full": "red", "no": "blue", "lowest": "green"}
+
+    if value_col not in filtered_df.columns:
+        raise ValueError(f"{value_col} not found in filtered DataFrame columns.")
+
+    # drop rows missing kL or the value
+    df = filtered_df.dropna(subset=["kL", value_col]).copy()
+    if df.empty:
+        print("No data left to plot after dropping NaNs.")
+        return
+
+    # Aggregate mean/std/count grouped by amplitude (if present), kL, WindCondition, PanelCondition
+    amp_col = "WaveAmplitudeInput [Volt]"
+    group_cols = [ "kL", "WindCondition", "PanelCondition" ]
+    if amp_col in df.columns:
+        group_cols = [amp_col] + group_cols
+
+    agg = (
+        df.groupby(group_cols, sort=True)[value_col]
+          .agg(mean="mean", std="std", count="count")
+          .reset_index()
+    )
+
+    # Determine amplitudes to plot separately (one figure per amplitude) or single figure if absent
+    if amp_col in agg.columns:
+        amplitudes = sorted(agg[amp_col].unique())
+    else:
+        amplitudes = [None]
+
+    # plotting params
+    figsize = ampvar.get("plotting", {}).get("figsize") or (10, 6)
+    annotate = ampvar.get("plotting", {}).get("annotate")
+    markers = ["o", "s", "v", "^", "x", "*", "D"]
+
+    for amp in amplitudes:
+        if amp is None:
+            a_df = agg.copy()
+            title_amp = ""
+        else:
+            a_df = agg[agg[amp_col] == amp].copy()
+            title_amp = f" ({amp_col} = {amp})"
+
+        panels = sorted(a_df["PanelCondition"].unique())
 
 
+        fig, axes = plt.subplots(nrows, ncols,
+                                 figsize=(figsize[0], figsize[1] * nrows),
+                                 squeeze=False)
+
+        # create stable marker map for combinations
+        series_keys = a_df.groupby(["WindCondition", "PanelCondition"]).size().index.tolist()
+        marker_map = {k: markers[i % len(markers)] for i, k in enumerate(series_keys)}
+
+        for i, panel in filtered_df:
+            ax = axes[i // ncols, i % ncols]
+            p_df = a_df[a_df["PanelCondition"] == panel]
+
+            for wind in sorted(p_df["WindCondition"].unique()):
+                sub = p_df[p_df["WindCondition"] == wind].sort_values(by="kL")
+                x = sub["kL"].to_numpy()
+                y = sub["mean"].to_numpy()
+                yerr = sub["std"].to_numpy()
+
+                color = wind_colors.get(wind, "black")
+                marker = marker_map.get((wind, panel), "o")
+                label = f"{wind} / {panel}"
+
+                ax.errorbar(x, y, yerr=yerr, marker=marker,
+                            color=color, capsize=3, label=label)
+
+                if annotate:
+                    for xi, yi in zip(x, y):
+                        ax.annotate(f"{yi:.2f}", xy=(xi, yi), xytext=(6, 6),
+                                    textcoords="offset points", fontsize=8, color=color)
+
+            ax.set_title(f"PanelCondition = {panel}{title_amp}")
+            ax.set_xlabel("kL (wavenumber x geometry length)")
+            ax.set_ylabel(f"Mean {value_col}")
+            ax.legend(title="Wind / Panel", fontsize=8)
+
+        # Hide unused axes
+        total_axes = nrows * ncols
+        for j in range(len(panels), total_axes):
+            ax = axes[j // ncols, j % ncols]
+            ax.axis('off')
+
+        plt.tight_layout()
+        plt.grid(True, which="both", linestyle=":", linewidth=0.5)
+        plt.minorticks_on()
+        # set xticks from present kL values (sorted)
+        probelocations = sorted(a_df["kL"].unique())
+        if probelocations:
+            axes[0,0].set_xticks(probelocations)
+        plt.show()
 
 
+# amplitude_plot.py
+import matplotlib.pyplot as plt
+import numpy as np
+from typing import Mapping, Any, Sequence, Optional
 
+def plot_damping_combined(
+    df,
+    *,
+    filters: Mapping[str, Any],
+    plotting: Mapping[str, Any],
+    x_col: str = "kL",
+    y_col: str = "mean_P3P2",
+    err_col: str = "std_P3P2",          # column that holds the error magnitude
+    hue_col: str = "WindCondition",
+    figsize: Optional[tuple] = None,
+    separate: bool = False,
+    overlay: bool = False,
+    annotate: bool = False,
+) -> None:
+    """
+    Plot mean P3/P2 versus kL with optional error bars.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame that already contains the columns needed for the plot
+        (e.g. `kL`, `mean`, `std`, `WindCondition` …).
+
+    filters, plotting : dict‑like
+        Dictionaries that come from ``amplitudeplotvariables``.
+        Only the entries used by this function are listed in the signature;
+        the rest are ignored but kept for forward compatibility.
+
+    x_col, y_col, err_col, hue_col : str
+        Column names for the x‑axis, y‑axis, error‑bars and the grouping
+        variable (wind condition).
+
+    figsize : tuple | None
+        Figure size. If ``None`` the default size from ``matplotlib`` is used.
+
+    separate : bool
+        If ``True`` each wind condition gets its own subplot (vertical stack).
+        If ``False`` everything is drawn in a single Axes.
+
+    overlay : bool
+        When ``separate=True`` you can either **overlay** the data from all
+        conditions on one subplot (``overlay=True``) or keep them in separate
+        sub‑axes (the default).
+
+    annotate : bool
+        Annotate each point with its exact ``mean`` value (rounded to 2 d.p.).
+    """
+    import matplotlib.pyplot as plt  # local import – safe for optional use
+
+    # ------------------------------------------------------------------ #
+    # 1️⃣  Apply the simple filters that live in ``filters`` (if you need
+    #     more sophisticated filtering you can do it before calling this
+    #     function – the example below only shows the most common ones)
+    # ------------------------------------------------------------------ #
+    # Example: keep only the requested wind conditions
+    wind_sel = filters.get("WindCondition", None)
+    if wind_sel is not None:
+        df = df[df[hue_col].isin(wind_sel)]
+
+    # ------------------------------------------------------------------ #
+    # 2️⃣  Set up the figure / axes
+    # ------------------------------------------------------------------ #
+    if figsize is None:
+        figsize = (10, 6) if not separate else (10, 3 * len(df[hue_col].unique()))
+
+    if separate:
+        # One row per wind condition (unless overlay=True → a single Axes)
+        n_rows = 1 if overlay else len(df[hue_col].unique())
+        fig, axes = plt.subplots(
+            n_rows, 1, figsize=figsize, sharex=True, sharey=True, squeeze=False
+        )
+        axes = axes.ravel()
+    else:
+        fig, ax = plt.subplots(figsize=figsize)
+        axes = [ax]  # unify handling later
+
+    # ------------------------------------------------------------------ #
+    # 3️⃣  Plot each condition
+    # ------------------------------------------------------------------ #
+    conditions = df[hue_col].unique()
+    for i, cond in enumerate(sorted(conditions)):
+        sub = df[df[hue_col] == cond]
+
+        # Choose the Axes we will draw on
+        if separate and not overlay:
+            ax = axes[i]
+        else:
+            ax = axes[0]
+
+        # Scatter + errorbars
+        ax.errorbar(
+            sub[x_col],
+            sub[y_col],
+            yerr=sub[err_col],
+            fmt="o",
+            capsize=4,
+            label=cond,
+            markersize=5,
+            linestyle="none",
+        )
+
+        # Optional annotation of each point
+        if annotate:
+            for _, row in sub.iterrows():
+                ax.annotate(
+                    f"{row[y_col]:.2f}",
+                    (row[x_col], row[y_col]),
+                    textcoords="offset points",
+                    xytext=(0, 5),
+                    ha="center",
+                    fontsize=8,
+                )
+
+        # Axis cosmetics – only add legend / labels once
+        if i == 0:
+            ax.set_xlabel(r"$kL$ (wavenumber $\times$ geometry length)")
+            ax.set_ylabel("Mean P3/P2")
+            ax.grid(True, which="both", ls=":", linewidth=0.5)
+            ax.minorticks_on()
+
+        if not separate or overlay:
+            # All curves share the same Axes → add a legend once
+            ax.legend(title="Wind condition")
+        else:
+            # Separate sub‑plots → title each subplot
+            ax.set_title(f"Wind condition: {cond}")
+
+    plt.tight_layout()
+    plt.show()
 
 
 

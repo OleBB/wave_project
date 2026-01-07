@@ -91,10 +91,8 @@ if all_meta_sel:
     # - Compare results between different datasets
 
 # %%
-
-
-from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis 
-summary_df = wind_damping_analysis(combined_meta_sel)
+# from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis 
+# summary_df = wind_damping_analysis(combined_meta_sel)
 
 #%%
 from wavescripts.wavestudyer import wind_damping_analysis
@@ -104,10 +102,10 @@ damping_analysis_results = wind_damping_analysis(combined_meta_sel)
 from wavescripts.wavestudyer import damping
 damping_comparison_df = damping(combined_meta_sel)
 
+# %%
 
 
 import matplotlib.pyplot as plt
-
 # Extract mean values and reset index
 mean_p3p2 = damping_comparison_df['mean'].reset_index()
 
@@ -115,9 +113,9 @@ mean_p3p2 = damping_comparison_df['mean'].reset_index()
 plt.figure(figsize=(10, 6))
 for condition in ['no', 'lowest', 'full']:
     subset = mean_p3p2[mean_p3p2['WindCondition'] == condition]
-    plt.scatter(subset['WaveFrequencyInput [Hz]'], subset['mean'], label=condition)
+    plt.scatter(subset['kL'], subset['mean'], label=condition)
 
-plt.xlabel('Wave Freq [Hz]')
+plt.xlabel('kL (wavenumber x geometry length')
 plt.ylabel('Mean P3/P2')
 plt.legend()
 plt.grid()
@@ -125,17 +123,16 @@ plt.minorticks_on()
 plt.show()
 
 # %%
-
 chooseAll = False
 amplitudeplotvariables = {
     "filters": {
-        "amp": 0.1, #0.1, 0.2, 0.3 
-        "freq": None, #bruk et tall  
-        "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": ["no", "lowest", "full"], #full, no, lowest, all
-        "tunnel": None,
-        "mooring": "low",
-        "panel": ["full", "reverse"], # no, full, reverse, 
+        "WaveAmplitudeInput [Volt]": 0.1, #0.1, 0.2, 0.3 
+        "WaveFrequencyInput [Hz]": None, #bruk et tall  
+        "WavePeriodInput": 40, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
+        "TunnelCondition": None,
+        "Mooring": "low",
+        "PanelCondition": ["full", "reverse"], # no, full, reverse, 
         
     },
     "processing": {
@@ -148,28 +145,42 @@ amplitudeplotvariables = {
     "plotting": {
         "figsize": None,
         "separate":True,
-        "overlay": False
+        "overlay": False,
+        "annotate": True
         
     }
     
 }
 
+# %%
 from wavescripts.filters import filter_for_amplitude_plot
 m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables, chooseAll)
 
-"""Plot amplitude summary plotter alt den tar inn"""
+
+# %%
+"""Plot_all_probes plotter alt den tar inn"""
 from wavescripts.plotter import plot_all_probes
 plot_all_probes(m_filtrert, amplitudeplotvariables)
 
+# %%
+from wavescripts.plotter import plot_damping
+# plot_damping(combined_meta_sel, amplitudeplotvariables)
+# %%
+from wavescripts.wavestudyer import damping
+damping_df = damping(combined_meta_sel)
 
+from wavescripts.filters import filter_for_damping
+m_damping_filtrert = filter_for_damping(
+    damping_df,
+    amplitudeplotvariables["filters"]
+)
 
-
-
-
-
-
-
-
+from wavescripts.plotter import amplitude_plot
+amplitude_plot(
+    m_damping_filtrert,
+    filters=amplitudeplotvariables["filters"],   # optional bookkeeping
+    plotting=amplitudeplotvariables["plotting"]
+)
 
 
 
