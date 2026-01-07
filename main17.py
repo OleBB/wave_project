@@ -156,27 +156,23 @@ amplitudeplotvariables = {
 from wavescripts.filters import filter_for_amplitude_plot
 m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables, chooseAll)
 
-
-# %%
 """Plot_all_probes plotter alt den tar inn"""
 from wavescripts.plotter import plot_all_probes
 plot_all_probes(m_filtrert, amplitudeplotvariables)
 
 # %%
-from wavescripts.plotter import plot_damping
-# plot_damping(combined_meta_sel, amplitudeplotvariables)
-# %%
 from wavescripts.wavestudyer import damping
-damping_df = damping(combined_meta_sel)
+damping_combinedruns_df = damping(combined_meta_sel)
+# %%
 
 from wavescripts.filters import filter_for_damping
 m_damping_filtrert = filter_for_damping(
-    damping_df,
+    damping_combinedruns_df,
     amplitudeplotvariables["filters"]
 )
 
-from wavescripts.plotter import amplitude_plot
-amplitude_plot(
+from wavescripts.plotter import plot_damping_combined
+plot_damping_combined(
     m_damping_filtrert,
     filters=amplitudeplotvariables["filters"],   # optional bookkeeping
     plotting=amplitudeplotvariables["plotting"]
