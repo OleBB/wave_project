@@ -131,13 +131,44 @@ m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables
 from wavescripts.plotter import plot_all_probes
 plot_all_probes(m_filtrert, amplitudeplotvariables)
 
-print("======== Results PLOTTED ===========")
+print("======== Amplituder P1234 PLOTTA ===========")
 
 #%%
 """Slå dei i hop"""
 from wavescripts.wavestudyer import damping_grouper
-damping_groupedruns_df = damping_grouper(combined_meta_sel)
+damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
+# %%
 
+
+wide = damping_pivot_wide
+print(wide.columns.tolist())
+
+mean_cols = [c for c in wide.columns if c.startswith("mean_P3P2_")]
+wide_means = wide[["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"] + mean_cols]
+
+mask = (
+    (wide["WaveAmplitudeInput [Volt]"] == 0.5)
+    & (wide["PanelConditionGrouped"] == "all")
+)
+row = wide.loc[mask]
+
+wide["delta_mean_P3P2_Windyyyy"] = (
+    wide["mean_P3P2_lowest"] - wide["mean_P3P2_full"]
+)
+# %%
+
+import matplotlib.pyplot as plt
+
+mean_cols = [c for c in wide.columns if c.startswith("mean_P3P2_")]
+wide_sorted = wide.sort_values(["PanelConditionGrouped", "WaveAmplitudeInput [Volt]"])
+wide_sorted.plot(
+    x=["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"],
+    y=mean_cols,
+    kind="bar",
+    figsize=(10, 6),
+)
+plt.tight_layout()
+plt.show()
 
 
 
