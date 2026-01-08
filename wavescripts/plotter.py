@@ -7,6 +7,7 @@ Created on Thu Nov 13 16:27:38 2025
 """
 
 import matplotlib.pyplot as plt
+import seaborn as sns
 import os
 
 
@@ -375,7 +376,107 @@ def plot_all_probes(meta_df, ampvar):
 # %%
 
 
-def plot_damping_2(meta_df, ampvar):
+def facet_means(df, ampvar):
+    # df should be your aggregated stats (mean_P3P2, std_P3P2)
+    x='WaveFrequencyInput [Hz]'
+    g = sns.relplot(
+        data=df.sort_values([x]),
+        x=x,
+        y='mean_P3P2',
+        hue='WindCondition',          # color by condition
+        palette=wind_colors,
+        style='PanelConditionGrouped',# differentiate panel
+        col='WaveAmplitudeInput [Volt]',  # one column per amplitude
+        kind='line',
+        marker=True,
+        facet_kws={'sharex': True, 'sharey': True},
+        height=3.0,
+        aspect=1.2,
+        errorbar=None                 # add std manually if desired
+    )
+    # Optional: manually draw std error bars per facet
+    for ax, ((amp), sub) in zip(g.axes.flat, df.groupby('WaveAmplitudeInput [Volt]')):
+        for (wind, panel), gsub in sub.groupby(['WindCondition', 'PanelConditionGrouped']):
+            ax.errorbar(gsub[x], gsub['mean_P3P2'], yerr=gsub['std_P3P2'],
+                        fmt='none', capsize=3, alpha=0.6)
+    plt.tight_layout()
+    plt.show()
+
+
+
+# %%
+
+
+
+def plot_damping_2(df, plotvariables):
+    xvar="WaveFrequencyInput [Hz]"
+    wind_colors = {
+        "full": "red",
+        "no": "blue",
+        "lowest": "green",
+    }
+    panel_markers = {
+        "no": "o",
+        "full": "s",
+        "reverse": "D",
+    }
+    panel_styles = {
+        "no": "solid",
+        "full": "dashed",
+        "reverse": "dashdot",
+    }
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Ensure sorted x for nicer visuals
+    df = df.sort_values([ 'PanelConditionGrouped', 'WindCondition', xvar ])
+
+    # One scatter per (panel, wind) group
+    for (panel, wind), sub in df.groupby(['PanelConditionGrouped', 'WindCondition'], sort=False):
+        color = wind_colors.get(wind, 'black')
+        marker = panel_markers.get(panel, 'o')
+        linestyle = panel_styles.get(panel, 'solid')
+
+        # Use scatter for points; optionally use plot for connecting line
+        ax.scatter(sub[xvar], sub['mean_P3P2'],
+                   label=f'{panel} | {wind}',
+                   color=color, marker=marker, alpha=0.85)
+        ax.plot(sub[xvar], sub['mean_P3P2'],
+                color=color, linestyle=linestyle, linewidth=1.5, alpha=0.7)
+
+        # Optional annotations
+        # for x, y in zip(sub[xvar], sub['mean_P3P2']):
+        #     ax.annotate(f'{y:.2f}', (x, y), textcoords='offset points', xytext=(6, 6), fontsize=8, color=color)
+
+    ax.set_xlabel('kL (wavenumber × geometry length)' if xvar == 'WaveFrequencyInput [Hz]' else xvar)
+    ax.set_ylabel('Mean P3/P2 in mm')
+    ax.set_title('Damping (mean P3/P2 vs frequency)')
+    ax.grid(True)
+    ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
+    ax.minorticks_on()
+
+    # Build a clean legend without duplicates
+    handles, labels = ax.get_legend_handles_labels()
+    uniq = dict(zip(labels, handles))
+    ax.legend(uniq.values(), uniq.keys(), title='Panel | Wind', ncol=2)
+
+    plt.tight_layout()
+    plt.show()
+    
+# %%
+    
+
+
+
+
+
+
+
+
+
+
+
+def plot_damping_old(grouped_df, ampvar):
     wind_colors = {
         "full":"red",
         "no": "blue",
@@ -396,12 +497,7 @@ def plot_damping_2(meta_df, ampvar):
 
     # probelocations = [1, 1.1, 1.2, 1.25]
     # xlabels = ["P1", "P2", "P3", "P4"]
-
-    
-
-   
-
-    for idx, row in meta_df.iterrows():
+    for idx, row in groped_df.iterrows():
         #path = row["path"]
 
         windcond = row["WindCondition"]

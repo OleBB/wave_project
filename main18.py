@@ -140,11 +140,46 @@ damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
 # %%
 
 
-wide = damping_pivot_wide
-print(wide.columns.tolist())
+from wavescripts.plotter import plot_damping_2
+plot_damping_2(damping_groupedruns_df, amplitudeplotvariables)
+# %%
+
+
+from wavescripts.plotter import facet_means
+facet_means(damping_groupedruns_df, amplitudeplotvariables)
+
 
 # %%
 
+
+
+# %%
+
+
+import seaborn as sns
+import matplotlib as plt
+xvar = "WaveFrequencyInput [Hz]"
+
+df = damping_groupedruns_df.copy()
+sns.set_theme(style='whitegrid')
+ax = sns.scatterplot(
+    data=df.sort_values(xvar),
+    x=xvar,
+    y='mean_P3P2',
+    hue='WindCondition',
+    style='PanelConditionGrouped',
+    markers=True
+)
+
+
+
+
+
+# %%
+
+
+wide = damping_pivot_wide
+print(wide.columns.tolist())
 
 mean_cols = [c for c in wide.columns if c.startswith("mean_P3P2_")]
 wide_means = wide[["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"] + mean_cols]
@@ -232,10 +267,6 @@ g.set_titles(col_template='{col_name}')
 
 # %%
 
-
-
-from wavescripts.plotter import plot_damping_2
-plot_damping_2(damping_groupedruns_df, amplitudeplotvariables)
 
 
 
