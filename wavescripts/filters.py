@@ -141,7 +141,7 @@ def filter_for_damping(
             • a list/tuple   → keep rows where column is in that list
             • a tuple (low, high) → keep rows where low ≤ column ≤ high
             • ``None``        → *ignore* this column (no filtering)
-    custom_filter : callable, optional
+    Eg fjerna: custom_filter : callable, optional
         If you need a bespoke filter that cannot be expressed with the simple
         rules above, pass a function that receives the intermediate DataFrame
         and returns a new one.

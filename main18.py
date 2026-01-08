@@ -89,18 +89,10 @@ if all_meta_sel:
     # - Count selections by dataset
     # - Analyze properties across all selections
     # - Compare results between different datasets
+# """PRINT RESULTS"""
+# from wavescripts.wavestudyer import wind_damping_analysis
+# damping_analysis_results = wind_damping_analysis(combined_meta_sel)
 
-# %%
-# from wavescripts.wavestudyer import compare_probe_amplitudes_and_lag, amplitude_overview, full_tank_diagnostics, wind_damping_analysis 
-# summary_df = wind_damping_analysis(combined_meta_sel)
-
-#%%
-from wavescripts.wavestudyer import wind_damping_analysis
-damping_analysis_results = wind_damping_analysis(combined_meta_sel)
-
-# %%
-from wavescripts.wavestudyer import damping
-damping_comparison_df = damping(combined_meta_sel)
 
 
 # %%
@@ -109,7 +101,7 @@ amplitudeplotvariables = {
     "filters": {
         "WaveAmplitudeInput [Volt]": 0.1, #0.1, 0.2, 0.3 
         "WaveFrequencyInput [Hz]": None, #bruk et tall  
-        "WavePeriodInput": 40, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
         "TunnelCondition": None,
         "Mooring": "low",
@@ -127,23 +119,38 @@ amplitudeplotvariables = {
         "figsize": None,
         "separate":True,
         "overlay": False,
-        "annotate": True
-        
-    }
-    
+        "annotate": True   
+    }   
 }
 
 # %%
+"""unikt filter for å se på amplitudene sjæl"""
 from wavescripts.filters import filter_for_amplitude_plot
 m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables, chooseAll)
-
 """Plot_all_probes plotter alt den tar inn"""
 from wavescripts.plotter import plot_all_probes
 plot_all_probes(m_filtrert, amplitudeplotvariables)
 
+print("======== Results PLOTTED ===========")
+
+#%%
+"""Slå dei i hop"""
+from wavescripts.wavestudyer import damping_grouper
+damping_groupedruns_df = damping_grouper(combined_meta_sel)
+
+
+
+
+
+
 # %%
-from wavescripts.wavestudyer import damping
-damping_combinedruns_df = damping(combined_meta_sel)
+
+
+
+
+
+
+
 # %%
 
 from wavescripts.filters import filter_for_damping
@@ -158,6 +165,8 @@ plot_damping_combined(
     filters=amplitudeplotvariables["filters"],   # optional bookkeeping
     plotting=amplitudeplotvariables["plotting"]
 )
+
+# %%
 
 
 import matplotlib.pyplot as plt

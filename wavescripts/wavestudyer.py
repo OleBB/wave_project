@@ -280,30 +280,10 @@ def _safe_round_ratio(a, b):
     return a / b
 
 
-
-
-# from scipy.optimize import brentq
-# def calculate_wavenumber(freq, H):
-#     """Tar inn frekvens og høyde
-#     bruker BRENTQ fra scipy
-#     """
-#     g = 9.81
-#     period = 1/freq
-#     omega = 2*np.pi/period
-#     f = lambda k: g*k*np.tanh(k*H) - omega**2
-#     k0 = omega**2/g #deep water guess
-#     k1 = omega/np.sqrt(g*H) #shallow water guess
-#     a, b = min(k0, k1)*0.1, max(k0, k1)*10
-#     while f(a)*f(b) >0:
-#         a, b = a/2, b*2
-    
-#     return brentq(f, a, b)
-    
-
 def wind_damping_analysis(meta_df):
     """
-    Full analysis of wave damping (P3/P2) vs wind condition.
-    Returns a DataFrame of results.
+    printer analyse av dempning (P3/P2) vs windCondition.
+    Returnerer ein DataRamme med resultater.
     """
     results = []
     meta_sel = meta_df.copy()
@@ -404,10 +384,7 @@ def damping_old(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
     return comparison 
 # %%
 
-
-
-
-def damping(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
+def damping_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
     """
     Returns a DataFrame with one row per
     (WaveAmplitudeInput [Volt], WaveFrequencyInput [Hz],
@@ -419,12 +396,10 @@ def damping(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
       * mean_Probe1, mean_Probe2, mean_Probe3,
         mean_Probe4                                 – average probe amplitudes
     """
-    # Work on a copy so the original DataFrame is never modified
     df = combined_meta_df.copy()
 
     # ------------------------------------------------------------------
-    # Columns that are not part of the aggregation – we keep the first
-    # value of each group for them.
+    # Columns that are not part of the aggregation – we keep the first value of each group for them.
     # ------------------------------------------------------------------
     meta_cols = [
         "path", "WindCondition", "PanelCondition", "Mooring",
@@ -433,17 +408,26 @@ def damping(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
     ]
 
     # ------------------------------------------------------------------
-    # Compute the required statistics per group.
+    # Slå sammen full og reverse til all
     # ------------------------------------------------------------------
+    df2 = df.assign(
+    PanelConditionGrouped=np.where(
+        df["PanelCondition"].isin(["full", "reverse"]),
+        "all",
+        df["PanelCondition"]
+    )
+    )
+    
     grouping_keys = [
         "WaveAmplitudeInput [Volt]",
         "WaveFrequencyInput [Hz]",
-        "PanelCondition",
+        "PanelConditionGrouped",  # use the grouped condition
         "WindCondition",
     ]
 
+
     stats = (
-        df.groupby(grouping_keys)
+        df2.groupby(grouping_keys)
         .agg(
             mean_P3P2=("P3/P2", "mean"),
             std_P3P2=("P3/P2", "std"),
@@ -476,9 +460,7 @@ def damping(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
         how="inner",
     )
 
-    
-
-    return out
+    return stats
 
 
     
