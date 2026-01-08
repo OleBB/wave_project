@@ -372,6 +372,8 @@ def plot_all_probes(meta_df, ampvar):
     ax.set_xticks(probelocations)
     ax.set_xticklabels(xlabels)
     plt.show()
+# %%
+
 
 def plot_damping_2(meta_df, ampvar):
     wind_colors = {
@@ -405,8 +407,7 @@ def plot_damping_2(meta_df, ampvar):
         windcond = row["WindCondition"]
         colla = wind_colors.get(windcond, "black")
         
-        panelcond = row["PanelCondition"]
-        linjestil = panel_styles.get(panelcond)
+        panelcond = row["PanelConditionGrouped"]
         
         marker = "o"
 
@@ -417,7 +418,7 @@ def plot_damping_2(meta_df, ampvar):
 
         
         # --- her plottes --- #
-        ax.scatter(meta_df['kL'], meta_df['mean'], linewidth=2, label=label, linestyle=linjestil,marker=marker, color=colla)
+        ax.scatter(meta_df['WaveFrequencyInput [Hz]'], meta_df['mean_P3P2'], linewidth=2, label=label, marker=marker, color=colla)
         
         # annotate each point with its value (formatted)
         for x, y in zip(xliste, yliste):
@@ -442,6 +443,8 @@ def plot_damping_2(meta_df, ampvar):
     #ax.set_xticklabels()
     plt.show()
 
+
+# %%
 
 
 

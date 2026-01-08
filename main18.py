@@ -100,7 +100,7 @@ chooseAll = False
 amplitudeplotvariables = {
     "filters": {
         "WaveAmplitudeInput [Volt]": 0.1, #0.1, 0.2, 0.3 
-        "WaveFrequencyInput [Hz]": None, #bruk et tall  
+        "WaveFrequencyInput [Hz]": 1.3, #bruk et tall  
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
         "TunnelCondition": None,
@@ -143,6 +143,9 @@ damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
 wide = damping_pivot_wide
 print(wide.columns.tolist())
 
+# %%
+
+
 mean_cols = [c for c in wide.columns if c.startswith("mean_P3P2_")]
 wide_means = wide[["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"] + mean_cols]
 
@@ -155,6 +158,87 @@ row = wide.loc[mask]
 wide["delta_mean_P3P2_Windyyyy"] = (
     wide["mean_P3P2_lowest"] - wide["mean_P3P2_full"]
 )
+# %%
+
+
+import seaborn as sns
+import matplotlib as plt
+
+# stats has columns: WaveAmplitudeInput [Volt], PanelConditionGrouped, WindCondition, mean_P3P2, std_P3P2, ...
+sns.lineplot(
+    data=damping_groupedruns_df,
+    x='WaveFrequencyInput [Hz]',
+    y='mean_P3P2',
+    hue='WindCondition',
+    style='PanelConditionGrouped',
+    marker='o',
+    errorbar=None  # we already have std; seaborn would otherwise estimate from raw data
+)
+
+# Add error bars manually using matplotlib if desired
+for (pc, w), g in damping_groupedruns_df.groupby(['PanelConditionGrouped', 'WindCondition']):
+    plt.errorbar(g['WaveAmplitudeInput [Volt]'], g['mean_P3P2'], yerr=g['std_P3P2'], fmt='none', alpha=0.3)
+plt.show()
+
+# %%
+
+import numpy as np
+df =damping_groupedruns_df
+# Palette mapping to reuse the same color for lines and error bars
+winds = df['WindCondition'].dropna().unique().tolist()
+palette = sns.color_palette('tab10', n_colors=len(winds))
+color_map = dict(zip(winds, palette))
+
+g = sns.FacetGrid(
+    data=df,
+    col='PanelConditionGrouped',
+    hue='WindCondition',
+    palette=color_map,
+    sharex=True,
+    sharey=True,
+    height=3.0,
+    aspect=1.2,
+    col_wrap=None  # set an int to wrap columns if you have many panels
+)
+
+# Draw mean lines with markers
+g.map_dataframe(
+    sns.lineplot,
+    x='WaveAmplitudeInput [Volt]',
+    y='mean_P3P2',
+    marker='o',
+    err_style=None  # disable seaborn’s internal error depiction
+)
+
+# Add std error bars manually for each hue in each facet
+for ax, (panel_cond, sub_panel) in zip(g.axes.flat, df.groupby('PanelConditionGrouped', sort=False)):
+    for wind, sub in sub_panel.groupby('WindCondition', sort=False):
+        ax.errorbar(
+            sub['WaveFrequencyInput [Volt]'],
+            sub['mean_P3P2'],
+            yerr=sub['std_P3P2'],
+            fmt='none',
+            capsize=3,
+            color=color_map[wind],
+            alpha=0.8
+        )
+
+g.add_legend(title='Wind')
+g.set_axis_labels('WaveAmplitudeInput [Volt]', 'mean P3/P2')
+g.set_titles(col_template='{col_name}')
+
+
+
+
+# %%
+
+
+
+from wavescripts.plotter import plot_damping_2
+plot_damping_2(damping_groupedruns_df, amplitudeplotvariables)
+
+
+
 # %%
 
 import matplotlib.pyplot as plt
