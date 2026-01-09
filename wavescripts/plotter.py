@@ -403,6 +403,60 @@ def facet_means(df, ampvar):
     plt.show()
 
 
+def facet_means_amp(df, ampvar):
+    # df should be your aggregated stats (mean_P3P2, std_P3P2)
+    x='WaveAmplitudeInput [Volt]'
+    sns.set_style("ticks",{'axes.grid' : True})
+    g = sns.relplot(
+        data=df.sort_values([x]),
+        x=x,
+        y='mean_P3P2',
+        hue='WindCondition',          # color by condition
+        palette=wind_colors,
+        style='PanelConditionGrouped',# differentiate panel
+        col='WaveFrequencyInput [Hz]',  # one column per amplitude
+        kind='line',
+        marker=True,
+        facet_kws={'sharex': True, 'sharey': True},
+        height=3.0,
+        aspect=1.2,
+        errorbar=None,              # add std manually if desired
+    )
+    # Optional: manually draw std error bars per facet
+    for ax, ((amp), sub) in zip(g.axes.flat, df.groupby('WaveAmplitudeInput [Volt]')):
+        for (wind, panel), gsub in sub.groupby(['WindCondition', 'PanelConditionGrouped']):
+            ax.errorbar(gsub[x], gsub['mean_P3P2'], yerr=gsub['std_P3P2'],
+                        fmt='none', capsize=3, alpha=0.6)
+    plt.tight_layout()
+    plt.show()
+    
+def facet_amp(df, ampvar):
+    # df should be your aggregated stats (mean_P3P2, std_P3P2)
+    x='WaveAmplitudeInput [Volt]'
+    sns.set_style("ticks",{'axes.grid' : True})
+    g = sns.relplot(
+        data=df.sort_values([x]),
+        x=x,
+        y='amp',
+        hue='WindCondition',          # color by condition
+        palette=wind_colors,
+        style='PanelConditionGrouped',# differentiate panel
+        col='WaveFrequencyInput [Hz]',  # one column per amplitude
+        kind='line',
+        marker=True,
+        facet_kws={'sharex': True, 'sharey': True},
+        height=3.0,
+        aspect=1.2,
+        errorbar=None                 # add std manually if desired
+    )
+    # Optional: manually draw std error bars per facet
+    for ax, ((amp), sub) in zip(g.axes.flat, df.groupby('WaveAmplitudeInput [Volt]')):
+        for (wind, panel), gsub in sub.groupby(['WindCondition', 'PanelConditionGrouped']):
+            ax.errorbar(gsub[x], gsub['mean_P3P2'], yerr=gsub['std_P3P2'],
+                        fmt='none', capsize=3, alpha=0.6)
+    plt.tight_layout()
+    plt.grid()
+    plt.show()
 
 # %%
 

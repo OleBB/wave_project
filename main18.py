@@ -148,6 +148,17 @@ plot_damping_2(damping_groupedruns_df, amplitudeplotvariables)
 from wavescripts.plotter import facet_means
 facet_means(damping_groupedruns_df, amplitudeplotvariables)
 
+# %%
+
+from wavescripts.plotter import facet_means_amp
+facet_means_amp(damping_groupedruns_df, amplitudeplotvariables)
+
+# %%
+
+
+from wavescripts.plotter import facet_amp
+facet_amp(damping_groupedruns_df, amplitudeplotvariables)
+
 
 # %%
 
