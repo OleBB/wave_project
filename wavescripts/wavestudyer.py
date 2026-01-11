@@ -391,7 +391,7 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
     """
     Aggregates P3/P2 (and optional probe amplitudes) by:
       - WaveAmplitudeInput [Volt]
-      - kL
+      - Frekvens, men byttes med kL senere(?) 
       - PanelConditionGrouped (full|reverse -> all; no stays no)
       - WindCondition
 
