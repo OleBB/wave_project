@@ -199,12 +199,43 @@ from wavescripts.plotter import facet_plot_amp_vs_mean
 facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
 
 # %%
+chooseAll = False
+dampingplotvariables = {
+    "overordnet": {"chooseAll": False}, 
+    "filters": {
+        #"WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3], #0.1, 0.2, 0.3 
+        "WaveFrequencyInput [Hz]": [1.3, 0.65], #bruk et tall  
+        "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
+        "TunnelCondition": None,
+        #"Mooring": None,
+        "PanelCondition": ["full", "reverse"], # no, full, reverse, 
+        
+    },
+    "processing": {
+        "chosenprobe": "Probe 2",
+        "rangestart": None,
+        "rangeend": None,
+        "data_cols": ["Probe 2"],#her kan jeg velge fler, må huske [listeformat]
+        "win": 11
+    },
+    "plotting": {
+        "figsize": None,
+        "separate":True,
+        "overlay": False,
+        "annotate": True   
+    }   
+}
+
+
 """Slå alle i hop"""
-from wavescripts.wavestudyer import damping_all_grouper
-damping_groupedallruns_df  = damping_all_grouper(combined_meta_sel)
+from wavescripts.wavestudyer import damping_all_amplitude_grouper
+damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
+
+# damping_all_amplitudes_filtrert = filter_for_damping(damping_groupedallruns_df, dampingplotvariables["filters"])
 
 from wavescripts.plotter import facet_amp
-facet_amp(damping_filtrert, dampingplotvariables)
+facet_amp(damping_groupedallruns_df, dampingplotvariables)
 
 
 # %%
