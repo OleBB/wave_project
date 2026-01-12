@@ -365,9 +365,7 @@ def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
 
     ax.set_xlabel("Probenes avstand er ikke representert korrekt visuelt")
     ax.set_ylabel("amplitude in mm")
-    ax.set_title(f"Utkast: Prober 1,2,3,4, (merk: arbitrær x-akse.)avstand P1-P2=60cm, avstand P2-P3/P4= 3,04m ")
-    ax.legend()
-    plt.tight_layout()
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid()
     ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
     ax.minorticks_on()
@@ -443,9 +441,10 @@ def facet_plot_amp_vs_mean(df, ampvar):
 
 def facet_amp(df, ampvar):
     # df should be your aggregated stats (mean_P3P2, std_P3P2)
+    fig, ax = plt.subplots()
     x='WaveAmplitudeInput [Volt]'
     sns.set_style("ticks",{'axes.grid' : True})
-    g = sns.relplot(
+    g = sns.scatterplot(
         data=df.sort_values([x]),
         x=x,
         y='mean_P3P2',
@@ -454,21 +453,19 @@ def facet_amp(df, ampvar):
         style='PanelConditionGrouped',# differentiate panel
         style_order=["no", "all"],
         col='WaveFrequencyInput [Hz]',  # one column per amplitude
-        kind='line',
+        #kind='line',
         marker=True,
-        facet_kws={'sharex': True, 'sharey': True},
-        height=3.0,
-        aspect=1.2,
-        errorbar=None,              # add std manually if desired
+        #facet_kws={'sharex': True, 'sharey': True},
+        #height=3.0,
+        #aspect=1.2,
+        #errorbar=True,              # add std manually if desired
     )
     # Optional: manually draw std error bars per facet
-    for ax, ((amp), sub) in zip(g.axes.flat, df.groupby('WaveFrequencyInput [Hz]')):
-        for (wind, panel), gsub in sub.groupby(['WindCondition', 'PanelConditionGrouped']):
-            ax.errorbar(gsub[x], gsub['mean_P3P2'], yerr=gsub['std_P3P2'],
-                        fmt='none', capsize=3, alpha=0.6)
-    sns.move_legend(
-    ax, "lower center",
-    bbox_to_anchor=(.5, 1), ncol=3, title=None, frameon=False)
+    collas = ["red", "green", "blue"]
+            # Add errorbars matching the marker colors
+    for xi, yi, err, c in zip(df["WaveAmplitudeInput [Volt]"], df["mean_P3P2"], df["std_P3P2"], collas):
+        ax.errorbar(xi, yi, yerr=err, fmt='none', ecolor=c, elinewidth=1.5, capsize=6)
+
     plt.tight_layout()
     plt.show()
 

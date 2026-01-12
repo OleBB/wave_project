@@ -246,6 +246,8 @@ def full_tank_diagnostics(processed_dfs,window_ms):
     print("="*120)
     return pd.DataFrame(results)
 
+# %%
+
 
 
 
@@ -424,10 +426,11 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
                 n_runs=("path", "nunique"),
                 paths=("path", lambda s: pd.unique(s).tolist()),  # unique paths, order preserved
                 # Uncomment if you want probe amplitude means as well:
-                # mean_A_Probe1=("Probe 1 Amplitude", "mean"),
-                # mean_A_Probe2=("Probe 2 Amplitude", "mean"),
-                # mean_A_Probe3=("Probe 3 Amplitude", "mean"),
-                # mean_A_Probe4=("Probe 4 Amplitude", "mean"),
+                mean_A_Probe1=("Probe 1 Amplitude", "mean"),
+                mean_A_Probe2=("Probe 2 Amplitude", "mean"),
+                mean_A_Probe3=("Probe 3 Amplitude", "mean"),
+                mean_A_Probe4=("Probe 4 Amplitude", "mean"),
+                mean_kL=("kL", "mean")
             )
             .reset_index()
     )
