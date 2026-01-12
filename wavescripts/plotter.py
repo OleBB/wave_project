@@ -303,7 +303,7 @@ def plot_ramp_detection(df, meta_sel, data_col,
     plt.show()
 
 #%%
-def plot_all_probes(meta_df, ampvar):
+def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
     wind_colors = {
         "full":"red",
         "no": "blue",
@@ -315,7 +315,8 @@ def plot_all_probes(meta_df, ampvar):
         "reverse":"dashdot"
         }
     
-    figsize = (10,6)
+
+    figsize = ampvar.get("plotting", {}).get("figsize")
     fig, ax = plt.subplots(figsize=figsize)
 
     probelocations = [9200, 9500, 12444, 12455]
@@ -364,7 +365,7 @@ def plot_all_probes(meta_df, ampvar):
 
     ax.set_xlabel("Probenes avstand er ikke representert korrekt visuelt")
     ax.set_ylabel("amplitude in mm")
-    ax.set_title(f"Utkast: Prober 1,2,3,4, (merk: arbitrær x-akse.)avstand P1-P2=30cm, avstand P2-P3/P4= 3,04m ")
+    ax.set_title(f"Utkast: Prober 1,2,3,4, (merk: arbitrær x-akse.)avstand P1-P2=60cm, avstand P2-P3/P4= 3,04m ")
     ax.legend()
     plt.tight_layout()
     ax.grid()
@@ -407,7 +408,7 @@ def facet_plot_freq_vs_mean(df, ampvar):
     plt.show()
 
 
-def facet_plot_freq_vs_mean(df, ampvar):
+def facet_plot_amp_vs_mean(df, ampvar):
     # df should be your aggregated stats (mean_P3P2, std_P3P2)
     x='WaveAmplitudeInput [Volt]'
     sns.set_style("ticks",{'axes.grid' : True})

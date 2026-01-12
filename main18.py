@@ -116,13 +116,12 @@ amplitudeplotvariables = {
         "win": 11
     },
     "plotting": {
-        "figsize": None,
+        "figsize": [20,10],
         "separate":True,
         "overlay": False,
         "annotate": True   
     }   
 }
-
 
 """unikt filter for å se på amplitudene sjæl"""
 from wavescripts.filters import filter_for_amplitude_plot
@@ -181,9 +180,9 @@ from wavescripts.filters import filter_for_damping
 damping_filtrert = filter_for_damping(damping_groupedruns_df, dampingplotvariables["filters"])
 
 # %%
-
-from wavescripts.plotter import plot_damping_2
-plot_damping_2(damping_filtrert, dampingplotvariables)
+# fritt frem:
+# from wavescripts.plotter import plot_damping_2
+# plot_damping_2(damping_filtrert, dampingplotvariables)
 # %%
 
 from wavescripts.plotter import facet_plot_freq_vs_mean
