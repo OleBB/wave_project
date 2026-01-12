@@ -20,10 +20,15 @@ from wavescripts.processor2nd import process_processed_data
 
 # List of dataset paths you want to process
 dataset_paths = [
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
     #Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped")
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
+    
 ]
 
 #%%
@@ -99,7 +104,7 @@ if all_meta_sel:
 chooseAll = False
 amplitudeplotvariables = {
     "filters": {
-        "WaveAmplitudeInput [Volt]": 0.1, #0.1, 0.2, 0.3 
+        "WaveAmplitudeInput [Volt]": [0.1,0.2,0.3], #0.1, 0.2, 0.3 
         "WaveFrequencyInput [Hz]": 1.3, #bruk et tall  
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
@@ -194,7 +199,9 @@ from wavescripts.plotter import facet_plot_amp_vs_mean
 facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
 
 # %%
-
+"""Slå alle i hop"""
+from wavescripts.wavestudyer import damping_all_grouper
+damping_groupedallruns_df  = damping_all_grouper(combined_meta_sel)
 
 from wavescripts.plotter import facet_amp
 facet_amp(damping_filtrert, dampingplotvariables)
