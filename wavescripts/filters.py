@@ -73,7 +73,7 @@ def filter_chosen_files(meta, plotvariables,chooseAll,chooseFirst):
     return df_sel
 
 
-def filter_for_amplitude_plot(meta_df :pd.DataFrame, amplotvars: dict, chooseAll: bool = False) -> pd.DataFrame:
+def filter_for_amplitude_plot(meta_df:pd.DataFrame, amplotvars: dict, chooseAll: bool = False) -> pd.DataFrame:
     if chooseAll:
         return meta_df
     
