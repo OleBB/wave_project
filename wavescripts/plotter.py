@@ -442,7 +442,7 @@ def facet_plot_amp_vs_mean(df, ampvar):
 def facet_amp(df, ampvar):
     # df should be your aggregated stats (mean_P3P2, std_P3P2)
     fig, ax = plt.subplots()
-    x='WaveAmplitudeInput [Volt]'
+    x="Wavenumber" #WaveFrequencyInput [Hz]"
     sns.set_style("ticks",{'axes.grid' : True})
     g = sns.scatterplot(
         data=df.sort_values([x]),
@@ -452,7 +452,7 @@ def facet_amp(df, ampvar):
         palette=wind_colors,
         style='PanelConditionGrouped',# differentiate panel
         style_order=["no", "all"],
-        col='WaveFrequencyInput [Hz]',  # one column per amplitude
+        #col='WaveFrequencyInput [Hz]',  # one column per amplitude
         #kind='line',
         marker=True,
         #facet_kws={'sharex': True, 'sharey': True},
@@ -463,8 +463,8 @@ def facet_amp(df, ampvar):
     # Optional: manually draw std error bars per facet
     collas = ["red", "green", "blue"]
             # Add errorbars matching the marker colors
-    for xi, yi, err, c in zip(df["WaveAmplitudeInput [Volt]"], df["mean_P3P2"], df["std_P3P2"], collas):
-        ax.errorbar(xi, yi, yerr=err, fmt='none', ecolor=c, elinewidth=1.5, capsize=6)
+    # for xi, yi, err, c in zip(x, df["mean_P3P2"], df["std_P3P2"], collas):
+        # ax.errorbar(xi, yi, yerr=err, fmt='none', ecolor=c, elinewidth=1.5, capsize=6)
 
     plt.tight_layout()
     plt.show()
