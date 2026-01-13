@@ -720,7 +720,7 @@ def process_selected_data(
             eta_col = f"eta_{i}"
 
             # subtract stillwater → zero mean
-            df[eta_col] = -(df[probe_col] - sw) #bruk  MINUS for å snu signalet!
+            df[eta_col] = -(df[probe_col] - sw) #bruker  MINUS for å snu signalet!
             #print(df[eta_col].iloc[0:10]) sjekk om den flipper
             # Optional: moving average of the zeroed signal
             df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
