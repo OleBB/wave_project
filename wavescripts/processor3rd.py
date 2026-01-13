@@ -31,13 +31,29 @@ col_names = [f'{f:.3f}Hz' for f in freqs]
 df_fft_complex = pd.DataFrame(X, index=df.index, columns=col_names)
 # Each cell is a complex number
 
+
+def compute_psd(df):
+    """
+    Regner ut PSD for en DF
+    """
+    
+    for i in range (1,5):
+        column  = f"eta {i}"
+        
+        psd_loopvalue = welch(column)
+        psd_df.append(psd_loopvalue)
+    
+    return psd_df
+
+
 def processor_psd(processed_dfs_dict:dict[str,pd.DataFrame]) -> pd.DataFrame:
     
     #vi tar inn en dict med df-er. 
-    
+    pddc = processed_dfs_dict.copy()
     
     psd_dict = {}
-    
-    
+    for key, df in pddc.items():
+        psd = compute_psd(df)
+        psd_dict[key] = psd
     
     return psd_dict
