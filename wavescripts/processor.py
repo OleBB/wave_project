@@ -21,6 +21,7 @@ from scipy.signal import find_peaks
 
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
+
 def find_wave_range(
     df,
     meta_row,  # metadata for selected files
@@ -190,7 +191,7 @@ def find_wave_range(
     threshold = baseline_mean + sigma_factor*baseline_std
     
     print('baselines:')
-    print(baseline_samples, baseline_mean, baseline_seconds, baseline_std)
+    print(f'_samples: {baseline_samples}, _mean: {baseline_mean}, _seconds {baseline_seconds}, _std {baseline_std}')
     #import sys; print('exit'); sys.exit()
     
     """ærbe
@@ -400,7 +401,6 @@ def find_wave_range(
 # ========================================================== #
 # === Make sure stillwater levels are computed and valid === #
 # ========================================================== #
-PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 def ensure_stillwater_columns(
     dfs: dict[str, pd.DataFrame],
     meta: pd.DataFrame,
@@ -470,16 +470,22 @@ def ensure_stillwater_columns(
     return meta
 
 
-
+from scipy.signal import welch
 # ------------------------------------------------------------
 # enkel utregning av amplituder
 # ------------------------------------------------------------
-def compute_simple_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
+def compute_amplitudes_psd(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
+    """
+    Tar inn dict av df og henter start-slutt fra metadf. 
+    regner ut amplituden med numpy.percentile 99.5
+    """
     records = []
+    psd_dict = {}
     for path, df in processed_dfs.items():
         subset_meta = meta_row[meta_row["path"] == path]
         for _, row in subset_meta.iterrows():
             row_out = {"path": path}
+
             for i in range(1, 5):
                 col = f"eta_{i}"
                 
@@ -500,7 +506,6 @@ def compute_simple_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd
                 if s_idx >= e_idx:
                     continue
                 
-                col = f"eta_{i}"
                 if col not in df.columns:
                     continue
                 
@@ -517,10 +522,20 @@ def compute_simple_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd
                 
                 amp = (np.percentile(s, 99.5) - np.percentile(s, 0.5)) / 2.0
                 row_out[f"Probe {i} Amplitude"] = float(amp)
-
+                
+                f, pxx = welch(s,250)
+                
+                if i == 1:
+                    psd_df = pd.DataFrame(index=f)
+                    psd_df.index.name = "Frequencies"
+                    
+                psd_df[f"Pxx {i}"]= pxx
+                
             records.append(row_out)
+            
+            psd_dict[path] = psd_df 
             #print(f"appended records: {records}")
-    return pd.DataFrame.from_records(records)
+    return pd.DataFrame.from_records(records), psd_dict
 
         
 from scipy.optimize import brentq
@@ -758,17 +773,19 @@ def process_selected_data(
                     print(f"after find wave range, no start found? {e}")
     
     # ==========================================================
-    # 3.a Kjøre compute_simple_amplitudes, basert på computed range i meta_sel
+    # 3.a Kjøre compute_amplitudes_psd, basert på computed range i meta_sel
     # Oppdaterer meta_sel
     # ==========================================================
     #DataFrame.update aligns on index and columns and then in-place replaces values 
     #in meta_sel with the corresponding non-NA values from the other frame. 
     #It uses index+column labels for alignment.
-    amplituder = compute_simple_amplitudes(processed_dfs, meta_sel)
+    amplituder, psd_dict = compute_amplitudes_psd(processed_dfs, meta_sel)
     cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
     meta_sel_indexed = meta_sel.set_index("path")
     meta_sel_indexed.update(amplituder.set_index("path")[cols])
     meta_sel = meta_sel_indexed.reset_index()
+    
+
     
     
     # ==========================================================
@@ -843,12 +860,12 @@ def process_selected_data(
     # 5.b Save updated metadata (now with stillwater columns)
     update_processed_metadata(meta_sel)
     # after all probes processed, then we drop the Raw Probe data
-    cols_to_drop = ["Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]
-    processed_dfs = {
-        path: df.drop(columns=cols_to_drop, errors="ignore").copy()
-        for path, df in processed_dfs.items()
-    }
+    # cols_to_drop = ["Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]
+    # processed_dfs = {
+    #     path: df.drop(columns=cols_to_drop, errors="ignore").copy()
+    #     for path, df in processed_dfs.items()
+    # }
 
     print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
-    return processed_dfs, meta_sel
+    return processed_dfs, meta_sel, psd_dict
 

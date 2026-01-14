@@ -15,8 +15,14 @@ from wavescripts.data_loader import load_or_update
 from wavescripts.filters import filter_chosen_files
 from wavescripts.processor import process_selected_data
 from wavescripts.processor2nd import process_processed_data
+from wavescripts.processor3rd import process_psd
 
 
+"""
+Overordnet: Enhver mappe er en egen kjøring, som deler samme vanndyp og probestilltilstand.
+En rekke prossesseringer skjer på likt for hele mappen.
+Og så er det kode som sammenlikner data når hele mappen er prosessert en gang
+"""
 
 # List of dataset paths you want to process
 dataset_paths = [
@@ -64,14 +70,18 @@ for i, data_path in enumerate(dataset_paths):
     try:
         dfs, meta = load_or_update(data_path)
         
-        print('# === Filter === #')
+        print('# === Filter === #') #dette filteret er egentlig litt unøding, når jeg ønsker å prossesere hele sulamitten
         meta_sel = filter_chosen_files(meta, processvariables, chooseAll, chooseFirst)
         
         print('# === Single probe process === #')
         processed_dfs, meta_sel = process_selected_data( dfs, meta_sel, meta, debug, win, find_range, range_plot)
-    
+        
+        print('arbeider her, med FFT av alle disse per folder')
+        print('# === FTT on each separate signal, saved to a dict of dfs')
+        ftt_dfs = process_psd(processed_dfs)
+        
         print('# === Probe comparison processing === #')
-        meta_sel = process_processed_data(dfs, meta_sel)
+        meta_sel = process_processed_data(meta_sel)
         all_meta_sel.append(meta_sel)
         all_processed_dfs.append(processed_dfs)
         print(f"Successfully processed {len(meta_sel)} selections from {data_path.name}")

@@ -18,20 +18,20 @@ os.chdir(file_dir)
 #%%
 from wavescripts.data_loader import load_or_update
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
-# dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")) #per15
-#Denna er bare 15 perioder. ikke godt nok. (Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"))
+dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")) #per15
+# (Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2")) #per15
 
-dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
+#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
 #%%
 # === Config ===
-chooseAll = True
+chooseAll = False
 chooseFirst = True
 # range debug and plot
 debug=True
 win=10
 find_range = True
-range_plot = True
+range_plot = False
 
 processvariables = {
     "filters": {
@@ -70,7 +70,7 @@ meta_sel = filter_chosen_files(meta,
 print('# === Process === #')
 from wavescripts.processor import process_selected_data
 # - and optional check: DEBUG gir noen ekstra printa linjer
-processed_dfs, meta_sel = process_selected_data(dfs, 
+processed_dfs, meta_sel, psd_dictionary = process_selected_data(dfs, 
                                                 meta_sel, 
                                                 meta, 
                                                 debug, 

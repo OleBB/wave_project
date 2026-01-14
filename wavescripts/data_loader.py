@@ -287,12 +287,12 @@ def load_or_update(
                         metadata["Mooring"] = "low"
                 
                 #Probe distance logic
-                "Probe 1 mm from paddle"
+                # "Probe 1 mm from paddle"
                 modtime = os.path.getmtime(path)
                 file_date = datetime.fromtimestamp(modtime)
                 date_match = re.search(r'(\d{8})', filename)
                 distance_cutoff = datetime(2025, 11, 14) #siste kjøring var 13nov
-                metadata["Probe 1 mm from paddle"] = 9000 if file_date < distance_cutoff else None
+                metadata["Probe 1 mm from paddle"] = 8855 if file_date < distance_cutoff else None
                 metadata["Probe 2 mm from paddle"] = 9455 if file_date < distance_cutoff else None
                 metadata["Probe 3 mm from paddle"] = 12544 if file_date < distance_cutoff else None
                 metadata["Probe 4 mm from paddle"] = 12545 if file_date < distance_cutoff else None
