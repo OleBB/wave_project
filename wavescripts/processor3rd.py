@@ -32,13 +32,13 @@ df_fft_complex = pd.DataFrame(X, index=df.index, columns=col_names)
 # Each cell is a complex number
 
 
-def compute_psd(df):
+def compute_psd(df,m_df):
     """
     Regner ut PSD for en DF
     """
     
     for i in range (1,5):
-        column  = f"eta {i}"
+        column  = f"eta_{i}"
         
         psd_loopvalue = welch(column)
         psd_df.append(psd_loopvalue)
@@ -46,7 +46,7 @@ def compute_psd(df):
     return psd_df
 
 
-def processor_psd(processed_dfs_dict:dict[str,pd.DataFrame]) -> pd.DataFrame:
+def processor_psd(processed_dfs_dict:dict[str,pd.DataFrame], m_df) -> pd.DataFrame:
     
     #vi tar inn en dict med df-er. 
     pddc = processed_dfs_dict.copy()
@@ -57,3 +57,36 @@ def processor_psd(processed_dfs_dict:dict[str,pd.DataFrame]) -> pd.DataFrame:
         psd_dict[key] = psd
     
     return psd_dict
+
+
+# ==========================================================
+# 2.a Ta utvalgte kjøringer, lag en ny dataframe, og sett null ved "stillwater"
+# ==========================================================
+processed_dfs = {}
+for _, row in meta_sel.iterrows():
+    path = row["path"]
+    if path not in dfs:
+        print(f"Warning: File not loaded: {path}")
+        continue
+
+    df = dfs[path].copy()
+
+    # Zero each probe
+    for i in range(1, 5):
+        probe_col = f"Probe {i}"           
+        if probe_col not in df.columns:
+            print(f"  Missing column {probe_col} in {Path(path).name}")
+            continue
+
+        sw = stillwater[i]
+        eta_col = f"eta_{i}"
+
+        # subtract stillwater → zero mean
+        df[eta_col] = -(df[probe_col] - sw) #bruker  MINUS for å snu signalet!
+        #print(df[eta_col].iloc[0:10]) sjekk om den flipper
+        # Optional: moving average of the zeroed signal
+        df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
+        
+        if debug:
+            print(f"  {Path(path).name:35} → eta_{i} mean = {df[eta_col].mean():.4f} mm")
+    processed_dfs[path] = df
