@@ -31,7 +31,7 @@ chooseFirst = False
 debug=True
 win=10
 find_range = True
-range_plot = False
+range_plot = True
 
 processvariables = {
     "filters": {

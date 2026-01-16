@@ -33,12 +33,12 @@ def probe_comparisor(meta_df):
 
 
 def process_processed_data(
-        dfs:dict[str, pd.DataFrame], 
         meta_sel: pd.DataFrame,
 ) -> pd.DataFrame:
     """ nu kjører vi funksjoner som krever en df som allerede har verdier for alle probene"""
     mdf = meta_sel.copy()
     
+    print("kjører process_processed_data fra processsor2nd.py")
     
     # ==========================================================
     #  regne ratioer. Oppdatere mdf
