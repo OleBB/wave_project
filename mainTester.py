@@ -25,8 +25,8 @@ dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/202511
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
 #%%
 # === Config ===
-chooseAll = False
-chooseFirst = True
+chooseAll = True
+chooseFirst = False
 # range debug and plot
 debug=True
 win=10
@@ -36,9 +36,9 @@ range_plot = False
 processvariables = {
     "filters": {
         "amp": 0.1, #0.1, 0.2, 0.3 
-        "freq": 0.65, #bruk et tall  
+        "freq": 1.3, #bruk et tall  
         "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": "no", #full, no, lowest
+        "wind": "full", #full, no, lowest
         "tunnel": None,
         "mooring": "low",
         "panel": ["full", "reverse"], # no, full, reverse, 
@@ -79,12 +79,51 @@ processed_dfs, meta_sel, psd_dictionary = process_selected_data(dfs,
                                                 range_plot)
 #TODO fiks slik at find_wave_range starter ved null eller ved en topp?
 # nå tar den first_motion_idx+ gitt antall bølger.
+
 # %%
+#from wavescripts.plotter import plot_psd
 
 
+import matplotlib.ticker as mticker
 
+first_df = next(iter(psd_dictionary.values()))
+# python
+ax = first_df[["Pxx 1", "Pxx 2", "Pxx 3", "Pxx 4"]].plot()
+ax.set_xlim(0, 10)
+ax.set_ylim(1e-6, 1e2)
+ax.minorticks_on()
+ax.xaxis.set_major_locator(mticker.MultipleLocator(0.5))   # major every 0.5 (adjust)
 
+ax.grid(True, which="major")
+#ax.grid(True, which="minor", linestyle="--")
 
+# python
+# ax.set_xscale("log")
+# ax.set_yscale("log")   # or "symlog" if values span zero
+
+# %%
+#
+# python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# df_plot has columns from your psd_dictionary (as in your example)
+first_cols = {k: d.iloc[:, 0] for k, d in psd_dictionary.items()}
+df_plot = pd.concat(first_cols, axis=1)
+
+fig, ax = plt.subplots(figsize=(7, 4))
+
+# Iterate columns for full control
+for name in df_plot.columns:
+    ax.plot(df_plot.index, df_plot[name], label=str(name), linewidth=1.5, marker=None)
+
+ax.set_xlabel("freq (Hz)")
+# ax.set_ylabel("PSD")
+ax.set_xlim(0, 10)
+ax.grid(True, which="both", ls="--", alpha=0.3)
+#ax.legend(title="Series", ncol=2)  # or remove if not needed
+plt.tight_layout()
+plt.show()
 
 
 
