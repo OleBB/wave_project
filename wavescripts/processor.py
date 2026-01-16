@@ -537,6 +537,75 @@ def compute_amplitudes_psd(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.Da
             #print(f"appended records: {records}")
     return pd.DataFrame.from_records(records), psd_dict
 
+
+""" ================CLAUDE ==================="""
+def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
+    """Compute wave amplitudes from processed data."""
+    records = []
+    for path, df in processed_dfs.items():
+        subset_meta = meta_row[meta_row["path"] == path]
+        for _, row in subset_meta.iterrows():
+            row_out = {"path": path}
+            for i in range(1, 5):
+                amplitude = _extract_probe_amplitude(df, row, i)
+                if amplitude is not None:
+                    row_out[f"Probe {i} Amplitude"] = amplitude
+            records.append(row_out)
+    return pd.DataFrame.from_records(records)
+
+def compute_psd(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) -> dict:
+    """Compute Power Spectral Density for each probe."""
+    psd_dict = {}
+    for path, df in processed_dfs.items():
+        subset_meta = meta_row[meta_row["path"] == path]
+        for _, row in subset_meta.iterrows():
+            psd_df = None
+            for i in range(1, 5):
+                signal = _extract_probe_signal(df, row, i)
+                if signal is not None:
+                    f, pxx = welch(signal, fs)
+                    if psd_df is None:
+                        psd_df = pd.DataFrame(index=f)
+                        psd_df.index.name = "Frequencies"
+                    psd_df[f"Pxx {i}"] = pxx
+            if psd_df is not None:
+                psd_dict[path] = psd_df
+    return psd_dict
+
+def _extract_probe_signal(df: pd.DataFrame, row: pd.Series, probe_num: int) -> np.ndarray | None:
+    """Extract and validate signal data for a specific probe."""
+    col = f"eta_{probe_num}"
+    start_val = row.get(f"Computed Probe {probe_num} start")
+    end_val = row.get(f"Computed Probe {probe_num} end")
+    
+    if pd.isna(start_val) or pd.isna(end_val) or col not in df.columns:
+        return None
+    
+    try:
+        s_idx = max(0, int(start_val))
+        e_idx = min(len(df) - 1, int(end_val))
+    except (TypeError, ValueError):
+        return None
+    
+    if s_idx >= e_idx:
+        return None
+    
+    signal = df[col].iloc[s_idx:e_idx+1].dropna().to_numpy()
+    return signal if signal.size > 0 else None
+
+def _extract_probe_amplitude(df: pd.DataFrame, row: pd.Series, probe_num: int) -> float | None:
+    """Extract amplitude for a specific probe."""
+    signal = _extract_probe_signal(df, row, probe_num)
+    if signal is None:
+        return None
+    return float((np.percentile(signal, 99.5) - np.percentile(signal, 0.5)) / 2.0)
+""" ==================================="""
+
+
+
+
+
+
         
 from scipy.optimize import brentq
 def calculate_wavenumbers(frequencies, heights):
@@ -675,7 +744,181 @@ def remove_outliers():
     return
 
 
+"claude=============="
 
+def process_selected_data(
+    dfs: dict[str, pd.DataFrame],
+    meta_sel: pd.DataFrame,
+    meta_full: pd.DataFrame,
+    debug: bool = True,
+    win: int = 10,
+    find_range: bool = True,
+    range_plot: bool = True
+) -> tuple[dict[str, pd.DataFrame], pd.DataFrame, dict]:
+    """
+    Zeroes all selected runs using the shared stillwater levels.
+    Adds eta_1..eta_4 (zeroed signal) and moving average.
+    """
+    # 1. Ensure stillwater levels are computed
+    meta_full = ensure_stillwater_columns(dfs, meta_full)
+    stillwater = _extract_stillwater_levels(meta_full, debug)
+
+    # 2. Process dataframes: zero and add moving averages
+    processed_dfs = _zero_and_smooth_signals(dfs, meta_sel, stillwater, win, debug)
+    
+    # 3. Optional: find wave ranges
+    if find_range:
+        meta_sel = _find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
+    
+    # 4. Compute PSDs
+    psd_dict = compute_psd(processed_dfs, meta_sel)
+    
+    # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
+    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater)
+    
+    # 6. Set output folder and save metadata
+    meta_sel = _set_output_folder(meta_sel, meta_full, debug)
+    update_processed_metadata(meta_sel)
+
+    if debug:
+        print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
+    
+    return processed_dfs, meta_sel, psd_dict
+
+
+def _extract_stillwater_levels(meta_full: pd.DataFrame, debug: bool) -> dict:
+    """Extract stillwater levels from metadata."""
+    stillwater = {}
+    for i in range(1, 5):
+        val = meta_full[f"Stillwater Probe {i}"].iloc[0]
+        if pd.isna(val):
+            raise ValueError(f"Stillwater Probe {i} is NaN!")
+        stillwater[i] = float(val)
+        if debug:
+            print(f"  Stillwater Probe {i} = {val:.3f} mm")
+    return stillwater
+
+
+def _zero_and_smooth_signals(
+    dfs: dict, 
+    meta_sel: pd.DataFrame, 
+    stillwater: dict, 
+    win: int,
+    debug: bool
+) -> dict[str, pd.DataFrame]:
+    """Zero signals using stillwater and add moving averages."""
+    processed_dfs = {}
+    for _, row in meta_sel.iterrows():
+        path = row["path"]
+        if path not in dfs:
+            print(f"Warning: File not loaded: {path}")
+            continue
+
+        df = dfs[path].copy()
+        for i in range(1, 5):
+            probe_col = f"Probe {i}"
+            if probe_col not in df.columns:
+                print(f"  Missing column {probe_col} in {Path(path).name}")
+                continue
+
+            eta_col = f"eta_{i}"
+            df[eta_col] = -(df[probe_col] - stillwater[i])
+            df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
+            
+            if debug:
+                print(f"  {Path(path).name:35} → eta_{i} mean = {df[eta_col].mean():.4f} mm")
+        
+        processed_dfs[path] = df
+    
+    return processed_dfs
+
+
+def _find_wave_ranges(
+    processed_dfs: dict,
+    meta_sel: pd.DataFrame,
+    win: int,
+    range_plot: bool,
+    debug: bool
+) -> pd.DataFrame:
+    """Find wave ranges for all probes."""
+    for idx, row in meta_sel.iterrows():
+        path = row["path"]
+        df = processed_dfs[path]
+      
+        for i in range(1, 5):
+            probe = f"Probe {i}"
+            start, end, debug_info = find_wave_range(
+                df, row, data_col=probe, detect_win=win, range_plot=range_plot
+            )
+            meta_sel.loc[idx, f'Computed Probe {i} start'] = start
+            meta_sel.loc[idx, f'Computed Probe {i} end'] = end
+        
+        if debug and start:
+            print(f'start: {start}, end: {end}, debug: {debug_info}')
+    
+    return meta_sel
+
+
+def _update_all_metrics(
+    processed_dfs: dict,
+    meta_sel: pd.DataFrame,
+    stillwater: dict
+) -> pd.DataFrame:
+    """Update all computed metrics in metadata."""
+    meta_indexed = meta_sel.set_index("path")
+    
+    # Amplitudes
+    amplitudes = compute_amplitudes(processed_dfs, meta_sel)
+    amp_cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
+    meta_indexed.update(amplitudes.set_index("path")[amp_cols])
+    
+    # Wavenumbers
+    meta_indexed["Wavenumber"] = calculate_wavenumbers(
+        meta_indexed["WaveFrequencyInput [Hz]"], 
+        meta_indexed["WaterDepth [mm]"]
+    )
+    
+    # Wave dimensions
+    wave_dims = calculate_wavedimensions(
+        k=meta_indexed["Wavenumber"],
+        H=meta_indexed["WaterDepth [mm]"],
+        PC=meta_indexed["PanelCondition"],
+        P2A=meta_indexed["Probe 2 Amplitude"],
+    )
+    meta_indexed[["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]] = wave_dims
+    
+    # Windspeed
+    meta_indexed["Windspeed"] = calculate_windspeed(meta_indexed["WindCondition"])
+    
+    # Add stillwater columns if missing
+    for i in range(1, 5):
+        col = f"Stillwater Probe {i}"
+        if col not in meta_indexed.columns:
+            meta_indexed[col] = stillwater[i]
+    
+    return meta_indexed.reset_index()
+
+
+def _set_output_folder(
+    meta_sel: pd.DataFrame,
+    meta_full: pd.DataFrame,
+    debug: bool
+) -> pd.DataFrame:
+    """Set the output folder for processed data."""
+    if "PROCESSED_folder" not in meta_sel.columns:
+        if "PROCESSED_folder" in meta_full.columns:
+            folder = meta_full["PROCESSED_folder"].iloc[0]
+        elif "experiment_folder" in meta_full.columns:
+            folder = f"PROCESSED-{meta_full['experiment_folder'].iloc[0]}"
+        else:
+            raw_folder = Path(meta_full["path"].iloc[0]).parent.name
+            folder = f"PROCESSED-{raw_folder}"
+        
+        meta_sel["PROCESSED_folder"] = folder
+        if debug:
+            print(f"Set PROCESSED_folder = {folder}")
+    
+    return meta_sel
 
 # ================================================== #
 # === Take in a filtered subset then process     === #
@@ -684,7 +927,7 @@ def remove_outliers():
 # === using functions: compute_simple_amplitudes === #
 # === using functions: update_processed_metadata === #
 # ================================================== #
-def process_selected_data(
+def process_selected_data_old(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
     meta_full: pd.DataFrame,
@@ -772,22 +1015,27 @@ def process_selected_data(
                 except Exception as e:
                     print(f"after find wave range, no start found? {e}")
     
+    
+    ## Hvor skal jeg plassere denne?
+    psd_dict = compute_psd(processed_dfs, meta_sel)
+
+    
+    
     # ==========================================================
-    # 3.a Kjøre compute_amplitudes_psd, basert på computed range i meta_sel
+    # 3.a Kjøre compute_amplitudes, basert på computed range i meta_sel
     # Oppdaterer meta_sel
     # ==========================================================
     #DataFrame.update aligns on index and columns and then in-place replaces values 
     #in meta_sel with the corresponding non-NA values from the other frame. 
     #It uses index+column labels for alignment.
-    amplituder, psd_dict = compute_amplitudes_psd(processed_dfs, meta_sel)
+
+    amplituder = compute_amplitudes(processed_dfs, meta_sel)
     cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
     meta_sel_indexed = meta_sel.set_index("path")
     meta_sel_indexed.update(amplituder.set_index("path")[cols])
     meta_sel = meta_sel_indexed.reset_index()
     
 
-    
-    
     # ==========================================================
     # 3.b Kjøre calculate_simple_wavenember, basert på inputfrekvens i meta_sel
     #     Oppdaterer meta_sel

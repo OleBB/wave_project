@@ -15,7 +15,7 @@ from wavescripts.data_loader import load_or_update
 from wavescripts.filters import filter_chosen_files
 from wavescripts.processor import process_selected_data
 from wavescripts.processor2nd import process_processed_data
-from wavescripts.processor3rd import process_psd
+# from wavescripts.processor3rd import process_psd
 
 
 """
@@ -33,7 +33,7 @@ dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
     
 ]
 
@@ -45,10 +45,10 @@ all_processed_dfs = []
 # === Config ===
 chooseAll = True
 chooseFirst = False
-debug = False
+debug = True
 win = 10
 find_range = True
-range_plot = False
+range_plot = True
 
 processvariables = {
     "filters": {
@@ -74,11 +74,11 @@ for i, data_path in enumerate(dataset_paths):
         meta_sel = filter_chosen_files(meta, processvariables, chooseAll, chooseFirst)
         
         print('# === Single probe process === #')
-        processed_dfs, meta_sel = process_selected_data( dfs, meta_sel, meta, debug, win, find_range, range_plot)
+        processed_dfs, meta_sel, psd_dictionary = process_selected_data( dfs, meta_sel, meta, debug, win, find_range, range_plot)
         
         print('arbeider her, med FFT av alle disse per folder')
         print('# === FTT on each separate signal, saved to a dict of dfs')
-        ftt_dfs = process_psd(processed_dfs)
+        # ftt_dfs = process_psd(processed_dfs)
         
         print('# === Probe comparison processing === #')
         meta_sel = process_processed_data(meta_sel)
@@ -213,7 +213,7 @@ chooseAll = False
 dampingplotvariables = {
     "overordnet": {"chooseAll": False}, 
     "filters": {
-        #"WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3], #0.1, 0.2, 0.3 
+        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3], #0.1, 0.2, 0.3 
         "WaveFrequencyInput [Hz]": [1.3, 0.65], #bruk et tall  
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
@@ -249,7 +249,48 @@ facet_amp(damping_groupedallruns_df, dampingplotvariables)
 
 
 # %%
+#
+# python
+import pandas as pd
+import matplotlib.pyplot as plt
 
+# df_plot has columns from your psd_dictionary (as in your example)
+first_cols = {k: d.iloc[:, 0] for k, d in psd_dictionary.items()}
+df_plot = pd.concat(first_cols, axis=1)
+
+fig, ax = plt.subplots(figsize=(7, 4))
+
+# Iterate columns for full control
+for name in df_plot.columns:
+    ax.plot(df_plot.index, df_plot[name], label=str(name), linewidth=1.5, marker=None)
+
+ax.set_xlabel("freq (Hz)")
+# ax.set_ylabel("PSD")
+ax.set_xlim(0, 10)
+ax.grid(True, which="both", ls="--", alpha=0.3)
+#ax.legend(title="Series", ncol=2)  # or remove if not needed
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+# %%
+
+
+import matplotlib.ticker as mticker
+
+first_df = next(iter(psd_dictionary.values()))
+# python
+ax = first_df[["Pxx 1", "Pxx 2", "Pxx 3", "Pxx 4"]].plot()
+ax.set_xlim(0, 10)
+ax.set_ylim(1e-6, 1e2)
+ax.minorticks_on()
+ax.xaxis.set_major_locator(mticker.MultipleLocator(0.5))   # major every 0.5 (adjust)
+
+ax.grid(True, which="major")
 
 
 # %%

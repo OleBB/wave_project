@@ -32,7 +32,7 @@ df_fft_complex = pd.DataFrame(X, index=df.index, columns=col_names)
 # Each cell is a complex number
 
 
-def compute_psd(df,m_df):
+def compute_psd(df):
     """
     Regner ut PSD for en DF
     """
@@ -40,6 +40,9 @@ def compute_psd(df,m_df):
     for i in range (1,5):
         column  = f"eta_{i}"
         
+        
+        #f, Pxx  = welch(s,250)
+
         psd_loopvalue = welch(column)
         psd_df.append(psd_loopvalue)
     
@@ -57,6 +60,8 @@ def processor_psd(processed_dfs_dict:dict[str,pd.DataFrame], m_df) -> pd.DataFra
         psd_dict[key] = psd
     
     return psd_dict
+
+
 
 
 # ==========================================================
@@ -90,3 +95,9 @@ for _, row in meta_sel.iterrows():
         if debug:
             print(f"  {Path(path).name:35} → eta_{i} mean = {df[eta_col].mean():.4f} mm")
     processed_dfs[path] = df
+    
+    
+    
+    
+    
+    
