@@ -481,6 +481,7 @@ def compute_amplitudes_psd(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.Da
     """
     records = []
     psd_dict = {}
+    fft_dict = {}
     for path, df in processed_dfs.items():
         subset_meta = meta_row[meta_row["path"] == path]
         for _, row in subset_meta.iterrows():
@@ -531,11 +532,27 @@ def compute_amplitudes_psd(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.Da
                     
                 psd_df[f"Pxx {i}"]= pxx
                 
+                # Compute FFT
+                fft_vals = np.fft.fft(s)
+                fft_freqs = np.fft.fftfreq(len(s), d=1/250)  # sampling rate = 250 Hz
+                
+                # Take only positive frequencies
+                positive_freq_idx = fft_freqs >= 0
+                fft_freqs_pos = fft_freqs[positive_freq_idx]
+                fft_magnitude = np.abs(fft_vals[positive_freq_idx])
+                
+                if i == 1:
+                    fft_df = pd.DataFrame(index=fft_freqs_pos)
+                    fft_df.index.name = "Frequencies"
+                    
+                fft_df[f"FFT {i}"] = fft_magnitude
+                
             records.append(row_out)
             
             psd_dict[path] = psd_df 
+            fft_dict[path] = fft_df
             #print(f"appended records: {records}")
-    return pd.DataFrame.from_records(records), psd_dict
+    return pd.DataFrame.from_records(records), psd_dict, fft_dict
 
 
 """ ================CLAUDE ==================="""
@@ -571,6 +588,35 @@ def compute_psd(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) ->
             if psd_df is not None:
                 psd_dict[path] = psd_df
     return psd_dict
+
+def compute_fft(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) -> dict:
+    """Compute FFT for each probe."""
+    fft_dict = {}
+    print('computing FFTs')
+    for path, df in processed_dfs.items():
+        subset_meta = meta_row[meta_row["path"] == path]
+        for _, row in subset_meta.iterrows():
+            fft_df = None
+            for i in range(1, 5):
+                signal = _extract_probe_signal(df, row, i)
+                if signal is not None:
+                    # Compute FFT
+                    fft_vals = np.fft.fft(signal)
+                    fft_freqs = np.fft.fftfreq(len(signal), d=1/fs)
+                    
+                    # Take only positive frequencies
+                    positive_freq_idx = fft_freqs >= 0
+                    fft_freqs_pos = fft_freqs[positive_freq_idx]
+                    fft_magnitude = np.abs(fft_vals[positive_freq_idx])
+                    
+                    if fft_df is None:
+                        fft_df = pd.DataFrame(index=fft_freqs_pos)
+                        fft_df.index.name = "Frequencies"
+                    fft_df[f"FFT {i}"] = fft_magnitude
+            if fft_df is not None:
+                fft_dict[path] = fft_df
+    return fft_dict
+
 
 def _extract_probe_signal(df: pd.DataFrame, row: pd.Series, probe_num: int) -> np.ndarray | None:
     """Extract and validate signal data for a specific probe."""
@@ -745,47 +791,6 @@ def remove_outliers():
 
 
 "claude=============="
-
-def process_selected_data(
-    dfs: dict[str, pd.DataFrame],
-    meta_sel: pd.DataFrame,
-    meta_full: pd.DataFrame,
-    debug: bool = True,
-    win: int = 10,
-    find_range: bool = True,
-    range_plot: bool = True
-) -> tuple[dict[str, pd.DataFrame], pd.DataFrame, dict]:
-    """
-    Zeroes all selected runs using the shared stillwater levels.
-    Adds eta_1..eta_4 (zeroed signal) and moving average.
-    """
-    # 1. Ensure stillwater levels are computed
-    meta_full = ensure_stillwater_columns(dfs, meta_full)
-    stillwater = _extract_stillwater_levels(meta_full, debug)
-
-    # 2. Process dataframes: zero and add moving averages
-    processed_dfs = _zero_and_smooth_signals(dfs, meta_sel, stillwater, win, debug)
-    
-    # 3. Optional: find wave ranges
-    if find_range:
-        meta_sel = _find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
-    
-    # 4. Compute PSDs
-    psd_dict = compute_psd(processed_dfs, meta_sel)
-    
-    # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
-    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater)
-    
-    # 6. Set output folder and save metadata
-    meta_sel = _set_output_folder(meta_sel, meta_full, debug)
-    update_processed_metadata(meta_sel)
-
-    if debug:
-        print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
-    
-    return processed_dfs, meta_sel, psd_dict
-
-
 def _extract_stillwater_levels(meta_full: pd.DataFrame, debug: bool) -> dict:
     """Extract stillwater levels from metadata."""
     stillwater = {}
@@ -920,14 +925,8 @@ def _set_output_folder(
     
     return meta_sel
 
-# ================================================== #
-# === Take in a filtered subset then process     === #
-# === using functions: ensure_stillwater_columns === #
-# === using functions: find_wave_range           === #
-# === using functions: compute_simple_amplitudes === #
-# === using functions: update_processed_metadata === #
-# ================================================== #
-def process_selected_data_old(
+
+def process_selected_data(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
     meta_full: pd.DataFrame,
@@ -935,185 +934,233 @@ def process_selected_data_old(
     win: int = 10,
     find_range: bool = True,
     range_plot: bool = True
-) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
+) -> tuple[dict[str, pd.DataFrame], pd.DataFrame, dict, dict]:
     """
     Zeroes all selected runs using the shared stillwater levels.
     Adds eta_1..eta_4 (zeroed signal) and moving average.
     """
-    # 1. Make sure stillwater levels are computed and valid
+    # 1. Ensure stillwater levels are computed
     meta_full = ensure_stillwater_columns(dfs, meta_full)
-    # Extract the four stillwater values (same for whole experiment)
-    stillwater = {}
-    for i in range(1, 5):
-        val = meta_full[f"Stillwater Probe {i}"].iloc[0]
-        if pd.isna(val):
-            raise ValueError(f"Stillwater Probe {i} is NaN! Run ensure_stillwater_columns first.")
-        stillwater[i] = float(val)
-        if debug:
-            print(f"  Stillwater Probe {i} = {val:.3f} mm")
+    stillwater = _extract_stillwater_levels(meta_full, debug)
+
+    # 2. Process dataframes: zero and add moving averages
+    processed_dfs = _zero_and_smooth_signals(dfs, meta_sel, stillwater, win, debug)
+    
+    # 3. Optional: find wave ranges
+    if find_range:
+        meta_sel = _find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
+    
+    # 4. Compute PSD and FFTs
+    psd_dict = compute_psd(processed_dfs, meta_sel)
+    fft_dict = compute_fft(processed_dfs, meta_sel)
+    
+    # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
+    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater)
+    
+    # 6. Set output folder and save metadata
+    meta_sel = _set_output_folder(meta_sel, meta_full, debug)
+    update_processed_metadata(meta_sel)
 
     if debug:
-        print(f"Using stillwater levels: {stillwater}")
+        print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
+    
+    return processed_dfs, meta_sel, psd_dict, fft_dict
 
-    # ==========================================================
-    # 2.a Ta utvalgte kjøringer, lag en ny dataframe, og sett null ved "stillwater"
-    # ==========================================================
-    processed_dfs = {}
-    for _, row in meta_sel.iterrows():
-        path = row["path"]
-        if path not in dfs:
-            print(f"Warning: File not loaded: {path}")
-            continue
+# ================================================== #
+# === Take in a filtered subset then process     === #
+# === using functions: ensure_stillwater_columns === #
+# === using functions: find_wave_range           === #
+# === using functions: compute_simple_amplitudes === #
+# === using functions: update_processed_metadata === #
+# ================================================== #
+# def process_selected_data_old(
+#     dfs: dict[str, pd.DataFrame],
+#     meta_sel: pd.DataFrame,
+#     meta_full: pd.DataFrame,
+#     debug: bool = True,
+#     win: int = 10,
+#     find_range: bool = True,
+#     range_plot: bool = True
+# ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
+#     """
+#     Zeroes all selected runs using the shared stillwater levels.
+#     Adds eta_1..eta_4 (zeroed signal) and moving average.
+#     """
+#     # 1. Make sure stillwater levels are computed and valid
+#     meta_full = ensure_stillwater_columns(dfs, meta_full)
+#     # Extract the four stillwater values (same for whole experiment)
+#     stillwater = {}
+#     for i in range(1, 5):
+#         val = meta_full[f"Stillwater Probe {i}"].iloc[0]
+#         if pd.isna(val):
+#             raise ValueError(f"Stillwater Probe {i} is NaN! Run ensure_stillwater_columns first.")
+#         stillwater[i] = float(val)
+#         if debug:
+#             print(f"  Stillwater Probe {i} = {val:.3f} mm")
 
-        df = dfs[path].copy()
+#     if debug:
+#         print(f"Using stillwater levels: {stillwater}")
 
-        # Zero each probe
-        for i in range(1, 5):
-            probe_col = f"Probe {i}"           
-            if probe_col not in df.columns:
-                print(f"  Missing column {probe_col} in {Path(path).name}")
-                continue
+#     # ==========================================================
+#     # 2.a Ta utvalgte kjøringer, lag en ny dataframe, og sett null ved "stillwater"
+#     # ==========================================================
+#     processed_dfs = {}
+#     for _, row in meta_sel.iterrows():
+#         path = row["path"]
+#         if path not in dfs:
+#             print(f"Warning: File not loaded: {path}")
+#             continue
 
-            sw = stillwater[i]
-            eta_col = f"eta_{i}"
+#         df = dfs[path].copy()
 
-            # subtract stillwater → zero mean
-            df[eta_col] = -(df[probe_col] - sw) #bruker  MINUS for å snu signalet!
-            #print(df[eta_col].iloc[0:10]) sjekk om den flipper
-            # Optional: moving average of the zeroed signal
-            df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
+#         # Zero each probe
+#         for i in range(1, 5):
+#             probe_col = f"Probe {i}"           
+#             if probe_col not in df.columns:
+#                 print(f"  Missing column {probe_col} in {Path(path).name}")
+#                 continue
+
+#             sw = stillwater[i]
+#             eta_col = f"eta_{i}"
+
+#             # subtract stillwater → zero mean
+#             df[eta_col] = -(df[probe_col] - sw) #bruker  MINUS for å snu signalet!
+#             #print(df[eta_col].iloc[0:10]) sjekk om den flipper
+#             # Optional: moving average of the zeroed signal
+#             df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
             
-            if debug:
-                print(f"  {Path(path).name:35} → eta_{i} mean = {df[eta_col].mean():.4f} mm")
-        processed_dfs[path] = df
+#             if debug:
+#                 print(f"  {Path(path).name:35} → eta_{i} mean = {df[eta_col].mean():.4f} mm")
+#         processed_dfs[path] = df
     
-    # ==========================================================
-    # 2.b Optional - kjører FIND_WAVE_RANGE(...)
-    # ==========================================================
-    if find_range:
-        for idx, row in meta_sel.iterrows():
-            path = row["path"]
-            df = processed_dfs[path].copy()
+#     # ==========================================================
+#     # 2.b Optional - kjører FIND_WAVE_RANGE(...)
+#     # ==========================================================
+#     if find_range:
+#         for idx, row in meta_sel.iterrows():
+#             path = row["path"]
+#             df = processed_dfs[path].copy()
           
-            for i in range(1,5):
-                probe = f"Probe {i}"
-                #print('nu kjøres FIND_WAVE_RANGE, i indre loop i 2.b) i process_selected_data')
-                start, end, debug_info = find_wave_range(df, 
-                                                         row,#pass single row
-                                                         data_col=probe, 
-                                                         detect_win=win, 
-                                                         range_plot=range_plot
-                                                         )
-                probestartcolumn  = f'Computed Probe {i} start'
-                meta_sel.loc[idx, probestartcolumn] = start
-                probeendcolumn = f'Computed Probe {i} end'
-                meta_sel.loc[idx, probeendcolumn] = end
-                #print(f'meta_sel sin Computed probe {i} start: {meta_sel[probestartcolumn]} og end: {meta_sel[probeendcolumn]}')
-            if start: 
-                try:
-                    print(f'start: {start}, end: {end} og debug_range_info: {debug_info}')
-                except Exception as e:
-                    print(f"after find wave range, no start found? {e}")
+#             for i in range(1,5):
+#                 probe = f"Probe {i}"
+#                 #print('nu kjøres FIND_WAVE_RANGE, i indre loop i 2.b) i process_selected_data')
+#                 start, end, debug_info = find_wave_range(df, 
+#                                                          row,#pass single row
+#                                                          data_col=probe, 
+#                                                          detect_win=win, 
+#                                                          range_plot=range_plot
+#                                                          )
+#                 probestartcolumn  = f'Computed Probe {i} start'
+#                 meta_sel.loc[idx, probestartcolumn] = start
+#                 probeendcolumn = f'Computed Probe {i} end'
+#                 meta_sel.loc[idx, probeendcolumn] = end
+#                 #print(f'meta_sel sin Computed probe {i} start: {meta_sel[probestartcolumn]} og end: {meta_sel[probeendcolumn]}')
+#             if start: 
+#                 try:
+#                     print(f'start: {start}, end: {end} og debug_range_info: {debug_info}')
+#                 except Exception as e:
+#                     print(f"after find wave range, no start found? {e}")
     
     
-    ## Hvor skal jeg plassere denne?
-    psd_dict = compute_psd(processed_dfs, meta_sel)
+#     ## Hvor skal jeg plassere denne?
+#     psd_dict = compute_psd(processed_dfs, meta_sel)
+#     fft_dict = compute_fft(processed_dfs, meta_sel)
 
     
     
-    # ==========================================================
-    # 3.a Kjøre compute_amplitudes, basert på computed range i meta_sel
-    # Oppdaterer meta_sel
-    # ==========================================================
-    #DataFrame.update aligns on index and columns and then in-place replaces values 
-    #in meta_sel with the corresponding non-NA values from the other frame. 
-    #It uses index+column labels for alignment.
+#     # ==========================================================
+#     # 3.a Kjøre compute_amplitudes, basert på computed range i meta_sel
+#     # Oppdaterer meta_sel
+#     # ==========================================================
+#     #DataFrame.update aligns on index and columns and then in-place replaces values 
+#     #in meta_sel with the corresponding non-NA values from the other frame. 
+#     #It uses index+column labels for alignment.
 
-    amplituder = compute_amplitudes(processed_dfs, meta_sel)
-    cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
-    meta_sel_indexed = meta_sel.set_index("path")
-    meta_sel_indexed.update(amplituder.set_index("path")[cols])
-    meta_sel = meta_sel_indexed.reset_index()
+#     amplituder = compute_amplitudes(processed_dfs, meta_sel)
+#     cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
+#     meta_sel_indexed = meta_sel.set_index("path")
+#     meta_sel_indexed.update(amplituder.set_index("path")[cols])
+#     meta_sel = meta_sel_indexed.reset_index()
     
 
-    # ==========================================================
-    # 3.b Kjøre calculate_simple_wavenember, basert på inputfrekvens i meta_sel
-    #     Oppdaterer meta_sel
-    # ==========================================================
-    columnz = ["path", "WaveFrequencyInput [Hz]", "WaterDepth [mm]"]
-    sub_df = meta_sel[columnz].copy()
-    sub_df["Wavenumber"] = calculate_wavenumbers(sub_df["WaveFrequencyInput [Hz]"], sub_df["WaterDepth [mm]"])
-    m_s_indexed = meta_sel.set_index("path")
-    w_s = sub_df.set_index("path")["Wavenumber"]
-    m_s_indexed["Wavenumber"] = w_s
-    meta_sel = m_s_indexed.reset_index()
+#     # ==========================================================
+#     # 3.b Kjøre calculate_simple_wavenember, basert på inputfrekvens i meta_sel
+#     #     Oppdaterer meta_sel
+#     # ==========================================================
+#     columnz = ["path", "WaveFrequencyInput [Hz]", "WaterDepth [mm]"]
+#     sub_df = meta_sel[columnz].copy()
+#     sub_df["Wavenumber"] = calculate_wavenumbers(sub_df["WaveFrequencyInput [Hz]"], sub_df["WaterDepth [mm]"])
+#     m_s_indexed = meta_sel.set_index("path")
+#     w_s = sub_df.set_index("path")["Wavenumber"]
+#     m_s_indexed["Wavenumber"] = w_s
+#     meta_sel = m_s_indexed.reset_index()
     
-    # ==========================================================
-    # 3.c Kjøre calculate_wavedimensions, basert på wavenumber, dypet,
-    # probe 2, i meta_sel
-    #     Oppdaterer meta_sel
-    # ==========================================================
-    columnz3 = ['path', 'PanelCondition', 'WaveFrequencyInput [Hz]', 'WaterDepth [mm]', 'Probe 2 Amplitude',
-                'Wavefrequency', 'Waveperiod', 'Wavenumber',
-                'Wavelength', 'kL', 'ak', 'kH', 'tanh(kH)', 'Celerity',]
-    sub_df3 = meta_sel[columnz3].copy().set_index("path")
-    calc = calculate_wavedimensions(
-        k=sub_df3["Wavenumber"],
-        H=sub_df3["WaterDepth [mm]"],
-        PC=sub_df3["PanelCondition"],
-        P2A=sub_df3["Probe 2 Amplitude"],
-    )
-    m_s_indexed3 = meta_sel.set_index("path")
-    m_s_indexed3[["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]] = calc  # vectorized, aligned by index
-    meta_sel = m_s_indexed3.reset_index()
+#     # ==========================================================
+#     # 3.c Kjøre calculate_wavedimensions, basert på wavenumber, dypet,
+#     # probe 2, i meta_sel
+#     #     Oppdaterer meta_sel
+#     # ==========================================================
+#     columnz3 = ['path', 'PanelCondition', 'WaveFrequencyInput [Hz]', 'WaterDepth [mm]', 'Probe 2 Amplitude',
+#                 'Wavefrequency', 'Waveperiod', 'Wavenumber',
+#                 'Wavelength', 'kL', 'ak', 'kH', 'tanh(kH)', 'Celerity',]
+#     sub_df3 = meta_sel[columnz3].copy().set_index("path")
+#     calc = calculate_wavedimensions(
+#         k=sub_df3["Wavenumber"],
+#         H=sub_df3["WaterDepth [mm]"],
+#         PC=sub_df3["PanelCondition"],
+#         P2A=sub_df3["Probe 2 Amplitude"],
+#     )
+#     m_s_indexed3 = meta_sel.set_index("path")
+#     m_s_indexed3[["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]] = calc  # vectorized, aligned by index
+#     meta_sel = m_s_indexed3.reset_index()
 
     
-    # ==========================================================
-    # 3.d Kjøre calculate_windspeed, basert på "windcondition" i meta_sel
-    #     Oppdaterer meta_sel
-    # ==========================================================
-    columnz4 = ["path", "WindCondition", "Windspeed", "WaterDepth [mm]"]
-    sub_df4 = meta_sel[columnz4].copy()
-    sub_df4["Windspeed"] = calculate_windspeed(sub_df4["WindCondition"])
-    m_s_indexed4 = meta_sel.set_index("path")
-    w_s4 = sub_df4.set_index("path")["Windspeed"]
-    m_s_indexed4["Windspeed"] = w_s4
-    meta_sel = m_s_indexed4.reset_index()
+#     # ==========================================================
+#     # 3.d Kjøre calculate_windspeed, basert på "windcondition" i meta_sel
+#     #     Oppdaterer meta_sel
+#     # ==========================================================
+#     columnz4 = ["path", "WindCondition", "Windspeed", "WaterDepth [mm]"]
+#     sub_df4 = meta_sel[columnz4].copy()
+#     sub_df4["Windspeed"] = calculate_windspeed(sub_df4["WindCondition"])
+#     m_s_indexed4 = meta_sel.set_index("path")
+#     w_s4 = sub_df4.set_index("path")["Windspeed"]
+#     m_s_indexed4["Windspeed"] = w_s4
+#     meta_sel = m_s_indexed4.reset_index()
     
    
     
-    # ==========================================================
-    # 4. Hvis ikke...  så fylles HELE stillwater-kolonnen med samme verdi
-    #       oppdaterer meta_sel
-    # ==========================================================
-    for i in range(1, 5):
-        col = f"Stillwater Probe {i}"
-        if col not in meta_sel.columns:
-            print(f"stillwater av i er {stillwater[i]}")
-            meta_sel[col] = stillwater[i]
+#     # ==========================================================
+#     # 4. Hvis ikke...  så fylles HELE stillwater-kolonnen med samme verdi
+#     #       oppdaterer meta_sel
+#     # ==========================================================
+#     for i in range(1, 5):
+#         col = f"Stillwater Probe {i}"
+#         if col not in meta_sel.columns:
+#             print(f"stillwater av i er {stillwater[i]}")
+#             meta_sel[col] = stillwater[i]
             
-    # 5.a Make sure meta_sel knows where to save
-    if "PROCESSED_folder" not in meta_sel.columns:
-        if "PROCESSED_folder" in meta_full.columns:
-            folder = meta_full["PROCESSED_folder"].iloc[0]
-        # elif "experiment_folder" in meta_full.columns:
-            folder = "PROCESSED-" + meta_full["experiment_folder"].iloc[0]
-        else:
-            raw_folder = Path(meta_full["path"].iloc[0]).parent.name
-            folder = f"PROCESSED-{raw_folder}"
-        meta_sel["PROCESSED_folder"] = folder
-        if debug:
-            print(f"Set PROCESSED_folder = {folder}")
+#     # 5.a Make sure meta_sel knows where to save
+#     if "PROCESSED_folder" not in meta_sel.columns:
+#         if "PROCESSED_folder" in meta_full.columns:
+#             folder = meta_full["PROCESSED_folder"].iloc[0]
+#         # elif "experiment_folder" in meta_full.columns:
+#             folder = "PROCESSED-" + meta_full["experiment_folder"].iloc[0]
+#         else:
+#             raw_folder = Path(meta_full["path"].iloc[0]).parent.name
+#             folder = f"PROCESSED-{raw_folder}"
+#         meta_sel["PROCESSED_folder"] = folder
+#         if debug:
+#             print(f"Set PROCESSED_folder = {folder}")
 
-    # 5.b Save updated metadata (now with stillwater columns)
-    update_processed_metadata(meta_sel)
-    # after all probes processed, then we drop the Raw Probe data
-    # cols_to_drop = ["Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]
-    # processed_dfs = {
-    #     path: df.drop(columns=cols_to_drop, errors="ignore").copy()
-    #     for path, df in processed_dfs.items()
-    # }
+#     # 5.b Save updated metadata (now with stillwater columns)
+#     update_processed_metadata(meta_sel)
+#     # after all probes processed, then we drop the Raw Probe data
+#     # cols_to_drop = ["Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]
+#     # processed_dfs = {
+#     #     path: df.drop(columns=cols_to_drop, errors="ignore").copy()
+#     #     for path, df in processed_dfs.items()
+#     # }
 
-    print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
-    return processed_dfs, meta_sel, psd_dict
+#     print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
+#     return processed_dfs, meta_sel, psd_dict, fft_dict
 

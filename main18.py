@@ -43,22 +43,22 @@ all_meta_sel = []
 all_processed_dfs = []
 
 # === Config ===
-chooseAll = True
+chooseAll = False
 chooseFirst = False
 debug = True
 win = 10
 find_range = True
-range_plot = True
+range_plot = False
 
 processvariables = {
     "filters": {
         "amp": 0.1,  # 0.1, 0.2, 0.3 
         "freq": 1.3,  # bruk et tall  
         "per": None,  # bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": None,  # full, no, lowest
+        "wind": None,#["full"],  # full, no, lowest
         "tunnel": None,
         "mooring": "low",
-        "panel": ["full", "reverse"],  # no, full, reverse, 
+        "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }
 }
 
@@ -74,7 +74,7 @@ for i, data_path in enumerate(dataset_paths):
         meta_sel = filter_chosen_files(meta, processvariables, chooseAll, chooseFirst)
         
         print('# === Single probe process === #')
-        processed_dfs, meta_sel, psd_dictionary = process_selected_data( dfs, meta_sel, meta, debug, win, find_range, range_plot)
+        processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data( dfs, meta_sel, meta, debug, win, find_range, range_plot)
         
         print('arbeider her, med FFT av alle disse per folder')
         print('# === FTT on each separate signal, saved to a dict of dfs')
@@ -250,12 +250,25 @@ facet_amp(damping_groupedallruns_df, dampingplotvariables)
 
 # %%
 #
+
+
+
+# %%
+
+
+
 # python
 import pandas as pd
 import matplotlib.pyplot as plt
 
 # df_plot has columns from your psd_dictionary (as in your example)
-first_cols = {k: d.iloc[:, 0] for k, d in psd_dictionary.items()}
+first_cols = {k: d.iloc[:,0] for k, d in psd_dictionary.items()}
+df_plot = pd.concat(first_cols, axis=1)
+# Get only first half of the dictionary items
+halfway = len(psd_dictionary) // 2
+first_half_items = dict(list(psd_dictionary.items())[:halfway])
+
+first_cols = {k: d.iloc[:, 2] for k, d in first_half_items.items()}
 df_plot = pd.concat(first_cols, axis=1)
 
 fig, ax = plt.subplots(figsize=(7, 4))
@@ -268,15 +281,334 @@ ax.set_xlabel("freq (Hz)")
 # ax.set_ylabel("PSD")
 ax.set_xlim(0, 10)
 ax.grid(True, which="both", ls="--", alpha=0.3)
-#ax.legend(title="Series", ncol=2)  # or remove if not needed
+# ax.legend(title="Series", ncol=2)  # or remove if not needed
 plt.tight_layout()
 plt.show()
 
 
+# %%
+# Get only first half of the dictionary items
+halfway = len(psd_dictionary) // 2
+first_half_items = dict(list(psd_dictionary.items())[:halfway])
+
+# Extract both columns
+col1_data = {k: d.iloc[:, 1] for k, d in first_half_items.items()}
+col2_data = {k: d.iloc[:, 2] for k, d in first_half_items.items()}
+
+df_col1 = pd.concat(col1_data, axis=1)
+df_col2 = pd.concat(col2_data, axis=1)
+
+# A4 size in inches (portrait: 8.27 x 11.69, landscape: 11.69 x 8.27)
+fig, axes = plt.subplots(1, 2, figsize=(11.69, 8.27), dpi=300)
+
+# Plot column 1 in first facet
+for name in df_col1.columns:
+    short_name = str(name)[66:120]
+    axes[0].plot(df_col1.index, df_col1[name], label=short_name, linewidth=1.5)
+axes[0].set_xlabel("freq (Hz)")
+axes[0].set_ylabel("PSD")
+axes[0].set_title("Column 1")
+axes[0].set_xlim(0, 10)
+axes[0].grid(True, which="both", ls="--", alpha=0.3)
+
+# Plot column 2 in second facet
+for name in df_col2.columns:
+    short_name = str(name)[66:120]
+    axes[1].plot(df_col2.index, df_col2[name], label=short_name, linewidth=1.5)
+axes[1].set_xlabel("freq (Hz)")
+axes[1].set_ylabel("PSD")
+axes[1].set_title("Column 2")
+axes[1].set_xlim(0, 10)
+axes[1].grid(True, which="both", ls="--", alpha=0.3)
+
+# Make y-axis limits equal
+y_min = min(axes[0].get_ylim()[0], axes[1].get_ylim()[0])
+y_max = max(axes[0].get_ylim()[1], axes[1].get_ylim()[1])
+axes[0].set_ylim(y_min, y_max)
+axes[1].set_ylim(y_min, y_max)
+
+# Add shared legend below the plots
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.02), 
+           ncol=4, frameon=False)
+
+plt.tight_layout()
+
+# Save as high-resolution image for direct printing
+plt.savefig('plot_A4.png', dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
+# %%
+import numpy as np
+
+def compute_amplitude_by_band(psd_dictionary, freq_bands=None):
+    """Compute amplitude for specific frequency bands from PSD"""
+    if freq_bands is None:
+        freq_bands = {
+            'swell': (1.0, 1.6),
+            'wind_waves': (3.0, 10.0),
+            'total': (0.0, 10.0)
+        }
+    
+    results = []
+    for path, psd_df in psd_dictionary.items():
+        row_out = {'path': path}
+        
+        for i in range(1, 5):
+            col = f'Pxx {i}'
+            if col not in psd_df.columns:
+                continue
+                
+            freq_res = psd_df.index[1] - psd_df.index[0]
+            
+            for band_name, (f_low, f_high) in freq_bands.items():
+                band_mask = (psd_df.index >= f_low) & (psd_df.index <= f_high)
+                variance = psd_df[band_mask][col].sum() * freq_res
+                amplitude = 2 * np.sqrt(variance)
+                row_out[f'Probe {i} {band_name} amplitude'] = amplitude
+        
+        results.append(row_out)
+    
+    return pd.DataFrame(results)
+
+# Use it:
+band_amplitudes = compute_amplitude_by_band(psd_dictionary)
+print(band_amplitudes)
+# %%
+
+
+def compute_amplitude_by_band(psd_dictionary, freq_bands=None, verbose=False):
+    """Compute amplitude for specific frequency bands from PSD"""
+    if freq_bands is None:
+        freq_bands = {
+            'swell': (1.0, 1.6),
+            'wind_waves': (3.0, 10.0),
+            'total': (0.0, 10.0)
+        }
+    
+    results = []
+    for path, psd_df in psd_dictionary.items():
+        row_out = {'path': path}
+        
+        if verbose:
+            print(f"\n=== Path: {path} ===")
+            print(f"Freq range: {psd_df.index.min():.3f} to {psd_df.index.max():.3f} Hz")
+        
+        for i in range(1, 5):
+            col = f'Pxx {i}'
+            if col not in psd_df.columns:
+                continue
+            
+            # Calculate frequency resolution
+            freq_res = psd_df.index[1] - psd_df.index[0]
+            
+            if verbose and i == 1:
+                print(f"Frequency resolution: {freq_res:.4f} Hz")
+            
+            for band_name, (f_low, f_high) in freq_bands.items():
+                band_mask = (psd_df.index >= f_low) & (psd_df.index <= f_high)
+                n_points = band_mask.sum()
+                
+                if n_points == 0:
+                    if verbose:
+                        print(f"  {band_name}: NO DATA POINTS in band [{f_low}, {f_high}] Hz")
+                    row_out[f'Probe {i} {band_name} amplitude'] = 0.0
+                    continue
+                
+                # Integrate PSD to get variance
+                psd_band = psd_df[band_mask][col]
+                variance = psd_band.sum() * freq_res
+                std_dev = np.sqrt(variance)
+                
+                # Standard wave amplitude estimate (peak-to-trough ≈ 2σ for sinusoid)
+                amplitude = 2 * std_dev
+                
+                if verbose and i == 1:
+                    print(f"  {band_name} [{f_low}-{f_high} Hz]: {n_points} points, "
+                          f"variance={variance:.6f}, amplitude={amplitude:.4f}")
+                
+                row_out[f'Probe {i} {band_name} amplitude'] = amplitude
+        
+        results.append(row_out)
+    
+    return pd.DataFrame(results)
+
+# Run with diagnostics
+band_amplitudes = compute_amplitude_by_band(psd_dictionary, verbose=True)
+print("\n=== Results ===")
+print(band_amplitudes)
+# %%
+
+def cabb(psd_dictionary):
+    
+    results = []
+    
+    for path, psd_df in psd_dictionary.items():
+        row_out = {"path"; path}
+        
+        for i in range(1,5):
+            col = f'Pxx {i}'
+            
+            PSEUDO: read row
+        
+    
+    return 
+
+# %%
+        
+import numpy as np
+import pandas as pd
+
+def compute_amplitude_by_band(psd_dictionary, freq_bands=None):
+    """Compute band amplitudes by integrating PSD using the actual frequency axis."""
+    if freq_bands is None:
+        freq_bands = {
+            'swell': (0.0, 1.6),
+            'wind_waves': (1.600001, 10.0),
+            'total': (0.0, 10.0),
+        }
+
+    results = []
+    for path, psd_df in psd_dictionary.items():
+        row_out = {'path': path}
+        freqs = psd_df.index.to_numpy(dtype=float)
+
+        for i in range(1, 5):
+            col = f'Pxx {i}'
+            if col not in psd_df.columns:
+                continue
+
+            for band_name, (f_low, f_high) in freq_bands.items():
+                mask = (freqs >= f_low) & (freqs <= f_high)
+                if mask.sum() < 2:
+                    amplitude = 0.0
+                else:
+                    f_band = freqs[mask]
+                    psd_band = psd_df.loc[mask, col].to_numpy(dtype=float)
+                    variance = np.trapezoid(psd_band, x=f_band)
+                    amplitude = 2.0 * np.sqrt(variance)
+
+                row_out[f'Probe {i} {band_name} amplitude'] = amplitude
+
+        results.append(row_out)
+
+    return pd.DataFrame(results)
+
+# Example usage:
+band_amplitudes = compute_amplitude_by_band(psd_dictionary)
+print(band_amplitudes)
+
+# %%
+
+
+import matplotlib.pyplot as plt
+
+def plot_p2_vs_p3_scatter(band_amplitudes):
+    bands = ['swell', 'wind_waves', 'total']
+    fig, axes = plt.subplots(1, len(bands), figsize=(12, 4), sharex=False, sharey=False)
+
+    for ax, band in zip(axes, bands):
+        p2 = band_amplitudes[f'Probe 2 {band} amplitude'].to_numpy()
+        p3 = band_amplitudes[f'Probe 3 {band} amplitude'].to_numpy()
+        ax.scatter(p2, p3, alpha=0.7)
+        lim = max(p2.max(), p3.max()) * 1.05 if len(p2) else 1.0
+        ax.plot([0, lim], [0, lim], 'k--', linewidth=1)  # y = x reference
+        ax.set_title(f'{band}')
+        ax.set_xlabel('P2 amplitude')
+        ax.set_ylabel('P3 amplitude')
+        ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+
+# Example:
+plot_p2_vs_p3_scatter(band_amplitudes)
+
+# %%
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plot_p2_p3_bars(band_amplitudes):
+    bands = ['swell', 'wind_waves', 'total']
+    for _, row in band_amplitudes.iterrows():
+        path = row['path']
+        values_p2 = [row[f'Probe 2 {b} amplitude'] for b in bands]
+        values_p3 = [row[f'Probe 3 {b} amplitude'] for b in bands]
+
+        x = np.arange(len(bands))
+        w = 0.35
+
+        plt.figure(figsize=(8, 4))
+        plt.bar(x - w/2, values_p2, width=w, label='P2')
+        plt.bar(x + w/2, values_p3, width=w, label='P3')
+        plt.xticks(x, bands)
+        plt.ylabel('Amplitude')
+        plt.title(path)
+        plt.legend()
+        plt.grid(True, axis='y', alpha=0.3)
+        plt.tight_layout()
+        plt.show()
+
+# Example:
+plot_p2_p3_bars(band_amplitudes)
 
 
 
+# %%
 
+
+
+"""FFT """
+# Get only first half of the dictionary items
+halfway = len(fft_dictionary) // 2
+first_half_items = dict(list(fft_dictionary.items())[:halfway])
+
+# Extract both columns
+col1_data = {k: d.iloc[:, 1] for k, d in first_half_items.items()}
+col2_data = {k: d.iloc[:, 2] for k, d in first_half_items.items()}
+
+df_col1 = pd.concat(col1_data, axis=1)
+df_col2 = pd.concat(col2_data, axis=1)
+
+# A4 size in inches (portrait: 8.27 x 11.69, landscape: 11.69 x 8.27)
+fig, axes = plt.subplots(1, 2, figsize=(11.69, 8.27), dpi=300)
+
+# Plot column 1 in first facet
+for name in df_col1.columns:
+    short_name = str(name)[66:120]
+    axes[0].plot(df_col1.index, df_col1[name], label=short_name, linewidth=1.5)
+axes[0].set_xlabel("freq (Hz)")
+axes[0].set_ylabel("Magnitude")
+axes[0].set_title("P2")
+axes[0].set_xlim(0, 10)
+axes[0].grid(True, which="both", ls="--", alpha=0.3)
+
+# Plot column 2 in second facet
+for name in df_col2.columns:
+    short_name = str(name)[66:120]
+    axes[1].plot(df_col2.index, df_col2[name], label=short_name, linewidth=1.5)
+axes[1].set_xlabel("freq (Hz)")
+axes[1].set_ylabel("Magnitude")
+axes[1].set_title("P3")
+axes[1].set_xlim(0, 10)
+axes[1].grid(True, which="both", ls="--", alpha=0.3)
+
+# Make y-axis limits equal
+y_min = min(axes[0].get_ylim()[0], axes[1].get_ylim()[0])
+y_max = max(axes[0].get_ylim()[1], axes[1].get_ylim()[1])
+axes[0].set_ylim(y_min, y_max)
+axes[1].set_ylim(y_min, y_max)
+
+# Add shared legend below the plots
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.02), 
+           ncol=4, frameon=False)
+
+plt.tight_layout()
+
+# Save as high-resolution image for direct printing
+plt.savefig('plot_A4.png', dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
 # %%
 
 
