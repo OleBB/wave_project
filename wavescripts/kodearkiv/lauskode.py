@@ -5,6 +5,231 @@ Created on Fri Nov 21 15:25:36 2025
 
 @author: ole
 """
+
+
+
+
+
+
+
+# %%
+
+
+
+"""claude plot ubrukt"""
+
+meta_df = meta_sel.copy()
+
+psd_plot_config = {
+    "overordnet": {"chooseAll": False}, 
+    "filters": {
+        # Filter which files/runs to include
+        "path_pattern": None,  # e.g., "wind" to match files with "wind" in path
+        "exclude_pattern": None,  # e.g., "test" to exclude test runs
+        "meta_filters": {  # Filter based on metadata columns
+            # "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],
+            # "WindCondition": ["no", "lowest"],
+        },
+        # Filter which probes/columns to plot
+        "probes": [1, 2, 3, 4],  # None for all, or list like [1, 3]
+        "freq_range": (0, 10),
+    },
+    "processing": {
+        "normalize": False,
+        "smooth": False,
+        "smooth_window": 5,
+        "average_probes": False,  # average across selected probes
+        "log_scale": False,
+    },
+    "plotting": {
+        "figsize": (10, 6),
+        "linewidth": 1.5,
+        "alpha": 0.7,  # lower for many lines
+        "show_legend": True,
+        "legend_ncol": 2,
+        "grid": True,
+        "title": None,
+        "color_by": None,  # "probe", "file", or a metadata column name
+        "separate_by_probe": False,  # create subplots per probe
+    }   
+}
+
+def filter_runs(psd_dict, meta_df, filters):
+    """Filter which runs/files to include based on path and metadata"""
+    runs_to_plot = list(psd_dict.keys())
+    
+    # Filter by path pattern
+    if filters["path_pattern"] is not None:
+        runs_to_plot = [r for r in runs_to_plot if filters["path_pattern"] in str(r)]
+    
+    if filters["exclude_pattern"] is not None:
+        runs_to_plot = [r for r in runs_to_plot if filters["exclude_pattern"] not in str(r)]
+    
+    # Filter by metadata
+    if filters["meta_filters"] and meta_df is not None:
+        for col, values in filters["meta_filters"].items():
+            if values is not None and col in meta_df.columns:
+                valid_runs = meta_df[meta_df[col].isin(values)].index.tolist()
+                runs_to_plot = [r for r in runs_to_plot if r in valid_runs]
+    
+    return runs_to_plot
+
+def get_probe_columns(df, probes):
+    """Get column names for specified probes"""
+    if probes is None:
+        # Return all Pxx columns
+        return [col for col in df.columns if col.startswith('Pxx')]
+    else:
+        # Return specific probe columns
+        probe_cols = []
+        for p in probes:
+            # Adjust this based on your actual column naming
+            col_name = f'Pxx_probe{p}'  # or 'Pxx Probe {p}' or however they're named
+            if col_name in df.columns:
+                probe_cols.append(col_name)
+        return probe_cols
+
+def plot_psd_from_dict(psd_dict, meta_df, config):
+    """Plot PSDs from dictionary of dataframes"""
+    
+    # Filter runs
+    if config["overordnet"]["chooseAll"]:
+        runs_to_plot = list(psd_dict.keys())
+    else:
+        runs_to_plot = filter_runs(psd_dict, meta_df, config["filters"])
+    
+    print(f"Plotting {len(runs_to_plot)} runs")
+    
+    # Setup plot
+    plot_cfg = config["plotting"]
+    proc_cfg = config["processing"]
+    
+    if plot_cfg["separate_by_probe"]:
+        # Create subplots for each probe
+        probes = config["filters"]["probes"] or [1, 2, 3, 4]
+        fig, axes = plt.subplots(len(probes), 1, figsize=(10, 3*len(probes)), sharex=True)
+        if len(probes) == 1:
+            axes = [axes]
+    else:
+        fig, ax = plt.subplots(figsize=plot_cfg["figsize"] or (10, 6))
+        axes = [ax]
+    
+    # Color mapping
+    if plot_cfg["color_by"] == "probe":
+        colors = plt.cm.tab10(np.linspace(0, 1, 4))
+        color_map = {f'Pxx_probe{i}': colors[i-1] for i in range(1, 5)}
+    elif plot_cfg["color_by"] == "file":
+        colors = plt.cm.viridis(np.linspace(0, 1, len(runs_to_plot)))
+        color_map = {run: colors[i] for i, run in enumerate(runs_to_plot)}
+    elif plot_cfg["color_by"] and meta_df is not None:
+        # Color by metadata column
+        unique_vals = meta_df[plot_cfg["color_by"]].unique()
+        colors = plt.cm.tab10(np.linspace(0, 1, len(unique_vals)))
+        color_map = {val: colors[i] for i, val in enumerate(unique_vals)}
+    else:
+        color_map = None
+    
+    # Plot each run
+    for run_path in runs_to_plot:
+        df = psd_dict[run_path]
+        freq = df.iloc[:, 0]  # First column is frequency
+        
+        # Get probe columns to plot
+        probe_cols = get_probe_columns(df, config["filters"]["probes"])
+        
+        # Filter frequency range
+        freq_range = config["filters"]["freq_range"]
+        mask = (freq >= freq_range[0]) & (freq <= freq_range[1])
+        
+        if plot_cfg["separate_by_probe"]:
+            # Plot each probe in its own subplot
+            for idx, probe_col in enumerate(probe_cols):
+                data = df[probe_col].values[mask]
+                
+                if proc_cfg["normalize"]:
+                    data = data / data.max()
+                if proc_cfg["smooth"]:
+                    from scipy.ndimage import uniform_filter1d
+                    data = uniform_filter1d(data, size=proc_cfg["smooth_window"])
+                
+                # Determine color
+                if color_map and plot_cfg["color_by"] == "file":
+                    color = color_map[run_path]
+                elif color_map and plot_cfg["color_by"] in meta_df.columns:
+                    color = color_map[meta_df.loc[run_path, plot_cfg["color_by"]]]
+                else:
+                    color = None
+                
+                label = f"{run_path}" if len(runs_to_plot) < 10 else None
+                
+                axes[idx].plot(freq[mask], data, 
+                             linewidth=plot_cfg["linewidth"],
+                             alpha=plot_cfg["alpha"],
+                             color=color,
+                             label=label)
+                axes[idx].set_ylabel(f"{probe_col}")
+                axes[idx].grid(plot_cfg["grid"], which="both", ls="--", alpha=0.3)
+        else:
+            # Plot all in one axis
+            for probe_col in probe_cols:
+                data = df[probe_col].values[mask]
+                
+                if proc_cfg["normalize"]:
+                    data = data / data.max()
+                if proc_cfg["smooth"]:
+                    from scipy.ndimage import uniform_filter1d
+                    data = uniform_filter1d(data, size=proc_cfg["smooth_window"])
+                
+                # Determine color
+                if color_map and plot_cfg["color_by"] == "probe":
+                    color = color_map[probe_col]
+                elif color_map and plot_cfg["color_by"] == "file":
+                    color = color_map[run_path]
+                elif color_map and plot_cfg["color_by"] in meta_df.columns:
+                    color = color_map[meta_df.loc[run_path, plot_cfg["color_by"]]]
+                else:
+                    color = None
+                
+                # Create informative label
+                label_parts = []
+                if len(runs_to_plot) < 10:
+                    label_parts.append(str(run_path).split('/')[-1][:20])  # shortened filename
+                label_parts.append(probe_col)
+                label = " - ".join(label_parts)
+                
+                ax.plot(freq[mask], data,
+                       linewidth=plot_cfg["linewidth"],
+                       alpha=plot_cfg["alpha"],
+                       color=color,
+                       label=label)
+    
+    # Styling
+    for axis in axes:
+        if proc_cfg["log_scale"]:
+            axis.set_yscale('log')
+        axis.grid(plot_cfg["grid"], which="both", ls="--", alpha=0.3)
+    
+    axes[-1].set_xlabel("Frequency (Hz)")
+    
+    if not plot_cfg["separate_by_probe"]:
+        ax.set_ylabel("PSD" if not proc_cfg["normalize"] else "Normalized PSD")
+        if plot_cfg["show_legend"] and len(runs_to_plot) * len(probe_cols) <= 20:
+            ax.legend(ncol=plot_cfg["legend_ncol"], fontsize='small')
+    
+    if plot_cfg["title"]:
+        fig.suptitle(plot_cfg["title"])
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return fig, axes, runs_to_plot
+
+# Usage
+fig, axes, plotted = plot_psd_from_dict(psd_dictionary, meta_df, psd_plot_config)
+
+# %%
+
+
 chooseAll = False
 plotvar = {
     "filters": {
