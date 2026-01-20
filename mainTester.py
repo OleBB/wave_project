@@ -25,13 +25,13 @@ dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/202511
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
 #%%
 # === Config ===
-chooseAll = True
+chooseAll = False
 chooseFirst = False
 # range debug and plot
 debug=True
 win=10
 find_range = True
-range_plot = True
+range_plot = False
 
 processvariables = {
     "filters": {
@@ -82,7 +82,29 @@ processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(
 
 # %%
 
+#dagens mål: implementere likningen fra John. 
+from datetime import datetime
 
+#fpdf - first
+#ts_df timeseries_df
+
+fpdf = next(iter(processed_dfs.values()))
+ts_df = fpdf[["Date", "eta_1"]]
+print(ts_df)
+# %%
+
+dt = (fpdf["Date"].iloc[1] - fpdf["Date"].iloc[0]).total_seconds()
+print(dt)
+
+#regne coeffisienter
+# ck =
+# første coeffisient
+# %%
+N = 10
+
+for m  in range (1,N)
+# c0
+c1 = 
 
 
 
@@ -91,13 +113,15 @@ processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(
 
 
 
+
+
 import matplotlib.ticker as mticker
 
 first_df = next(iter(psd_dictionary.values()))
 # python
 ax = first_df[["Pxx 1", "Pxx 2", "Pxx 3", "Pxx 4"]].plot()
-ax.set_xlim(0, 10)
-ax.set_ylim(1e-6, 1e2)
+ax.set_xlim(0, 6)
+ax.set_ylim(1e-6, 40)
 ax.minorticks_on()
 ax.xaxis.set_major_locator(mticker.MultipleLocator(0.5))   # major every 0.5 (adjust)
 
