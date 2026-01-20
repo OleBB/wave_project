@@ -494,14 +494,21 @@ def compute_psd(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) ->
     """Compute Power Spectral Density for each probe."""
     psd_dict = {}
     for path, df in processed_dfs.items():
-        subset_meta = meta_row[meta_row["path"] == path]
+        
+        subset_meta = meta_row[meta_row["path"] == path ]
+
         for _, row in subset_meta.iterrows():
             psd_df = None
+            freq = row["WaveFrequencyInput [Hz]"]
+            print(type(freq), freq)
+            npersegment = int(2*(250/freq))
             for i in range(1, 5):
                 signal = _extract_probe_signal(df, row, i)
+                nperseg = max(1, min(npersegment, len(signal)))
+                    
                 if signal is not None:
 
-                    nperseg = 2048
+                    nperseg = npersegment #har noen mye kortere signaler
                     noverlap = nperseg // 2  # or int(0.75 * nperseg)
                     
                     f, pxx = welch(
@@ -548,7 +555,7 @@ def compute_fft(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) ->
                 fft_dict[path] = fft_df
     return fft_dict
 
-
+    
 def _extract_probe_signal(df: pd.DataFrame, row: pd.Series, probe_num: int) -> np.ndarray | None:
     """Extract and validate signal data for a specific probe."""
     col = f"eta_{probe_num}"
@@ -857,4 +864,43 @@ def _set_output_folder(
     return meta_sel
 
 
+def process_selected_data(
+    dfs: dict[str, pd.DataFrame],
+    meta_sel: pd.DataFrame,
+    meta_full: pd.DataFrame,
+    debug: bool = True,
+    win: int = 10,
+    find_range: bool = True,
+    range_plot: bool = True
+) -> tuple[dict[str, pd.DataFrame], pd.DataFrame, dict]:
+    """
+    Zeroes all selected runs using the shared stillwater levels.
+    Adds eta_1..eta_4 (zeroed signal) and moving average.
+    """
+    # 1. Ensure stillwater levels are computed
+    meta_full = ensure_stillwater_columns(dfs, meta_full)
+    stillwater = _extract_stillwater_levels(meta_full, debug)
+
+    # 2. Process dataframes: zero and add moving averages
+    processed_dfs = _zero_and_smooth_signals(dfs, meta_sel, stillwater, win, debug)
+    
+    # 3. Optional: find wave ranges
+    if find_range:
+        meta_sel = _find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
+    
+    # 4. Compute PSDs
+    psd_dict = compute_psd(processed_dfs, meta_sel)
+    fft_dict = compute_fft(processed_dfs, meta_sel)
+    
+    # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
+    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater)
+    
+    # 6. Set output folder and save metadata
+    meta_sel = _set_output_folder(meta_sel, meta_full, debug)
+    update_processed_metadata(meta_sel)
+
+    if debug:
+        print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
+    
+    return processed_dfs, meta_sel, psd_dict, fft_dict
 
