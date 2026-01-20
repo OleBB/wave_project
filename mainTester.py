@@ -70,7 +70,7 @@ meta_sel = filter_chosen_files(meta,
 print('# === Process === #')
 from wavescripts.processor import process_selected_data
 # - and optional check: DEBUG gir noen ekstra printa linjer
-processed_dfs, meta_sel, psd_dictionary = process_selected_data(dfs, 
+processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, 
                                                 meta_sel, 
                                                 meta, 
                                                 debug, 
@@ -81,7 +81,14 @@ processed_dfs, meta_sel, psd_dictionary = process_selected_data(dfs,
 # nå tar den first_motion_idx+ gitt antall bølger.
 
 # %%
-#from wavescripts.plotter import plot_psd
+
+
+
+
+
+
+# %%
+
 
 
 import matplotlib.ticker as mticker

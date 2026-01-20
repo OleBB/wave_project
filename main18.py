@@ -462,8 +462,8 @@ def compute_amplitude_by_band(psd_dictionary, freq_bands=None):
     """Compute band amplitudes by integrating PSD using the actual frequency axis."""
     if freq_bands is None:
         freq_bands = {
-            'swell': (0.0, 1.6),
-            'wind_waves': (1.600001, 10.0),
+            'swell': (0.0, 2.9999),
+            'wind_waves': (3, 10.0),
             'total': (0.0, 10.0),
         }
 
