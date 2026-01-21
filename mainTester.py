@@ -99,7 +99,7 @@ time = np.arange(n_samples)*dt
 time_series.iloc[:,1].plot()
 # %%
 ctotal = 0
-number_of_frequencies = 8000
+number_of_frequencies = 300
 frequencies = np.linspace(0.04,60,number_of_frequencies)
 
 signal = np.asarray(signal)          # shape (N,)
@@ -153,63 +153,33 @@ signal = signal * window
 omega = 2 * np.pi * frequencies[:, np.newaxis] #reshape til (200, 1)
 f_coeffs = np.sum(signal * np.exp(-1j * omega * time), axis=1)*dt#/n_samples
 
-plt.plot(frequencies, np.abs(f_coeffs), '-', color='red')
-plt.xlabel('Frequency')
-plt.xlim(0,10)
-plt.ylabel(' - ')
-plt.grid(True)
-plt.show()
+# plt.plot(frequencies, np.abs(f_coeffs), '-', color='red')
+# plt.xlabel('Frequency')
+# plt.xlim(0,10)
+# plt.ylabel(' - ')
+# plt.grid(True)
+# plt.show()
 # %%
 """FFT"""
 fft_vals = np.fft.fft(signal)
 fft_freqs = np.fft.fftfreq(len(signal), d=1/250)
 
-# Take only positive frequencies
 positive_freq_idx = fft_freqs >= 0
 fft_freqs_pos = fft_freqs[positive_freq_idx]
 fft_magnitude = np.abs(fft_vals[positive_freq_idx])
 
-plt.plot(fft_freqs_pos, np.abs(fft_magnitude), '-.', color='red')
-plt.xlabel('Frequency')
-plt.xlim(0,10)
-plt.ylabel(' - ')
-plt.grid(True)
-plt.show()
+# plt.plot(fft_freqs_pos, np.abs(fft_magnitude), '-.', color='red')
+# plt.xlabel('Frequency')
+# plt.xlim(0,10)
+# plt.ylabel(' - ')
+# plt.grid(True)
+# plt.show()
 # %%
-
-# Compare different windows
-windows = {
-    'Rectangular (no window)': np.ones(n_samples),
-    'Hanning': np.hanning(n_samples),
-    'Hamming': np.hamming(n_samples),
-    'Blackman': np.blackman(n_samples),
-}
-
-fig, axes = plt.subplots(len(windows), 1, figsize=(10, 12))
-# %%
-
-
-for ax, (name, win) in zip(axes, windows.items()):
-    signal_windowed = signal * win
-    omega = 2 * np.pi * frequencies[:, np.newaxis]
-    fourier = np.sum(signal_windowed * np.exp(-1j * omega * time), axis=1) * dt
-    
-    ax.plot(frequencies, np.abs(fourier))
-    ax.set_title(name)
-    ax.set_xlim(0,10)
-    ax.set_xlabel('Frequency (Hz)')
-    ax.set_ylabel('Amplitude')
-    ax.grid(True)
-
-plt.tight_layout()
-plt.show()
-# %%
-
-
 fig, axes = plt.subplots(2, 1, figsize=(10, 8))
 
 # Manual method
-axes[0].plot(frequencies, np.abs(f_coeffs))
+axes[0].stem(frequencies, np.abs(f_coeffs), '-o')
+axes[0].plot(frequencies, np.abs(f_coeffs), '-')
 axes[0].set_xlabel('Frequency (Hz)')
 axes[0].set_xlim(0,10)
 axes[0].set_ylabel('Amplitude')
@@ -217,7 +187,8 @@ axes[0].set_title('Manual Fourier Transform')
 axes[0].grid(True)
 
 # FFT method
-axes[1].plot(fft_freqs_pos, np.abs(fft_magnitude))
+axes[1].stem(fft_freqs_pos, np.abs(fft_magnitude),'-o')
+axes[1].plot(fft_freqs_pos, np.abs(fft_magnitude),'-')
 axes[1].set_xlabel('Frequency (Hz)')
 axes[1].set_xlim(0,10)
 axes[1].set_ylabel('Amplitude')
@@ -227,8 +198,114 @@ axes[1].grid(True)
 
 plt.tight_layout()
 plt.show()
+# %%
+
+
+# Original signal (970 samples)
+signal_original = signal.copy()
+n_original = len(signal_original)
+
+# Zero-padded signal (4x longer)
+n_padded = 4 * n_original
+signal_padded = np.pad(signal_original, (0, n_padded - n_original), mode='constant')
+
+# Compute FFT for both
+fft_original = np.fft.fft(signal_original)
+fft_padded = np.fft.fft(signal_padded)
+
+freqs_original = np.fft.fftfreq(n_original, dt)
+freqs_padded = np.fft.fftfreq(n_padded, dt)
+
+# Plot comparison
+fig, axes = plt.subplots(2, 1, figsize=(12, 8))
+
+# Original (coarse)
+mask_orig = (freqs_original >= 0) & (freqs_original <= 10)
+axes[0].stem(freqs_original[mask_orig], np.abs(fft_original[mask_orig]), basefmt=' ')
+axes[0].plot(freqs_original[mask_orig], np.abs(fft_original[mask_orig]), 'r-', linewidth=2)
+axes[0].set_title(f'Original FFT ({n_original} points) - Coarser frequency bins')
+axes[0].set_xlabel('Frequency (Hz)')
+axes[0].set_ylabel('Amplitude')
+axes[0].grid(True, alpha=0.3)
+
+# Zero-padded (smooth)
+mask_pad = (freqs_padded >= 0) & (freqs_padded <= 10)
+axes[1].stem(freqs_padded[mask_pad], np.abs(fft_padded[mask_pad]), basefmt=' ')
+axes[1].plot(freqs_padded[mask_pad], np.abs(fft_padded[mask_pad]), 'r-', linewidth=2)
+axes[1].set_title(f'Zero-Padded FFT ({n_padded} points) - Smoother, same resolution')
+axes[1].set_xlabel('Frequency (Hz)')
+axes[1].set_ylabel('Amplitude')
+axes[1].grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.show()
+# %%
+# If you know it's ~1.30 Hz, fit a sinusoid at that frequency
+target_freq = 1.30
+
+# Test frequencies around target
+test_freqs = np.linspace(1.25, 1.35, 1000)
+
+# For each frequency, compute how well a sinusoid fits
+def compute_fit_quality(freq, signal, time):
+    omega = 2 * np.pi * freq
+    # Project signal onto cosine and sine at this frequency
+    cos_component = np.sum(signal * np.cos(omega * time))
+    sin_component = np.sum(signal * np.sin(omega * time))
+    # Amplitude of best-fit sinusoid
+    amplitude = np.sqrt(cos_component**2 + sin_component**2)
+    return amplitude
+
+fit_quality = np.array([compute_fit_quality(f, signal, time) for f in test_freqs])
+
+# Find best frequency
+best_idx = np.argmax(fit_quality)
+best_frequency = test_freqs[best_idx]
+
+print(f"Best fit frequency: {best_frequency:.6f} Hz")
+
+# Plot
+fig, axes = plt.subplots(2, 1, figsize=(12, 10))
+
+# Fit quality vs frequency
+axes[0].plot(test_freqs, fit_quality, linewidth=2)
+axes[0].axvline(best_frequency, color='red', linestyle='--', 
+                label=f'Best: {best_frequency:.4f} Hz')
+axes[0].set_xlabel('Frequency (Hz)')
+axes[0].set_ylabel('Fit Quality')
+axes[0].set_title('Frequency Fit Quality')
+axes[0].legend()
+axes[0].grid(True, alpha=0.3)
+
+# Reconstruct signal at best frequency
+omega_best = 2 * np.pi * best_frequency
+cos_comp = np.sum(signal * np.cos(omega_best * time))
+sin_comp = np.sum(signal * np.sin(omega_best * time))
+amplitude = 2 * np.sqrt(cos_comp**2 + sin_comp**2) / n_samples
+phase = np.arctan2(sin_comp, cos_comp)
+fitted_signal = amplitude * np.cos(omega_best * time - phase)
+
+axes[1].plot(time, signal, 'b-', alpha=0.5, label='Original signal')
+axes[1].plot(time, fitted_signal, 'r-', linewidth=2, 
+             label=f'Fitted {best_frequency:.4f} Hz sinusoid')
+axes[1].set_xlabel('Time (s)')
+axes[1].set_ylabel('Amplitude')
+axes[1].set_title('Signal vs Best Fit')
+axes[1].legend()
+axes[1].grid(True, alpha=0.3)
+axes[1].set_xlim(0, min(3.4, time[-1]))  # Show first 2 seconds
+
+plt.tight_layout()
+plt.show()
 
 # %%
+
+plt.plot(time,signal, 'rx')
+plt.plot(time, signal, 'b-', alpha=0.5, label='Original signal')
+
+# %%
+
+
 kof = f_coeffs
 import numpy as np
 import matplotlib.pyplot as plt
