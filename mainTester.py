@@ -83,29 +83,197 @@ processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(
 # %%
 
 #dagens mål: implementere likningen fra John. 
+import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
 
-#fpdf - first
-#ts_df timeseries_df
+first_df = next(iter(processed_dfs.values()))
+time_series_full = first_df[["Date", "eta_3"]]
+time_series = time_series_full.iloc[5980:6950]
 
-fpdf = next(iter(processed_dfs.values()))
-ts_df = fpdf[["Date", "eta_1"]]
-print(ts_df)
+dt = 0.004
+signal = time_series["eta_3"].values
+n_samples = len(signal)
+time = np.arange(n_samples)*dt
+
+time_series.iloc[:,1].plot()
+# %%
+ctotal = 0
+number_of_frequencies = 8000
+frequencies = np.linspace(0.04,60,number_of_frequencies)
+
+signal = np.asarray(signal)          # shape (N,)
+time  = np.asarray(time)           # shape (N,)
+N  = 970
+
+frequencies = np.asarray(frequencies)  # shape (F,)
+fourier_coeffs = np.zeros(len(frequencies), dtype=complex)
+
+# %% nested for loop
+""" NESTED FOR LOOP """
+kof = np.zeros(len(frequencies), dtype=complex)
+c   = np.zeros(N, dtype=complex)
+for i, f in enumerate(frequencies):
+    w = 2 * np.pi * f
+    ctotal = 0.0 + 0.0j
+    for n in range(N):  # med n=0
+        c[n] = signal[n] * np.exp(-1j * w * time[n])
+        if n == 2:
+            print(c)
+        ctotal += c[n]
+    kof[i] = (ctotal * dt) / N
+    
+plt.plot(frequencies, np.abs(kof), '-')
+plt.xlabel('Frequency')
+plt.ylabel(' - ')
+plt.grid(True)
+plt.show()
+# %% vektorisert indre loop
+""" Vektorisert indre loop"""
+for i, freq in enumerate(frequencies):
+    omega = 2 * np.pi * freq
+    
+    # Compute Fourier coefficient using trapezoidal integration
+    integrand = signal * np.exp(-1j * omega * time)
+    fourier_coeffs[i] = np.sum(integrand) * dt / n_samples
+    
+    if i == 0:  # Debug: print first few values
+        print(f"Frequency {freq:.3f} Hz: {integrand[:3]}")
+
+plt.plot(frequencies, np.abs(fourier_coeffs), '-', color='green')
+plt.xlabel('Frequency')
+plt.xlim(0,10)
+plt.ylabel(' - ')
+plt.grid(True)
+plt.show()
+# %%
+"""Vectorisert ytre loop også"""
+window = np.hanning(n_samples)
+signal = signal * window
+omega = 2 * np.pi * frequencies[:, np.newaxis] #reshape til (200, 1)
+f_coeffs = np.sum(signal * np.exp(-1j * omega * time), axis=1)*dt#/n_samples
+
+plt.plot(frequencies, np.abs(f_coeffs), '-', color='red')
+plt.xlabel('Frequency')
+plt.xlim(0,10)
+plt.ylabel(' - ')
+plt.grid(True)
+plt.show()
+# %%
+"""FFT"""
+fft_vals = np.fft.fft(signal)
+fft_freqs = np.fft.fftfreq(len(signal), d=1/250)
+
+# Take only positive frequencies
+positive_freq_idx = fft_freqs >= 0
+fft_freqs_pos = fft_freqs[positive_freq_idx]
+fft_magnitude = np.abs(fft_vals[positive_freq_idx])
+
+plt.plot(fft_freqs_pos, np.abs(fft_magnitude), '-.', color='red')
+plt.xlabel('Frequency')
+plt.xlim(0,10)
+plt.ylabel(' - ')
+plt.grid(True)
+plt.show()
 # %%
 
-dt = (fpdf["Date"].iloc[1] - fpdf["Date"].iloc[0]).total_seconds()
-print(dt)
+# Compare different windows
+windows = {
+    'Rectangular (no window)': np.ones(n_samples),
+    'Hanning': np.hanning(n_samples),
+    'Hamming': np.hamming(n_samples),
+    'Blackman': np.blackman(n_samples),
+}
 
-#regne coeffisienter
-# ck =
-# første coeffisient
+fig, axes = plt.subplots(len(windows), 1, figsize=(10, 12))
 # %%
-N = 10
 
-for m  in range (1,N)
-# c0
-c1 = 
 
+for ax, (name, win) in zip(axes, windows.items()):
+    signal_windowed = signal * win
+    omega = 2 * np.pi * frequencies[:, np.newaxis]
+    fourier = np.sum(signal_windowed * np.exp(-1j * omega * time), axis=1) * dt
+    
+    ax.plot(frequencies, np.abs(fourier))
+    ax.set_title(name)
+    ax.set_xlim(0,10)
+    ax.set_xlabel('Frequency (Hz)')
+    ax.set_ylabel('Amplitude')
+    ax.grid(True)
+
+plt.tight_layout()
+plt.show()
+# %%
+
+
+fig, axes = plt.subplots(2, 1, figsize=(10, 8))
+
+# Manual method
+axes[0].plot(frequencies, np.abs(f_coeffs))
+axes[0].set_xlabel('Frequency (Hz)')
+axes[0].set_xlim(0,10)
+axes[0].set_ylabel('Amplitude')
+axes[0].set_title('Manual Fourier Transform')
+axes[0].grid(True)
+
+# FFT method
+axes[1].plot(fft_freqs_pos, np.abs(fft_magnitude))
+axes[1].set_xlabel('Frequency (Hz)')
+axes[1].set_xlim(0,10)
+axes[1].set_ylabel('Amplitude')
+axes[1].set_title('NumPy FFT')
+# axes[1].set_xlim(frequencies[0], frequencies[-1])  # Same range as manual
+axes[1].grid(True)
+
+plt.tight_layout()
+plt.show()
+
+# %%
+kof = f_coeffs
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Assuming you already have:
+# frequencies = np.array([1.3, 2.6, 5.2])  # in Hz (or rad/s)
+# kof = ...  # shape (len(frequencies),), likely complex
+
+plt.figure(figsize=(8, 5))
+
+# Magnitude
+plt.subplot(2, 2, 1)
+plt.plot(frequencies, np.abs(kof), marker='o')
+plt.title('Magnitude |kof|')
+plt.xlabel('Frequency')
+plt.ylabel('|kof|')
+plt.grid(True)
+
+# Real part
+plt.subplot(2, 2, 2)
+plt.plot(frequencies, np.real(kof), marker='o', color='tab:blue')
+plt.title('Real(kof)')
+plt.xlabel('Frequency')
+plt.ylabel('Real')
+plt.grid(True)
+
+# Imag part
+plt.subplot(2, 2, 3)
+plt.plot(frequencies, np.imag(kof), marker='o', color='tab:orange')
+plt.title('Imag(kof)')
+plt.xlabel('Frequency')
+plt.ylabel('Imag')
+plt.grid(True)
+
+# Phase
+plt.subplot(2, 2, 4)
+phase = np.angle(kof)
+plt.plot(frequencies, phase, marker='o', color='tab:green')
+plt.title('Phase(kof)')
+plt.xlabel('Frequency')
+plt.ylabel('Phase (rad)')
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
 
 
 
@@ -156,7 +324,60 @@ ax.grid(True, which="both", ls="--", alpha=0.3)
 plt.tight_layout()
 plt.show()
 
+# %%
 
+
+"""FFT """
+# Get only first half of the dictionary items
+# halfway = len(fft_dictionary) // 2
+# first_half_items = dict(list(fft_dictionary.items())[:halfway])
+
+# Extract both columns
+col1_data = {k: d.iloc[:, 1] for k, d in fft_dictionary.items()}
+col2_data = {k: d.iloc[:, 2] for k, d in fft_dictionary.items()}
+
+df_col1 = pd.concat(col1_data, axis=1)
+df_col2 = pd.concat(col2_data, axis=1)
+
+# A4 size in inches (portrait: 8.27 x 11.69, landscape: 11.69 x 8.27)
+fig, axes = plt.subplots(1, 2, figsize=(11.69, 8.27), dpi=300)
+
+# Plot column 1 in first facet
+for name in df_col1.columns:
+    short_name = str(name)[66:120]
+    axes[0].plot(df_col1.index, df_col1[name], label=short_name, linewidth=1.5)
+axes[0].set_xlabel("freq (Hz)")
+axes[0].set_ylabel("Magnitude")
+axes[0].set_title("P2")
+axes[0].set_xlim(0, 10)
+axes[0].grid(True, which="both", ls="--", alpha=0.3)
+
+# Plot column 2 in second facet
+for name in df_col2.columns:
+    short_name = str(name)[66:120]
+    axes[1].plot(df_col2.index, df_col2[name], label=short_name, linewidth=1.5)
+axes[1].set_xlabel("freq (Hz)")
+axes[1].set_ylabel("Magnitude")
+axes[1].set_title("P3")
+axes[1].set_xlim(0, 10)
+axes[1].grid(True, which="both", ls="--", alpha=0.3)
+
+# Make y-axis limits equal
+y_min = min(axes[0].get_ylim()[0], axes[1].get_ylim()[0])
+y_max = max(axes[0].get_ylim()[1], axes[1].get_ylim()[1])
+axes[0].set_ylim(y_min, y_max)
+axes[1].set_ylim(y_min, y_max)
+
+# Add shared legend below the plots
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.02), 
+           ncol=4, frameon=False)
+
+# plt.tight_layout()
+
+# Save as high-resolution image for direct printing
+# plt.savefig('plot_A4.png', dpi=300, bbox_inches='tight', facecolor='white')
+plt.show()
 
 
 
