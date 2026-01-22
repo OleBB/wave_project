@@ -15,9 +15,11 @@ import os
 from datetime import datetime
 #from wavescripts.data_loader import load_or_update #blir vel motsatt.. 
 import numpy as np
-import matplotlib.pyplot as plt
 from wavescripts.data_loader import update_processed_metadata
 from scipy.signal import find_peaks
+from scipy.signal import welch
+from scipy.optimize import brentq
+
 
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
@@ -470,12 +472,7 @@ def ensure_stillwater_columns(
     return meta
 
 
-from scipy.signal import welch
 
-
-
-
-""" ================CLAUDE ==================="""
 def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
     """Compute wave amplitudes from processed data."""
     records = []
@@ -530,29 +527,24 @@ def compute_psd(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) ->
 def compute_fft(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) -> dict:
     """Compute FFT for each probe."""
     fft_dict = {}
-    print('computing FFTs')
     for path, df in processed_dfs.items():
         subset_meta = meta_row[meta_row["path"] == path]
         for _, row in subset_meta.iterrows():
             fft_df = None
+            series_list = []
             for i in range(1, 5):
-                signal = _extract_probe_signal(df, row, i)
-                if signal is not None:
-                    # Compute FFT
-                    fft_vals = np.fft.fft(signal)
-                    fft_freqs = np.fft.fftfreq(len(signal), d=1/fs)
-                    
-                    # Take only positive frequencies
-                    positive_freq_idx = fft_freqs >= 0
-                    fft_freqs_pos = fft_freqs[positive_freq_idx]
-                    fft_magnitude = np.abs(fft_vals[positive_freq_idx])
-                    
-                    if fft_df is None:
-                        fft_df = pd.DataFrame(index=fft_freqs_pos)
-                        fft_df.index.name = "Frequencies"
-                    fft_df[f"FFT {i}"] = fft_magnitude
-            if fft_df is not None:
+                
+                if (signal := _extract_probe_signal(df, row, i) )is not None: #Walrus operator := sjekker om den ikke er None
+                    fft_vals = np.fft.rfft(signal)  # rfft only returns positive frequencies
+                    fft_freqs = np.fft.rfftfreq(len(signal), d=1/fs)
+                    series_list.append(pd.Series(np.abs(fft_vals), index=fft_freqs, name=f"FFT {i}"))
+            
+            if series_list:  # Only create DataFrame if we have data
+                fft_df = pd.concat(series_list, axis=1)
+                fft_df = fft_df.sort_index()  # sorterer
+                fft_df.index.name = "Frequencies"
                 fft_dict[path] = fft_df
+            
     return fft_dict
 
     
@@ -583,15 +575,8 @@ def _extract_probe_amplitude(df: pd.DataFrame, row: pd.Series, probe_num: int) -
     if signal is None:
         return None
     return float((np.percentile(signal, 99.5) - np.percentile(signal, 0.5)) / 2.0)
-""" ==================================="""
 
 
-
-
-
-
-        
-from scipy.optimize import brentq
 def calculate_wavenumbers(frequencies, heights):
     """Tar inn frekvens og høyde
     bruker BRENTQ fra scipy

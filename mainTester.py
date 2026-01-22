@@ -17,8 +17,8 @@ os.chdir(file_dir)
 # ------------------------------------------------------------------
 #%%
 from wavescripts.data_loader import load_or_update
-#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
-dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")) #per15
+dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
+# dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")) #per15
 # (Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2")) #per15
 
 #dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
@@ -28,7 +28,7 @@ dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/202511
 chooseAll = False
 chooseFirst = False
 # range debug and plot
-debug=True
+debug=False
 win=10
 find_range = True
 range_plot = False
@@ -89,7 +89,11 @@ import matplotlib.pyplot as plt
 
 first_df = next(iter(processed_dfs.values()))
 time_series_full = first_df[["Date", "eta_3"]]
-time_series = time_series_full.iloc[5980:6950]
+
+start = meta_sel.iloc[0]["Computed Probe 2 start"]
+end = meta_sel.iloc[0]["Computed Probe 2 end"]
+
+time_series = time_series_full.iloc[int(start):int(end)]
 
 dt = 0.004
 signal = time_series["eta_3"].values
@@ -122,9 +126,10 @@ for i, f in enumerate(frequencies):
             print(c)
         ctotal += c[n]
     kof[i] = (ctotal * dt) / N
-    
+# %%
 plt.plot(frequencies, np.abs(kof), '-')
 plt.xlabel('Frequency')
+plt.xlim(0,10)
 plt.ylabel(' - ')
 plt.grid(True)
 plt.show()
@@ -149,9 +154,9 @@ plt.show()
 # %%
 """Vectorisert ytre loop også"""
 window = np.hanning(n_samples)
-signal = signal * window
+h_signal = signal * window
 omega = 2 * np.pi * frequencies[:, np.newaxis] #reshape til (200, 1)
-f_coeffs = np.sum(signal * np.exp(-1j * omega * time), axis=1)*dt#/n_samples
+f_coeffs = np.sum(h_signal * np.exp(-1j * omega * time), axis=1)*dt#/n_samples
 
 # plt.plot(frequencies, np.abs(f_coeffs), '-', color='red')
 # plt.xlabel('Frequency')
@@ -161,8 +166,8 @@ f_coeffs = np.sum(signal * np.exp(-1j * omega * time), axis=1)*dt#/n_samples
 # plt.show()
 # %%
 """FFT"""
-fft_vals = np.fft.fft(signal)
-fft_freqs = np.fft.fftfreq(len(signal), d=1/250)
+fft_vals = np.fft.fft(h_signal)
+fft_freqs = np.fft.fftfreq(len(h_signal), d=1/250)
 
 positive_freq_idx = fft_freqs >= 0
 fft_freqs_pos = fft_freqs[positive_freq_idx]
@@ -202,7 +207,7 @@ plt.show()
 
 
 # Original signal (970 samples)
-signal_original = signal.copy()
+signal_original = h_signal.copy()
 n_original = len(signal_original)
 
 # Zero-padded signal (4x longer)
@@ -247,16 +252,16 @@ target_freq = 1.30
 test_freqs = np.linspace(1.25, 1.35, 1000)
 
 # For each frequency, compute how well a sinusoid fits
-def compute_fit_quality(freq, signal, time):
+def compute_fit_quality(freq, h_signal, time):
     omega = 2 * np.pi * freq
     # Project signal onto cosine and sine at this frequency
-    cos_component = np.sum(signal * np.cos(omega * time))
-    sin_component = np.sum(signal * np.sin(omega * time))
+    cos_component = np.sum(h_signal * np.cos(omega * time))
+    sin_component = np.sum(h_signal * np.sin(omega * time))
     # Amplitude of best-fit sinusoid
     amplitude = np.sqrt(cos_component**2 + sin_component**2)
     return amplitude
 
-fit_quality = np.array([compute_fit_quality(f, signal, time) for f in test_freqs])
+fit_quality = np.array([compute_fit_quality(f, h_signal, time) for f in test_freqs])
 
 # Find best frequency
 best_idx = np.argmax(fit_quality)
@@ -298,9 +303,10 @@ axes[1].set_xlim(0, min(3.4, time[-1]))  # Show first 2 seconds
 plt.tight_layout()
 plt.show()
 
+
 # %%
 
-plt.plot(time,signal, 'rx')
+plt.plot(time,h_signal, 'rx', label='hanning')
 plt.plot(time, signal, 'b-', alpha=0.5, label='Original signal')
 
 # %%
