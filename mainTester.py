@@ -94,6 +94,7 @@ start = meta_sel.iloc[0]["Computed Probe 2 start"]
 end = meta_sel.iloc[0]["Computed Probe 2 end"]
 
 time_series = time_series_full.iloc[int(start):int(end)]
+# time_series = time_series_full
 
 dt = 0.004
 signal = time_series["eta_3"].values

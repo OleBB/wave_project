@@ -268,6 +268,9 @@ df_plot = pd.concat(first_cols, axis=1)
 halfway = len(psd_dictionary) // 2
 first_half_items = dict(list(psd_dictionary.items())[:halfway])
 
+# %%
+
+
 first_cols = {k: d.iloc[:, 2] for k, d in first_half_items.items()}
 df_plot = pd.concat(first_cols, axis=1)
 
