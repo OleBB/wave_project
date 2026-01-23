@@ -792,7 +792,7 @@ def _update_all_metrics(
     meta_sel: pd.DataFrame,
     stillwater: dict
 ) -> pd.DataFrame:
-    """Update all computed metrics in metadata."""
+    """Kalkuler og oppdater all computed metrics in metadata."""
     meta_indexed = meta_sel.set_index("path")
     
     # Amplitudes
@@ -832,7 +832,7 @@ def _set_output_folder(
     meta_full: pd.DataFrame,
     debug: bool
 ) -> pd.DataFrame:
-    """Set the output folder for processed data."""
+    """Velg output folder for processed data."""
     if "PROCESSED_folder" not in meta_sel.columns:
         if "PROCESSED_folder" in meta_full.columns:
             folder = meta_full["PROCESSED_folder"].iloc[0]
