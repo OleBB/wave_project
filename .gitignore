@@ -12,15 +12,11 @@ __pycache__/
 !wavenotebooks/fremvisning.ipynb
 !wavenotebooks/finebilde.ipynb
 
-
-wavenotebooks/cmd+shift+prikk_gitignore_inkluder_ønsket_notebook.txt
-wavenotebooks/slettefil.txt
-
 # Data folders (large CSV files)
-#wavedata/raw/
-#wavedata/processed/
-#wavedata/outputs/
-#pressuredata
+wavedata/raw/
+pressuredata/
+#waveresults/
+#wavezarchive
 
 # Temporary files
 *.log
@@ -29,3 +25,6 @@ wavenotebooks/slettefil.txt
 
 # macOS-specific
 .DS_Store
+
+# environment
+.env
