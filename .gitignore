@@ -16,7 +16,7 @@ __pycache__/
 wavedata/raw/
 pressuredata/
 #waveresults/
-#wavezarchive
+wavezarchive/
 
 # Temporary files
 *.log
