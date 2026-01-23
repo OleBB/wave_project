@@ -1,3 +1,5 @@
+https://github.com/OleBB/wave_project/tree/main
+
 ## Solo Workflow
 
 **1. Always work on branches, never directly on main**
@@ -146,3 +148,10 @@ dependencies:
   - tabulate
   - spyder-unittest
 prefix: /opt/anaconda3/envs/draumeriket
+
+  
+# gitignore - notebooks
+
+bruk cmd+shift+prikk for å se gitignore-filen. 
+
+[ ] - velg de notatbøkene du vil dele
