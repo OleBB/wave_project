@@ -18,6 +18,115 @@ from scipy import fft
 import pandas as pd
 
 
+#TODO: 
+import os
+from pathlib import Path
+
+# ------------------------------------------------------------------
+# Make the script always run from the folder where THIS file lives
+# ------------------------------------------------------------------
+file_dir = Path(__file__).resolve().parent
+os.chdir(file_dir)
+# ------------------------------------------------------------------
+#%%
+from wavescripts.data_loader import load_or_update
+dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
+# dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")) #per15
+# (Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2")) #per15
+
+#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
+#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
+#%%
+# === Config ===
+chooseAll = False
+chooseFirst = True
+# range debug and plot
+debug=False
+win=10
+find_range = True
+range_plot = False
+
+processvariables = {
+    "filters": {
+        "amp": 0.1, #0.1, 0.2, 0.3 
+        "freq": 1.3, #bruk et tall  
+        "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "wind": "full", #full, no, lowest
+        "tunnel": None,
+        "mooring": "low",
+        "panel": ["full", "reverse"], # no, full, reverse, 
+    },
+    "processing": {
+        "chosenprobe": "Probe 3", #ikkje i bruk
+        "rangestart": None, #ikkje i bruk
+        "rangeend": None, #ikkje i bruk
+        "data_cols": ["Probe 2"],#ikkje i bruk
+        "win": 11 #ikkje i bruk
+    },
+    "plotting": {
+        "figsize": None,
+        "separate":True,
+        "overlay": False   
+    }
+}
+# alternativt importere plotvariabler
+#import json
+#with open("plotsettings.json") as f:_
+#      plotvariables = json.load(f)
+print('# === Filter === #')
+from wavescripts.filters import filter_chosen_files
+meta_sel = filter_chosen_files(meta,
+                             processvariables,
+                             chooseAll,chooseFirst)
+#nå har vi de utvalgte: meta_sel altså metadataframes_selected
+#%%
+print('# === Process === #')
+from wavescripts.processor import process_selected_data
+# - and optional check: DEBUG gir noen ekstra printa linjer
+processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, 
+                                                meta_sel, 
+                                                meta, 
+                                                debug, 
+                                                win, 
+                                                find_range,
+                                                range_plot)
+#TODO fiks slik at find_wave_range starter ved null eller ved en topp?
+# nå tar den first_motion_idx+ gitt antall bølger.
+
+# %%
+
+#dagens mål: implementere likningen fra John. 
+import numpy as np
+from datetime import datetime
+import matplotlib.pyplot as plt
+
+first_df = next(iter(processed_dfs.values()))
+time_series_full = first_df[["Date", "eta_3"]]
+
+start = meta_sel.iloc[0]["Computed Probe 2 start"]
+end = meta_sel.iloc[0]["Computed Probe 2 end"]
+
+time_series = time_series_full.iloc[int(start):int(end)]
+# time_series = time_series_full
+
+dt = 0.004
+signal = time_series["eta_3"].values
+n_samples = len(signal)
+time = np.arange(n_samples)*dt
+
+time_series.iloc[:,1].plot()
+# %%
+ctotal = 0
+number_of_frequencies = 300
+frequencies = np.linspace(0.04,60,number_of_frequencies)
+
+signal = np.asarray(signal)          # shape (N,)
+time  = np.asarray(time)           # shape (N,)
+N  = 970
+
+
+
+
 def psd_estimator_adaptive(signal, sampling_rate=1000, min_seg=64, max_seg=512):
     # Adaptive segment length based on signal length
     segment_length = min(max(min_seg, len(signal)//8), max_seg)
