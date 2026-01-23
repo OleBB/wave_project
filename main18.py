@@ -15,7 +15,7 @@ from wavescripts.data_loader import load_or_update
 from wavescripts.filters import filter_chosen_files
 from wavescripts.processor import process_selected_data
 from wavescripts.processor2nd import process_processed_data
-# from wavescripts.processor3rd import process_psd
+
 
 
 """
