@@ -57,3 +57,4 @@ Tests on tiny sample inputs ensure: monotonic timestamps, max gap ≤ X seconds,
 Refactoring safety
 You move logic from notebooks to modules, rename functions, or vectorize code. Tests verify outputs still match known baselines.
 """
+
