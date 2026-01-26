@@ -282,8 +282,10 @@ freqplotvariables = {
 }
 
 
-plot_frequencyspectrum(fft_dictionary, 
-                       meta_sel, )
+# from wavescripts.filters import filter_for_frequencyplot
+# filtert_frequencies = filter_for_frequencyplot(fft_dictionary, freqplotvariables)
+
+plot_frequencyspectrum(fft_dictionary, meta_sel, freqplotvariables)
 
 
 
