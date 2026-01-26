@@ -250,15 +250,18 @@ from wavescripts.plotter import facet_amp
 facet_amp(damping_groupedallruns_df, dampingplotvariables)
 
 # %%
+
+"""FFT-SPEKTRUM"""
+
 from wavescripts.plotter import plot_frequencyspectrum
 freqplotvariables = {
     "overordnet": {
         "chooseAll": False,
-        "chooseFirst": False,
+        "chooseFirst": True,
     }, 
     "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3], #0.1, 0.2, 0.3 
-        "WaveFrequencyInput [Hz]": [1.3, 0.65], #bruk et tall  
+        "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
+        "WaveFrequencyInput [Hz]": [1.3],# 0.65], #bruk et tall  
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
         "TunnelCondition": None,
@@ -270,7 +273,7 @@ freqplotvariables = {
         "chosenprobe": "Probe 2",
         "rangestart": None,
         "rangeend": None,
-        "data_cols": ["Probe 2"],#her kan jeg velge fler, må huske [listeformat]
+        "data_cols": ["Probe 2"],#her kan jeg velge- fler, må huske [listeformat]
         "win": 11
     },
     "plotting": {
@@ -282,15 +285,26 @@ freqplotvariables = {
 }
 
 
-# from wavescripts.filters import filter_for_frequencyplot
-# filtert_frequencies = filter_for_frequencyplot(fft_dictionary, freqplotvariables)
+from wavescripts.filters import filter_for_frequencyspectrum
+filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables["filters"])
 
-plot_frequencyspectrum(fft_dictionary, meta_sel, freqplotvariables)
-
-
+# %%
 
 
+filtrert_frequencies= filtrert_frequencies.drop(filtrert_frequencies.index[0:1])
+# %%
 
+
+plot_frequencyspectrum(fft_dictionary,filtrert_frequencies, freqplotvariables)
+
+
+
+
+# %%
+
+
+for i in range(1,1):
+    print(i)
 
 
 
