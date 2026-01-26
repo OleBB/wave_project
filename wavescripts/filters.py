@@ -171,6 +171,54 @@ def filter_for_damping(
 
 
 
+def filter_for_frequencyspectrum(
+    df: pd.DataFrame,
+    criteria: Mapping[str, Any],
+) -> pd.DataFrame:
+    """
+    Return a *view* of ``df`` that respects the key/value pairs in ``criteria``.
+    The function is deliberately simple – it only implements the operations you
+    need for the amplitude‑plot workflow.  Anything more complex can be added
+    later as a ``custom_filter`` callback.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The original (unfiltered) data.
+    criteria : dict
+        Keys are column names, values are either:
+            • a single scalar → keep rows where column == scalar
+            • a list/tuple   → keep rows where column is in that list
+            • a tuple (low, high) → keep rows where low ≤ column ≤ high
+            • ``None``        → *ignore* this column (no filtering)
+    Eg fjerna: custom_filter : callable, optional
+        If you need a bespoke filter that cannot be expressed with the simple
+        rules above, pass a function that receives the intermediate DataFrame
+        and returns a new one.
+
+    Returns
+    -------
+    pd.DataFrame
+        A filtered copy (``df.copy()``) so the original data stays untouched.
+    """
+    out = df.copy()
+
+    for col, val in criteria.items():
+        if val is None:
+            continue                # nothing to do for this column
+        if isinstance(val, (list, tuple, set)):
+            # treat a 2‑tuple specially: low‑high range
+            if len(val) == 2 and not isinstance(val, list):
+                low, high = val
+                out = out[(out[col] >= low) & (out[col] <= high)]
+            else:
+                out = out[out[col].isin(val)]
+        else:
+            # scalar equality
+            out = out[out[col] == val]
+
+    return out
+
 
 
 

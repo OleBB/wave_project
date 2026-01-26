@@ -476,9 +476,6 @@ def facet_amp(df, ampvar):
 
 
 # %%
-
-
-
 def plot_damping_2(df, plotvariables):
     xvar="WaveFrequencyInput [Hz]"
     wind_colors = {
@@ -534,13 +531,6 @@ def plot_damping_2(df, plotvariables):
     plt.tight_layout()
     plt.show()
     
-# %%
-    
-
-
-
-
-
 
 
 # %%
@@ -807,7 +797,6 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         
         df_fft = fft_dict[path]
         
-
         # print('print')
         # print(df_fft.values)
         # sys.exit()
@@ -822,36 +811,44 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
 
         label = make_label(row)
         
-        xliste = []
-        yliste = []
+        stopp = 50
 
-        for i in range(1,5):
-            x = df_fft["Frequencies"]
-            y = row[f"FFT {i}"]
+        for i in range(1,3):
+            print(f'for loop {i} i gang')
+            x = df_fft.index[0:stopp]
+            print('len', len(x))
+            y = df_fft[f"FFT {i}"].head(stopp)
             print(f'x is {x} and y is: {y}')
-            xliste.append(x)
-            yliste.append(y)
+            ax.plot(x,
+                    y, 
+                    linewidth=2, 
+                    label=label, 
+                    linestyle=linjestil,
+                    marker=marker, 
+                    color=colla
+                    )
+
+
         
         # --- her plottes --- #
-        ax.plot(xliste,yliste, linewidth=2, label=label, linestyle=linjestil,marker=marker, color=colla)
         
         # annotate each point with its value (formatted)
-        for x, y in zip(xliste, yliste):
-            ax.annotate(
-                f"{y:.2f}",          # format as needed
-                xy=(x, y),
-                xytext=(6, 6),       # offset in points to avoid overlapping the marker
-                textcoords="offset points",
-                fontsize=8,
-                color=colla
-            )
+        # for x, y in zip(xliste, yliste):
+        #     ax.annotate(
+        #         f"{y:.2f}",          # format as needed
+        #         xy=(x, y),
+        #         xytext=(6, 6),       # offset in points to avoid overlapping the marker
+        #         textcoords="offset points",
+        #         fontsize=8,
+        #         color=colla
+        #     )
 
-    ax.set_xlabel("frekvenser")
+    ax.set_xlabel(f'Frekvenser')
     ax.set_ylabel("fft")
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    # ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid()
     ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
-    ax.minorticks_on()
+    # ax.minorticks_on()
     # ax.set_xticks()
     # ax.set_xticklabels()
     plt.show()
