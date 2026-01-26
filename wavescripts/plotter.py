@@ -9,6 +9,12 @@ Created on Thu Nov 13 16:27:38 2025
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.widgets import Slider, CheckButtons
+from typing import Mapping, Any, Optional, Sequence
+
 
 
 wind_colors = {
@@ -235,9 +241,7 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
 
 #%% ##
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
+
 def plot_ramp_detection(df, meta_sel, data_col,
                         signal,
                         baseline_mean,
@@ -541,10 +545,6 @@ def plot_damping_2(df, plotvariables):
 
 # %%
 
-
-
-
-from typing import Mapping, Any, Sequence, Optional
 def plot_damping_combined_2(
     df,
     *,
@@ -592,7 +592,6 @@ def plot_damping_combined_2(
     annotate : bool
         Annotate each point with its exact ``mean`` value (rounded to 2 d.p.).
     """
-    import matplotlib.pyplot as plt  # local import – safe for optional use
 
     # ------------------------------------------------------------------ #
     # 1️⃣  Apply the simple filters that live in ``filters`` (if you need
@@ -678,7 +677,6 @@ def plot_damping_combined_2(
 
 
 
-from typing import Mapping, Any, Optional, Sequence
 
 def plot_damping_combined(
     df,
@@ -776,11 +774,77 @@ def plot_damping_combined(
 
     plt.tight_layout()
     plt.show()
+# %%
 
+def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
+    wind_colors = {
+        "full":"red",
+        "no": "blue",
+        "lowest":"green"
+    }
+    panel_styles = {
+        "no": "solid",
+        "full": "dashed",
+        "reverse":"dashdot"
+        }
+    
 
+    figsize = ampvar.get("plotting", {}).get("figsize")
+    fig, ax = plt.subplots(figsize=figsize)
 
+    probelocations = [9200, 9500, 12444, 12455]
+    probelocations = [1, 1.1, 1.2, 1.25]
+    newsymbol = ["x","*",".","v","o","x"]
 
+    probelocations = [1, 1.1, 1.2, 1.25]
+    xlabels = ["P1", "P2", "P3", "P4"]
 
+    for idx, row in meta_df.iterrows():
+        #path = row["path"]
+
+        windcond = row["WindCondition"]
+        colla = wind_colors.get(windcond, "black")
+        
+        panelcond = row["PanelCondition"]
+        linjestil = panel_styles.get(panelcond)
+        
+        marker = "o"
+
+        label = make_label(row)
+        
+        xliste = []
+        yliste = []
+
+        for i in range(1,5):
+            x = probelocations[i-1]
+            y = row[f"Probe {i} Amplitude"]
+            #print(f'x is {x} and y is: {y}')
+            xliste.append(x)
+            yliste.append(y)
+        
+        # --- her plottes --- #
+        ax.plot(xliste,yliste, linewidth=2, label=label, linestyle=linjestil,marker=marker, color=colla)
+        
+        # annotate each point with its value (formatted)
+        for x, y in zip(xliste, yliste):
+            ax.annotate(
+                f"{y:.2f}",          # format as needed
+                xy=(x, y),
+                xytext=(6, 6),       # offset in points to avoid overlapping the marker
+                textcoords="offset points",
+                fontsize=8,
+                color=colla
+            )
+
+    ax.set_xlabel("Probenes avstand er ikke representert korrekt visuelt")
+    ax.set_ylabel("amplitude in mm")
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.grid()
+    ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
+    ax.minorticks_on()
+    ax.set_xticks(probelocations)
+    ax.set_xticklabels(xlabels)
+    plt.show()
 
 
 
