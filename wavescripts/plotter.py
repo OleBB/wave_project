@@ -776,7 +776,9 @@ def plot_damping_combined(
     plt.show()
 # %%
 
-def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
+import sys
+
+def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
     wind_colors = {
         "full":"red",
         "no": "blue",
@@ -789,18 +791,26 @@ def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
         }
     
 
-    figsize = ampvar.get("plotting", {}).get("figsize")
+    figsize = freqplotvar.get("plotting", {}).get("figsize")
     fig, ax = plt.subplots(figsize=figsize)
 
-    probelocations = [9200, 9500, 12444, 12455]
-    probelocations = [1, 1.1, 1.2, 1.25]
-    newsymbol = ["x","*",".","v","o","x"]
-
-    probelocations = [1, 1.1, 1.2, 1.25]
-    xlabels = ["P1", "P2", "P3", "P4"]
-
+    # probelocations = [9200, 9500, 12444, 12455]
+    # probelocations = [1, 1.1, 1.2, 1.25]
+    # newsymbol = ["x","*",".","v","o","x"]
+    # xlabels = ["P1", "P2", "P3", "P4"]
+    
     for idx, row in meta_df.iterrows():
-        #path = row["path"]
+        path = row["path"]
+        
+        if path not in fft_dict:
+            continue
+        
+        df_fft = fft_dict[path]
+        
+
+        # print('print')
+        # print(df_fft.values)
+        # sys.exit()
 
         windcond = row["WindCondition"]
         colla = wind_colors.get(windcond, "black")
@@ -816,9 +826,9 @@ def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
         yliste = []
 
         for i in range(1,5):
-            x = probelocations[i-1]
-            y = row[f"Probe {i} Amplitude"]
-            #print(f'x is {x} and y is: {y}')
+            x = df_fft["Frequencies"]
+            y = row[f"FFT {i}"]
+            print(f'x is {x} and y is: {y}')
             xliste.append(x)
             yliste.append(y)
         
@@ -836,14 +846,14 @@ def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
                 color=colla
             )
 
-    ax.set_xlabel("Probenes avstand er ikke representert korrekt visuelt")
-    ax.set_ylabel("amplitude in mm")
+    ax.set_xlabel("frekvenser")
+    ax.set_ylabel("fft")
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid()
     ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
     ax.minorticks_on()
-    ax.set_xticks(probelocations)
-    ax.set_xticklabels(xlabels)
+    # ax.set_xticks()
+    # ax.set_xticklabels()
     plt.show()
 
 
