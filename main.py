@@ -36,8 +36,6 @@ dataset_paths = [
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
     
 ]
-#gitsjekk
-
 #%%
 # Initialize containers for all results
 all_meta_sel = []
@@ -293,7 +291,7 @@ filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables[
 
 filtrert_frequencies= filtrert_frequencies.drop(filtrert_frequencies.index[0:1])
 # %%
-
+#gitss
 
 plot_frequencyspectrum(fft_dictionary,filtrert_frequencies, freqplotvariables)
 
