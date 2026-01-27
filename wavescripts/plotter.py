@@ -984,11 +984,193 @@ def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:
     _apply_legend(ax, freqplotvar)
     # plt.tight_layout()
     plt.show()
+# %%
 
+def plot_facet_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame, freqplotvar: dict) -> tuple:
+    
+    # Extract config
+    plotting = freqplotvar.get("plotting", {})
+    facet = plotting.get("facet", False)
+    probes = plotting.get("probes", [1])
+    n_peaks = plotting.get("peaks", 7)
+    log_scale = plotting.get("logarithmic", False)
+    
+    panel_styles = {
+        "no": "solid",
+        "full": "dashed",
+        "reverse":"solid"
+    }
+    PANEL_STYLES = panel_styles
+    marker_styles = {
+        "full": "*",
+        "no": "<",
+        "lowest": ">"
+    }
+    MARKER_STYLES=marker_styles
+    
+    base_freq = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
+    base_freq = base_freq[0]
+    
+    plotting = freqplotvar.get("plotting", {})
+    log_scale = plotting.get("logaritmic", False)
+    n_peaks = plotting.get("peaks", None)
+    
+    probes = plotting.get("probes", 1)
 
+    figsize = freqplotvar.get("plotting", {}).get("figsize")
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    legend_position = plotting.get("legend")
+    
+    # ===== CREATE FIGURE =====
+    if facet:
+        # Create subplots - one per probe
+        n_probes = len(probes)
+        fig, axes = plt.subplots(n_probes, 1, figsize=(12, 4*n_probes), sharex=True)
+        
+        # Handle single probe case (axes won't be array)
+        if n_probes == 1:
+            axes = [axes]
+    else:
+        # Single plot for all
+        fig, ax = plt.subplots(figsize=(12, 6))
+        axes = [ax] * len(probes)  # Reuse same ax for all probes
+    
+    # ===== PLOTTING LOOP =====
+    for idx, row in meta_df.iterrows():
+        path = row["path"]
+        
+        if path not in fft_dict:
+            continue
+        
+        df_fft = fft_dict[path]
+        
+        # Styling
+        windcond = row["WindCondition"]
+        colla = WIND_COLORS.get(windcond, "black")
+        
+        panelcond = row["PanelCondition"]
+        linjestil = PANEL_STYLES.get(panelcond, "solid")
+        peak_marker = MARKER_STYLES.get(windcond, ".")
+        
+        label = _make_label(row)
+        stopp = 100
+        
+        # Plot each probe
+        for probe_idx, probe_num in enumerate(probes):
+            ax = axes[probe_idx]  # Get correct subplot
+            
+            selected_probe = f"Probe {probe_num}"
+            y = df_fft[f"FFT {probe_num}"].head(stopp).dropna()
+            x = y.index
+            
+            top_indices = y.nlargest(n_peaks).index
+            top_values = y[top_indices]
+            
+            # Label handling for facet vs single plot
+            if facet:
+                plot_label = label  # No need to add probe name (it's in subplot title)
+            else:
+                plot_label = f"{label}_{selected_probe}"
+            
+            # Plot line
+            ax.plot(x, y, 
+                    linewidth=2, 
+                    label=plot_label, 
+                    linestyle=linjestil,
+                    color=colla)
+            
+            # Plot peaks
+            ax.scatter(top_indices, top_values, 
+                      color=colla, s=100, zorder=5, 
+                      marker=peak_marker, edgecolors='black', linewidths=0.7)
+    
+    # ===== FORMATTING =====
+    for probe_idx, probe_num in enumerate(probes):
+        ax = axes[probe_idx]
+        
+        # Log scale
+        if log_scale:
+            ax.set_yscale('log')
+        
+        # Grid
+        ax.grid(which='major', linestyle='--', alpha=0.6)
+        ax.grid(which='minor', linestyle='-.', alpha=0.3)
+        
+        # Labels
+        if facet:
+            ax.set_title(f"Probe {probe_num}", fontsize=12, fontweight='bold')
+            ax.set_ylabel('FFT Magnitude')
+        else:
+            ax.set_ylabel('FFT Magnitude')
+        
+        # Legend
+        _apply_legend(ax, freqplotvar)
+        
+        # X-axis limits and ticks
+        ax.set_xlim(0, 10)
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
+    
+    # X-label only on bottom plot
+    axes[-1].set_xlabel('Frequency (Hz)', fontsize=12)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return fig, axes if facet else fig, axes[0]
 
+# %%
 
-
+def plot_facet_condition_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame, freqplotvar: dict) -> tuple:
+    
+    plotting = freqplotvar.get("plotting", {})
+    facet_by = plotting.get("facet", None)  # None, "probe", "wind", "panel"
+    probes = plotting.get("probes",1)
+    
+    # Determine facet structure
+    if facet_by == "probe":
+        facet_groups = probes
+        facet_labels = [f"Probe {p}" for p in probes]
+    elif facet_by == "wind":
+        facet_groups = meta_df["WindCondition"].unique()
+        facet_labels = [f"Wind: {w}" for w in facet_groups]
+    elif facet_by == "panel":
+        facet_groups = meta_df["PanelCondition"].unique()
+        facet_labels = [f"Panel: {p}" for p in facet_groups]
+    else:
+        # No faceting - single plot
+        facet_groups = [None]
+        facet_labels = [""]
+    
+    # Create subplots
+    n_facets = len(facet_groups)
+    fig, axes = plt.subplots(n_facets, 1, figsize=(12, 4*n_facets), sharex=True)
+    if n_facets == 1:
+        axes = [axes]
+    
+    # Plot into each facet
+    for facet_idx, (group, label) in enumerate(zip(facet_groups, facet_labels)):
+        ax = axes[facet_idx]
+        
+        # Filter data for this facet
+        if facet_by == "wind":
+            subset = meta_df[meta_df["WindCondition"] == group]
+        elif facet_by == "panel":
+            subset = meta_df[meta_df["PanelCondition"] == group]
+        else:
+            subset = meta_df  # No filtering
+        
+        # Plot loop for this facet
+        for idx, row in subset.iterrows():
+            # ... your plotting code ...
+            pass
+        
+        ax.set_title(label, fontweight='bold')
+        _apply_legend(ax, freqplotvar)
+    
+    plt.tight_layout()
+    return fig, axes
 
 
 
