@@ -767,6 +767,11 @@ def plot_damping_combined(
 
     plt.tight_layout()
     plt.show()
+    
+    
+    
+    
+
 # %%
 import sys
 def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
@@ -812,11 +817,10 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         
         panelcond = row["PanelCondition"]
         linjestil = panel_styles.get(panelcond)
-        
 
         peak_marker = marker_styles.get(windcond, ".")
         
-        marker = "o"
+        # marker = "o"
 
         label = make_label(row)
         stopp = 100
@@ -852,6 +856,108 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
     # ax.set_xticklabels()
     plt.show()
 
+# %%
+
+import matplotlib.ticker as ticker
+def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
+    wind_colors = {
+        "full":"red",
+        "no": "blue",
+        "lowest":"green"
+    }
+    panel_styles = {
+        "no": "solid",
+        "full": "dashed",
+        "reverse":"solid"
+    }
+    marker_styles = {
+        "full": "*",
+        "no": "<",
+        "lowest": ">"
+    }
+    plotting = freqplotvar.get("plotting", {})
+    log_scale = plotting.get("logaritmic", False)
+    n_peaks = plotting.get("peaks", None)
+    
+    probes = plotting.get("probes", 1)
+
+    figsize = freqplotvar.get("plotting", {}).get("figsize")
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    base_freq = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
+    base_freq = base_freq[0]
+    
+    for idx, row in meta_df.iterrows():
+        path = row["path"]
+        
+        if path not in psd_dict:
+            continue
+        
+        df_fft = psd_dict[path]
+        
+        # print('print')
+        # print(df_fft.values)
+        # sys.exit()
+        
+        windcond = row["WindCondition"]
+        colla = wind_colors.get(windcond, "black")
+        
+        panelcond = row["PanelCondition"]
+        linjestil = panel_styles.get(panelcond)
+
+        peak_marker = marker_styles.get(windcond, ".")
+        
+        # marker = "o"
+
+        label = make_label(row)
+        stopp = 100
+        
+        for i in probes:
+            selected_probe = f"Probe {i}"
+            y = df_fft[f"Pxx {i}"].head(stopp).dropna()
+            x = y.index
+            top_indices = y.nlargest(n_peaks).index
+            top_values = y[top_indices]
+            # print(f'x is {x} and y is: {y}')
+            ax.plot(x,
+                    y, 
+                    linewidth=2, 
+                    label=label+"_"+selected_probe, 
+                    linestyle=linjestil,
+                    marker=None, 
+                    color=colla,
+                    )
+            ax.scatter(top_indices, top_values, 
+                  color=colla, s=100, zorder=5, 
+                  marker=peak_marker, edgecolors=None, linewidths=0.7)
+
+    if log_scale:
+        ax.set_yscale('log')    
+    ax.set_xlabel(f'Frekvenser')
+    ax.set_ylabel("fft")
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    # ax.grid()
+    # ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
+    # ax.minorticks_on()
+    # ax.set_xticks()
+    # ax.set_xticklabels()
+    ax.set_xlim(0,10)
+
+    # Add minor ticks every 1.3 Hz
+    ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
+    
+    # Add major ticks every 2×1.3 Hz = 2.6 Hz (your "nyquist intervals 2*base")
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
+    
+    # Optional: highlight exact multiples of base_freq with vertical lines
+    multiples = np.arange(0, 130, base_freq)
+    for m in multiples:
+        if m > 0:  # skip DC if unwanted
+            ax.axvline(m, color='gray', lw=0.6, ls=':', alpha=0.5, zorder=0)
+    
+    ax.grid(which='major', linestyle='--', alpha=0.6)
+    ax.grid(which='minor', linestyle='-.', alpha=0.3)
+    plt.show()
 
 
 
