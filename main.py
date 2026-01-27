@@ -253,7 +253,7 @@ facet_amp(damping_groupedallruns_df, dampingplotvariables)
 freqplotvariables = {
     "overordnet": {
         "chooseAll": False, 
-        "chooseFirst": True,
+        "chooseFirst": False,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -279,8 +279,8 @@ freqplotvariables = {
         "overlay": False,
         "annotate": True, 
         "logaritmic": False, 
-        "peaks": 10, 
-        "probes": [3]        
+        "peaks": 7, 
+        "probes": [1]        
     }   
 }
 
@@ -291,10 +291,16 @@ filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 # %%
 
 
-# filtrert_frequencies= filtrert_frequencies.drop(filtrert_frequencies.index[1:2])
 from wavescripts.plotter import plot_frequencyspectrum
 
 plot_frequencyspectrum(fft_dictionary,filtrert_frequencies, freqplotvariables)
+
+# %%
+from wavescripts.plotter import plot_powerspectraldensity
+
+plot_powerspectraldensity(psd_dictionary, filtrert_frequencies, freqplotvariables)
+
+
 
 
 

@@ -498,14 +498,15 @@ def compute_psd(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) ->
             psd_df = None
             freq = row["WaveFrequencyInput [Hz]"]
             print(type(freq), freq)
-            npersegment = int(2*(250/freq))
+            desired_resolution = 0.25 #Hz per steg i Psd'en.
+            npersegment = int(fs/desired_resolution)
             for i in range(1, 5):
                 signal = _extract_probe_signal(df, row, i)
                 nperseg = max(1, min(npersegment, len(signal)))
                     
                 if signal is not None:
 
-                    nperseg = npersegment #har noen mye kortere signaler
+                    # nperseg = npersegment #har noen mye kortere signaler
                     noverlap = nperseg // 2  # or int(0.75 * nperseg)
                     
                     f, pxx = welch(
