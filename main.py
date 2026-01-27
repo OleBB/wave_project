@@ -279,7 +279,9 @@ freqplotvariables = {
         "separate":True,
         "overlay": False,
         "annotate": True, 
-        "peaks": 10
+        "logaritmic": False, 
+        "peaks": 10, 
+        
     }   
 }
 
@@ -294,39 +296,6 @@ filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 from wavescripts.plotter import plot_frequencyspectrum
 
 plot_frequencyspectrum(fft_dictionary,filtrert_frequencies, freqplotvariables)
-# %%
-
-
-import matplotlib.pyplot as plt
-
-markers = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
-           '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4']
-
-fig, ax = plt.subplots(figsize=(12, 6))
-
-n_cols = 6
-n_rows = (len(markers) + n_cols - 1) // n_cols
-
-for i, marker in enumerate(markers):
-    row = i // n_cols
-    col = i % n_cols
-    
-    x = col * 2
-    y = -row * 2
-    
-    ax.plot(x, y, marker=marker, markersize=20, 
-            color='red', markeredgecolor='black', markeredgewidth=2)
-    
-    ax.text(x, y - 0.6, f"'{marker}'", ha='center', fontsize=10, fontweight='bold')
-
-ax.set_xlim(-1, n_cols * 2)
-ax.set_ylim(-n_rows * 2, 1)
-ax.axis('off')
-ax.set_title('Matplotlib Marker Styles', fontsize=16, fontweight='bold', pad=20)
-
-plt.tight_layout()
-plt.show()
-
 
 
 
