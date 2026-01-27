@@ -765,9 +765,7 @@ def plot_damping_combined(
     plt.tight_layout()
     plt.show()
 # %%
-
 import sys
-
 def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
     wind_colors = {
         "full":"red",
@@ -777,7 +775,7 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
     panel_styles = {
         "no": "solid",
         "full": "dashed",
-        "reverse":"dashdot"
+        "reverse":"solid"
         }
     
 
@@ -811,14 +809,14 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
 
         label = make_label(row)
         
-        stopp = 50
+        stopp = 100
 
         for i in range(1,3):
-            print(f'for loop {i} i gang')
+            # print(f'for loop {i} i gang')
             x = df_fft.index[0:stopp]
-            print('len', len(x))
+            # print('len', len(x))
             y = df_fft[f"FFT {i}"].head(stopp)
-            print(f'x is {x} and y is: {y}')
+            # print(f'x is {x} and y is: {y}')
             ax.plot(x,
                     y, 
                     linewidth=2, 
