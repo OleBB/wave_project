@@ -300,13 +300,6 @@ plot_frequencyspectrum(fft_dictionary,filtrert_frequencies, freqplotvariables)
 
 
 
-# %%
-
-
-for i in range(1,1):
-    print(i)
-
-
 
 
 
