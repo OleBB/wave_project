@@ -206,7 +206,7 @@ def filter_for_frequencyspectrum(
                 # Override: return all data without filtering
                 return df.copy()
             elif overordnet.get("chooseFirst", False):
-                return df.iloc[0]
+                return df.iloc[[0]].copy()
         
         # Use the "filters" sub-dictionary
         actual_criteria = criteria["filters"]
