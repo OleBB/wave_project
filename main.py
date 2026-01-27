@@ -254,7 +254,7 @@ facet_amp(damping_groupedallruns_df, dampingplotvariables)
 from wavescripts.plotter import plot_frequencyspectrum
 freqplotvariables = {
     "overordnet": {
-        "chooseAll": False, #ikke implementert vel
+        "chooseAll": False, 
         "chooseFirst": False,
     }, 
     "filters": {
@@ -278,7 +278,8 @@ freqplotvariables = {
         "figsize": None,
         "separate":True,
         "overlay": False,
-        "annotate": True   
+        "annotate": True, 
+        "peaks": 10
     }   
 }
 
@@ -290,9 +291,41 @@ filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 
 
 # filtrert_frequencies= filtrert_frequencies.drop(filtrert_frequencies.index[1:2])
+from wavescripts.plotter import plot_frequencyspectrum
 
 plot_frequencyspectrum(fft_dictionary,filtrert_frequencies, freqplotvariables)
+# %%
 
+
+import matplotlib.pyplot as plt
+
+markers = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
+           '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4']
+
+fig, ax = plt.subplots(figsize=(12, 6))
+
+n_cols = 6
+n_rows = (len(markers) + n_cols - 1) // n_cols
+
+for i, marker in enumerate(markers):
+    row = i // n_cols
+    col = i % n_cols
+    
+    x = col * 2
+    y = -row * 2
+    
+    ax.plot(x, y, marker=marker, markersize=20, 
+            color='red', markeredgecolor='black', markeredgewidth=2)
+    
+    ax.text(x, y - 0.6, f"'{marker}'", ha='center', fontsize=10, fontweight='bold')
+
+ax.set_xlim(-1, n_cols * 2)
+ax.set_ylim(-n_rows * 2, 1)
+ax.axis('off')
+ax.set_title('Matplotlib Marker Styles', fontsize=16, fontweight='bold', pad=20)
+
+plt.tight_layout()
+plt.show()
 
 
 

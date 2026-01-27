@@ -23,6 +23,9 @@ wind_colors = {
     "lowest":"green"
 }
 
+markers = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
+           '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4']
+
 # ------------------------------------------------------------
 # Short label builder (prevents huge legend)
 # ------------------------------------------------------------
@@ -776,8 +779,14 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         "no": "solid",
         "full": "dashed",
         "reverse":"solid"
-        }
-    
+    }
+    marker_styles = {
+        "full": "*",
+        "no": "o",
+        "reverse": "^"
+    }
+        
+    n_peaks = freqplotvar.get("plotting", {}).get("peaks")
 
     figsize = freqplotvar.get("plotting", {}).get("figsize")
     fig, ax = plt.subplots(figsize=figsize)
@@ -786,7 +795,7 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
     # probelocations = [1, 1.1, 1.2, 1.25]
     # newsymbol = ["x","*",".","v","o","x"]
     # xlabels = ["P1", "P2", "P3", "P4"]
-    
+
     for idx, row in meta_df.iterrows():
         path = row["path"]
         
@@ -805,26 +814,31 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         panelcond = row["PanelCondition"]
         linjestil = panel_styles.get(panelcond)
         
+
+        peak_marker = marker_styles.get(windcond, ".")
+        
         marker = "o"
 
         label = make_label(row)
-        
         stopp = 100
-
-        for i in range(1,3):
-            # print(f'for loop {i} i gang')
-            x = df_fft.index[0:stopp]
-            # print('len', len(x))
-            y = df_fft[f"FFT {i}"].head(stopp)
+        
+        for i in range(1,2):
+            y = df_fft[f"FFT {i}"].head(stopp).dropna()
+            x = y.index
+            top_indices = y.nlargest(n_peaks).index
+            top_values = y[top_indices]
             # print(f'x is {x} and y is: {y}')
             ax.plot(x,
                     y, 
                     linewidth=2, 
                     label=label, 
                     linestyle=linjestil,
-                    marker=marker, 
+                    marker=None, 
                     color=colla
                     )
+            ax.scatter(top_indices, top_values, 
+                  color=colla, s=100, zorder=5, 
+                  marker=peak_marker, edgecolors=None, linewidths=1.5)
 
 
         
@@ -843,7 +857,7 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
 
     ax.set_xlabel(f'Frekvenser')
     ax.set_ylabel("fft")
-    # ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.legend()#(loc='center left')#, bbox_to_anchor=(1, 0.5))
     ax.grid()
     ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
     # ax.minorticks_on()
@@ -855,6 +869,37 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
 
 
 
+
+# %% hjelpemiddel
+"""Plott alle markører"""
+import matplotlib.pyplot as plt
+markers = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
+           '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4']
+
+fig, ax = plt.subplots(figsize=(12, 6))
+
+n_cols = 6
+n_rows = (len(markers) + n_cols - 1) // n_cols
+
+for i, marker in enumerate(markers):
+    row = i // n_cols
+    col = i % n_cols
+    
+    x = col * 2
+    y = -row * 2
+    
+    ax.plot(x, y, marker=marker, markersize=20, 
+            color='red', markeredgecolor='black', markeredgewidth=2)
+    
+    ax.text(x, y - 0.6, f"'{marker}'", ha='center', fontsize=10, fontweight='bold')
+
+ax.set_xlim(-1, n_cols * 2)
+ax.set_ylim(-n_rows * 2, 1)
+ax.axis('off')
+ax.set_title('Matplotlib Marker Styles', fontsize=16, fontweight='bold', pad=20)
+
+plt.tight_layout()
+plt.show()
 
 
 
