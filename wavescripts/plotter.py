@@ -785,16 +785,14 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         "no": "o",
         "reverse": "^"
     }
-        
-    n_peaks = freqplotvar.get("plotting", {}).get("peaks")
+    plotting = freqplotvar.get("plotting", {})
+    log_scale = plotting.get("logaritmic", False)
+    n_peaks = plotting.get("peaks", None)
+    
 
     figsize = freqplotvar.get("plotting", {}).get("figsize")
     fig, ax = plt.subplots(figsize=figsize)
-
-    # probelocations = [9200, 9500, 12444, 12455]
-    # probelocations = [1, 1.1, 1.2, 1.25]
-    # newsymbol = ["x","*",".","v","o","x"]
-    # xlabels = ["P1", "P2", "P3", "P4"]
+    
 
     for idx, row in meta_df.iterrows():
         path = row["path"]
@@ -854,7 +852,8 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         #         fontsize=8,
         #         color=colla
         #     )
-
+    if log_scale:
+        ax.set_yscale('log')    
     ax.set_xlabel(f'Frekvenser')
     ax.set_ylabel("fft")
     ax.legend()#(loc='center left')#, bbox_to_anchor=(1, 0.5))
@@ -864,6 +863,11 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
     # ax.set_xticks()
     # ax.set_xticklabels()
     plt.show()
+
+
+
+
+
 
 
 
