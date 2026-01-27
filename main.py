@@ -252,7 +252,7 @@ facet_amp(damping_groupedallruns_df, dampingplotvariables)
 """FFT-SPEKTRUM"""
 freqplotvariables = {
     "overordnet": {
-        "chooseAll": False, 
+        "chooseAll": True, 
         "chooseFirst": False,
     }, 
     "filters": {
@@ -278,9 +278,10 @@ freqplotvariables = {
         "facet": False,
         "overlay": False,
         "annotate": True, 
+        "legend": "outside", # inside, below, above #med mer!
         "logaritmic": False, 
         "peaks": 7, 
-        "probes": [1]        
+        "probes": [1,2,3,4],
     }   
 }
 

@@ -16,20 +16,40 @@ from matplotlib.widgets import Slider, CheckButtons
 from typing import Mapping, Any, Optional, Sequence
 
 
-
-wind_colors = {
+WIND_COLORS = {
     "full":"red",
     "no": "blue",
     "lowest":"green"
 }
 
-markers = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
+MARKERS = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
            '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4']
+
+LEGEND_CONFIGS = {
+    "outside_right": {"loc": "center left", "bbox_to_anchor": (1.02, 0.5)},
+    "outside_left": {"loc": "center right", "bbox_to_anchor": (-0.02, 0.5)},
+    "inside": {"loc": "best"},
+    "inside_upper_right": {"loc": "upper right"},
+    "inside_upper_left": {"loc": "upper left"},
+    "below": {"loc": "upper center", "bbox_to_anchor": (0.5, -0.15), "ncol": 3},
+    "above": {"loc": "lower center", "bbox_to_anchor": (0.5, 1.02), "ncol": 3},
+    "none": None
+}
+
+def _apply_legend(ax, freqplotvar):
+    """bruker plottevariablene og kobler mot konfiggen i toppen."""
+    plotting = freqplotvar.get("plotting", {})
+    legend_pos = plotting.get("legend", "outside_right")
+    
+    config = LEGEND_CONFIGS.get(legend_pos)
+    if config is not None:
+        ax.legend(**config)
+
 
 # ------------------------------------------------------------
 # Short label builder (prevents huge legend)
 # ------------------------------------------------------------
-def make_label(row):
+def _make_label(row):
     panel = row.get("PanelCondition", "")
     wind  = row.get("WindCondition", "")
     amp   = row.get("WaveAmplitudeInput [Volt]", "")
@@ -128,12 +148,7 @@ def plot_filtered(processed_dfs,
     win         = runtime_vars["win"]
     figsize     = runtime_vars.get("figsize")
 
-    # Mapping for consistent colors
-    wind_colors = {
-        "full":"red",
-        "no":"blue",
-        "lowest":"green"
-    }
+    
     figsize = (10,6)
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -145,14 +160,14 @@ def plot_filtered(processed_dfs,
 
         # Color based on wind
         windcond = row["WindCondition"]
-        color = wind_colors.get(windcond, "black")
+        color = WIND_COLORS.get(windcond, "black")
 
         # Linestyle based on panel condition
         panelcond = row["PanelCondition"]
         linestyle = "--" if "full" in panelcond else "-"
 
         # Short label for legend
-        label = make_label(row)
+        label = _make_label(row)
         
         print("start_idx =", rangestart)
         print("end_idx   =", rangeend)
@@ -190,14 +205,9 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
     """
     Overlay multiple datasets on the same axes,
     aligning each on its own good_start_idx, and using
-    the same legend style as plot_filtered (make_label).
+    the same legend style as plot_filtered (_make_label).
     """
-    # Mapping for consistent colors
-    wind_colors = {
-        "full":"red",
-        "no":"blue",
-        "lowest":"green"
-    }
+
     chosenprobe = plotvariables["processing"]["chosenprobe"]
     figsize     = plotvariables["plotting"]["figsize"] or (12, 6)
 
@@ -208,7 +218,7 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
         
         # Color based on wind
         windcond = row["WindCondition"]
-        color = wind_colors.get(windcond, "black")
+        color = WIND_COLORS.get(windcond, "black")
         
         # skip if this path isn't in processed_dfs/auto_ranges
         if path not in processed_dfs or path not in plot_ranges:
@@ -228,7 +238,7 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
         time_ms = (df_cut["Date"] - t0).dt.total_seconds() * 1000
 
         # use your existing label function
-        label = make_label(row)
+        label = _make_label(row)
 
         ax.plot(time_ms,
                 df_cut[chosenprobe],
@@ -311,11 +321,7 @@ def plot_ramp_detection(df, meta_sel, data_col,
 
 #%%
 def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
-    wind_colors = {
-        "full":"red",
-        "no": "blue",
-        "lowest":"green"
-    }
+
     panel_styles = {
         "no": "solid",
         "full": "dashed",
@@ -337,14 +343,14 @@ def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
         #path = row["path"]
 
         windcond = row["WindCondition"]
-        colla = wind_colors.get(windcond, "black")
+        colla = WIND_COLORS.get(windcond, "black")
         
         panelcond = row["PanelCondition"]
         linjestil = panel_styles.get(panelcond)
         
         marker = "o"
 
-        label = make_label(row)
+        label = _make_label(row)
         
         xliste = []
         yliste = []
@@ -390,7 +396,7 @@ def facet_plot_freq_vs_mean(df, ampvar):
         x=x,
         y='mean_P3P2',
         hue='WindCondition',          # color by condition
-        palette=wind_colors,
+        palette=WIND_COLORS,
         style='PanelConditionGrouped',# differentiate panel
         style_order=["no", "all"],  
         col='WaveAmplitudeInput [Volt]',  # one column per amplitude
@@ -422,7 +428,7 @@ def facet_plot_amp_vs_mean(df, ampvar):
         x=x,
         y='mean_P3P2',
         hue='WindCondition',          # color by condition
-        palette=wind_colors,
+        palette=WIND_COLORS,
         style='PanelConditionGrouped',# differentiate panel
         style_order=["no", "all"],
         col='WaveFrequencyInput [Hz]',  # one column per amplitude
@@ -456,7 +462,7 @@ def facet_amp(df, ampvar):
         x=x,
         y='mean_P3P2',
         hue='WindCondition',          # color by condition
-        palette=wind_colors,
+        palette=WIND_COLORS,
         style='PanelConditionGrouped',# differentiate panel
         style_order=["no", "all"],
         #col='WaveFrequencyInput [Hz]',  # one column per amplitude
@@ -481,11 +487,7 @@ def facet_amp(df, ampvar):
 # %%
 def plot_damping_2(df, plotvariables):
     xvar="WaveFrequencyInput [Hz]"
-    wind_colors = {
-        "full": "red",
-        "no": "blue",
-        "lowest": "green",
-    }
+    
     panel_markers = {
         "no": "o",
         "full": "s",
@@ -504,7 +506,7 @@ def plot_damping_2(df, plotvariables):
 
     # One scatter per (panel, wind) group
     for (panel, wind), sub in df.groupby(['PanelConditionGrouped', 'WindCondition'], sort=False):
-        color = wind_colors.get(wind, 'black')
+        color = WIND_COLORS.get(wind, 'black')
         marker = panel_markers.get(panel, 'o')
         linestyle = panel_styles.get(panel, 'solid')
 
@@ -688,11 +690,11 @@ def plot_damping_combined(
     """
     Plot mean P3/P2 versus kL with optional error bars and wind-condition colors.
     """
-    colors = wind_colors
+    colors = WIND_COLORS
 
     # Default colors: use provided mapping or try to pull from `plotting`
     if colors is None:
-        colors = plotting.get("wind_colors", None) if isinstance(plotting, Mapping) else None
+        colors = plotting.get("WIND_COLORS", None) if isinstance(plotting, Mapping) else None
     if colors is None:
         # fallback palette if some conditions are missing in mapping
         colors = {}
@@ -775,11 +777,6 @@ def plot_damping_combined(
 # %%
 import sys
 def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
-    wind_colors = {
-        "full":"red",
-        "no": "blue",
-        "lowest":"green"
-    }
     panel_styles = {
         "no": "solid",
         "full": "dashed",
@@ -790,6 +787,10 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         "no": "o",
         "reverse": "^"
     }
+    
+    base_freq = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
+    base_freq = base_freq[0]
+    
     plotting = freqplotvar.get("plotting", {})
     log_scale = plotting.get("logaritmic", False)
     n_peaks = plotting.get("peaks", None)
@@ -813,7 +814,7 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         # sys.exit()
 
         windcond = row["WindCondition"]
-        colla = wind_colors.get(windcond, "black")
+        colla = WIND_COLORS.get(windcond, "black")
         
         panelcond = row["PanelCondition"]
         linjestil = panel_styles.get(panelcond)
@@ -822,7 +823,7 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         
         # marker = "o"
 
-        label = make_label(row)
+        label = _make_label(row)
         stopp = 100
         
         for i in probes:
@@ -844,27 +845,43 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
                   color=colla, s=100, zorder=5, 
                   marker=peak_marker, edgecolors=None, linewidths=0.7)
 
+     # ===== AXES SCALING =====
     if log_scale:
-        ax.set_yscale('log')    
-    ax.set_xlabel(f'Frekvenser')
-    ax.set_ylabel("fft")
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    ax.grid()
-    ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
-    # ax.minorticks_on()
-    # ax.set_xticks()
-    # ax.set_xticklabels()
+        ax.set_yscale('log')
+    
+    # ===== AXIS LIMITS =====
+    ax.set_xlim(0, 10)
+    
+    # ===== TICK CONFIGURATION =====
+    # Minor ticks at base frequency intervals (e.g., every 1.3 Hz)
+    ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
+    
+    # Major ticks at 2× base frequency (e.g., every 2.6 Hz)
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
+    
+    # ===== GRID STYLE =====
+    ax.grid(which='major', linestyle='--', alpha=0.6)
+    ax.grid(which='minor', linestyle='-.', alpha=0.3)
+    
+    # ===== REFERENCE LINES =====
+    # Vertical lines at frequency multiples
+    multiples = np.arange(base_freq, 10, base_freq)  # Skip 0, stop at xlim
+    for freq in multiples:
+        ax.axvline(freq, color='gray', linewidth=0.6, 
+                   linestyle=':', alpha=0.5, zorder=0)
+    
+    # ===== LABELS AND LEGEND =====
+    ax.set_xlabel('Frequency (Hz)', fontsize=12)
+    ax.set_ylabel('FFT Magnitude', fontsize=12)
+    _apply_legend(ax, freqplotvar)
+
+    # plt.tight_layout()
     plt.show()
 
 # %%
 
 import matplotlib.ticker as ticker
 def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
-    wind_colors = {
-        "full":"red",
-        "no": "blue",
-        "lowest":"green"
-    }
     panel_styles = {
         "no": "solid",
         "full": "dashed",
@@ -875,6 +892,10 @@ def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:
         "no": "<",
         "lowest": ">"
     }
+    
+    base_freq = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
+    base_freq = base_freq[0]
+    
     plotting = freqplotvar.get("plotting", {})
     log_scale = plotting.get("logaritmic", False)
     n_peaks = plotting.get("peaks", None)
@@ -884,8 +905,7 @@ def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:
     figsize = freqplotvar.get("plotting", {}).get("figsize")
     fig, ax = plt.subplots(figsize=figsize)
     
-    base_freq = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
-    base_freq = base_freq[0]
+    legend_position = plotting.get("legend")
     
     for idx, row in meta_df.iterrows():
         path = row["path"]
@@ -900,7 +920,7 @@ def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:
         # sys.exit()
         
         windcond = row["WindCondition"]
-        colla = wind_colors.get(windcond, "black")
+        colla = WIND_COLORS.get(windcond, "black")
         
         panelcond = row["PanelCondition"]
         linjestil = panel_styles.get(panelcond)
@@ -909,7 +929,7 @@ def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:
         
         # marker = "o"
 
-        label = make_label(row)
+        label = _make_label(row)
         stopp = 100
         
         for i in probes:
@@ -931,32 +951,38 @@ def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:
                   color=colla, s=100, zorder=5, 
                   marker=peak_marker, edgecolors=None, linewidths=0.7)
 
+    # ===== AXES SCALING =====
     if log_scale:
-        ax.set_yscale('log')    
-    ax.set_xlabel(f'Frekvenser')
-    ax.set_ylabel("fft")
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    # ax.grid()
-    # ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
-    # ax.minorticks_on()
-    # ax.set_xticks()
-    # ax.set_xticklabels()
-    ax.set_xlim(0,10)
-
-    # Add minor ticks every 1.3 Hz
+        ax.set_yscale('log')
+    
+    # ===== AXIS LIMITS =====
+    ax.set_xlim(0, 10)
+    
+    # ===== TICK CONFIGURATION =====
+    # Minor ticks at base frequency intervals (e.g., every 1.3 Hz)
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
     
-    # Add major ticks every 2×1.3 Hz = 2.6 Hz (your "nyquist intervals 2*base")
+    # Major ticks at 2× base frequency (e.g., every 2.6 Hz)
     ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
     
-    # Optional: highlight exact multiples of base_freq with vertical lines
-    multiples = np.arange(0, 130, base_freq)
-    for m in multiples:
-        if m > 0:  # skip DC if unwanted
-            ax.axvline(m, color='gray', lw=0.6, ls=':', alpha=0.5, zorder=0)
-    
+    # ===== GRID STYLE =====
     ax.grid(which='major', linestyle='--', alpha=0.6)
     ax.grid(which='minor', linestyle='-.', alpha=0.3)
+    
+    # ===== REFERENCE LINES =====
+    # Vertical lines at frequency multiples
+    multiples = np.arange(base_freq, 10, base_freq)  # Skip 0, stop at xlim
+    for freq in multiples:
+        ax.axvline(freq, color='gray', linewidth=0.6, 
+                   linestyle=':', alpha=0.5, zorder=0)
+    
+    # ===== LABELS AND LEGEND =====
+    ax.set_xlabel('Frequency (Hz)', fontsize=12)
+    ax.set_ylabel('PSD', fontsize=12)
+    # ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    
+    _apply_legend(ax, freqplotvar)
+    # plt.tight_layout()
     plt.show()
 
 
