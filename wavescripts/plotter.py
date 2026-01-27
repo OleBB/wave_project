@@ -789,6 +789,7 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
     log_scale = plotting.get("logaritmic", False)
     n_peaks = plotting.get("peaks", None)
     
+    probes = plotting.get("probes", 1)
 
     figsize = freqplotvar.get("plotting", {}).get("figsize")
     fig, ax = plt.subplots(figsize=figsize)
@@ -820,7 +821,8 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
         label = make_label(row)
         stopp = 100
         
-        for i in range(1,2):
+        for i in probes:
+            selected_probe = f"Probe {i}"
             y = df_fft[f"FFT {i}"].head(stopp).dropna()
             x = y.index
             top_indices = y.nlargest(n_peaks).index
@@ -829,34 +831,20 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
             ax.plot(x,
                     y, 
                     linewidth=2, 
-                    label=label, 
+                    label=label+"_"+selected_probe, 
                     linestyle=linjestil,
                     marker=None, 
-                    color=colla
+                    color=colla,
                     )
             ax.scatter(top_indices, top_values, 
                   color=colla, s=100, zorder=5, 
-                  marker=peak_marker, edgecolors=None, linewidths=1.5)
+                  marker=peak_marker, edgecolors=None, linewidths=0.7)
 
-
-        
-        # --- her plottes --- #
-        
-        # annotate each point with its value (formatted)
-        # for x, y in zip(xliste, yliste):
-        #     ax.annotate(
-        #         f"{y:.2f}",          # format as needed
-        #         xy=(x, y),
-        #         xytext=(6, 6),       # offset in points to avoid overlapping the marker
-        #         textcoords="offset points",
-        #         fontsize=8,
-        #         color=colla
-        #     )
     if log_scale:
         ax.set_yscale('log')    
     ax.set_xlabel(f'Frekvenser')
     ax.set_ylabel("fft")
-    ax.legend()#(loc='center left')#, bbox_to_anchor=(1, 0.5))
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid()
     ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
     # ax.minorticks_on()
@@ -877,40 +865,38 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
 # %% hjelpemiddel
 """Plott alle markører"""
 import matplotlib.pyplot as plt
-markers = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
-           '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4']
 
-fig, ax = plt.subplots(figsize=(12, 6))
-
-n_cols = 6
-n_rows = (len(markers) + n_cols - 1) // n_cols
-
-for i, marker in enumerate(markers):
-    row = i // n_cols
-    col = i % n_cols
+def plot_all_markers():
+    markers = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
+               '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4']
     
-    x = col * 2
-    y = -row * 2
+    fig, ax = plt.subplots(figsize=(12, 6))
     
-    ax.plot(x, y, marker=marker, markersize=20, 
-            color='red', markeredgecolor='black', markeredgewidth=2)
+    n_cols = 6
+    n_rows = (len(markers) + n_cols - 1) // n_cols
     
-    ax.text(x, y - 0.6, f"'{marker}'", ha='center', fontsize=10, fontweight='bold')
+    for i, marker in enumerate(markers):
+        row = i // n_cols
+        col = i % n_cols
+        
+        x = col * 2
+        y = -row * 2
+        
+        ax.plot(x, y, marker=marker, markersize=20, 
+                color='red', markeredgecolor='black', markeredgewidth=2)
+        
+        ax.text(x, y - 0.6, f"'{marker}'", ha='center', fontsize=10, fontweight='bold')
+    
+    ax.set_xlim(-1, n_cols * 2)
+    ax.set_ylim(-n_rows * 2, 1)
+    ax.axis('off')
+    ax.set_title('Matplotlib Marker Styles', fontsize=16, fontweight='bold', pad=20)
+    
+    plt.tight_layout()
+    plt.show()
 
-ax.set_xlim(-1, n_cols * 2)
-ax.set_ylim(-n_rows * 2, 1)
-ax.axis('off')
-ax.set_title('Matplotlib Marker Styles', fontsize=16, fontweight='bold', pad=20)
 
-plt.tight_layout()
-plt.show()
-
-
-
-
-
-
-
-
-
-# 
+if __name__ == "__main__":
+    print('main called')
+    plot_all_markers()
+    #legg ved fleire hjelpefunksjoner

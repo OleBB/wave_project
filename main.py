@@ -250,12 +250,10 @@ facet_amp(damping_groupedallruns_df, dampingplotvariables)
 # %%
 
 """FFT-SPEKTRUM"""
-
-from wavescripts.plotter import plot_frequencyspectrum
 freqplotvariables = {
     "overordnet": {
         "chooseAll": False, 
-        "chooseFirst": False,
+        "chooseFirst": True,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -268,20 +266,21 @@ freqplotvariables = {
         
     },
     "processing": {
-        "chosenprobe": "Probe 2",
+        "chosenprobe": 1, #[1,2,3,4]
         "rangestart": None,
         "rangeend": None,
-        "data_cols": ["Probe 2"],#her kan jeg velge- fler, må huske [listeformat]
-        "win": 11
+        "data_cols": ["Probe 2"],
+        "win": 11 #Ingen av disse er egt i bruk
     },
     "plotting": {
         "figsize": None,
-        "separate":True,
+        "separate":False,
+        "facet": False,
         "overlay": False,
         "annotate": True, 
         "logaritmic": False, 
         "peaks": 10, 
-        
+        "probes": [3]        
     }   
 }
 
@@ -485,22 +484,6 @@ def compute_amplitude_by_band(psd_dictionary, freq_bands=None, verbose=False):
 band_amplitudes = compute_amplitude_by_band(psd_dictionary, verbose=True)
 print("\n=== Results ===")
 print(band_amplitudes)
-# %%
-
-def cabb(psd_dictionary):
-    
-    results = []
-    
-    for path, psd_df in psd_dictionary.items():
-        row_out = {"path"; path}
-        
-        for i in range(1,5):
-            col = f'Pxx {i}'
-            
-            PSEUDO: read row
-        
-    
-    return 
 
 # %%
         
