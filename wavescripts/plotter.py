@@ -25,6 +25,18 @@ WIND_COLORS = {
 MARKERS = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
            '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4']
 
+PANEL_STYLES = {
+    "no": "solid",
+    "full": "dashed",
+    "reverse":"solid"
+}
+
+MARKER_STYLES = {
+    "full": "*",
+    "no": "<",
+    "lowest": ">"
+}
+
 LEGEND_CONFIGS = {
     "outside_right": {"loc": "center left", "bbox_to_anchor": (1.02, 0.5)},
     "outside_left": {"loc": "center right", "bbox_to_anchor": (-0.02, 0.5)},
@@ -1118,7 +1130,7 @@ def plot_facet_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame, freqplot
     plt.tight_layout()
     plt.show()
     
-    return fig, axes if facet else fig, axes[0]
+    return (fig, axes) if facet else (fig, axes[0])
 
 # %%
 
@@ -1127,6 +1139,9 @@ def plot_facet_condition_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame
     plotting = freqplotvar.get("plotting", {})
     facet_by = plotting.get("facet", None)  # None, "probe", "wind", "panel"
     probes = plotting.get("probes",1)
+    
+    n_peaks = plotting.get("peaks", None)
+
     
     # Determine facet structure
     if facet_by == "probe":
@@ -1163,7 +1178,50 @@ def plot_facet_condition_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame
         
         # Plot loop for this facet
         for idx, row in subset.iterrows():
-            # ... your plotting code ...
+            # ===== PLOTTING LOOP =====
+            for idx, row in meta_df.iterrows():
+                path = row["path"]
+                
+                if path not in fft_dict:
+                    continue
+                
+                df_fft = fft_dict[path]
+                
+                # Styling
+                windcond = row["WindCondition"]
+                colla = WIND_COLORS.get(windcond, "black")
+                
+                panelcond = row["PanelCondition"]
+                linjestil = PANEL_STYLES.get(panelcond, "solid")
+                peak_marker = MARKER_STYLES.get(windcond, ".")
+                
+                label = _make_label(row)
+                stopp = 100
+                
+                # Plot each probe
+                for probe_idx, probe_num in enumerate(probes):
+                    ax = axes[probe_idx]  # Get correct subplot
+                    
+                    # selected_probe = f"Probe {probe_num}"
+                    y = df_fft[f"FFT {probe_num}"].head(stopp).dropna()
+                    x = y.index
+                    
+                    top_indices = y.nlargest(n_peaks).index
+                    top_values = y[top_indices]
+                    
+                    
+                    # Plot line
+                    ax.plot(x, y, 
+                            linewidth=2, 
+                            label=label, 
+                            linestyle=linjestil,
+                            color=colla)
+                    
+                    # Plot peaks
+                    ax.scatter(top_indices, top_values, 
+                              color=colla, s=100, zorder=5, 
+                              marker=peak_marker, edgecolors='black', linewidths=0.7)
+            
             pass
         
         ax.set_title(label, fontweight='bold')
