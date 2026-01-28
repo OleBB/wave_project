@@ -474,7 +474,7 @@ def ensure_stillwater_columns(
 
 
 def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
-    """Compute wave amplitudes from processed data."""
+    """Compute wave amplitudes from np.percentile"""
     records = []
     for path, df in processed_dfs.items():
         subset_meta = meta_row[meta_row["path"] == path]
@@ -487,14 +487,25 @@ def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFr
             records.append(row_out)
     return pd.DataFrame.from_records(records)
 
-def compute_psd(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) -> dict:
+def compute_amplitudes_from_psd(f, pxx, target_freq, window=0.5):
+    """Hent amplituden fra PSD ved gitt frekvens"""
+    mask = (f >= target_freq - window) & (f <= target_freq + window)
+    psd_at_freq = pxx[mask].max()
+    deltaf = f[1]-f[0] #frequency resolution
+    amplitude = np.sqrt(2 * psd_at_freq * deltaf)
+    return amplitude
+
+
+def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) -> Tuple[dict, list]:
     """Compute Power Spectral Density for each probe."""
     psd_dict = {}
+    amplitude_records = []
     for path, df in processed_dfs.items():
         
         subset_meta = meta_row[meta_row["path"] == path ]
 
         for _, row in subset_meta.iterrows():
+            row_out = {"path": path}
             psd_df = None
             freq = row["WaveFrequencyInput [Hz]"]
             print(type(freq), freq)
@@ -519,11 +530,17 @@ def compute_psd(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) ->
                     )
                     if psd_df is None:
                         psd_df = pd.DataFrame(index=f)
-                        psd_df.index.name = "Frequencies"
+                        psd_df.index.name = "Frequencies"  
                     psd_df[f"Pxx {i}"] = pxx
+                    # - - - amplitude
+                    amplitude = compute_amplitudes_from_psd(f, pxx, freq)
+                    print("amplitden inni loopen er ", amplitude)
+                    row_out[f"Probe {i} Amplitude from PSD"] = amplitude
             if psd_df is not None:
                 psd_dict[path] = psd_df
-    return psd_dict
+            amplitude_records.append(row_out)
+            print("row out er ", row_out )
+    return psd_dict, amplitude_records
 
 def compute_fft(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) -> dict:
     """Compute FFT for each probe."""
@@ -791,15 +808,20 @@ def _find_wave_ranges(
 def _update_all_metrics(
     processed_dfs: dict,
     meta_sel: pd.DataFrame,
-    stillwater: dict
+    stillwater: dict,
+    amplitudes_psd_df: pd.DataFrame
 ) -> pd.DataFrame:
     """Kalkuler og oppdater all computed metrics in metadata."""
     meta_indexed = meta_sel.set_index("path")
     
-    # Amplitudes
+    # Amplitudes from np.percentile
     amplitudes = compute_amplitudes(processed_dfs, meta_sel)
     amp_cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
     meta_indexed.update(amplitudes.set_index("path")[amp_cols])
+    
+    #Amplitudes from psd
+    amp_cols = [f"Probe {i} Amplitude from PSD" for i in range(1, 5)]
+    meta_sel.update(amplitudes_psd_df.set_index("path")[amp_cols])
     
     # Wavenumbers
     meta_indexed["Wavenumber"] = calculate_wavenumbers(
@@ -874,12 +896,17 @@ def process_selected_data(
     if find_range:
         meta_sel = _find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
     
-    # 4. Compute PSDs
-    psd_dict = compute_psd(processed_dfs, meta_sel)
+    # 4. Compute PSDs and amplitudes from PSD
+    psd_dict,amplitudes_from_psd  = compute_psd_with_amplitudes(processed_dfs, meta_sel)
+    amplitudes_psd_df = pd.DataFrame(amplitudes_from_psd)
+    # 4. b compute FFT 
     fft_dict = compute_fft(processed_dfs, meta_sel)
     
+    
     # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
-    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater)
+    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater, amplitudes_psd_df)
+    
+    
     
     # 6. Set output folder and save metadata
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)

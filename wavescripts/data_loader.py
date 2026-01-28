@@ -40,9 +40,13 @@ dtype_map = {
     "Computed Probe 3 end": "float64",
     "Computed Probe 4 end": "float64",
     "Probe 1 Amplitude": "float64",
+    "Probe 1 Amplitude (PSD)": "float64",
     "Probe 2 Amplitude": "float64",
+    "Probe 2 Amplitude (PSD)": "float64",
     "Probe 3 Amplitude": "float64",
+    "Probe 3 Amplitude (PSD)": "float64",
     "Probe 4 Amplitude": "float64",
+    "Probe 4 Amplitude (PSD)": "float64",
     "Wavefrequency": "float64",
     "Waveperiod": "float64",
     "Wavenumber": "float64",
@@ -177,7 +181,7 @@ def load_or_update(
             print(f"   Loading {len(new_files)} new file(s)...")
 
         # ------------------------------------------------------------------
-        # Load and process new files (your original logic – unchanged!)
+        # Load and process new files
         # ------------------------------------------------------------------
         for i, path in enumerate(new_files, 1):
             key = str(path.resolve())
@@ -227,9 +231,13 @@ def load_or_update(
                     "Computed Probe 3 end": float,
                     "Computed Probe 4 end": float,
                     "Probe 1 Amplitude": float,
+                    "Probe 1 Amplitude (PSD)": float,
                     "Probe 2 Amplitude": float,
+                    "Probe 2 Amplitude (PSD)": float,
                     "Probe 3 Amplitude": float,
+                    "Probe 3 Amplitude (PSD)": float,
                     "Probe 4 Amplitude": float,
+                    "Probe 4 Amplitude (PSD)": float,
                     "Wavefrequency": float,
                     "Waveperiod": float,
                     "Wavenumber": float,
