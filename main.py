@@ -43,11 +43,11 @@ all_processed_dfs = []
 
 processvariables = {
     "overordnet": {
-        "chooseAll": False,
-        "chooseFirst": False,
+        "chooseAll": True,
+        "chooseFirst": True,
     },
     "filters": {
-        "amp": [0.1,0.2,0.3],  # 0.1, 0.2, 0.3 
+        "amp": [0.1],  # 0.1, 0.2, 0.3 
         "freq": 1.3,  # bruk et tall  
         "per": None,  # bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "wind": None,#["full"],  # full, no, lowest
@@ -60,7 +60,7 @@ processvariables = {
         "smoothing window": 10, 
         "find_range": True,
         "range_plot": False,    
-        "force_recompute": True,
+        "force_recompute": False,
     },
 }
 
