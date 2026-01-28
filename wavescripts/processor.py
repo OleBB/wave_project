@@ -466,7 +466,7 @@ def ensure_stillwater_columns(
             meta["PROCESSED_folder"] = f"PROCESSED-{raw_folder}"
 
     # Save to disk
-    update_processed_metadata(meta)
+    update_processed_metadata(meta, force_recompute=False)
     print("Stillwater levels successfully saved to meta.json for ALL runs")
 
     return meta
@@ -882,10 +882,6 @@ def process_selected_data(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
     meta_full: pd.DataFrame,
-    # debug: bool = True,
-    # win: int = 10,
-    # find_range: bool = True,
-    # range_plot: bool = True,
     processvariables: dict, 
 ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame, dict]:
     """
@@ -921,10 +917,12 @@ def process_selected_data(
     
     # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
     meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater, amplitudes_psd_df)
-    
+    print("hei")
     # 6. Set output folder and save metadata
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)
-    update_processed_metadata(meta_sel, None, force_recompute)
+    print("hei igjen")
+    print(meta_sel.columns)
+    update_processed_metadata(meta_sel, force_recompute=force_recompute)
 
     if debug:
         print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")

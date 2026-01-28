@@ -16,8 +16,6 @@ from wavescripts.filters import filter_chosen_files
 from wavescripts.processor import process_selected_data
 from wavescripts.processor2nd import process_processed_data
 
-
-
 """
 Overordnet: Enhver mappe er en egen kjøring, som deler samme vanndyp og probestilltilstand.
 En rekke prossesseringer skjer på likt for hele mappen.
@@ -61,8 +59,8 @@ processvariables = {
         "debug": True,
         "smoothing window": 10, 
         "find_range": True,
-        "range_plot": False,
-        "force_recompute": True,
+        "range_plot": False,    
+        "force_recompute": False,
     },
 }
 
@@ -72,7 +70,9 @@ for i, data_path in enumerate(dataset_paths):
     print(f"Processing dataset {i+1}/{len(dataset_paths)}: {data_path.name}")
     print(f"{'='*50}")
     try:
-        dfs, meta = load_or_update(data_path)
+        prosessering = processvariables.get("prosessering", {})
+        force =prosessering.get("force_recompute", False)
+        dfs, meta = load_or_update(data_path, force_recompute=force)
         
         print('# === Filter === #') #dette filteret er egentlig litt unøding, når jeg ønsker å prossesere hele sulamitten
         meta_sel = filter_chosen_files(meta, processvariables)

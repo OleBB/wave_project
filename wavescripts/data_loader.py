@@ -104,8 +104,8 @@ def get_data_files(folder: Path) -> Iterator[Path]:
 # Updated function – saves per-experiment cache in waveprocessed/
 # ----------------------------------------------------------------------
 def load_or_update(
-    *folders: Path | str,
-    processed_root: Path | str | None = None,
+    *folders: Path | str,  #force evertyghin  following stjerne * to be keyword only
+   
     force_recompute: bool = False,
 ) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
     """
@@ -114,6 +114,7 @@ def load_or_update(
         waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580/
     containing dfs.pkl and meta.json
     """
+    # processed_root: Path | str | None = None, #fjernet fordi ikke i bruk
     # --------------------------------------------------------------
     # 1. Find project root (so everything is independent of cwd)
     # --------------------------------------------------------------
@@ -129,7 +130,7 @@ def load_or_update(
     # --------------------------------------------------------------
     # 2. Define base folder for all processed experiments
     # --------------------------------------------------------------
-    processed_root = Path(processed_root or project_root / "waveprocessed")
+    processed_root = Path(project_root / "waveprocessed") #processed_root or 
     processed_root.mkdir(parents=True, exist_ok=True)
 
     # Global containers
@@ -359,7 +360,6 @@ def load_or_update(
 # --------------------------------------------------
 def update_processed_metadata(
     meta_df: pd.DataFrame,
-    processed_root: Path | str | None = None,
     force_recompute: bool = False, 
 ) -> None:
     """
@@ -375,7 +375,8 @@ def update_processed_metadata(
         (p for p in current_file.parents if (p / "main.py").exists() or (p / ".git").exists()),
         current_file.parent.parent
     )
-    processed_root = Path(processed_root or project_root / "waveprocessed")
+    # def ...     processed_root: Path | str | None = None, fjernet
+    processed_root = Path( project_root / "waveprocessed") #processed_root or
     
     # Ensure we have a way to group by experiment
     meta_df = meta_df.copy()
