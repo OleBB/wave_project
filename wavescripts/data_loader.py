@@ -106,6 +106,7 @@ def get_data_files(folder: Path) -> Iterator[Path]:
 def load_or_update(
     *folders: Path | str,
     processed_root: Path | str | None = None,
+    force_recompute: bool = False,
 ) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
     """
     For each input folder (e.g. wavedata/20251110-tett6roof-lowM-ekte580),
@@ -158,7 +159,7 @@ def load_or_update(
         dfs: Dict[str, pd.DataFrame] = {}
         meta_list: list[dict] = []
 
-        if dfs_path.exists() and meta_path.exists():
+        if dfs_path.exists() and meta_path.exists() and not force_recompute:
             try:
                 dfs = pd.read_pickle(dfs_path)
                 meta_list = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -168,17 +169,23 @@ def load_or_update(
             except Exception as e:
                 print(f"   Cache corrupted ({e}) → rebuilding")
                 dfs, meta_list = {}, []
-
-        seen_keys = set(dfs.keys())
-        new_files = [
-            p for p in get_data_files(folder_path)
-            if str(p.resolve()) not in seen_keys
-        ]
-
-        if not new_files:
-            print("   No new files → using cache only")
+        elif force_recompute and dfs_path.exists():
+            print(f"Du har valgt -> Force recompute: ignoring existing cache")
+        
+        if force_recompute:
+            new_files = list(get_data_files(folder_path))
+            print(f" Force recompute: processing all {len(new_files)} files...")
         else:
-            print(f"   Loading {len(new_files)} new file(s)...")
+            seen_keys = set(dfs.keys())
+            new_files = [
+                p for p in get_data_files(folder_path)
+                if str(p.resolve()) not in seen_keys
+            ]
+    
+            if not new_files:
+                print("   No new files → using cache only")
+            else:
+                print(f"   Loading {len(new_files)} new file(s)...")
 
         # ------------------------------------------------------------------
         # Load and process new files
@@ -331,7 +338,8 @@ def load_or_update(
         if new_files or not dfs_path.exists():
             pd.to_pickle(dfs, dfs_path)
             meta_path.write_text(json.dumps(meta_list, indent=2), encoding="utf-8")
-            print(f"   Cache saved → {len(dfs)} files")
+            mode = "rebuilt" if force_recompute else "updated"
+            print(f"   Cache {mode} → {len(dfs)} files")
 
         # Merge into global result
         all_dfs.update(dfs)
@@ -339,9 +347,10 @@ def load_or_update(
 
     # Final metadata DataFrame
     meta_df = pd.DataFrame(all_meta_list)
-
     meta_df = meta_df.astype(dtype_map)
-    print(f"\nFinished! Total {len(all_dfs)} files from {len(folders)} experiment(s)")
+    
+    mode = "recomputed" if force_recompute else "loaded"
+    print(f"\nFinished! Total {len(all_dfs)} files {mode} from {len(folders)} experiment(s)")
     return all_dfs, meta_df
 ################
 
