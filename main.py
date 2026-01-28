@@ -524,17 +524,13 @@ def compute_amplitude_by_band(psd_dictionary, freq_bands=None, verbose=False):
         results.append(row_out)
     
     return pd.DataFrame(results)
-
 # Run with diagnostics
 band_amplitudes = compute_amplitude_by_band(psd_dictionary, verbose=True)
 print("\n=== Results ===")
 print(band_amplitudes)
-
-# %%
-        
+# %%    
 import numpy as np
 import pandas as pd
-
 def compute_amplitude_by_band(psd_dictionary, freq_bands=None):
     """Compute band amplitudes by integrating PSD using the actual frequency axis."""
     if freq_bands is None:
@@ -689,6 +685,83 @@ plt.show()
 # %%
 
 
+import numpy as np
+from scipy.signal import welch, detrend
+
+def dominant_wave(x, fs, band=(0.04, 2)):
+    """
+    x: signal (1D), fs: sampling rate (Hz), band: expected wave band in Hz
+    returns: f0 (Hz), amplitude (peak), phase (rad)
+    """
+    # 1) Preprocess
+    x = detrend(x, type='linear')
+
+    # 2) Welch PSD (tune nperseg for resolution; overlap smooths)
+    nperseg = int(8 * fs)  # ~8 s segments, adjust as needed
+    f, Pxx = welch(x, fs=fs, window='hann', nperseg=nperseg, noverlap=nperseg//2, nfft=4*nperseg)
+
+    # 3) Band-limit and find max
+    m = (f >= band[0]) & (f <= band[1])
+    if m.sum() < 3:
+        return np.nan, 0.0, np.nan
+    f_band, P_band = f[m], Pxx[m]
+    k = np.argmax(P_band)
+
+    # 4) Quadratic (parabolic) interpolation on log power for sub-bin frequency
+    # Use three points: k-1, k, k+1 (guard edges)
+    if 0 < k < len(P_band) - 1:
+        y0, y1, y2 = np.log(P_band[k-1] + 1e-20), np.log(P_band[k] + 1e-20), np.log(P_band[k+1] + 1e-20)
+        # Offset of peak from center bin (in bins)
+        delta = 0.5 * (y0 - y2) / (y0 - 2*y1 + y2)
+        df = f_band[1] - f_band[0]
+        f0 = f_band[k] + delta * df
+    else:
+        f0 = f_band[k]
+
+    # 5) Sinusoid least-squares fit at f0: x(t) ≈ a*sin(2πf0 t) + b*cos(2πf0 t)
+    t = np.arange(len(x)) / fs
+    s = np.sin(2*np.pi*f0*t)
+    c = np.cos(2*np.pi*f0*t)
+    A = np.column_stack([s, c])
+    coef, _, _, _ = np.linalg.lstsq(A, x, rcond=None)
+    a, b = coef
+    amplitude_peak = np.hypot(a, b)            # peak amplitude
+    phase = np.arctan2(b, a)                   # phase for cos-sin convention
+
+    return float(f0), float(amplitude_peak), float(phase)
+
+first_df = next(iter(processed_dfs.values()))
+x = first_df["eta_2"]
+x = x[6000:12000]
+fs = 250
+f0, amppeak, phase = dominant_wave(x, fs)
+
+# %%
+
+import numpy as np
+
+def fft_peak_amplitude(x, window=None):
+    N = len(x)
+    if window is None:
+        window = np.ones(N)
+    xw = x * window
+    X = np.fft.rfft(xw)  # single-sided
+    k = np.argmax(np.abs(X[1:])) + 1  # avoid DC
+    # Coherent gain: amplitude reduction of the window for a bin-aligned tone
+    CG = window.sum() / N
+    # Single-sided: double non-DC/non-Nyquist bins
+    A_peak = (2.0 * np.abs(X[k])) / (N * CG)
+    f0_bin = k  # bin index; convert to Hz with fs*(k/N)
+    return A_peak, k
+
+a_peak, k = fft_peak_amplitude(x)
+
+
+
+
+# %%
+
+
 import matplotlib.ticker as mticker
 
 first_df = next(iter(psd_dictionary.values()))
@@ -814,9 +887,6 @@ g.set_titles(col_template='{col_name}')
 
 
 
-# %%
-
-
 
 
 # %%
@@ -835,10 +905,6 @@ plt.tight_layout()
 plt.show()
 
 
-
-
-
-# %%
 
 
 
