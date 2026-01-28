@@ -26,7 +26,7 @@ dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/202511
 #%%
 # === Config ===
 chooseAll = False
-chooseFirst = False
+chooseFirst = True
 # range debug and plot
 debug=False
 win=10
@@ -63,8 +63,7 @@ processvariables = {
 print('# === Filter === #')
 from wavescripts.filters import filter_chosen_files
 meta_sel = filter_chosen_files(meta,
-                             processvariables,
-                             chooseAll,chooseFirst)
+                             processvariables)
 #nå har vi de utvalgte: meta_sel altså metadataframes_selected
 #%%
 print('# === Process === #')
@@ -72,11 +71,7 @@ from wavescripts.processor import process_selected_data
 # - and optional check: DEBUG gir noen ekstra printa linjer
 processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, 
                                                 meta_sel, 
-                                                meta, 
-                                                debug, 
-                                                win, 
-                                                find_range,
-                                                range_plot)
+                                                meta, processvariables)
 #TODO fiks slik at find_wave_range starter ved null eller ved en topp?
 # nå tar den first_motion_idx+ gitt antall bølger.
 
@@ -88,7 +83,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 first_df = next(iter(processed_dfs.values()))
-time_series_full = first_df[["Date", "eta_3"]]
+time_series_full = first_df[["Date", "eta_2"]]
 
 start = meta_sel.iloc[0]["Computed Probe 2 start"]
 end = meta_sel.iloc[0]["Computed Probe 2 end"]
@@ -97,7 +92,7 @@ time_series = time_series_full.iloc[int(start):int(end)]
 # time_series = time_series_full
 
 dt = 0.004
-signal = time_series["eta_3"].values
+signal = time_series["eta_2"].values
 n_samples = len(signal)
 time = np.arange(n_samples)*dt
 
@@ -106,7 +101,8 @@ time_series.iloc[:,1].plot()
 ctotal = 0
 number_of_frequencies = 300
 frequencies = np.linspace(0.04,60,number_of_frequencies)
-
+# frequencies = np.linspace(1.28,1.32,number_of_frequencies)
+# frequencies = np.array(1,)
 signal = np.asarray(signal)          # shape (N,)
 time  = np.asarray(time)           # shape (N,)
 N  = 970
@@ -247,7 +243,7 @@ plt.tight_layout()
 plt.show()
 # %%
 # If you know it's ~1.30 Hz, fit a sinusoid at that frequency
-target_freq = 1.30
+target_freq = 1.3
 
 # Test frequencies around target
 test_freqs = np.linspace(1.25, 1.35, 1000)

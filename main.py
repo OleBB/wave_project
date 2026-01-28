@@ -28,7 +28,7 @@ dataset_paths = [
     
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
@@ -60,7 +60,7 @@ processvariables = {
         "smoothing window": 10, 
         "find_range": True,
         "range_plot": False,    
-        "force_recompute": False,
+        "force_recompute": True,
     },
 }
 
