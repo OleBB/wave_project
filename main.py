@@ -27,12 +27,14 @@ Og så er det kode som sammenlikner data når hele mappen er prosessert en gang
 # List of dataset paths you want to process
 dataset_paths = [
     #Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
+    
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+    
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
     
 ]
@@ -735,10 +737,6 @@ x = first_df["eta_2"]
 x = x[6000:12000]
 fs = 250
 f0, amppeak, phase = dominant_wave(x, fs)
-
-# %%
-
-import numpy as np
 
 def fft_peak_amplitude(x, window=None):
     N = len(x)
