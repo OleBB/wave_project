@@ -29,9 +29,9 @@ dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
     
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
     
@@ -44,7 +44,7 @@ all_processed_dfs = []
 processvariables = {
     "overordnet": {
         "chooseAll": True,
-        "chooseFirst": True,
+        "chooseFirst": False,
     },
     "filters": {
         "amp": [0.1],  # 0.1, 0.2, 0.3 
@@ -56,7 +56,7 @@ processvariables = {
         "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
-        "debug": True,
+        "debug": False,
         "smoothing window": 10, 
         "find_range": True,
         "range_plot": False,    
