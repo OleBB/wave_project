@@ -490,9 +490,14 @@ def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFr
 def compute_amplitudes_from_psd(f, pxx, target_freq, window=0.5):
     """Hent amplituden fra PSD ved gitt frekvens"""
     mask = (f >= target_freq - window) & (f <= target_freq + window)
-    psd_at_freq = pxx[mask].max()
+    # psd_at_freq = pxx[mask].max()
     deltaf = f[1]-f[0] #frequency resolution
-    amplitude = np.sqrt(2 * psd_at_freq * deltaf)
+    # amplitude = np.sqrt(2 * psd_at_freq * deltaf)
+    
+    
+    var = pxx[mask].sum() * deltaf
+    sigma = np.sqrt(var)
+    amplitude = np.sqrt(2) * sigma
     return amplitude
 
 
@@ -535,7 +540,7 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
                     # - - - amplitude
                     amplitude = compute_amplitudes_from_psd(f, pxx, freq)
                     print("amplitden inni loopen er ", amplitude)
-                    row_out[f"Probe {i} Amplitude from PSD"] = amplitude
+                    row_out[f"Probe {i} Amplitude (PSD)"] = amplitude
             if psd_df is not None:
                 psd_dict[path] = psd_df
             amplitude_records.append(row_out)
@@ -820,8 +825,9 @@ def _update_all_metrics(
     meta_indexed.update(amplitudes.set_index("path")[amp_cols])
     
     #Amplitudes from psd
-    amp_cols = [f"Probe {i} Amplitude from PSD" for i in range(1, 5)]
-    meta_sel.update(amplitudes_psd_df.set_index("path")[amp_cols])
+    amp_psd_cols = [f"Probe {i} Amplitude (PSD)" for i in range(1, 5)]
+    meta_indexed[amp_psd_cols] = amplitudes_psd_df.set_index("path")[amp_psd_cols]  # Direct assignment
+
     
     # Wavenumbers
     meta_indexed["Wavenumber"] = calculate_wavenumbers(
@@ -876,15 +882,26 @@ def process_selected_data(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
     meta_full: pd.DataFrame,
-    debug: bool = True,
-    win: int = 10,
-    find_range: bool = True,
-    range_plot: bool = True
+    # debug: bool = True,
+    # win: int = 10,
+    # find_range: bool = True,
+    # range_plot: bool = True,
+    processvariables: dict, 
 ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame, dict]:
     """
     Zeroes all selected runs using the shared stillwater levels.
     Adds eta_1..eta_4 (zeroed signal) and moving average.
     """
+    # 0. unpack processvariables
+    # overordnet = processvariables.get("overordnet", {})
+    prosessering = processvariables.get("prosessering", {})
+    
+    debug = prosessering.get("debug", False)
+    win = prosessering.get("smoothing window", 1)
+    find_range =prosessering.get("find_range", False)
+    range_plot =prosessering.get("range_plot", False)
+    force_recompute =prosessering.get("force_recompute", False)
+    
     # 1. Ensure stillwater levels are computed
     meta_full = ensure_stillwater_columns(dfs, meta_full)
     stillwater = _extract_stillwater_levels(meta_full, debug)
@@ -896,21 +913,18 @@ def process_selected_data(
     if find_range:
         meta_sel = _find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
     
-    # 4. Compute PSDs and amplitudes from PSD
+    # 4. a - Compute PSDs and amplitudes from PSD
     psd_dict,amplitudes_from_psd  = compute_psd_with_amplitudes(processed_dfs, meta_sel)
     amplitudes_psd_df = pd.DataFrame(amplitudes_from_psd)
-    # 4. b compute FFT 
+    # 4. b - compute FFT 
     fft_dict = compute_fft(processed_dfs, meta_sel)
-    
     
     # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
     meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater, amplitudes_psd_df)
     
-    
-    
     # 6. Set output folder and save metadata
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)
-    update_processed_metadata(meta_sel)
+    update_processed_metadata(meta_sel, None, force_recompute)
 
     if debug:
         print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
