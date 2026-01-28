@@ -493,11 +493,34 @@ def compute_amplitudes_from_psd(f, pxx, target_freq, window=0.5):
     # psd_at_freq = pxx[mask].max()
     deltaf = f[1]-f[0] #frequency resolution
     # amplitude = np.sqrt(2 * psd_at_freq * deltaf)
-    
-    
     var = pxx[mask].sum() * deltaf
     sigma = np.sqrt(var)
     amplitude = np.sqrt(2) * sigma
+    return amplitude
+
+def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.5):
+    """
+    Extract amplitude from FFT at a given frequency.
+    
+    Args:
+        fft_freqs: Frequency array from FFT
+        fft_magnitude: Magnitude of FFT (already normalized to amplitude)
+        target_freq: Target frequency (Hz)
+        window: Frequency window around target (Hz). Default 0.5 Hz.
+    
+    Returns:
+        Amplitude at target frequency
+    """
+    mask = (fft_freqs >= target_freq - window) & (fft_freqs <= target_freq + window)
+    
+    if not mask.any():
+        # No frequencies in range - fallback to closest
+        closest_idx = np.argmin(np.abs(fft_freqs - target_freq))
+        return fft_magnitude[closest_idx]
+    
+    # Return the maximum amplitude in the window (peak)
+    amplitude = fft_magnitude[mask].max()
+    
     return amplitude
 
 
@@ -511,10 +534,9 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
 
         for _, row in subset_meta.iterrows():
             row_out = {"path": path}
-            psd_df = None
             freq = row["WaveFrequencyInput [Hz]"]
-            print(type(freq), freq)
-            desired_resolution = 0.25 #Hz per steg i Psd'en.
+            psd_df = None
+            desired_resolution = 0.125 #Hz per steg i Psd'en.
             npersegment = int(fs/desired_resolution)
             for i in range(1, 5):
                 signal = _extract_probe_signal(df, row, i)
@@ -547,29 +569,45 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
             print("row out er ", row_out )
     return psd_dict, amplitude_records
 
-def compute_fft(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) -> dict:
-    """Compute FFT for each probe."""
+def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250) -> dict:
+    """Compute FFT for each probe. and calculate amplitude"""
     fft_dict = {}
+    amplitude_records = []
     for path, df in processed_dfs.items():
         subset_meta = meta_row[meta_row["path"] == path]
         for _, row in subset_meta.iterrows():
+            row_out = {"path": path}
+            freq = row["WaveFrequencyInput [Hz]"]
             fft_df = None
             series_list = []
             for i in range(1, 5):
                 
                 if (signal := _extract_probe_signal(df, row, i) )is not None: #Walrus operator := sjekker om den ikke er None
+                    N = len(signal)
                     fft_vals = np.fft.rfft(signal)  # rfft only returns positive frequencies
-                    fft_freqs = np.fft.rfftfreq(len(signal), d=1/fs)
-                    series_list.append(pd.Series(np.abs(fft_vals), index=fft_freqs, name=f"FFT {i}"))
-            
+                    fft_freqs = np.fft.rfftfreq(N, d=1/fs)
+                    
+                    amplitudar = np.abs(fft_vals) * 2 / N
+                    amplitudar[0] = amplitudar[0] / 2 #0hz should not be doubled
+                    
+                    if N % 2 == 0:
+                        amplitudar[-1] = amplitudar[-1] / 2 #if N is even, Nyquist freq should not be doubled
+                    
+                    series_list.append(pd.Series(amplitudar, index=fft_freqs, name=f"FFT {i}"))
+                    # amplitude entall
+                    
+                    amplitude = compute_amplitudes_from_fft(fft_freqs, amplitudar, freq)
+                    row_out[f"Probe {i} Amplitude (FFT)"] = amplitude
             if series_list:  # Only create DataFrame if we have data
                 fft_df = pd.concat(series_list, axis=1)
                 fft_df = fft_df.sort_index()  # sorterer
                 fft_df.index.name = "Frequencies"
                 fft_dict[path] = fft_df
             
-    return fft_dict
+    return fft_dict, amplitude_records
 
+
+    
     
 def _extract_probe_signal(df: pd.DataFrame, row: pd.Series, probe_num: int) -> np.ndarray | None:
     """Extract and validate signal data for a specific probe."""
@@ -814,7 +852,8 @@ def _update_all_metrics(
     processed_dfs: dict,
     meta_sel: pd.DataFrame,
     stillwater: dict,
-    amplitudes_psd_df: pd.DataFrame
+    amplitudes_psd_df: pd.DataFrame,
+    amplitudes_fft_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """Kalkuler og oppdater all computed metrics in metadata."""
     meta_indexed = meta_sel.set_index("path")
@@ -827,6 +866,10 @@ def _update_all_metrics(
     #Amplitudes from psd
     amp_psd_cols = [f"Probe {i} Amplitude (PSD)" for i in range(1, 5)]
     meta_indexed[amp_psd_cols] = amplitudes_psd_df.set_index("path")[amp_psd_cols]  # Direct assignment
+    
+    #Amplitudes from FFT
+    amp_fft_cols = [f"Probe {i} Amplitude (FFT)" for i in range(1, 5)]
+    meta_indexed[amp_fft_cols] = amplitudes_fft_df.set_index("path")[amp_fft_cols]  # Direct assignment
 
     
     # Wavenumbers
@@ -885,8 +928,11 @@ def process_selected_data(
     processvariables: dict, 
 ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame, dict]:
     """
-    Zeroes all selected runs using the shared stillwater levels.
-    Adds eta_1..eta_4 (zeroed signal) and moving average.
+    1. Zeroes all selected runs using the shared stillwater levels.
+    2. Adds eta_1..eta_4 (zeroed signal) and moving average.
+    3. Find wave range (optional)
+    4. Regner PSD og FFT med tilhørende 
+    5. Oppdaterer meta
     """
     # 0. unpack processvariables
     # overordnet = processvariables.get("overordnet", {})
@@ -910,13 +956,14 @@ def process_selected_data(
         meta_sel = _find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
     
     # 4. a - Compute PSDs and amplitudes from PSD
-    psd_dict,amplitudes_from_psd  = compute_psd_with_amplitudes(processed_dfs, meta_sel)
+    psd_dict, amplitudes_from_psd  = compute_psd_with_amplitudes(processed_dfs, meta_sel)
     amplitudes_psd_df = pd.DataFrame(amplitudes_from_psd)
-    # 4. b - compute FFT 
-    fft_dict = compute_fft(processed_dfs, meta_sel)
+    # 4. b - compute FFT and amplitudes from FFT
+    fft_dict, amplitudes_from_fft = compute_fft_with_amplitudes(processed_dfs, meta_sel)
+    amplitudes_fft_df = pd.DataFrame(amplitudes_from_fft)
     
     # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
-    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater, amplitudes_psd_df)
+    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater, amplitudes_psd_df, amplitudes_fft_df)
     print("hei")
     # 6. Set output folder and save metadata
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)
