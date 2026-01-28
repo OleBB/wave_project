@@ -346,18 +346,20 @@ def load_or_update(
 ################
 
 # --------------------------------------------------
-# Takes in a modified meta-dataframe, and updates the meta.JSON
+# Takes in a modified meta-dataframe, and updates the meta.JSON and meta excel
 # --------------------------------------------------
 def update_processed_metadata(
     meta_df: pd.DataFrame,
     processed_root: Path | str | None = None,
+    force_recompute: bool = False, 
 ) -> None:
     """
     Safely updates meta.json files:
-      • Keeps existing runs
-      • Adds new runs
-      • Updates changed rows (matched by 'path')
-      • Never overwrites or deletes data
+      Keeps existing runs
+      Adds new runs
+      Updates changed rows (matched by 'path')
+      Never overwrites or deletes data unless forced
+      Lagrer til meta json og meta xlsx
     """
     current_file = Path(__file__).resolve()
     project_root = next(
@@ -365,8 +367,9 @@ def update_processed_metadata(
         current_file.parent.parent
     )
     processed_root = Path(processed_root or project_root / "waveprocessed")
-
+    
     # Ensure we have a way to group by experiment
+    meta_df = meta_df.copy()
     if "PROCESSED_folder" in meta_df.columns:
         meta_df["__group_key"] = meta_df["PROCESSED_folder"]
     elif "experiment_folder" in meta_df.columns:
@@ -381,9 +384,10 @@ def update_processed_metadata(
     for processed_folder_name, group_df in meta_df.groupby("__group_key"):
         cache_dir = processed_root / processed_folder_name
         meta_path = cache_dir / "meta.json"
+        excel_path = cache_dir / "meta.xlsx"
 
         # Load existing metadata if file exists
-        if meta_path.exists():
+        if meta_path.exists() and not force_recompute:
             try:
                 with open(meta_path, "r", encoding="utf-8") as f:
                     old_records = json.load(f)
@@ -399,36 +403,35 @@ def update_processed_metadata(
 
         # Clean incoming data
         new_df = group_df.drop(columns=["__group_key"], errors="ignore").copy()
-        new_df["path"] = new_df["path"].astype(str)  # ensure path is string
-
+        new_df["path"] = new_df["path"].astype(str)
+        
+        # Ensure old_df path is also string
         if not old_df.empty:
             old_df["path"] = old_df["path"].astype(str)
-
-            # Merge: update existing + add new ones
-            if not new_df.empty:
-                # Use 'path' as key — it's unique per file
-                combined = pd.concat([old_df, new_df], ignore_index=True)
-                combined = combined.drop_duplicates(subset="path", keep="last")  # last = newest
-                final_df = combined
-            else:
-                final_df = old_df
-        else:
+        
+        # Merge logic
+        if old_df.empty:
             final_df = new_df
+        elif new_df.empty:
+            final_df = old_df
+        else:
+            combined = pd.concat([old_df, new_df], ignore_index=True)
+            final_df = combined.drop_duplicates(subset="path", keep="last")
 
         # Save back safely
         records = final_df.to_dict("records")
-        meta_path.write_text(
+        temp_path = meta_path.with_suffix(".json.tmp")
+        temp_path.write_text(
             json.dumps(records, indent=2, default=str),
-            encoding="utf-8"
-        )
+            encoding="utf-8")
+        temp_path.replace(meta_path) #atomic
+        
+        final_df.to_excel(excel_path, index=False)
+        
         added = len(final_df) - len(old_df) if not old_df.empty else len(final_df)
         print(f"Updated {meta_path.relative_to(project_root)} → {len(final_df)} entries (+{added} new)")
     
     print(f"\nMetadata safely updated and preserved across {meta_df['__group_key'].nunique()} experiment(s)!")
-
-
-
-
 
 
 def load_meta_from_processed(folder_name: str) -> pd.DataFrame:

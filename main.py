@@ -29,7 +29,7 @@ dataset_paths = [
     #Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
     
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
@@ -43,24 +43,27 @@ dataset_paths = [
 all_meta_sel = []
 all_processed_dfs = []
 
-# === Config ===
-chooseAll = False
-chooseFirst = False
-debug = True
-win = 10
-find_range = True
-range_plot = False
-
 processvariables = {
+    "overordnet": {
+        "chooseAll": False,
+        "chooseFirst": False,
+    },
     "filters": {
-        "amp": 0.1,  # 0.1, 0.2, 0.3 
+        "amp": [0.1,0.2,0.3],  # 0.1, 0.2, 0.3 
         "freq": 1.3,  # bruk et tall  
         "per": None,  # bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "wind": None,#["full"],  # full, no, lowest
         "tunnel": None,
         "mooring": "low",
         "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
-    }
+    }, 
+    "prosessering": {
+        "debug": True,
+        "smoothing window": 10, 
+        "find_range": True,
+        "range_plot": False,
+        "force_recompute": True,
+    },
 }
 
 # Loop through each dataset
@@ -72,10 +75,10 @@ for i, data_path in enumerate(dataset_paths):
         dfs, meta = load_or_update(data_path)
         
         print('# === Filter === #') #dette filteret er egentlig litt unøding, når jeg ønsker å prossesere hele sulamitten
-        meta_sel = filter_chosen_files(meta, processvariables, chooseAll, chooseFirst)
+        meta_sel = filter_chosen_files(meta, processvariables)
         
         print('# === Single probe process === #')
-        processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data( dfs, meta_sel, meta, debug, win, find_range, range_plot)
+        processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, meta_sel, meta, processvariables)
         
         print('arbeider her, med FFT av alle disse per folder')
         print('# === FTT on each separate signal, saved to a dict of dfs')

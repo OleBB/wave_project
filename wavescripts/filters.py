@@ -21,7 +21,7 @@ column_map = {
     "panel": "PanelCondition" 
 }
 
-def filter_chosen_files(meta, plotvariables,chooseAll,chooseFirst):
+def filter_chosen_files(meta, processvariables):
     """
     meta: pd.DataFrame with columns referenced in column_map
     plotvariables: dict with nested "filters" mapping short keys -> value or list-of-values
@@ -31,6 +31,11 @@ def filter_chosen_files(meta, plotvariables,chooseAll,chooseFirst):
       - Otherwise -> equality match
     Returns a filtered DataFrame (index preserved).
     """
+    # 0. unpack
+    overordnet = processvariables.get("overordnet", {})
+    chooseAll = overordnet.get("chooseAll", False)
+    chooseFirst = overordnet.get("chooseFirst", False)
+
     # === Førstemann til mølla! This one overrides === #
     if chooseAll:
         print("Alle valgt, fordi chooseAll=True")
@@ -39,7 +44,7 @@ def filter_chosen_files(meta, plotvariables,chooseAll,chooseFirst):
         return meta.iloc[0:1]
     # === === === #
     df_sel = meta.copy()
-    filter_values = plotvariables.get("filters", {})
+    filter_values = processvariables.get("filters", {})
     """Use .get(..., default) when the key may be absent and you want a
     safe fallback (common for config-like dicts).
     Use [] when the key must exist and its absence 
