@@ -233,6 +233,18 @@ def filter_for_frequencyspectrum(
         else:
             # scalar equality
             out = out[out[col] == val]
+        
+    if "overordnet" in criteria:
+        overordnet = criteria["overordnet"]
+        if overordnet.get("chooseFirstUnique", False):
+            #find those cols to compare for uniqueness
+            # use only those filtered on
+            cols_to_compare = [
+                col for col in actual_criteria.keys()
+                if col in out.columns and actual_criteria[col] is not None
+                ]
+            if cols_to_compare:
+                out = out.drop_duplicates(subset=cols_to_compare, keep="first")            
     return out
 
 # %% gpts forsøk på å forbedre filterne
