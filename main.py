@@ -254,7 +254,7 @@ freqplotvariables = {
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
         "TunnelCondition": None,
-        #"Mooring": None,
+        "Mooring": None,
         "PanelCondition": ["no", "full", "reverse"], # no, full, reverse, 
         
     },
@@ -267,19 +267,17 @@ freqplotvariables = {
     },
     "plotting": {
         "show_plot": True,
-        "figsize": None,
+        "figsize": (10,10),
+        "linewidth": 0.7,
         "separate":False,
         "facet_by": "wind", #wind, panel, probe 
         "overlay": False, #
         "annotate": False, #
         "xlim": (0,5),
-        "legend": None, #"outside_right", # inside, below, above #med mer!
+        "legend": "inside", #"outside_right", # inside, below, above #med mer!
         "logaritmic": False, 
         "peaks": 3, 
-        "probes": [2, 3],
-        "runs": 1
-        
-        
+        "probes": [2, 3]
     }   
 }
 
