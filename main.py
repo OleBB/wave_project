@@ -166,7 +166,7 @@ dampingplotvariables = {
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
         "TunnelCondition": None,
-        "Mooring": None,
+        # "Mooring": None,
         "PanelCondition": None #["full", "reverse"], # no, full, reverse, 
         
     },
@@ -198,16 +198,16 @@ dampingplotvariables = {
 from wavescripts.filters import filter_for_damping
 damping_filtrert = filter_for_damping(damping_groupedruns_df, dampingplotvariables["filters"])
 
-# %%
+# %% damping 2
 # fritt frem:
 # from wavescripts.plotter import plot_damping_2
 # plot_damping_2(damping_filtrert, dampingplotvariables)
-# %%
+# %% facet damping
 
 from wavescripts.plotter import facet_plot_freq_vs_mean
 facet_plot_freq_vs_mean(damping_filtrert, dampingplotvariables)
 
-# %%
+# %% damping amp
 
 from wavescripts.plotter import facet_plot_amp_vs_mean
 facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
@@ -281,7 +281,7 @@ freqplotvariables = {
         "facet_by": "panel", #wind, panel, probe 
         "overlay": False,
         "annotate": True, 
-        "legend": "outside", # inside, below, above #med mer!
+        "legend": "outside_right", # inside, below, above #med mer!
         "logaritmic": False, 
         "peaks": 7, 
         "probes": [1,2,3,4],
@@ -558,7 +558,7 @@ def plot_p2_vs_p3_scatter(band_amplitudes):
 # Example:
 plot_p2_vs_p3_scatter(band_amplitudes)
 
-# %% band bars
+# %% band bars looop
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -642,7 +642,7 @@ fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.02),
 plt.tight_layout()
 
 # Save as high-resolution image for direct printing
-plt.savefig('plot_A4.png', dpi=300, bbox_inches='tight', facecolor='white')
+# plt.savefig('plot_A4.png', dpi=300, bbox_inches='tight', facecolor='white')
 plt.show()
 # %%
 
@@ -717,23 +717,7 @@ a_peak, k = fft_peak_amplitude(x)
 
 
 
-# %%
-
-
-import matplotlib.ticker as mticker
-
-first_df = next(iter(psd_dictionary.values()))
-# python
-ax = first_df[["Pxx 1", "Pxx 2", "Pxx 3", "Pxx 4"]].plot()
-ax.set_xlim(0, 10)
-ax.set_ylim(1e-6, 1e2)
-ax.minorticks_on()
-ax.xaxis.set_major_locator(mticker.MultipleLocator(0.5))   # major every 0.5 (adjust)
-
-ax.grid(True, which="major")
-
-
-# %%
+# %% damping
 
 
 import seaborn as sns
@@ -775,7 +759,6 @@ wide["delta_mean_P3P2_Windyyyy"] = (
 )
 # %%
 
-
 import seaborn as sns
 import matplotlib as plt
 
@@ -787,7 +770,7 @@ sns.lineplot(
     hue='WindCondition',
     style='PanelConditionGrouped',
     marker='o',
-    errorbar=None  # we already have std; seaborn would otherwise estimate from raw data
+    # errorbar=None  # we already have std; seaborn would otherwise estimate from raw data
 )
 
 # Add error bars manually using matplotlib if desired
@@ -829,7 +812,7 @@ g.map_dataframe(
 for ax, (panel_cond, sub_panel) in zip(g.axes.flat, df.groupby('PanelConditionGrouped', sort=False)):
     for wind, sub in sub_panel.groupby('WindCondition', sort=False):
         ax.errorbar(
-            sub['WaveFrequencyInput [Volt]'],
+            sub['WaveFrequencyInput [Hz]'],
             sub['mean_P3P2'],
             yerr=sub['std_P3P2'],
             fmt='none',
@@ -844,45 +827,19 @@ g.set_titles(col_template='{col_name}')
 
 
 
+# %% damping comb - meaningless gpt plot
 
-
-
-# %%
-
-import matplotlib.pyplot as plt
-
-mean_cols = [c for c in wide.columns if c.startswith("mean_P3P2_")]
-wide_sorted = wide.sort_values(["PanelConditionGrouped", "WaveAmplitudeInput [Volt]"])
-wide_sorted.plot(
-    x=["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"],
-    y=mean_cols,
-    kind="bar",
-    figsize=(10, 6),
-)
-plt.tight_layout()
-plt.show()
-
-
-
-
-
-
-
-
-
-# %%
-
-from wavescripts.filters import filter_for_damping
-m_damping_filtrert = filter_for_damping(
-    damping_combinedruns_df,
-    amplitudeplotvariables["filters"]
+from wavescripts.filters import filter_dataframe
+m_damping_filtrert = filter_dataframe(
+    damping_groupedruns_df,
+    amplitudeplotvariables, 
+    ignore_missing_columns=True
 )
 
 from wavescripts.plotter import plot_damping_combined
 plot_damping_combined(
     m_damping_filtrert,
-    filters=amplitudeplotvariables["filters"],   # optional bookkeeping
-    plotting=amplitudeplotvariables["plotting"]
+    amplitudeplotvariables=amplitudeplotvariables
 )
 
 # %%

@@ -404,60 +404,7 @@ ax.grid(True, which="both", ls="--", alpha=0.3)
 plt.tight_layout()
 plt.show()
 
-# %%
-
-
-"""FFT """
-# Get only first half of the dictionary items
-# halfway = len(fft_dictionary) // 2
-# first_half_items = dict(list(fft_dictionary.items())[:halfway])
-
-# Extract both columns
-col1_data = {k: d.iloc[:, 1] for k, d in fft_dictionary.items()}
-col2_data = {k: d.iloc[:, 2] for k, d in fft_dictionary.items()}
-
-df_col1 = pd.concat(col1_data, axis=1)
-df_col2 = pd.concat(col2_data, axis=1)
-
-# A4 size in inches (portrait: 8.27 x 11.69, landscape: 11.69 x 8.27)
-fig, axes = plt.subplots(1, 2, figsize=(11.69, 8.27), dpi=300)
-
-# Plot column 1 in first facet
-for name in df_col1.columns:
-    short_name = str(name)[66:120]
-    axes[0].plot(df_col1.index, df_col1[name], label=short_name, linewidth=1.5)
-axes[0].set_xlabel("freq (Hz)")
-axes[0].set_ylabel("Magnitude")
-axes[0].set_title("P2")
-axes[0].set_xlim(0, 10)
-axes[0].grid(True, which="both", ls="--", alpha=0.3)
-
-# Plot column 2 in second facet
-for name in df_col2.columns:
-    short_name = str(name)[66:120]
-    axes[1].plot(df_col2.index, df_col2[name], label=short_name, linewidth=1.5)
-axes[1].set_xlabel("freq (Hz)")
-axes[1].set_ylabel("Magnitude")
-axes[1].set_title("P3")
-axes[1].set_xlim(0, 10)
-axes[1].grid(True, which="both", ls="--", alpha=0.3)
-
-# Make y-axis limits equal
-y_min = min(axes[0].get_ylim()[0], axes[1].get_ylim()[0])
-y_max = max(axes[0].get_ylim()[1], axes[1].get_ylim()[1])
-axes[0].set_ylim(y_min, y_max)
-axes[1].set_ylim(y_min, y_max)
-
-# Add shared legend below the plots
-handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.02), 
-           ncol=4, frameon=False)
-
-# plt.tight_layout()
-
-# Save as high-resolution image for direct printing
-# plt.savefig('plot_A4.png', dpi=300, bbox_inches='tight', facecolor='white')
-plt.show()
+# %% FFT
 
 
 
@@ -465,8 +412,7 @@ plt.show()
 
 
 
-
-# %% - OBS OBS koden over lagrer greier. nå vil jeg jo sammenlikne flere datasett uten å lagre.
+#%% TODO: correlate
 
 np.correlate()
 
@@ -531,7 +477,7 @@ plot_all_probes(m_filtrert, amplitudeplotvariables)
 
 
 
-#%%æ
+#%% lage diagnose senere
 summary = full_tank_diagnostics(processed_dfs)
 #TODO få resultater fra disse over i run_and_save_report.py
 #%%
