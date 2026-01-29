@@ -267,10 +267,10 @@ freqplotvariables = {
     },
     "plotting": {
         "show_plot": True,
-        "figsize": None, #(10,10),
+        "figsize": (10,12), #(10,10),
         "linewidth": 0.7,
         "separate":False,
-        "facet_by": None, #wind", #wind, panel, probe 
+        "facet_by": "probe", #wind", #wind, panel, probe 
         "overlay": False, #
         "annotate": False, #
         "max_points": 120, #spørs på oppløsning av fft'en.
@@ -302,103 +302,9 @@ fig, axes = plot_frequency_spectrum(
     data_type="psd"
 )
 
-# %% forsøk på facet plot
-from wavescripts.plotter import plot_facet_frequencyspectrum
-fig, axes = plot_facet_frequencyspectrum(fft_dictionary, filtrert_frequencies, freqplotvariables)
 
-# %% 
-from wavescripts.plotter import plot_frequencyspectrum
-plot_frequencyspectrum(fft_dictionary,filtrert_frequencies, freqplotvariables)
-
-from wavescripts.plotter import plot_powerspectraldensity
-plot_powerspectraldensity(psd_dictionary, filtrert_frequencies, freqplotvariables)
-
-# %%
-
-
-# python
-import pandas as pd
 import matplotlib.pyplot as plt
 
-# df_plot has columns from your psd_dictionary (as in your example)
-first_cols = {k: d.iloc[:,0] for k, d in psd_dictionary.items()}
-df_plot = pd.concat(first_cols, axis=1)
-# Get only first half of the dictionary items
-halfway = len(psd_dictionary) // 2
-first_half_items = dict(list(psd_dictionary.items())[:halfway])
-
-# %%
-
-
-first_cols = {k: d.iloc[:, 2] for k, d in first_half_items.items()}
-df_plot = pd.concat(first_cols, axis=1)
-
-fig, ax = plt.subplots(figsize=(7, 4))
-
-# Iterate columns for full control
-for name in df_plot.columns:
-    ax.plot(df_plot.index, df_plot[name], label=str(name), linewidth=1.5, marker=None)
-
-ax.set_xlabel("freq (Hz)")
-# ax.set_ylabel("PSD")
-ax.set_xlim(0, 10)
-ax.grid(True, which="both", ls="--", alpha=0.3)
-# ax.legend(title="Series", ncol=2)  # or remove if not needed
-plt.tight_layout()
-plt.show()
-
-
-# %% test av psd dict
-# Get only first half of the dictionary items
-halfway = len(psd_dictionary) // 2
-first_half_items = dict(list(psd_dictionary.items())[:halfway])
-
-# Extract both columns
-col1_data = {k: d.iloc[:, 1] for k, d in first_half_items.items()}
-col2_data = {k: d.iloc[:, 2] for k, d in first_half_items.items()}
-
-df_col1 = pd.concat(col1_data, axis=1)
-df_col2 = pd.concat(col2_data, axis=1)
-
-# A4 size in inches (portrait: 8.27 x 11.69, landscape: 11.69 x 8.27)
-fig, axes = plt.subplots(1, 2, figsize=(11.69, 8.27), dpi=300)
-
-# Plot column 1 in first facet
-for name in df_col1.columns:
-    short_name = str(name)[66:120]
-    axes[0].plot(df_col1.index, df_col1[name], label=short_name, linewidth=1.5)
-axes[0].set_xlabel("freq (Hz)")
-axes[0].set_ylabel("PSD")
-axes[0].set_title("Column 1")
-axes[0].set_xlim(0, 10)
-axes[0].grid(True, which="both", ls="--", alpha=0.3)
-
-# Plot column 2 in second facet
-for name in df_col2.columns:
-    short_name = str(name)[66:120]
-    axes[1].plot(df_col2.index, df_col2[name], label=short_name, linewidth=1.5)
-axes[1].set_xlabel("freq (Hz)")
-axes[1].set_ylabel("PSD")
-axes[1].set_title("Column 2")
-axes[1].set_xlim(0, 10)
-axes[1].grid(True, which="both", ls="--", alpha=0.3)
-
-# Make y-axis limits equal
-y_min = min(axes[0].get_ylim()[0], axes[1].get_ylim()[0])
-y_max = max(axes[0].get_ylim()[1], axes[1].get_ylim()[1])
-axes[0].set_ylim(y_min, y_max)
-axes[1].set_ylim(y_min, y_max)
-
-# Add shared legend below the plots
-handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.02), 
-           ncol=4, frameon=False)
-
-plt.tight_layout()
-
-# Save as high-resolution image for direct printing
-plt.savefig('plot_A4.png', dpi=300, bbox_inches='tight', facecolor='white')
-plt.show()
 # %%
 import numpy as np
 

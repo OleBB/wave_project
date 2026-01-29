@@ -13,6 +13,32 @@ import pandas as pd
 import matplotlib.ticker as ticker
 from matplotlib.widgets import Slider, CheckButtons
 from typing import Mapping, Any, Optional, Sequence
+from matplotlib.lines import Line2D
+from matplotlib.offsetbox import (AnchoredOffsetbox, AuxTransformBox,
+                                  DrawingArea, TextArea, VPacker)
+from matplotlib.patches import Circle, Ellipse
+from matplotlib.offsetbox import AnchoredText
+from matplotlib.offsetbox import AnchoredOffsetbox   # or AnchoredOffsetBox
+
+def draw_anchored_text(ax, txt="Figuren", loc="upper left", fontsize=9,
+                       facecolor="white", edgecolor="gray", alpha=0.85):
+    """
+    Add a small text box anchored to a corner of *ax*.
+    """
+    at = AnchoredText(
+        txt,
+        loc=loc,               # any of the usual legend locations
+        prop=dict(size=fontsize, color="black"),
+        frameon=True,
+        pad=0.3,               # padding inside the box (in points)
+    )
+    # style the surrounding rectangle
+    at.patch.set_facecolor(facecolor)
+    at.patch.set_edgecolor(edgecolor)
+    at.patch.set_alpha(alpha)
+    # optional rounded corners
+    at.patch.set_boxstyle("round,pad=0.4,rounding_size=0.2")
+    ax.add_artist(at)
 
 
 WIND_COLORS = {
@@ -939,221 +965,6 @@ def plot_damping_combined_old(
     plt.show()
     
     
-    
-    
-
-# %% Frequency plots 
-
-def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
-    panel_styles = {
-        "no": "solid",
-        "full": "dashed",
-        "reverse":"solid"
-    }
-    marker_styles = {
-        "full": "*",
-        "no": "o",
-        "reverse": "^"
-    }
-    
-    base_freq = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
-    base_freq = base_freq[0]
-    
-    plotting = freqplotvar.get("plotting", {})
-    log_scale = plotting.get("logaritmic", False)
-    n_peaks = plotting.get("peaks", None)
-    
-    probes = plotting.get("probes", 1)
-
-    figsize = freqplotvar.get("plotting", {}).get("figsize")
-    fig, ax = plt.subplots(figsize=figsize)
-    
-
-    for idx, row in meta_df.iterrows():
-        path = row["path"]
-        
-        if path not in fft_dict:
-            continue
-        
-        df_fft = fft_dict[path]
-        
-        # print('print')
-        # print(df_fft.values)
-        # sys.exit()
-
-        windcond = row["WindCondition"]
-        colla = WIND_COLORS.get(windcond, "black")
-        
-        panelcond = row["PanelCondition"]
-        linjestil = panel_styles.get(panelcond)
-
-        peak_marker = marker_styles.get(windcond, ".")
-        
-        # marker = "o"
-
-        label = _make_label(row)
-        stopp = 100
-        
-        for i in probes:
-            selected_probe = f"Probe {i}"
-            y = df_fft[f"FFT {i}"].head(stopp).dropna()
-            x = y.index
-            top_indices = y.nlargest(n_peaks).index
-            top_values = y[top_indices]
-            # print(f'x is {x} and y is: {y}')
-            ax.plot(x,
-                    y, 
-                    linewidth=2, 
-                    label=label+"_"+selected_probe, 
-                    linestyle=linjestil,
-                    marker=None, 
-                    color=colla,
-                    )
-            ax.scatter(top_indices, top_values, 
-                  color=colla, s=100, zorder=5, 
-                  marker=peak_marker, edgecolors=None, linewidths=0.7)
-
-     # ===== AXES SCALING =====
-    if log_scale:
-        ax.set_yscale('log')
-    
-    # ===== AXIS LIMITS =====
-    ax.set_xlim(0, 10)
-    
-    # ===== TICK CONFIGURATION =====
-    # Minor ticks at base frequency intervals (e.g., every 1.3 Hz)
-    ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
-    
-    # Major ticks at 2× base frequency (e.g., every 2.6 Hz)
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
-    
-    # ===== GRID STYLE =====
-    ax.grid(which='major', linestyle='--', alpha=0.6)
-    ax.grid(which='minor', linestyle='-.', alpha=0.3)
-    
-    # ===== REFERENCE LINES =====
-    # Vertical lines at frequency multiples
-    multiples = np.arange(base_freq, 10, base_freq)  # Skip 0, stop at xlim
-    for freq in multiples:
-        ax.axvline(freq, color='gray', linewidth=0.6, 
-                   linestyle=':', alpha=0.5, zorder=0)
-    
-    # ===== LABELS AND LEGEND =====
-    ax.set_xlabel('Frequency (Hz)', fontsize=12)
-    ax.set_ylabel('FFT Magnitude', fontsize=12)
-    _apply_legend(ax, freqplotvar)
-
-    # plt.tight_layout()
-    plt.show()
-
-
-
-def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
-    panel_styles = {
-        "no": "solid",
-        "full": "dashed",
-        "reverse":"solid"
-    }
-    marker_styles = {
-        "full": "*",
-        "no": "<",
-        "lowest": ">"
-    }
-    
-    base_freq = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
-    base_freq = base_freq[0]
-    
-    plotting = freqplotvar.get("plotting", {})
-    log_scale = plotting.get("logaritmic", False)
-    n_peaks = plotting.get("peaks", None)
-    
-    probes = plotting.get("probes", 1)
-
-    figsize = freqplotvar.get("plotting", {}).get("figsize")
-    fig, ax = plt.subplots(figsize=figsize)
-    
-    legend_position = plotting.get("legend")
-    
-    for idx, row in meta_df.iterrows():
-        path = row["path"]
-        
-        if path not in psd_dict:
-            continue
-        
-        df_fft = psd_dict[path]
-        
-        # print('print')
-        # print(df_fft.values)
-        # sys.exit()
-        
-        windcond = row["WindCondition"]
-        colla = WIND_COLORS.get(windcond, "black")
-        
-        panelcond = row["PanelCondition"]
-        linjestil = panel_styles.get(panelcond)
-
-        peak_marker = marker_styles.get(windcond, ".")
-        
-        # marker = "o"
-
-        label = _make_label(row)
-        stopp = 100
-        
-        for i in probes:
-            selected_probe = f"Probe {i}"
-            y = df_fft[f"Pxx {i}"].head(stopp).dropna()
-            x = y.index
-            top_indices = y.nlargest(n_peaks).index
-            top_values = y[top_indices]
-            # print(f'x is {x} and y is: {y}')
-            ax.plot(x,
-                    y, 
-                    linewidth=2, 
-                    label=label+"_"+selected_probe, 
-                    linestyle=linjestil,
-                    marker=None, 
-                    color=colla,
-                    )
-            ax.scatter(top_indices, top_values, 
-                  color=colla, s=100, zorder=5, 
-                  marker=peak_marker, edgecolors=None, linewidths=0.7)
-
-    # ===== AXES SCALING =====
-    if log_scale:
-        ax.set_yscale('log')
-    
-    # ===== AXIS LIMITS =====
-    ax.set_xlim(0, 10)
-    
-    # ===== TICK CONFIGURATION =====
-    # Minor ticks at base frequency intervals (e.g., every 1.3 Hz)
-    ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
-    
-    # Major ticks at 2× base frequency (e.g., every 2.6 Hz)
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
-    
-    # ===== GRID STYLE =====
-    ax.grid(which='major', linestyle='--', alpha=0.6)
-    ax.grid(which='minor', linestyle='-.', alpha=0.3)
-    
-    # ===== REFERENCE LINES =====
-    # Vertical lines at frequency multiples
-    multiples = np.arange(base_freq, 10, base_freq)  # Skip 0, stop at xlim
-    for freq in multiples:
-        ax.axvline(freq, color='gray', linewidth=0.6, 
-                   linestyle=':', alpha=0.5, zorder=0)
-    
-    # ===== LABELS AND LEGEND =====
-    ax.set_xlabel('Frequency (Hz)', fontsize=12)
-    ax.set_ylabel('PSD', fontsize=12)
-    # ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    
-    _apply_legend(ax, freqplotvar)
-    # plt.tight_layout()
-    plt.show()
-
-
-
 
 
 
@@ -1230,6 +1041,7 @@ def plot_frequency_spectrum(
     fontsize = 7
     
     # Extract base frequency for tick locators
+    #not-todo: eventuelt gjøre om denne til å hente fra meta-sel, dersom man skulle ville hatt flere frekvenser men det blir kanksje dumt for fft'en.
     base_freq_val = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
     base_freq = None
     if isinstance(base_freq_val, (list, tuple, np.ndarray, pd.Series)):
@@ -1396,12 +1208,16 @@ def plot_frequency_spectrum(
     # X-label only on bottom plot
     axes[-1].set_xlabel(col_prefix, fontsize=fontsize)
     
+    draw_anchored_text(ax,"tekstboks")
+    
     plt.tight_layout()
     
     if show_plot:
         plt.show()
     
     return fig, axes
+
+# %%
 
 
 
