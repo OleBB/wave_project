@@ -362,6 +362,117 @@ def filter_dataframe(
 
 
 
+# %% GROUPERS
+
+def damping_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Aggregates P3/P2 (and optional probe amplitudes) by:
+      - WaveAmplitudeInput [Volt]
+      - Frekvens, men byttes med kL senere(?) 
+      - PanelConditionGrouped (full|reverse -> all; no stays no)
+      - WindCondition
+
+    Returns mean/std for P3/P2 (extendable with more metrics).
+    """
+    cmdf = combined_meta_df.copy()
+    
+    columns = ["path", "WindCondition", "PanelCondition",
+        "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
+        "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude",
+        "kL", "P2/P1", "P3/P2", "P4/P3"
+    ]
+    rmdf = cmdf[columns].copy()
+
+    # Group PanelCondition: "full" and "reverse" -> "all"; keep "no" as "no"
+    rmdf["PanelConditionGrouped"] = rmdf["PanelCondition"].replace({"full": "all", "reverse": "all"})
+
+    grouping_keys = [
+        "WaveAmplitudeInput [Volt]",
+        "WaveFrequencyInput [Hz]",
+        "PanelConditionGrouped",
+        "WindCondition",
+    ]
+
+    stats = (
+        rmdf.groupby(grouping_keys)
+            .agg(
+                mean_P3P2=("P3/P2", "mean"),
+                std_P3P2=("P3/P2", "std"),
+                n_runs=("path", "nunique"),
+                paths=("path", lambda s: pd.unique(s).tolist()),  # unique paths, order preserved
+                # Uncomment if you want probe amplitude means as well:
+                mean_A_Probe1=("Probe 1 Amplitude", "mean"),
+                mean_A_Probe2=("Probe 2 Amplitude", "mean"),
+                mean_A_Probe3=("Probe 3 Amplitude", "mean"),
+                mean_A_Probe4=("Probe 4 Amplitude", "mean"),
+                mean_kL=("kL", "mean")
+            )
+            .reset_index()
+    )
+    
+    wide = stats.pivot_table(index=["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"],
+                             columns ="WindCondition", 
+                             values = ["mean_P3P2", "std_P3P2"])
+    #optionally flatten the columns
+    wide.columns = ["_".join(map(str,col)).strip() for col in wide.columns]
+    wide = wide.reset_index()
+    
+#     wide = stats.explode("paths").rename(columns={"paths": "path"})
+# # Optional: set a MultiIndex including path
+# wide = wide.set_index(["WaveAmplitudeInput [Volt]", "kL", "PanelConditionGrouped", "WindCondition", "path"])
+    return stats, wide
+
+
+def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Aggregates P3/P2 (and optional probe amplitudes) by:
+      - WaveAmplitudeInput [Volt]
+      - Frekvens, men byttes med kL senere(?) 
+      - PanelConditionGrouped (full|reverse -> all; no stays no)
+      - WindCondition
+
+    Returns mean/std for P3/P2 (extendable with more metrics).
+    """
+    cmdf = combined_meta_df.copy()
+    
+    columns = ["path", "WindCondition", "PanelCondition",
+        "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
+        "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude",
+        "Wavenumber", "kL", "P2/P1", "P3/P2", "P4/P3"
+    ]
+    rmdf = cmdf[columns].copy()
+
+    # Group PanelCondition: "full" and "reverse" -> "all"; keep "no" as "no"
+    rmdf["PanelConditionGrouped"] = rmdf["PanelCondition"].replace({"full": "all", "reverse": "all"})
+
+    grouping_keys = [
+        "WaveFrequencyInput [Hz]",
+        "Wavenumber",
+        "PanelConditionGrouped",
+        "WindCondition",
+    ]
+
+    stats = (
+        rmdf.groupby(grouping_keys)
+            .agg(
+                mean_P3P2=("P3/P2", "mean"),
+                std_P3P2=("P3/P2", "std"),
+                n_runs=("path", "nunique"),
+                paths=("path", lambda s: pd.unique(s).tolist()),  # unique paths, order preserved
+                mean_A_Probe1=("Probe 1 Amplitude", "mean"),
+                mean_A_Probe2=("Probe 2 Amplitude", "mean"),
+                mean_A_Probe3=("Probe 3 Amplitude", "mean"),
+                mean_A_Probe4=("Probe 4 Amplitude", "mean"),
+                mean_Wavenumber=("Wavenumber", "mean"),
+                mean_kL=("kL", "mean")
+                
+            )
+            .reset_index()
+    )
+    
+    return stats
+
+    
 
 
 

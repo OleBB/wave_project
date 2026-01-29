@@ -398,7 +398,6 @@ def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
     plt.show()
 # %% Facet amp og freq
 
-
 def facet_plot_freq_vs_mean(df, ampvar):
     # df should be your aggregated stats (mean_P3P2, std_P3P2)
     x='WaveFrequencyInput [Hz]'
@@ -495,58 +494,7 @@ def facet_amp(df, ampvar):
 
 
 
-# %% Damping
-def plot_damping_2(df, plotvariables):
-    xvar="WaveFrequencyInput [Hz]"
-    
-    panel_markers = {
-        "no": "o",
-        "full": "s",
-        "reverse": "D",
-    }
-    panel_styles = {
-        "no": "solid",
-        "full": "dashed",
-        "reverse": "dashdot",
-    }
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Ensure sorted x for nicer visuals
-    df = df.sort_values([ 'PanelConditionGrouped', 'WindCondition', xvar ])
-
-    # One scatter per (panel, wind) group
-    for (panel, wind), sub in df.groupby(['PanelConditionGrouped', 'WindCondition'], sort=False):
-        color = WIND_COLORS.get(wind, 'black')
-        marker = panel_markers.get(panel, 'o')
-        linestyle = panel_styles.get(panel, 'solid')
-
-        # Use scatter for points; optionally use plot for connecting line
-        ax.scatter(sub[xvar], sub['mean_P3P2'],
-                   label=f'{panel} | {wind}',
-                   color=color, marker=marker, alpha=0.85)
-        ax.plot(sub[xvar], sub['mean_P3P2'],
-                color=color, linestyle=linestyle, linewidth=1.5, alpha=0.7)
-
-        # Optional annotations
-        # for x, y in zip(sub[xvar], sub['mean_P3P2']):
-        #     ax.annotate(f'{y:.2f}', (x, y), textcoords='offset points', xytext=(6, 6), fontsize=8, color=color)
-
-    ax.set_xlabel('kL (wavenumber × geometry length)' if xvar == 'WaveFrequencyInput [Hz]' else xvar)
-    ax.set_ylabel('Mean P3/P2 in mm')
-    ax.set_title('Damping (mean P3/P2 vs frequency)')
-    ax.grid(True)
-    ax.grid(True, which='minor', linestyle=':', linewidth=0.5, color='gray')
-    ax.minorticks_on()
-
-    # Build a clean legend without duplicates
-    handles, labels = ax.get_legend_handles_labels()
-    uniq = dict(zip(labels, handles))
-    ax.legend(uniq.values(), uniq.keys(), title='Panel | Wind', ncol=2)
-
-    plt.tight_layout()
-    plt.show()
-    
 
 
 
@@ -679,18 +627,9 @@ def plot_damping_combined_2(
     plt.tight_layout()
     plt.show()
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import ticker as mticker
-from typing import Any
 
-# Example color map (adjust to your project)
-WIND_COLORS = {
-    "no": "C0",
-    "lowest": "C1",
-    "full": "C2",
-}
+
+
 
 def plot_damping_combined(
     df: pd.DataFrame,
@@ -766,7 +705,7 @@ def plot_damping_combined(
             ax.set_ylabel(y_col)
             ax.grid(True, which='major', alpha=0.35)
             ax.grid(True, which='minor', alpha=0.15, linestyle=':')
-            ax.yaxis.set_major_locator(mticker.MaxNLocator(5))
+            ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
         axes[-1].set_xlabel(x_col)
     else:
         ax = axes[0]
@@ -785,8 +724,8 @@ def plot_damping_combined(
         ax.set_ylabel(y_col)
         ax.grid(True, which='major', alpha=0.35)
         ax.grid(True, which='minor', alpha=0.15, linestyle=':')
-        ax.xaxis.set_major_locator(mticker.MaxNLocator(6))
-        ax.yaxis.set_major_locator(mticker.MaxNLocator(5))
+        ax.xaxis.set_major_locator(ticker.MaxNLocator(6))
+        ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
         # Legend only if meaningful labels exist
         handles, labels = ax.get_legend_handles_labels()
         if labels and any(lab for lab in labels):
@@ -1374,6 +1313,337 @@ def plot_facet_condition_frequencyspectrum(
     fig.tight_layout()
     return fig, axes
 
+# %%
+def plot_frequency_spectrum(
+    fft_dict: dict,
+    meta_df: pd.DataFrame,
+    freqplotvar: dict
+) -> tuple:
+    """
+    Flexible frequency spectrum plotter with extensive customization options.
+    
+    Parameters
+    ----------
+    fft_dict : dict
+        Dictionary mapping file paths to FFT DataFrames
+    meta_df : pd.DataFrame
+        Metadata with columns: path, WindCondition, PanelCondition, etc.
+    freqplotvar : dict
+        Configuration with structure:
+        {
+            "filters": {"WaveFrequencyInput [Hz]": [value], ...},
+            "plotting": {
+                "figsize": tuple or None,
+                "facet_by": "probe" | "wind" | "panel" | None,
+                "probes": [1, 2, 3, 4],
+                "peaks": int or None,
+                "logaritmic": bool,
+                "legend": "inside" | "outside_right" | "below" | "above" | None,
+                "max_points": int (default 100),
+                "xlim": tuple or None,
+                "grid": bool (default True),
+                "show": bool (default True)
+            }
+        }
+    
+    Returns
+    -------
+    tuple
+        (fig, axes) - matplotlib figure and axes objects
+    """
+    
+    # ===== STYLE DEFINITIONS =====
+    PANEL_STYLES = {
+        "no": "solid",
+        "full": "dashed",
+        "reverse": "solid"
+    }
+    
+    MARKER_STYLES = {
+        "full": "*",
+        "no": "<",
+        "lowest": ">"
+    }
+    
+    # ===== EXTRACT CONFIGURATION =====
+    plotting = freqplotvar.get("plotting", {})
+    
+    facet_by = plotting.get("facet_by", None)  # None, 'probe', 'wind', 'panel'
+    probes = plotting.get("probes", [1])
+    if not isinstance(probes, (list, tuple)):
+        probes = [probes]
+    
+    n_peaks = plotting.get("peaks", None)
+    log_scale = plotting.get("logaritmic", False)
+    max_points = plotting.get("max_points", 100)
+    legend_position = plotting.get("legend", "outside_right")
+    show_grid = plotting.get("grid", True)
+    show_plot = plotting.get("show", True)
+    xlim = plotting.get("xlim", (0, 10))
+    
+    # Extract base frequency for tick locators
+    base_freq_val = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
+    base_freq = None
+    if isinstance(base_freq_val, (list, tuple, np.ndarray, pd.Series)):
+        base_freq = float(base_freq_val[0]) if len(base_freq_val) > 0 else None
+    elif base_freq_val is not None:
+        base_freq = float(base_freq_val)
+    use_locators = base_freq is not None and base_freq > 0
+    
+    # ===== DETERMINE FACET STRUCTURE =====
+    if facet_by == "probe":
+        facet_groups = list(probes)
+        facet_labels = [f"Probe {p}" for p in facet_groups]
+    elif facet_by == "wind":
+        facet_groups = list(pd.unique(meta_df["WindCondition"]))
+        facet_labels = [f"Wind: {w}" for w in facet_groups]
+    elif facet_by == "panel":
+        facet_groups = list(pd.unique(meta_df["PanelCondition"]))
+        facet_labels = [f"Panel: {p}" for p in facet_groups]
+    else:
+        facet_groups = [None]
+        facet_labels = ["All Data"]
+    
+    n_facets = len(facet_groups)
+    
+    # ===== CREATE FIGURE =====
+    default_figsize = (12, 4 * n_facets) if n_facets > 1 else (12, 6)
+    figsize = plotting.get("figsize", default_figsize)
+    
+    fig, axes = plt.subplots(
+        n_facets, 1,
+        figsize=figsize,
+        sharex=True,
+        squeeze=False
+    )
+    axes = axes.flatten()  # Always work with 1D array
+    
+    # ===== PLOTTING LOOP =====
+    for facet_idx, (group, facet_label) in enumerate(zip(facet_groups, facet_labels)):
+        ax = axes[facet_idx]
+        
+        # Filter data for this facet
+        if facet_by == "wind":
+            subset = meta_df[meta_df["WindCondition"] == group]
+        elif facet_by == "panel":
+            subset = meta_df[meta_df["PanelCondition"] == group]
+        else:
+            subset = meta_df
+        
+        # Plot each row in the subset
+        for _, row in subset.iterrows():
+            path = row["path"]
+            
+            if path not in fft_dict:
+                continue
+            
+            df_fft = fft_dict[path]
+            
+            # Extract styling information
+            windcond = row.get("WindCondition", "unknown")
+            colla = WIND_COLORS.get(windcond, "black")
+            panelcond = row.get("PanelCondition", "unknown")
+            linjestil = PANEL_STYLES.get(panelcond, "solid")
+            peak_marker = MARKER_STYLES.get(windcond, ".")
+            
+            # Generate label
+            label_base = _make_label(row) if "_make_label" in dir() else f"{windcond}_{panelcond}"
+            
+            # Determine which probes to plot for this facet
+            if facet_by == "probe":
+                probes_to_plot = [group]  # Only plot the faceted probe
+            else:
+                probes_to_plot = probes  # Plot all requested probes
+            
+            # Plot each probe
+            for probe_num in probes_to_plot:
+                col = f"FFT {probe_num}"
+                
+                if col not in df_fft:
+                    continue
+                
+                # Extract data
+                y = df_fft[col].dropna().iloc[:max_points]
+                if y.empty:
+                    continue
+                
+                x = y.index.values
+                
+                # Create label for this line
+                if facet_by == "probe":
+                    plot_label = label_base
+                elif len(probes_to_plot) > 1:
+                    plot_label = f"{label_base}_P{probe_num}"
+                else:
+                    plot_label = label_base
+                
+                # Plot line
+                ax.plot(
+                    x, y.values,
+                    linewidth=1.5,
+                    label=plot_label,
+                    linestyle=linjestil,
+                    color=colla,
+                    antialiased=True
+                )
+                
+                # Plot peaks if requested
+                if n_peaks and n_peaks > 0:
+                    vals = y.values
+                    top_idx_local = _top_k_indices(vals, n_peaks)
+                    ax.scatter(
+                        x[top_idx_local],
+                        vals[top_idx_local],
+                        color=colla,
+                        s=80,
+                        zorder=5,
+                        marker=peak_marker,
+                        edgecolors=None,#denna er visstnok dyr
+                        linewidths=0.7
+                    )
+        
+        # ===== FORMATTING FOR THIS FACET =====
+        
+        # Title
+        if facet_label:
+            ax.set_title(facet_label, fontsize=12, fontweight='bold')
+        
+        # Y-axis
+        ax.set_ylabel('FFT Magnitude', fontsize=11)
+        if log_scale:
+            ax.set_yscale('log')
+        
+        # X-axis limits
+        if xlim:
+            ax.set_xlim(xlim)
+        
+        # Tick locators
+        if use_locators:
+            ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
+            ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
+        else:
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(10))
+            ax.yaxis.set_major_locator(ticker.MaxNLocator(8))
+        
+        # Grid
+        if show_grid:
+            ax.grid(which='major', linestyle='--', alpha=0.6)
+            ax.grid(which='minor', linestyle='-.', alpha=0.3)
+        
+        # Legend
+        _apply_legend(ax, freqplotvar)
+    
+    # ===== FINAL TOUCHES =====
+    
+    # X-label only on bottom plot
+    axes[-1].set_xlabel('Frequency (Hz)', fontsize=12)
+    
+    plt.tight_layout()
+    
+    if show_plot:
+        plt.show()
+    
+    return fig, axes
+
+
+def _top_k_indices_2(values: np.ndarray, k: int) -> np.ndarray:
+    """
+    Fast selection of top k indices using partial sorting.
+    
+    Parameters
+    ----------
+    values : np.ndarray
+        Array of numeric values
+    k : int
+        Number of top values to select
+    
+    Returns
+    -------
+    np.ndarray
+        Indices of top k values, sorted in descending order
+    """
+    if k is None or k <= 0 or k >= values.size:
+        return np.arange(values.size)
+    
+    # Use argpartition for O(n) selection
+    part = np.argpartition(values, -k)[-k:]
+    
+    # Sort the selected indices by their values (descending)
+    return part[np.argsort(values[part])[::-1]]
+
+
+def _apply_legend_2(ax, freqplotvar: dict):
+    """
+    Apply legend to axis based on configuration.
+    
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axis to apply legend to
+    freqplotvar : dict
+        Configuration dictionary with plotting.legend key
+    """
+    legend_position = freqplotvar.get("plotting", {}).get("legend", None)
+    
+    if legend_position is None:
+        return
+    
+    handles, labels = ax.get_legend_handles_labels()
+    
+    if not handles:
+        return
+    
+    if legend_position == "inside":
+        ax.legend(loc='best', framealpha=0.9)
+    elif legend_position == "outside_right":
+        ax.legend(
+            bbox_to_anchor=(1.05, 1),
+            loc='upper left',
+            framealpha=0.9
+        )
+    elif legend_position == "below":
+        ax.legend(
+            bbox_to_anchor=(0.5, -0.15),
+            loc='upper center',
+            ncol=min(len(labels), 4),
+            framealpha=0.9
+        )
+    elif legend_position == "above":
+        ax.legend(
+            bbox_to_anchor=(0.5, 1.15),
+            loc='lower center',
+            ncol=min(len(labels), 4),
+            framealpha=0.9
+        )
+
+
+def _make_label(row: pd.Series) -> str:
+    """
+    Create a descriptive label from a metadata row.
+    
+    Parameters
+    ----------
+    row : pd.Series
+        Row from metadata DataFrame
+    
+    Returns
+    -------
+    str
+        Formatted label string
+    """
+    parts = []
+    
+    if "WindCondition" in row:
+        parts.append(f"W:{row['WindCondition']}")
+    
+    if "PanelCondition" in row:
+        parts.append(f"P:{row['PanelCondition']}")
+    
+    # Add other relevant fields as needed
+    # if "WaveAmplitudeInput [Volt]" in row:
+    #     parts.append(f"A:{row['WaveAmplitudeInput [Volt]']}")
+    
+    return "_".join(parts) if parts else "Unknown"
 
 
 
