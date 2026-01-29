@@ -951,7 +951,7 @@ def process_selected_data(
     prosessering = processvariables.get("prosessering", {})
     
     debug = prosessering.get("debug", False)
-    win = prosessering.get("smoothing window", 1)
+    win = prosessering.get("smoothing_window", 1)
     find_range =prosessering.get("find_range", False)
     range_plot =prosessering.get("range_plot", False)
     force_recompute =prosessering.get("force_recompute", False)

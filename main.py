@@ -57,7 +57,7 @@ processvariables = {
     }, 
     "prosessering": {
         "debug": False,
-        "smoothing window": 10, 
+        "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
         "range_plot": False,    
         "force_recompute": False,
@@ -154,7 +154,7 @@ print("======== Amplituder P1234 PLOTTA ===========")
 #%% grouper - slå i hop
 from wavescripts.filters import damping_grouper
 damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
-# %%
+# %% damping variables
 chooseAll = False
 dampingplotvariables = {
     "overordnet": {"chooseAll": False}, 
@@ -622,3 +622,8 @@ plot_damping_combined(
 
 
 
+# %%
+
+
+# if __name__ == "__main__":
+    # print('running main')
