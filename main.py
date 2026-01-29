@@ -499,133 +499,6 @@ plot_p2_p3_bars(band_amplitudes)
 
 
 
-# %% fft leik
-
-
-
-"""FFT """
-# Get only first half of the dictionary items
-halfway = len(fft_dictionary) // 2
-first_half_items = dict(list(fft_dictionary.items())[:halfway])
-
-# Extract both columns
-col1_data = {k: d.iloc[:, 1] for k, d in first_half_items.items()}
-col2_data = {k: d.iloc[:, 2] for k, d in first_half_items.items()}
-
-df_col1 = pd.concat(col1_data, axis=1)
-df_col2 = pd.concat(col2_data, axis=1)
-
-# A4 size in inches (portrait: 8.27 x 11.69, landscape: 11.69 x 8.27)
-fig, axes = plt.subplots(1, 2, figsize=(11.69, 8.27), dpi=300)
-
-# Plot column 1 in first facet
-for name in df_col1.columns:
-    short_name = str(name)[66:120]
-    axes[0].plot(df_col1.index, df_col1[name], label=short_name, linewidth=1.5)
-axes[0].set_xlabel("freq (Hz)")
-axes[0].set_ylabel("Magnitude")
-axes[0].set_title("P2")
-axes[0].set_xlim(0, 10)
-axes[0].grid(True, which="both", ls="--", alpha=0.3)
-
-# Plot column 2 in second facet
-for name in df_col2.columns:
-    short_name = str(name)[66:120]
-    axes[1].plot(df_col2.index, df_col2[name], label=short_name, linewidth=1.5)
-axes[1].set_xlabel("freq (Hz)")
-axes[1].set_ylabel("Magnitude")
-axes[1].set_title("P3")
-axes[1].set_xlim(0, 10)
-axes[1].grid(True, which="both", ls="--", alpha=0.3)
-
-# Make y-axis limits equal
-y_min = min(axes[0].get_ylim()[0], axes[1].get_ylim()[0])
-y_max = max(axes[0].get_ylim()[1], axes[1].get_ylim()[1])
-axes[0].set_ylim(y_min, y_max)
-axes[1].set_ylim(y_min, y_max)
-
-# Add shared legend below the plots
-handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.02), 
-           ncol=4, frameon=False)
-
-plt.tight_layout()
-
-# Save as high-resolution image for direct printing
-# plt.savefig('plot_A4.png', dpi=300, bbox_inches='tight', facecolor='white')
-plt.show()
-# %%
-
-
-import numpy as np
-from scipy.signal import welch, detrend
-
-def dominant_wave(x, fs, band=(0.04, 2)):
-    """
-    x: signal (1D), fs: sampling rate (Hz), band: expected wave band in Hz
-    returns: f0 (Hz), amplitude (peak), phase (rad)
-    """
-    # 1) Preprocess
-    x = detrend(x, type='linear')
-
-    # 2) Welch PSD (tune nperseg for resolution; overlap smooths)
-    nperseg = int(8 * fs)  # ~8 s segments, adjust as needed
-    f, Pxx = welch(x, fs=fs, window='hann', nperseg=nperseg, noverlap=nperseg//2, nfft=4*nperseg)
-
-    # 3) Band-limit and find max
-    m = (f >= band[0]) & (f <= band[1])
-    if m.sum() < 3:
-        return np.nan, 0.0, np.nan
-    f_band, P_band = f[m], Pxx[m]
-    k = np.argmax(P_band)
-
-    # 4) Quadratic (parabolic) interpolation on log power for sub-bin frequency
-    # Use three points: k-1, k, k+1 (guard edges)
-    if 0 < k < len(P_band) - 1:
-        y0, y1, y2 = np.log(P_band[k-1] + 1e-20), np.log(P_band[k] + 1e-20), np.log(P_band[k+1] + 1e-20)
-        # Offset of peak from center bin (in bins)
-        delta = 0.5 * (y0 - y2) / (y0 - 2*y1 + y2)
-        df = f_band[1] - f_band[0]
-        f0 = f_band[k] + delta * df
-    else:
-        f0 = f_band[k]
-
-    # 5) Sinusoid least-squares fit at f0: x(t) ≈ a*sin(2πf0 t) + b*cos(2πf0 t)
-    t = np.arange(len(x)) / fs
-    s = np.sin(2*np.pi*f0*t)
-    c = np.cos(2*np.pi*f0*t)
-    A = np.column_stack([s, c])
-    coef, _, _, _ = np.linalg.lstsq(A, x, rcond=None)
-    a, b = coef
-    amplitude_peak = np.hypot(a, b)            # peak amplitude
-    phase = np.arctan2(b, a)                   # phase for cos-sin convention
-
-    return float(f0), float(amplitude_peak), float(phase)
-
-first_df = next(iter(processed_dfs.values()))
-x = first_df["eta_2"]
-x = x[6000:12000]
-fs = 250
-f0, amppeak, phase = dominant_wave(x, fs)
-
-def fft_peak_amplitude(x, window=None):
-    N = len(x)
-    if window is None:
-        window = np.ones(N)
-    xw = x * window
-    X = np.fft.rfft(xw)  # single-sided
-    k = np.argmax(np.abs(X[1:])) + 1  # avoid DC
-    # Coherent gain: amplitude reduction of the window for a bin-aligned tone
-    CG = window.sum() / N
-    # Single-sided: double non-DC/non-Nyquist bins
-    A_peak = (2.0 * np.abs(X[k])) / (N * CG)
-    f0_bin = k  # bin index; convert to Hz with fs*(k/N)
-    return A_peak, k
-
-a_peak, k = fft_peak_amplitude(x)
-
-
-
 
 # %% damping
 
@@ -647,7 +520,7 @@ ax = sns.scatterplot(
 
 
 
-# %%
+# %% damping wide
 
 
 wide = damping_pivot_wide
