@@ -12,6 +12,7 @@ from wavescripts.data_loader import update_processed_metadata
 from scipy.signal import find_peaks
 from scipy.signal import welch
 from scipy.optimize import brentq
+from typing import Dict, List, Tuple
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
