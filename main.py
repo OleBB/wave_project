@@ -246,7 +246,7 @@ freqplotvariables = {
     "overordnet": {
         "chooseAll": False, 
         "chooseFirst": False,
-        "chooseFirstUnique": True,
+        "chooseFirstUnique": False,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -285,20 +285,25 @@ freqplotvariables = {
 from wavescripts.filters import filter_for_frequencyspectrum
 filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 
-# %% Facet plotter advanced
+# %% Facet flex 
 from wavescripts.plotter import plot_frequency_spectrum
 fig, axes = plot_frequency_spectrum(
     fft_dictionary,
     filtrert_frequencies,
-    freqplotvariables
+    freqplotvariables,
+    data_type="fft"
+)
+# %% PSD 
+fig, axes = plot_frequency_spectrum(
+    psd_dictionary,  # Your PSD data dictionary
+    filtrert_frequencies, 
+    freqplotvariables,
+    data_type="psd"
 )
 
 # %% forsøk på facet plot
 from wavescripts.plotter import plot_facet_frequencyspectrum
 fig, axes = plot_facet_frequencyspectrum(fft_dictionary, filtrert_frequencies, freqplotvariables)
-# %%
-from wavescripts.plotter import plot_facet_condition_frequencyspectrum
-fig_fft, axes_fft = plot_facet_condition_frequencyspectrum(fft_dictionary, filtrert_frequencies, freqplotvariables)
 
 # %% 
 from wavescripts.plotter import plot_frequencyspectrum
