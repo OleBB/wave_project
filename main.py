@@ -9,12 +9,16 @@ Created on Fri Dec 19 10:21:49 2025
 import os
 from pathlib import Path
 import pandas as pd
-file_dir = Path(__file__).resolve().parent
-os.chdir(file_dir) # Make the script always run from the folder where THIS file lives
+import numpy as np
+import matplotlib.pyplot as plt
+
 from wavescripts.data_loader import load_or_update
 from wavescripts.filters import filter_chosen_files
 from wavescripts.processor import process_selected_data
 from wavescripts.processor2nd import process_processed_data
+
+file_dir = Path(__file__).resolve().parent
+os.chdir(file_dir) # Make the script always run from the folder where THIS file lives
 
 """
 Overordnet: Enhver mappe er en egen kjøring, som deler samme vanndyp og probestilltilstand.
@@ -194,7 +198,7 @@ facet_plot_freq_vs_mean(damping_filtrert, dampingplotvariables)
 from wavescripts.plotter import facet_plot_amp_vs_mean
 facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
 
-# %% grouped
+# %% slår alle i hop
 chooseAll = False
 dampingplotvariables = {
     "overordnet": {
@@ -232,16 +236,15 @@ dampingplotvariables = {
 }
 
 
-"""Slå alle i hop"""
 from wavescripts.filters import damping_all_amplitude_grouper
 damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
 
 # damping_all_amplitudes_filtrert = filter_for_damping(damping_groupedallruns_df, dampingplotvariables["filters"])
-
+# %% plotter damping_groupedallruns
 from wavescripts.plotter import facet_amp
 facet_amp(damping_groupedallruns_df, dampingplotvariables)
 
-# %% FFT-SPEKTRUM filter
+# %% FFT-SPEKTRUM filter initiert
 freqplotvariables = {
     "overordnet": {
         "chooseAll": False, 
@@ -286,7 +289,8 @@ freqplotvariables = {
 from wavescripts.filters import filter_for_frequencyspectrum
 filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 
-# %% Facet flex 
+
+# %% plotter fft facet
 from wavescripts.plotter import plot_frequency_spectrum
 fig, axes = plot_frequency_spectrum(
     fft_dictionary,
@@ -294,7 +298,7 @@ fig, axes = plot_frequency_spectrum(
     freqplotvariables,
     data_type="fft"
 )
-# %% PSD 
+# %% plotter PSD facet
 fig, axes = plot_frequency_spectrum(
     psd_dictionary,  # Your PSD data dictionary
     filtrert_frequencies, 
@@ -303,10 +307,7 @@ fig, axes = plot_frequency_spectrum(
 )
 
 
-import matplotlib.pyplot as plt
-
 # %%
-import numpy as np
 
 def compute_amplitude_by_band(psd_dictionary, freq_bands=None):
     """Compute amplitude for specific frequency bands from PSD"""
