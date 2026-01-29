@@ -114,7 +114,7 @@ if all_meta_sel:
 
 
 
-# %%
+# %% fysisk plott
 chooseAll = False
 amplitudeplotvariables = {
     "filters": {
@@ -145,15 +145,13 @@ amplitudeplotvariables = {
 """unikt filter for å se på amplitudene sjæl"""
 from wavescripts.filters import filter_for_amplitude_plot
 m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables, chooseAll)
-# %%
-"""Plot_all_probes plotter alt den tar inn"""
+# %% Plot_all_probes plotter alt den tar inn
 from wavescripts.plotter import plot_all_probes
 plot_all_probes(m_filtrert, amplitudeplotvariables)
 
 print("======== Amplituder P1234 PLOTTA ===========")
 
-#%%
-"""Slå dei i hop"""
+#%% grouper - slå i hop
 from wavescripts.wavestudyer import damping_grouper
 damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
 # %%
@@ -757,10 +755,7 @@ row = wide.loc[mask]
 wide["delta_mean_P3P2_Windyyyy"] = (
     wide["mean_P3P2_lowest"] - wide["mean_P3P2_full"]
 )
-# %%
-
-import seaborn as sns
-import matplotlib as plt
+# %% Kult plot med errorbar
 
 # stats has columns: WaveAmplitudeInput [Volt], PanelConditionGrouped, WindCondition, mean_P3P2, std_P3P2, ...
 sns.lineplot(
@@ -827,7 +822,7 @@ g.set_titles(col_template='{col_name}')
 
 
 
-# %% damping comb - meaningless gpt plot
+# %% damping comb - under arbeid gpt plot
 
 from wavescripts.filters import filter_dataframe
 m_damping_filtrert = filter_dataframe(
@@ -841,35 +836,6 @@ plot_damping_combined(
     m_damping_filtrert,
     amplitudeplotvariables=amplitudeplotvariables
 )
-
-# %%
-
-
-import matplotlib.pyplot as plt
-# Extract mean values and reset index
-mean_p3p2 = damping_comparison_df#['mean_P3P2'].reset_index()
-# %%
-
-# Simple plot
-plt.figure(figsize=(10, 6))
-for condition in ['no', 'lowest', 'full']:
-    subset = mean_p3p2[mean_p3p2['WindCondition'] == condition]
-    plt.scatter(subset['kL'], subset['mean_P3P2'], label=condition)
-
-plt.xlabel('kL (wavenumber x geometry length')
-plt.ylabel('Mean P3/P2')
-plt.legend()
-plt.grid()
-plt.minorticks_on() 
-plt.show()
-
-
-
-
-
-
-
-
 
 
 
