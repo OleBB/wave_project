@@ -55,6 +55,88 @@ def _apply_legend(ax, freqplotvar):
     config = LEGEND_CONFIGS.get(legend_pos)
     if config is not None:
         ax.legend(**config)
+        
+def _apply_legend_3(ax, freqplotvar: dict):
+    """
+    Apply legend to axis based on configuration.
+    
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axis to apply legend to
+    freqplotvar : dict
+        Configuration dictionary with plotting.legend key
+    """
+    legend_position = freqplotvar.get("plotting", {}).get("legend", None)
+    
+    if legend_position is None:
+        return
+    
+    handles, labels = ax.get_legend_handles_labels()
+    
+    if not handles:
+        return
+    
+    # Common legend properties for better readability
+    legend_props = {
+        'framealpha': 0.9,
+        'fontsize': 8,  # Smaller font
+        'labelspacing': 0.3,  # Tighter spacing between entries
+        'handlelength': 1.5,  # Shorter line samples
+        'handletextpad': 0.5,  # Less space between line and text
+    }
+    
+    if legend_position == "inside":
+        ax.legend(loc='best', **legend_props)
+    elif legend_position == "outside_right":
+        ax.legend(
+            bbox_to_anchor=(1.02, 1),
+            loc='upper left',
+            **legend_props
+        )
+    elif legend_position == "below":
+        # Multi-column layout for horizontal space
+        ncol = min(len(labels), 5)  # Up to 5 columns
+        ax.legend(
+            bbox_to_anchor=(0.5, -0.2),
+            loc='upper center',
+            ncol=ncol,
+            **legend_props
+        )
+    elif legend_position == "above":
+        ncol = min(len(labels), 5)
+        ax.legend(
+            bbox_to_anchor=(0.5, 1.05),
+            loc='lower center',
+            ncol=ncol,
+            **legend_props
+        )
+
+def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
+    """
+    Fast selection of top k indices using partial sorting.
+    
+    Parameters
+    ----------
+    values : np.ndarray
+        Array of numeric values
+    k : int
+        Number of top values to select
+    
+    Returns
+    -------
+    np.ndarray
+        Indices of top k values, sorted in descending order
+    """
+    if k is None or k <= 0 or k >= values.size:
+        return np.arange(values.size)
+    
+    # Use argpartition for O(n) selection
+    part = np.argpartition(values, -k)[-k:]
+    
+    # Sort the selected indices by their values (descending)
+    return part[np.argsort(values[part])[::-1]]
+
 
 
 # ------------------------------------------------------------
@@ -67,6 +149,36 @@ def _make_label(row):
     freq  = row.get("WaveFrequencyInput [Hz]", "")
 
     return f"{panel}panel-{wind}wind-amp{amp}-freq{freq}"
+
+#Claude
+def _make_label_2(row: pd.Series) -> str:
+    """
+    Create a descriptive label from a metadata row.
+    
+    Parameters
+    ----------
+    row : pd.Series
+        Row from metadata DataFrame
+    
+    Returns
+    -------
+    str
+        Formatted label string
+    """
+    parts = []
+    
+    if "WindCondition" in row:
+        parts.append(f"W:{row['WindCondition']}")
+    
+    if "PanelCondition" in row:
+        parts.append(f"P:{row['PanelCondition']}")
+    
+    # Add other relevant fields as needed
+    # if "WaveAmplitudeInput [Volt]" in row:
+    #     parts.append(f"A:{row['WaveAmplitudeInput [Volt]']}")
+    
+    return "_".join(parts) if parts else "Unknown"
+
 
 # ------------------------------------------------------------
 # Core plot function (single dataset)
@@ -1176,23 +1288,8 @@ def plot_facet_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame, freqplot
     return (fig, axes) if facet else (fig, axes[0])
 
 
-# def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
-#     # Faster than pandas nlargest for numeric arrays; returns indices into values
-#     if k is None or k <= 0 or k >= values.size:
-#         return np.arange(values.size)
-#     # argpartition gives k largest in O(n); then sort those k if you need ordered peaks
-#     part = np.argpartition(values, -k)[-k:]
-#     # Sort descending for nicer visuals
-#     return part[np.argsort(values[part])[::-1]]
 
 
-
-
-def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
-    if k is None or k <= 0 or k >= values.size:
-        return np.arange(values.size)
-    part = np.argpartition(values, -k)[-k:]
-    return part[np.argsort(values[part])[::-1]]
 
 def plot_facet_condition_frequencyspectrum(
     fft_dict: dict, meta_df: pd.DataFrame, freqplotvar: dict
@@ -1313,7 +1410,7 @@ def plot_facet_condition_frequencyspectrum(
     fig.tight_layout()
     return fig, axes
 
-# %%
+# %% fleksibel fft-plotter
 def plot_frequency_spectrum(
     fft_dict: dict,
     meta_df: pd.DataFrame,
@@ -1509,7 +1606,7 @@ def plot_frequency_spectrum(
             ax.set_title(facet_label, fontsize=12, fontweight='bold')
         
         # Y-axis
-        ax.set_ylabel('FFT Magnitude', fontsize=11)
+        ax.set_ylabel('FFT amplitude', fontsize=11)
         if log_scale:
             ax.set_yscale('log')
         
@@ -1531,7 +1628,7 @@ def plot_frequency_spectrum(
             ax.grid(which='minor', linestyle='-.', alpha=0.3)
         
         # Legend
-        _apply_legend(ax, freqplotvar)
+        _apply_legend_3(ax, freqplotvar)
     
     # ===== FINAL TOUCHES =====
     
@@ -1546,104 +1643,9 @@ def plot_frequency_spectrum(
     return fig, axes
 
 
-def _top_k_indices_2(values: np.ndarray, k: int) -> np.ndarray:
-    """
-    Fast selection of top k indices using partial sorting.
-    
-    Parameters
-    ----------
-    values : np.ndarray
-        Array of numeric values
-    k : int
-        Number of top values to select
-    
-    Returns
-    -------
-    np.ndarray
-        Indices of top k values, sorted in descending order
-    """
-    if k is None or k <= 0 or k >= values.size:
-        return np.arange(values.size)
-    
-    # Use argpartition for O(n) selection
-    part = np.argpartition(values, -k)[-k:]
-    
-    # Sort the selected indices by their values (descending)
-    return part[np.argsort(values[part])[::-1]]
 
 
-def _apply_legend_2(ax, freqplotvar: dict):
-    """
-    Apply legend to axis based on configuration.
-    
-    Parameters
-    ----------
-    ax : matplotlib.axes.Axes
-        Axis to apply legend to
-    freqplotvar : dict
-        Configuration dictionary with plotting.legend key
-    """
-    legend_position = freqplotvar.get("plotting", {}).get("legend", None)
-    
-    if legend_position is None:
-        return
-    
-    handles, labels = ax.get_legend_handles_labels()
-    
-    if not handles:
-        return
-    
-    if legend_position == "inside":
-        ax.legend(loc='best', framealpha=0.9)
-    elif legend_position == "outside_right":
-        ax.legend(
-            bbox_to_anchor=(1.05, 1),
-            loc='upper left',
-            framealpha=0.9
-        )
-    elif legend_position == "below":
-        ax.legend(
-            bbox_to_anchor=(0.5, -0.15),
-            loc='upper center',
-            ncol=min(len(labels), 4),
-            framealpha=0.9
-        )
-    elif legend_position == "above":
-        ax.legend(
-            bbox_to_anchor=(0.5, 1.15),
-            loc='lower center',
-            ncol=min(len(labels), 4),
-            framealpha=0.9
-        )
 
-
-def _make_label(row: pd.Series) -> str:
-    """
-    Create a descriptive label from a metadata row.
-    
-    Parameters
-    ----------
-    row : pd.Series
-        Row from metadata DataFrame
-    
-    Returns
-    -------
-    str
-        Formatted label string
-    """
-    parts = []
-    
-    if "WindCondition" in row:
-        parts.append(f"W:{row['WindCondition']}")
-    
-    if "PanelCondition" in row:
-        parts.append(f"P:{row['PanelCondition']}")
-    
-    # Add other relevant fields as needed
-    # if "WaveAmplitudeInput [Volt]" in row:
-    #     parts.append(f"A:{row['WaveAmplitudeInput [Volt]']}")
-    
-    return "_".join(parts) if parts else "Unknown"
 
 
 

@@ -265,15 +265,19 @@ freqplotvariables = {
         "win": 11 #Ingen av disse er egt i bruk
     },
     "plotting": {
+        "show_plot": True,
         "figsize": None,
         "separate":False,
         "facet_by": "wind", #wind, panel, probe 
-        "overlay": False,
-        "annotate": True, 
-        "legend": "None", # inside, below, above #med mer!
+        "overlay": False, #
+        "annotate": False, #
+        "xlim": (0,5),
+        "legend": None, #"outside_right", # inside, below, above #med mer!
         "logaritmic": False, 
-        "peaks": 7, 
-        "probes": [2,3]#,
+        "peaks": 3, 
+        "probes": [2]
+        
+        
     }   
 }
 
