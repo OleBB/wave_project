@@ -1170,7 +1170,7 @@ def plot_frequency_spectrum(
     Parameters
     ----------
     fft_dict : dict
-        Dictionary mapping file paths to FFT DataFrames
+        Dictionary mapping file paths to FFT/PSD DataFrames
     meta_df : pd.DataFrame
         Metadata with columns: path, WindCondition, PanelCondition, etc.
     freqplotvar : dict
@@ -1201,7 +1201,7 @@ def plot_frequency_spectrum(
     PANEL_STYLES = {
         "no": "solid",
         "full": "dashed",
-        "reverse": "solid"
+        "reverse": "dashdot"
     }
     
     MARKER_STYLES = {
@@ -1209,7 +1209,8 @@ def plot_frequency_spectrum(
         "no": "<",
         "lowest": ">"
     }
-    
+    #TODO: vurdere å markere ulike prober.. 
+    #TODO: videre, fikse legend til å være mer beskrivende
     # ===== EXTRACT CONFIGURATION =====
     plotting = freqplotvar.get("plotting", {})
     
@@ -1220,7 +1221,7 @@ def plot_frequency_spectrum(
     
     n_peaks = plotting.get("peaks", None)
     log_scale = plotting.get("logaritmic", False)
-    max_points = plotting.get("max_points", 100)
+    max_points = plotting.get("max_points", 120)
     legend_position = plotting.get("legend", "outside_right")
     show_grid = plotting.get("grid", True)
     show_plot = plotting.get("show", True)
@@ -1361,7 +1362,7 @@ def plot_frequency_spectrum(
         
         # Title
         if facet_label:
-            ax.set_title(facet_label, fontsize=fontsize, fontweight='normal')
+            ax.set_title("Frequencies [Hz]", fontsize=fontsize, fontweight='normal')
         
         # Y-axis
         ax.set_ylabel(ylabel, fontsize=fontsize)

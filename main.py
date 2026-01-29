@@ -246,7 +246,7 @@ freqplotvariables = {
     "overordnet": {
         "chooseAll": False, 
         "chooseFirst": False,
-        "chooseFirstUnique": False,
+        "chooseFirstUnique": True,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -255,7 +255,7 @@ freqplotvariables = {
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
         "TunnelCondition": None,
         "Mooring": None,
-        "PanelCondition": ["no", "full", "reverse"], # no, full, reverse, 
+        "PanelCondition": "reverse", #["no", "full", "reverse"], # no, full, reverse,  #kan grupperes i filters.
         
     },
     "processing": {
@@ -270,14 +270,15 @@ freqplotvariables = {
         "figsize": None, #(10,10),
         "linewidth": 0.7,
         "separate":False,
-        "facet_by": "wind", #wind, panel, probe 
+        "facet_by": None, #wind", #wind, panel, probe 
         "overlay": False, #
         "annotate": False, #
-        "xlim": (0,5),
+        "max_points": 120, #spørs på oppløsning av fft'en.
+        "xlim": (0,5.2), #4x 1.3
         "legend": "inside", #"outside_right", # inside, below, above #med mer!
         "logaritmic": False, 
         "peaks": 3, 
-        "probes": [2]
+        "probes": [2,3]
     }   
 }
 #lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.
@@ -329,22 +330,22 @@ first_half_items = dict(list(psd_dictionary.items())[:halfway])
 # %%
 
 
-# first_cols = {k: d.iloc[:, 2] for k, d in first_half_items.items()}
-# df_plot = pd.concat(first_cols, axis=1)
+first_cols = {k: d.iloc[:, 2] for k, d in first_half_items.items()}
+df_plot = pd.concat(first_cols, axis=1)
 
-# fig, ax = plt.subplots(figsize=(7, 4))
+fig, ax = plt.subplots(figsize=(7, 4))
 
-# # Iterate columns for full control
-# for name in df_plot.columns:
-#     ax.plot(df_plot.index, df_plot[name], label=str(name), linewidth=1.5, marker=None)
+# Iterate columns for full control
+for name in df_plot.columns:
+    ax.plot(df_plot.index, df_plot[name], label=str(name), linewidth=1.5, marker=None)
 
-# ax.set_xlabel("freq (Hz)")
-# # ax.set_ylabel("PSD")
-# ax.set_xlim(0, 10)
-# ax.grid(True, which="both", ls="--", alpha=0.3)
-# # ax.legend(title="Series", ncol=2)  # or remove if not needed
-# plt.tight_layout()
-# plt.show()
+ax.set_xlabel("freq (Hz)")
+# ax.set_ylabel("PSD")
+ax.set_xlim(0, 10)
+ax.grid(True, which="both", ls="--", alpha=0.3)
+# ax.legend(title="Series", ncol=2)  # or remove if not needed
+plt.tight_layout()
+plt.show()
 
 
 # %% test av psd dict
