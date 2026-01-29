@@ -246,6 +246,7 @@ freqplotvariables = {
     "overordnet": {
         "chooseAll": False, 
         "chooseFirst": False,
+        "chooseFirstUnique": True,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -275,7 +276,8 @@ freqplotvariables = {
         "legend": None, #"outside_right", # inside, below, above #med mer!
         "logaritmic": False, 
         "peaks": 3, 
-        "probes": [2]
+        "probes": [2, 3],
+        "runs": 1
         
         
     }   
