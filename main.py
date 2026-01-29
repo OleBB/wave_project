@@ -252,10 +252,10 @@ damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
 from wavescripts.plotter import facet_amp
 facet_amp(damping_groupedallruns_df, dampingplotvariables)
 
-# %% FFT-SPEKTRUM
+# %% fFT-SPEKTRUM filter
 freqplotvariables = {
     "overordnet": {
-        "chooseAll": True, 
+        "chooseAll": False, 
         "chooseFirst": False,
     }, 
     "filters": {
@@ -265,7 +265,7 @@ freqplotvariables = {
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
         "TunnelCondition": None,
         #"Mooring": None,
-        "PanelCondition": ["full", "reverse"], # no, full, reverse, 
+        "PanelCondition": ["no", "full", "reverse"], # no, full, reverse, 
         
     },
     "processing": {
@@ -278,7 +278,7 @@ freqplotvariables = {
     "plotting": {
         "figsize": None,
         "separate":False,
-        "facet": True,
+        "facet_by": "panel", #wind, panel, probe 
         "overlay": False,
         "annotate": True, 
         "legend": "outside", # inside, below, above #med mer!
@@ -291,57 +291,23 @@ freqplotvariables = {
 from wavescripts.filters import filter_for_frequencyspectrum
 filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 
-# %%
-from wavescripts.plotter import plot_frequencyspectrum
-plot_frequencyspectrum(fft_dictionary,filtrert_frequencies, freqplotvariables)
-
-from wavescripts.plotter import plot_powerspectraldensity
-plot_powerspectraldensity(psd_dictionary, filtrert_frequencies, freqplotvariables)
-
 
 # %% forsøk på facet plot
-freqplotvariables = {
-    "overordnet": {
-        "chooseAll": True, 
-        "chooseFirst": False,
-    }, 
-    "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
-        "WaveFrequencyInput [Hz]": [1.3],# 0.65], #bruk et tall  
-        "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
-        "TunnelCondition": None,
-        #"Mooring": None,
-        "PanelCondition": ["full", "reverse"], # no, full, reverse, 
-        
-    },
-    "processing": {
-        "chosenprobe": 1, #[1,2,3,4]
-        "rangestart": None,
-        "rangeend": None,
-        "data_cols": ["Probe 2"],
-        "win": 11 #Ingen av disse er egt i bruk
-    },
-    "plotting": {
-        "figsize": None,
-        "separate":False,
-        "facet": "probe", #"probe"
-        "overlay": None,
-        "annotate": True, 
-        "legend": "outside", # inside, below, above #med mer!
-        "logaritmic": False, 
-        "peaks": 7, 
-        "probes": [1,2,3,4],
-    }   
-}
 
 from wavescripts.plotter import plot_facet_frequencyspectrum
 from wavescripts.plotter import plot_facet_condition_frequencyspectrum
 
 # fig, axes = plot_facet_frequencyspectrum(fft_dictionary, meta_sel, freqplotvariables)
-fig, axes = plot_facet_condition_frequencyspectrum(fft_dictionary, meta_sel, freqplotvariables)
+fig, axes = plot_facet_condition_frequencyspectrum(fft_dictionary, filtrert_frequencies, freqplotvariables)
 
 
+
+# %% 
+from wavescripts.plotter import plot_frequencyspectrum
+plot_frequencyspectrum(fft_dictionary,filtrert_frequencies, freqplotvariables)
+
+from wavescripts.plotter import plot_powerspectraldensity
+plot_powerspectraldensity(psd_dictionary, filtrert_frequencies, freqplotvariables)
 
 # %%
 

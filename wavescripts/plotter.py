@@ -264,7 +264,7 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
     plt.tight_layout()
     plt.show()
 
-#%% ##
+#%% ## Ramp detection
 
 
 def plot_ramp_detection(df, meta_sel, data_col,
@@ -331,7 +331,7 @@ def plot_ramp_detection(df, meta_sel, data_col,
     plt.tight_layout()
     plt.show()
 
-#%%
+#%% physical probe plot
 def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
 
     panel_styles = {
@@ -397,7 +397,7 @@ def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
     ax.set_xticks(probelocations)
     ax.set_xticklabels(xlabels)
     plt.show()
-# %%
+# %% Facet amp og freq
 
 
 def facet_plot_freq_vs_mean(df, ampvar):
@@ -462,7 +462,7 @@ def facet_plot_amp_vs_mean(df, ampvar):
     plt.tight_layout()
     plt.show()
     
-# %%
+
 
 def facet_amp(df, ampvar):
     # df should be your aggregated stats (mean_P3P2, std_P3P2)
@@ -496,7 +496,7 @@ def facet_amp(df, ampvar):
 
 
 
-# %%
+# %% Damping
 def plot_damping_2(df, plotvariables):
     xvar="WaveFrequencyInput [Hz]"
     
@@ -550,7 +550,6 @@ def plot_damping_2(df, plotvariables):
     
 
 
-# %%
 
 def plot_damping_combined_2(
     df,
@@ -786,8 +785,8 @@ def plot_damping_combined(
     
     
 
-# %%
-import sys
+# %% Frequency plots 
+
 def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
     panel_styles = {
         "no": "solid",
@@ -890,7 +889,6 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
     # plt.tight_layout()
     plt.show()
 
-# %%
 
 import matplotlib.ticker as ticker
 def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
@@ -996,7 +994,7 @@ def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:
     _apply_legend(ax, freqplotvar)
     # plt.tight_layout()
     plt.show()
-# %%
+
 
 def plot_facet_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame, freqplotvar: dict) -> tuple:
     
@@ -1132,103 +1130,146 @@ def plot_facet_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame, freqplot
     
     return (fig, axes) if facet else (fig, axes[0])
 
-# %%
 
-def plot_facet_condition_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame, freqplotvar: dict) -> tuple:
-    
+def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
+    # Faster than pandas nlargest for numeric arrays; returns indices into values
+    if k is None or k <= 0 or k >= values.size:
+        return np.arange(values.size)
+    # argpartition gives k largest in O(n); then sort those k if you need ordered peaks
+    part = np.argpartition(values, -k)[-k:]
+    # Sort descending for nicer visuals
+    return part[np.argsort(values[part])[::-1]]
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib import ticker as mticker  # ensure this import
+
+def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
+    if k is None or k <= 0 or k >= values.size:
+        return np.arange(values.size)
+    part = np.argpartition(values, -k)[-k:]
+    return part[np.argsort(values[part])[::-1]]
+
+def plot_facet_condition_frequencyspectrum(
+    fft_dict: dict, meta_df: pd.DataFrame, freqplotvar: dict
+) -> tuple:
     plotting = freqplotvar.get("plotting", {})
-    facet_by = plotting.get("facet", None)  # None, "probe", "wind", "panel"
-    probes = plotting.get("probes",1)
-    
+    facet_by = plotting.get("facet_by", None)  # None, 'probe', 'wind', 'panel'
+    probes = plotting.get("probes", [1,2,3,4])  # must be iterable
     n_peaks = plotting.get("peaks", None)
+    max_points = plotting.get("max_points", 100)  # your 'stopp'
 
-    
-    # Determine facet structure
+    # Robust base_freq extraction
+    base_freq_val = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
+    base_freq = None
+    if isinstance(base_freq_val, (list, tuple, np.ndarray, pd.Series)):
+        base_freq = float(base_freq_val[0]) if len(base_freq_val) > 0 else None
+    elif base_freq_val is not None:
+        base_freq = float(base_freq_val)
+    # base_freq must be positive to use MultipleLocator
+    use_locators = base_freq is not None and base_freq > 0
+
+    # Decide facets
     if facet_by == "probe":
-        facet_groups = probes
-        facet_labels = [f"Probe {p}" for p in probes]
+        facet_groups = list(probes)
+        facet_labels = [f"Probe {p}" for p in facet_groups]
     elif facet_by == "wind":
-        facet_groups = meta_df["WindCondition"].unique()
+        facet_groups = list(pd.unique(meta_df["WindCondition"]))
         facet_labels = [f"Wind: {w}" for w in facet_groups]
     elif facet_by == "panel":
-        facet_groups = meta_df["PanelCondition"].unique()
+        facet_groups = list(pd.unique(meta_df["PanelCondition"]))
         facet_labels = [f"Panel: {p}" for p in facet_groups]
     else:
-        # No faceting - single plot
         facet_groups = [None]
         facet_labels = [""]
-    
-    # Create subplots
+
     n_facets = len(facet_groups)
-    fig, axes = plt.subplots(n_facets, 1, figsize=(12, 4*n_facets), sharex=True)
+    print(f"[DEBUG] facet_by={facet_by}, n_facets={n_facets}, facet_groups={facet_groups}")
+
+    fig, axes = plt.subplots(n_facets, 1, figsize=(12, 4 * n_facets), sharex=True, dpi=120)
     if n_facets == 1:
         axes = [axes]
-    
-    # Plot into each facet
-    for facet_idx, (group, label) in enumerate(zip(facet_groups, facet_labels)):
+
+    for facet_idx, (group, facet_label) in enumerate(zip(facet_groups, facet_labels)):
         ax = axes[facet_idx]
-        
+
         # Filter data for this facet
         if facet_by == "wind":
             subset = meta_df[meta_df["WindCondition"] == group]
         elif facet_by == "panel":
             subset = meta_df[meta_df["PanelCondition"] == group]
         else:
-            subset = meta_df  # No filtering
-        
-        # Plot loop for this facet
-        for idx, row in subset.iterrows():
-            # ===== PLOTTING LOOP =====
-            for idx, row in meta_df.iterrows():
-                path = row["path"]
-                
-                if path not in fft_dict:
+            subset = meta_df
+
+        print(f"[DEBUG] facet {facet_idx}: label={facet_label}, subset_rows={len(subset)}")
+
+        # Plot rows
+        any_plotted = False
+        for _, row in subset.iterrows():
+            path = row["path"]
+            if path not in fft_dict:
+                continue
+            df_fft = fft_dict[path]
+
+            windcond = row.get("WindCondition")
+            colla = WIND_COLORS.get(windcond, "C0")
+            panelcond = row.get("PanelCondition")
+            linjestil = PANEL_STYLES.get(panelcond, "solid")
+            peak_marker = MARKER_STYLES.get(windcond, ".")
+
+            if facet_by == "probe":
+                probe_num = group
+                col = f"FFT {probe_num}"
+                if col not in df_fft:
                     continue
-                
-                df_fft = fft_dict[path]
-                
-                # Styling
-                windcond = row["WindCondition"]
-                colla = WIND_COLORS.get(windcond, "black")
-                
-                panelcond = row["PanelCondition"]
-                linjestil = PANEL_STYLES.get(panelcond, "solid")
-                peak_marker = MARKER_STYLES.get(windcond, ".")
-                
-                label = _make_label(row)
-                stopp = 100
-                
-                # Plot each probe
-                for probe_idx, probe_num in enumerate(probes):
-                    ax = axes[probe_idx]  # Get correct subplot
-                    
-                    # selected_probe = f"Probe {probe_num}"
-                    y = df_fft[f"FFT {probe_num}"].head(stopp).dropna()
-                    x = y.index
-                    
-                    top_indices = y.nlargest(n_peaks).index
-                    top_values = y[top_indices]
-                    
-                    
-                    # Plot line
-                    ax.plot(x, y, 
-                            linewidth=2, 
-                            label=label, 
-                            linestyle=linjestil,
-                            color=colla)
-                    
-                    # Plot peaks
-                    ax.scatter(top_indices, top_values, 
-                              color=colla, s=100, zorder=5, 
-                              marker=peak_marker, edgecolors='black', linewidths=0.7)
-            
-            pass
-        
-        ax.set_title(label, fontweight='bold')
-        _apply_legend(ax, freqplotvar)
-    
-    plt.tight_layout()
+                y = df_fft[col].dropna().iloc[:max_points]
+                if y.empty:
+                    continue
+                x = y.index.values
+                ax.plot(x, y.values, linewidth=1.5, linestyle=linjestil, color=colla, antialiased=False)
+                if n_peaks and n_peaks > 0:
+                    vals = y.values
+                    top_idx_local = _top_k_indices(vals, n_peaks)
+                    ax.scatter(x[top_idx_local], vals[top_idx_local], color=colla, s=36, zorder=5,
+                               marker=peak_marker, edgecolors='none')
+                any_plotted = True
+            else:
+                # Plot all requested probes on this facet
+                for probe_num in probes:
+                    col = f"FFT {probe_num}"
+                    if col not in df_fft:
+                        continue
+                    y = df_fft[col].dropna().iloc[:max_points]
+                    if y.empty:
+                        continue
+                    x = y.index.values
+                    ax.plot(x, y.values, linewidth=1.0, linestyle=linjestil, color=colla, antialiased=False)
+                    if n_peaks and n_peaks > 0:
+                        vals = y.values
+                        top_idx_local = _top_k_indices(vals, n_peaks)
+                        ax.scatter(x[top_idx_local], vals[top_idx_local], color=colla, s=24, zorder=5,
+                                   marker=peak_marker, edgecolors='none')
+                    any_plotted = True
+
+        ax.set_title(facet_label, fontweight='bold')
+
+        # Keep locator logic simple for testing; add MultipleLocator only if valid
+        ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
+        ax.yaxis.set_major_locator(mticker.MaxNLocator(5))
+        if use_locators:
+            ax.xaxis.set_minor_locator(mticker.MultipleLocator(base_freq))
+            ax.xaxis.set_major_locator(mticker.MultipleLocator(2 * base_freq))
+
+        # Temporarily disable legend/grid while debugging
+        # _apply_legend(ax, freqplotvar)
+        # ax.grid()
+
+        print(f"[DEBUG] facet {facet_idx}: any_plotted={any_plotted}")
+
+    fig.tight_layout()
     return fig, axes
+
 
 
 
