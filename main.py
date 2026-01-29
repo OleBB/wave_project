@@ -267,7 +267,7 @@ freqplotvariables = {
     },
     "plotting": {
         "show_plot": True,
-        "figsize": (10,10),
+        "figsize": None, #(10,10),
         "linewidth": 0.7,
         "separate":False,
         "facet_by": "wind", #wind, panel, probe 
@@ -277,14 +277,15 @@ freqplotvariables = {
         "legend": "inside", #"outside_right", # inside, below, above #med mer!
         "logaritmic": False, 
         "peaks": 3, 
-        "probes": [2, 3]
+        "probes": [2]
     }   
 }
+#lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.
 
 from wavescripts.filters import filter_for_frequencyspectrum
 filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 
-# %% cLAUdE - gi fn nytt navn seinar
+# %% Facet plotter advanced
 from wavescripts.plotter import plot_frequency_spectrum
 fig, axes = plot_frequency_spectrum(
     fft_dictionary,
