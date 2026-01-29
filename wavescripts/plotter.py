@@ -8,10 +8,9 @@ Created on Thu Nov 13 16:27:38 2025
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import matplotlib.ticker as ticker
 from matplotlib.widgets import Slider, CheckButtons
 from typing import Mapping, Any, Optional, Sequence
 
@@ -680,29 +679,136 @@ def plot_damping_combined_2(
     plt.tight_layout()
     plt.show()
 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import ticker as mticker
+from typing import Any
 
-
-
+# Example color map (adjust to your project)
+WIND_COLORS = {
+    "no": "C0",
+    "lowest": "C1",
+    "full": "C2",
+}
 
 def plot_damping_combined(
-    df,
+    df: pd.DataFrame,
     *,
-    filters: Mapping[str, Any],
-    plotting: Mapping[str, Any],  # kept for forward compatibility
-    x_col: str = "kL",
-    y_col: str = "mean_P3P2",
-    err_col: str = "std_P3P2",
-    hue_col: str = "WindCondition",
-    figsize: Optional[tuple] = None,
-    separate: bool = False,
-    overlay: bool = False,
-    annotate: bool = False,
+    amplitudeplotvariables: dict[str, Any],
+) -> None:
+    """
+    Plot y_col vs x_col with optional error bars, colored by hue_col.
+    Column names are taken from df (preferred) or defaulted if missing.
+    Plot options (figsize, separate, overlay, annotate) are read from amplitudeplotvariables['plotting'].
+    """
+
+    # 1) Resolve column names from the DataFrame (fall back to defaults if absent)
+    default_x = "kL"
+    default_y = "mean_P3P2"
+    default_err = "std_P3P2"
+    default_hue = "WindCondition"
+
+    x_col = default_x if default_x in df.columns else df.columns[0]
+    y_col = default_y if default_y in df.columns else df.columns[1] if len(df.columns) > 1 else default_y
+    err_col = default_err if default_err in df.columns else None
+    hue_col = default_hue if default_hue in df.columns else None
+
+    # 2) Resolve plotting options from config
+    plotting = amplitudeplotvariables.get("plotting", {})
+    figsize = plotting.get("figsize", (10, 6))
+    separate = bool(plotting.get("separate", False))
+    overlay = bool(plotting.get("overlay", False))
+    annotate = bool(plotting.get("annotate", False))
+
+    # 3) Sanity checks
+    missing = [c for c in [x_col, y_col] if c not in df.columns]
+    if missing:
+        raise KeyError(f"Required column(s) missing in df: {missing}")
+    if err_col is not None and err_col not in df.columns:
+        err_col = None  # silently disable error bars if column not present
+
+    # 4) Prepare figure/axes
+    if separate and hue_col and hue_col in df.columns:
+        groups = list(df[hue_col].dropna().unique())
+        n = len(groups)
+        fig, axes = plt.subplots(n, 1, figsize=(figsize[0], max(figsize[1], 3) if isinstance(figsize, tuple) else 6), sharex=True)
+        if n == 1:
+            axes = [axes]
+    else:
+        fig, ax = plt.subplots(figsize=figsize)
+        axes = [ax]
+
+    # 5) Plotting helper
+    def draw_one(ax, data, label=None):
+        x = data[x_col].values
+        y = data[y_col].values
+        if err_col is not None:
+            yerr = data[err_col].values
+            ax.errorbar(x, y, yerr=yerr, fmt='o-', lw=1.5, ms=5, capsize=3,
+                        color=WIND_COLORS.get(label, None) if label is not None else None,
+                        label=label)
+        else:
+            ax.plot(x, y, 'o-', lw=1.5, ms=5,
+                    color=WIND_COLORS.get(label, None) if label is not None else None,
+                    label=label)
+
+        if annotate:
+            for xi, yi in zip(x, y):
+                ax.annotate(f"{yi:.3g}", (xi, yi), textcoords="offset points", xytext=(5, 4), fontsize=8)
+
+    # 6) Draw data
+    if separate and hue_col and hue_col in df.columns:
+        for ax, g in zip(axes, df.groupby(hue_col)):
+            label, sub = g
+            draw_one(ax, sub.sort_values(x_col), label=str(label))
+            ax.set_title(f"{hue_col}: {label}")
+            ax.set_ylabel(y_col)
+            ax.grid(True, which='major', alpha=0.35)
+            ax.grid(True, which='minor', alpha=0.15, linestyle=':')
+            ax.yaxis.set_major_locator(mticker.MaxNLocator(5))
+        axes[-1].set_xlabel(x_col)
+    else:
+        ax = axes[0]
+        if hue_col and hue_col in df.columns and not overlay:
+            # Plot each hue as its own line in same axes
+            for label, sub in df.groupby(hue_col):
+                draw_one(ax, sub.sort_values(x_col), label=str(label))
+        else:
+            # Overlay or no hue: draw once with a generic label
+            label = None
+            if hue_col and hue_col in df.columns and overlay:
+                label = "overlay"
+            draw_one(ax, df.sort_values(x_col), label=label)
+
+        ax.set_xlabel(x_col)
+        ax.set_ylabel(y_col)
+        ax.grid(True, which='major', alpha=0.35)
+        ax.grid(True, which='minor', alpha=0.15, linestyle=':')
+        ax.xaxis.set_major_locator(mticker.MaxNLocator(6))
+        ax.yaxis.set_major_locator(mticker.MaxNLocator(5))
+        # Legend only if meaningful labels exist
+        handles, labels = ax.get_legend_handles_labels()
+        if labels and any(lab for lab in labels):
+            ax.legend(loc="best")
+
+    fig.tight_layout()
+    plt.show()
+
+
+
+
+def plot_damping_combined_old(
+    df: pd.DataFrame,
+    amplitudeplotvariables: dict[str, Any]
 ) -> None:
     """
     Plot mean P3/P2 versus kL with optional error bars and wind-condition colors.
     """
     colors = WIND_COLORS
-
+    filters =  amplitudeplotvariables.get("filters", {})
+    plotting = amplitudeplotvariables.get("plotting", {})
+    
     # Default colors: use provided mapping or try to pull from `plotting`
     if colors is None:
         colors = plotting.get("WIND_COLORS", None) if isinstance(plotting, Mapping) else None
@@ -890,7 +996,7 @@ def plot_frequencyspectrum(fft_dict:dict, meta_df: pd.DataFrame, freqplotvar:dic
     plt.show()
 
 
-import matplotlib.ticker as ticker
+
 def plot_powerspectraldensity(psd_dict:dict, meta_df: pd.DataFrame, freqplotvar:dict) -> None:
     panel_styles = {
         "no": "solid",
@@ -1131,19 +1237,17 @@ def plot_facet_frequencyspectrum(fft_dict: dict, meta_df: pd.DataFrame, freqplot
     return (fig, axes) if facet else (fig, axes[0])
 
 
-def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
-    # Faster than pandas nlargest for numeric arrays; returns indices into values
-    if k is None or k <= 0 or k >= values.size:
-        return np.arange(values.size)
-    # argpartition gives k largest in O(n); then sort those k if you need ordered peaks
-    part = np.argpartition(values, -k)[-k:]
-    # Sort descending for nicer visuals
-    return part[np.argsort(values[part])[::-1]]
+# def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
+#     # Faster than pandas nlargest for numeric arrays; returns indices into values
+#     if k is None or k <= 0 or k >= values.size:
+#         return np.arange(values.size)
+#     # argpartition gives k largest in O(n); then sort those k if you need ordered peaks
+#     part = np.argpartition(values, -k)[-k:]
+#     # Sort descending for nicer visuals
+#     return part[np.argsort(values[part])[::-1]]
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib import ticker as mticker  # ensure this import
+
+
 
 def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
     if k is None or k <= 0 or k >= values.size:
@@ -1255,11 +1359,11 @@ def plot_facet_condition_frequencyspectrum(
         ax.set_title(facet_label, fontweight='bold')
 
         # Keep locator logic simple for testing; add MultipleLocator only if valid
-        ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
-        ax.yaxis.set_major_locator(mticker.MaxNLocator(5))
+        ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
+        ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
         if use_locators:
-            ax.xaxis.set_minor_locator(mticker.MultipleLocator(base_freq))
-            ax.xaxis.set_major_locator(mticker.MultipleLocator(2 * base_freq))
+            ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
+            ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
 
         # Temporarily disable legend/grid while debugging
         # _apply_legend(ax, freqplotvar)

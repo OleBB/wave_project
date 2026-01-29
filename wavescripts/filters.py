@@ -235,6 +235,131 @@ def filter_for_frequencyspectrum(
             out = out[out[col] == val]
     return out
 
+# %% gpts forsøk på å forbedre filterne
+
+import re
+import pandas as pd
+from typing import Any, Mapping, Iterable, Callable, Union
+
+CriteriaVal = Union[
+    Any,                    # scalar equality
+    Iterable[Any],          # membership (isin)
+    dict                    # structured ops: {'between': (...)} | {'regex': '...'} | {'callable': fn} | {'not': {...}}
+]
+
+def _is_iterable_but_not_str(x) -> bool:
+    return isinstance(x, (list, tuple, set)) and not isinstance(x, (str, bytes))
+
+def _normalize_criteria(criteria: Mapping[str, Any], *, allow_nested: bool = True):
+    """
+    Return (mode, filters) where:
+      - mode in {'all', 'first', 'filter'}
+      - filters is a flat dict of column -> criterion
+    """
+    if allow_nested and "filters" in criteria:
+        over = criteria.get("overordnet", {}) or {}
+        if over.get("chooseAll", False):
+            return "all", {}
+        if over.get("chooseFirst", False):
+            return "first", {}
+        return "filter", criteria["filters"]
+    return "filter", criteria
+
+def _apply_one(series: pd.Series, spec: CriteriaVal) -> pd.Series:
+    """
+    Turn a single column criterion into a boolean mask aligned to series.
+    Supported:
+      - scalar            -> equality
+      - iterable          -> membership (isin)
+      - dict ops:
+          {'between': (low, high)}        inclusive bounds
+          {'regex': pattern}              str contains regex (NaN -> False)
+          {'callable': fn}                fn(series) -> boolean Series
+          {'op': 'between'|'regex'|'callable', 'value': ...}  # alternative form
+          {'not': <any of the above>}     negation
+    """
+    # Negation wrapper
+    if isinstance(spec, dict) and "not" in spec:
+        inner = spec["not"]
+        mask = _apply_one(series, inner)
+        return ~mask
+
+    # Structured ops
+    if isinstance(spec, dict):
+        # Unified op/value form
+        op = spec.get("op")
+        if "between" in spec or op == "between":
+            bounds = spec.get("between", spec.get("value"))
+            if not (_is_iterable_but_not_str(bounds) and len(bounds) == 2):
+                raise ValueError(f"between expects (low, high); got {bounds}")
+            low, high = bounds
+            return series.between(low, high)
+        if "regex" in spec or op == "regex":
+            pattern = spec.get("regex", spec.get("value"))
+            return series.astype(str).str.contains(pattern, regex=True, na=False)
+        if "callable" in spec or op == "callable":
+            fn = spec.get("callable", spec.get("value"))
+            mask = fn(series)
+            if not isinstance(mask, pd.Series) or mask.dtype != bool or mask.shape != series.shape:
+                raise ValueError("callable must return a boolean Series aligned with the column")
+            return mask
+        raise ValueError(f"Unsupported filter dict for column '{series.name}': {spec}")
+
+    # Membership (explicit iterable)
+    if _is_iterable_but_not_str(spec):
+        return series.isin(list(spec))
+
+    # Scalar equality
+    return series == spec
+
+def filter_dataframe(
+    df: pd.DataFrame,
+    criteria: Mapping[str, Any],
+    *,
+    ignore_missing_columns: bool = False,
+    allow_nested: bool = True,
+    return_first_if_requested: bool = True,
+) -> pd.DataFrame:
+    """
+    Unified DataFrame filter.
+
+    Parameters
+    - df: DataFrame to filter.
+    - criteria:
+        Flat form: {'Col': value_or_iterable_or_struct, ...}
+        Nested form: {'overordnet': {'chooseAll': bool, 'chooseFirst': bool}, 'filters': {...}}
+    - ignore_missing_columns: skip criteria for columns not in df (instead of raising).
+    - allow_nested: enable nested form parsing.
+    - return_first_if_requested: if chooseFirst=True, return df.iloc[[0]].
+
+    Returns
+    - A filtered copy (df.loc[mask].copy()).
+    """
+    mode, filters = _normalize_criteria(criteria, allow_nested=allow_nested)
+
+    if mode == "all":
+        return df.copy()
+    if mode == "first" and return_first_if_requested:
+        return df.iloc[[0]].copy()
+
+    if not isinstance(filters, Mapping):
+        raise ValueError("filters must be a dict mapping column -> criterion")
+
+    mask = pd.Series(True, index=df.index)
+    for col, spec in filters.items():
+        if spec is None:
+            continue
+        if col not in df.columns:
+            if ignore_missing_columns:
+                continue
+            raise KeyError(f"Column '{col}' not in DataFrame")
+        col_mask = _apply_one(df[col], spec)
+        if not (isinstance(col_mask, pd.Series) and col_mask.dtype == bool):
+            raise ValueError(f"Filter for column '{col}' must yield a boolean Series")
+        mask &= col_mask
+
+    return df.loc[mask].copy()
+
 
 
 
