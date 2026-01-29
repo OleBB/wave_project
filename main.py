@@ -29,9 +29,9 @@ dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
     
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
     
@@ -252,9 +252,7 @@ damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
 from wavescripts.plotter import facet_amp
 facet_amp(damping_groupedallruns_df, dampingplotvariables)
 
-# %%
-
-"""FFT-SPEKTRUM"""
+# %% FFT-SPEKTRUM
 freqplotvariables = {
     "overordnet": {
         "chooseAll": True, 
@@ -290,9 +288,6 @@ freqplotvariables = {
     }   
 }
 
-# %%
-
-
 from wavescripts.filters import filter_for_frequencyspectrum
 filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 
@@ -304,8 +299,7 @@ from wavescripts.plotter import plot_powerspectraldensity
 plot_powerspectraldensity(psd_dictionary, filtrert_frequencies, freqplotvariables)
 
 
-# %%
-"""forsøk på facet plot"""
+# %% forsøk på facet plot
 freqplotvariables = {
     "overordnet": {
         "chooseAll": True, 
@@ -384,7 +378,7 @@ import matplotlib.pyplot as plt
 # plt.show()
 
 
-# %%
+# %% test av psd dict
 # Get only first half of the dictionary items
 halfway = len(psd_dictionary) // 2
 first_half_items = dict(list(psd_dictionary.items())[:halfway])
@@ -471,8 +465,7 @@ def compute_amplitude_by_band(psd_dictionary, freq_bands=None):
 # Use it:
 band_amplitudes = compute_amplitude_by_band(psd_dictionary)
 print(band_amplitudes)
-# %%
-
+# %% amp by band
 
 def compute_amplitude_by_band(psd_dictionary, freq_bands=None, verbose=False):
     """Compute amplitude for specific frequency bands from PSD"""
@@ -533,7 +526,7 @@ def compute_amplitude_by_band(psd_dictionary, freq_bands=None, verbose=False):
 band_amplitudes = compute_amplitude_by_band(psd_dictionary, verbose=True)
 print("\n=== Results ===")
 print(band_amplitudes)
-# %%    
+# %% amp by band
 import numpy as np
 import pandas as pd
 def compute_amplitude_by_band(psd_dictionary, freq_bands=None):
@@ -575,9 +568,7 @@ def compute_amplitude_by_band(psd_dictionary, freq_bands=None):
 band_amplitudes = compute_amplitude_by_band(psd_dictionary)
 print(band_amplitudes)
 
-# %%
-
-
+# %% band scatter
 import matplotlib.pyplot as plt
 
 def plot_p2_vs_p3_scatter(band_amplitudes):
@@ -601,7 +592,7 @@ def plot_p2_vs_p3_scatter(band_amplitudes):
 # Example:
 plot_p2_vs_p3_scatter(band_amplitudes)
 
-# %%
+# %% band bars
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -632,7 +623,7 @@ plot_p2_p3_bars(band_amplitudes)
 
 
 
-# %%
+# %% fft leik
 
 
 

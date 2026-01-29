@@ -5,22 +5,13 @@ Created on Mon Nov 17 17:18:03 2025
 
 @author: ole
 """
-
 from pathlib import Path
-from typing import Iterator, Dict, Tuple
-import json
-import re
 import pandas as pd
-import os
-from datetime import datetime
-#from wavescripts.data_loader import load_or_update #blir vel motsatt.. 
 import numpy as np
 from wavescripts.data_loader import update_processed_metadata
 from scipy.signal import find_peaks
 from scipy.signal import welch
 from scipy.optimize import brentq
-
-
 
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
@@ -74,8 +65,7 @@ def find_wave_range(
         good_end_idx = len(df)
         debug_info = None
         return good_start_idx, good_end_idx, debug_info
-    
-    
+        
     samples_per_period = int(round(Fs / importertfrekvens))
     
     # ─────── velge antall perioder ─────── 
@@ -101,36 +91,36 @@ def find_wave_range(
     # ==========================================================
     """ELIF RETURN SNARVEI"""
     if input_freq == 1.3:
-        if data_col == "Probe 1": 
-                good_start_idx = P1amp01frwq13eyeball 
-                good_end_idx = good_start_idx+keep_idx
+        if data_col == "Probe 1":
+            good_start_idx = P1amp01frwq13eyeball 
+            good_end_idx = good_start_idx+keep_idx
                 #return good_start_idx, good_end_idx, debug_info
         elif data_col == "Probe 2" : 
-                good_start_idx = P2handcalc
-                good_end_idx = P2handcalc + keep_idx
+            good_start_idx = P2handcalc
+            good_end_idx = P2handcalc + keep_idx
                 #return good_start_idx, good_end_idx, debug_info
         elif data_col == "Probe 3" : 
-                good_start_idx = P3handcalc
-                good_end_idx = good_start_idx + keep_idx
+            good_start_idx = P3handcalc
+            good_end_idx = good_start_idx + keep_idx
         elif data_col == "Probe 4" : 
-                good_start_idx = P3handcalc
-                good_end_idx = good_start_idx + keep_idx
+            good_start_idx = P3handcalc
+            good_end_idx = good_start_idx + keep_idx
                 # return good_start_idx, good_end_idx, debug_info
     if input_freq == 0.65:
         if data_col == "Probe 1": 
-                good_start_idx = P1amp01f065eyeball 
-                good_end_idx = good_start_idx+keep_idx
+            good_start_idx = P1amp01f065eyeball 
+            good_end_idx = good_start_idx+keep_idx
                 #return good_start_idx, good_end_idx, debug_info
         elif data_col == "Probe 2" : 
-                good_start_idx = P2_f065_handcalc
-                good_end_idx = good_start_idx + keep_idx
+             good_start_idx = P2_f065_handcalc
+             good_end_idx = good_start_idx + keep_idx
                 #return good_start_idx, good_end_idx, debug_info
         elif data_col == "Probe 3" : 
-                good_start_idx = P3_f065_handcalc
-                good_end_idx = good_start_idx + keep_idx
+            good_start_idx = P3_f065_handcalc
+            good_end_idx = good_start_idx + keep_idx
         elif data_col == "Probe 4" : 
-                good_start_idx = P3_f065_handcalc
-                good_end_idx = good_start_idx + keep_idx
+            good_start_idx = P3_f065_handcalc
+            good_end_idx = good_start_idx + keep_idx
                 # return good_start_idx, good_end_idx, debug_info
     #import sys; print('exit'); sys.exit()
      
@@ -566,14 +556,13 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
                     psd_df[f"Pxx {i}"] = pxx
                     # - - - amplitude
                     amplitude = compute_amplitudes_from_psd(f, pxx, freq)
-                    print("amplitden inni loopen er ", amplitude)
+                    if debug:
+                        print("amplitden inni PSD loopen er ", amplitude)
                     row_out[f"Probe {i} Amplitude (PSD)"] = amplitude
             if psd_df is not None:
                 psd_dict[path] = psd_df
             amplitude_records.append(row_out)
-            print("row out er ", row_out )
-        print("row loop ferdig")
-    print("ytre psd path loop ferdig")
+
     if debug:
         print(f"=== PSD Complete: {len(amplitude_records)} records ===\n")
     return psd_dict, amplitude_records
@@ -611,7 +600,6 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
                     
                     series_list.append(pd.Series(amplitudar, index=fft_freqs, name=f"FFT {i}"))
                     # amplitude entall
-                    
                     amplitude = compute_amplitudes_from_fft(fft_freqs, amplitudar, freq)
                     row_out[f"Probe {i} Amplitude (FFT)"] = amplitude
                     
