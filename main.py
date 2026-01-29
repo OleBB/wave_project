@@ -152,7 +152,7 @@ plot_all_probes(m_filtrert, amplitudeplotvariables)
 print("======== Amplituder P1234 PLOTTA ===========")
 
 #%% grouper - slå i hop
-from wavescripts.wavestudyer import damping_grouper
+from wavescripts.filters import damping_grouper
 damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
 # %%
 chooseAll = False
@@ -182,76 +182,21 @@ dampingplotvariables = {
         "annotate": True   
     }   
 }
-# dampingplotvariables =  {
-#         "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3], #0.1, 0.2, 0.3 
-#         "WaveFrequencyInput [Hz]": [1.3, 0.65], #bruk et tall  
-#         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-#         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
-#         "TunnelCondition": None,
-#         #"Mooring": "low",
-#         #"PanelCondition": ["full", "reverse"], # no, full, reverse, 
-        
-#     }  
 
 from wavescripts.filters import filter_for_damping
 damping_filtrert = filter_for_damping(damping_groupedruns_df, dampingplotvariables["filters"])
 
-# %% damping 2
-# fritt frem:
-# from wavescripts.plotter import plot_damping_2
-# plot_damping_2(damping_filtrert, dampingplotvariables)
-# %% facet damping
-
+# %% facet damping seaborn
 from wavescripts.plotter import facet_plot_freq_vs_mean
 facet_plot_freq_vs_mean(damping_filtrert, dampingplotvariables)
 
-# %% damping amp
-
+# %% damping amp seaborn 
 from wavescripts.plotter import facet_plot_amp_vs_mean
 facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
 
-# %%
+# %% grouped
 chooseAll = False
 dampingplotvariables = {
-    "overordnet": {"chooseAll": False}, 
-    "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3], #0.1, 0.2, 0.3 
-        "WaveFrequencyInput [Hz]": [1.3, 0.65], #bruk et tall  
-        "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
-        "TunnelCondition": None,
-        #"Mooring": None,
-        "PanelCondition": ["full", "reverse"], # no, full, reverse, 
-        
-    },
-    "processing": {
-        "chosenprobe": "Probe 2",
-        "rangestart": None,
-        "rangeend": None,
-        "data_cols": ["Probe 2"],#her kan jeg velge fler, må huske [listeformat]
-        "win": 11
-    },
-    "plotting": {
-        "figsize": None,
-        "separate":True,
-        "overlay": False,
-        "annotate": True   
-    }   
-}
-
-
-
-"""Slå alle i hop"""
-from wavescripts.wavestudyer import damping_all_amplitude_grouper
-damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
-
-# damping_all_amplitudes_filtrert = filter_for_damping(damping_groupedallruns_df, dampingplotvariables["filters"])
-
-from wavescripts.plotter import facet_amp
-facet_amp(damping_groupedallruns_df, dampingplotvariables)
-
-# %% fFT-SPEKTRUM filter
-freqplotvariables = {
     "overordnet": {
         "chooseAll": False, 
         "chooseFirst": False,
@@ -286,19 +231,69 @@ freqplotvariables = {
     }   
 }
 
+
+"""Slå alle i hop"""
+from wavescripts.filters import damping_all_amplitude_grouper
+damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
+
+# damping_all_amplitudes_filtrert = filter_for_damping(damping_groupedallruns_df, dampingplotvariables["filters"])
+
+from wavescripts.plotter import facet_amp
+facet_amp(damping_groupedallruns_df, dampingplotvariables)
+
+# %% FFT-SPEKTRUM filter
+freqplotvariables = {
+    "overordnet": {
+        "chooseAll": False, 
+        "chooseFirst": False,
+    }, 
+    "filters": {
+        "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
+        "WaveFrequencyInput [Hz]": [1.3],# 0.65], #bruk et tall  
+        "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
+        "TunnelCondition": None,
+        #"Mooring": None,
+        "PanelCondition": ["no", "full", "reverse"], # no, full, reverse, 
+        
+    },
+    "processing": {
+        "chosenprobe": 1, #[1,2,3,4]
+        "rangestart": None,
+        "rangeend": None,
+        "data_cols": ["Probe 2"],
+        "win": 11 #Ingen av disse er egt i bruk
+    },
+    "plotting": {
+        "figsize": None,
+        "separate":False,
+        "facet_by": "wind", #wind, panel, probe 
+        "overlay": False,
+        "annotate": True, 
+        "legend": "None", # inside, below, above #med mer!
+        "logaritmic": False, 
+        "peaks": 7, 
+        "probes": [2,3]#,
+    }   
+}
+
 from wavescripts.filters import filter_for_frequencyspectrum
 filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 
+# %% cLAUdE - gi fn nytt navn seinar
+from wavescripts.plotter import plot_frequency_spectrum
+fig, axes = plot_frequency_spectrum(
+    fft_dictionary,
+    filtrert_frequencies,
+    freqplotvariables
+)
 
 # %% forsøk på facet plot
-
 from wavescripts.plotter import plot_facet_frequencyspectrum
+fig, axes = plot_facet_frequencyspectrum(fft_dictionary, filtrert_frequencies, freqplotvariables)
+# %%
 from wavescripts.plotter import plot_facet_condition_frequencyspectrum
-
-# fig, axes = plot_facet_frequencyspectrum(fft_dictionary, meta_sel, freqplotvariables)
-fig, axes = plot_facet_condition_frequencyspectrum(fft_dictionary, filtrert_frequencies, freqplotvariables)
-
-
+fig_fft, axes_fft = plot_facet_condition_frequencyspectrum(fft_dictionary, filtrert_frequencies, freqplotvariables)
 
 # %% 
 from wavescripts.plotter import plot_frequencyspectrum
@@ -315,11 +310,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # df_plot has columns from your psd_dictionary (as in your example)
-# first_cols = {k: d.iloc[:,0] for k, d in psd_dictionary.items()}
-# df_plot = pd.concat(first_cols, axis=1)
-# # Get only first half of the dictionary items
-# halfway = len(psd_dictionary) // 2
-# first_half_items = dict(list(psd_dictionary.items())[:halfway])
+first_cols = {k: d.iloc[:,0] for k, d in psd_dictionary.items()}
+df_plot = pd.concat(first_cols, axis=1)
+# Get only first half of the dictionary items
+halfway = len(psd_dictionary) // 2
+first_half_items = dict(list(psd_dictionary.items())[:halfway])
 
 # %%
 
@@ -732,8 +727,6 @@ ax = sns.scatterplot(
     style='PanelConditionGrouped',
     markers=True
 )
-
-
 
 
 
