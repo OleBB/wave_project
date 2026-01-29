@@ -20,17 +20,19 @@ def find_wave_range(
     df,
     meta_row,  # metadata for selected files
     data_col,
-    detect_win=1,
-    range_plot: bool = False,
+    detect_win,
+    range_plot: bool,
+    debug: bool,
 ):
     
     if (meta_row["WindCondition"]) == "full":
         detect_win = 15
-    if (meta_row["WindCondition"]) == "low":
+    elif (meta_row["WindCondition"]) == "low":
         detect_win = 10
-    if (meta_row["WindCondition"]) == "low":
+    elif (meta_row["WindCondition"]) == "no":
         detect_win = 1
-
+    else:
+        detect_win = 1
     # ==========================================================
     # 1. smoothe signalet med moving average vindu: detect_win
     # ==========================================================
@@ -183,8 +185,9 @@ def find_wave_range(
     baseline_std = np.std(baseline)
     threshold = baseline_mean + sigma_factor*baseline_std
     
-    print('baselines:')
-    print(f'_samples: {baseline_samples}, _mean: {baseline_mean}, _seconds {baseline_seconds}, _std {baseline_std}')
+    if debug:
+        print('baselines:')
+        print(f'_samples: {baseline_samples}, _mean: {baseline_mean}, _seconds {baseline_seconds}, _std {baseline_std}')
     #import sys; print('exit'); sys.exit()
     
     """ærbe
@@ -833,7 +836,7 @@ def _zero_and_smooth_signals(
     return processed_dfs
 
 
-def _find_wave_ranges(
+def run_find_wave_ranges(
     processed_dfs: dict,
     meta_sel: pd.DataFrame,
     win: int,
@@ -848,7 +851,7 @@ def _find_wave_ranges(
         for i in range(1, 5):
             probe = f"Probe {i}"
             start, end, debug_info = find_wave_range(
-                df, row, data_col=probe, detect_win=win, range_plot=range_plot
+                df, row, data_col=probe, detect_win=win, range_plot=range_plot, debug=debug
             )
             meta_sel.loc[idx, f'Computed Probe {i} start'] = start
             meta_sel.loc[idx, f'Computed Probe {i} end'] = end
@@ -965,7 +968,7 @@ def process_selected_data(
     
     # 3. Optional: find wave ranges
     if find_range:
-        meta_sel = _find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
+        meta_sel = run_find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
     
     # 4. a - Compute PSDs and amplitudes from PSD
     psd_dict, amplitudes_from_psd  = compute_psd_with_amplitudes(processed_dfs, meta_sel, fs=fs,debug=debug)

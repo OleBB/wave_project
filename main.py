@@ -36,7 +36,7 @@ dataset_paths = [
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
     
 ]
-#%%
+#%% kjør
 # Initialize containers for all results
 all_meta_sel = []
 all_processed_dfs = []
@@ -151,10 +151,10 @@ plot_all_probes(m_filtrert, amplitudeplotvariables)
 
 print("======== Amplituder P1234 PLOTTA ===========")
 
-#%% grouper - slå i hop
+#%% grouper - slår i hop
 from wavescripts.filters import damping_grouper
 damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
-# %% damping variables
+# %% damping variables initiert
 chooseAll = False
 dampingplotvariables = {
     "overordnet": {"chooseAll": False}, 
@@ -186,11 +186,11 @@ dampingplotvariables = {
 from wavescripts.filters import filter_for_damping
 damping_filtrert = filter_for_damping(damping_groupedruns_df, dampingplotvariables["filters"])
 
-# %% facet damping seaborn
+# %% plotting damping frequencies seaborn
 from wavescripts.plotter import facet_plot_freq_vs_mean
 facet_plot_freq_vs_mean(damping_filtrert, dampingplotvariables)
 
-# %% damping amp seaborn 
+# %% plotting damping amplitudes seaborn 
 from wavescripts.plotter import facet_plot_amp_vs_mean
 facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
 
@@ -622,7 +622,7 @@ plot_damping_combined(
 
 
 
-# %%
+# %% __main__
 
 
 # if __name__ == "__main__":
