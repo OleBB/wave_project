@@ -1477,6 +1477,8 @@ def plot_frequency_spectrum(
     show_grid = plotting.get("grid", True)
     show_plot = plotting.get("show", True)
     xlim = plotting.get("xlim", (0, 10))
+    linewidth = plotting.get("linewidth", 1.0)
+    fontsize = 7
     
     # Extract base frequency for tick locators
     base_freq_val = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
@@ -1502,16 +1504,18 @@ def plot_frequency_spectrum(
         facet_labels = ["All Data"]
     
     n_facets = len(facet_groups)
+    print(n_facets)
     
     # ===== CREATE FIGURE =====
-    default_figsize = (12, 4 * n_facets) if n_facets > 1 else (12, 6)
-    figsize = plotting.get("figsize", default_figsize)
-    
+    default_figsize = (4, 4 * n_facets) if n_facets > 1 else (18,10)
+    figsize = plotting.get("figsize") or default_figsize
+
     fig, axes = plt.subplots(
-        n_facets, 1,
+        n_facets, 
         figsize=figsize,
         sharex=True,
-        squeeze=False
+        squeeze=False,
+        dpi=120
     )
     axes = axes.flatten()  # Always work with 1D array
     
@@ -1577,11 +1581,11 @@ def plot_frequency_spectrum(
                 # Plot line
                 ax.plot(
                     x, y.values,
-                    linewidth=1.5,
+                    linewidth=linewidth,
                     label=plot_label,
                     linestyle=linjestil,
                     color=colla,
-                    antialiased=True
+                    antialiased=False #merk
                 )
                 
                 # Plot peaks if requested
@@ -1603,10 +1607,10 @@ def plot_frequency_spectrum(
         
         # Title
         if facet_label:
-            ax.set_title(facet_label, fontsize=12, fontweight='bold')
+            ax.set_title(facet_label, fontsize=fontsize, fontweight='normal')
         
         # Y-axis
-        ax.set_ylabel('FFT amplitude', fontsize=11)
+        ax.set_ylabel('FFT amplitude', fontsize=fontsize)
         if log_scale:
             ax.set_yscale('log')
         
@@ -1621,7 +1625,9 @@ def plot_frequency_spectrum(
         else:
             ax.xaxis.set_major_locator(ticker.MaxNLocator(10))
             ax.yaxis.set_major_locator(ticker.MaxNLocator(8))
+        ax.tick_params(axis='both', labelsize=8)
         
+        # ax.set_frame_on(False) didnt help
         # Grid
         if show_grid:
             ax.grid(which='major', linestyle='--', alpha=0.6)
@@ -1633,7 +1639,7 @@ def plot_frequency_spectrum(
     # ===== FINAL TOUCHES =====
     
     # X-label only on bottom plot
-    axes[-1].set_xlabel('Frequency (Hz)', fontsize=12)
+    axes[-1].set_xlabel('Frequency (Hz)', fontsize=fontsize)
     
     plt.tight_layout()
     
