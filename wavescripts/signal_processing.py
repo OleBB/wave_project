@@ -6,6 +6,15 @@ Created on Fri Jan 30 09:47:15 2026
 @author: ole
 """
 
+
+import pandas as pd
+import numpy as np
+from scipy.signal import find_peaks
+from scipy.signal import welch
+from scipy.optimize import brentq
+from typing import Dict, List, Tuple
+
+
 #signal_processing.py
 
 def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
