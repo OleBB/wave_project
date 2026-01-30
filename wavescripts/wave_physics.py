@@ -13,6 +13,8 @@ from scipy.signal import find_peaks
 from scipy.signal import welch
 from scipy.optimize import brentq
 from typing import Dict, List, Tuple
+
+from wavescripts.constants import PHYSICS, WAVENUMBER, MEASUREMENT
 #wave_physics.py
 
 
@@ -28,10 +30,12 @@ def calculate_wavenumbers(frequencies, heights):
     i_valid = np.flatnonzero(valid)
     if i_valid.size ==0:
         return k
-    g = 9.81
+    g = PHYSICS.GRAVITY
+    w_dwbf = WAVENUMBER.DEEP_WATER_BRACKET_FACTOR
+    w_swbf = WAVENUMBER.SHALLOW_WATER_BRACKET_FACTOR
     for idx in i_valid:
         fr = freq.flat[idx]
-        h = H.flat[idx]/1000.0 #konverter fra millimeter
+        h = H.flat[idx] * MEASUREMENT.MM_TO_M #konverter fra millimeter
         omega = 2 * np.pi * fr
         
         def disp(k_wave):
@@ -40,8 +44,8 @@ def calculate_wavenumbers(frequencies, heights):
         k_deep = omega**2 / g
         k_shallow = omega / np.sqrt(g * h) if h >0 else k_deep
         
-        a = min(k_deep, k_shallow) *0.1
-        b = max(k_deep, k_shallow) *10
+        a = min(k_deep, k_shallow) *w_dwbf
+        b = max(k_deep, k_shallow) *w_swbf
         
         fa = disp(a)
         fb = disp(b)
@@ -58,9 +62,9 @@ def calculate_celerity(wavenumbers,heights):
     H = np.broadcast_to(np.asarray(heights), k.shape)
     c = np.zeros_like(k,dtype=float)
     
-    g = 9.81
-    sigma = 0.074 #ved 20celcius
-    rho = 1000 #10^3 kg/m^3
+    g = PHYSICS.GRAVITY
+    sigma = PHYSICS.WATER_SURFACE_TENSION #ved 20celcius
+    rho = PHYSICS.WATER_DENSITY #10^3 kg/m^3
     
     c = np.sqrt( g/ k * np.tanh(k*H))
     return c
@@ -97,10 +101,10 @@ def calculate_wavedimensions(k: pd.Series,
     PC_aligned = None if PC is None else PC.reindex(idx)
 
     k_arr = k_aligned.to_numpy(dtype=float)
-    Hm = H_aligned.to_numpy(dtype=float)/1000.0 #fra millimeter
+    Hm = H_aligned.to_numpy(dtype=float)* MEASUREMENT.MM_TO_M  #fra millimeter
      
     valid_k = k_arr > 0.0 # Mask for valid k values
-    g = 9.81
+    g = PHYSICS.GRAVITY
     
     kH = np.full_like(k_arr, np.nan, dtype=float)
     kH[valid_k] = k_arr[valid_k] * Hm[valid_k]
@@ -124,7 +128,7 @@ def calculate_wavedimensions(k: pd.Series,
     
     ak = np.full_like(k_arr, np.nan, dtype=float)
     if P2A_aligned is not None:
-        a_arr = P2A_aligned.to_numpy(dtype=float) / 1000.0  #fra millimeter
+        a_arr = P2A_aligned.to_numpy(dtype=float) * MEASUREMENT.MM_TO_M   #fra millimeter
         ak[valid_k] = a_arr[valid_k] * k_arr[valid_k]
     else:
         print('No probe 2 amplitude - no ak to calculate')
