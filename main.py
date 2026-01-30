@@ -64,7 +64,7 @@ processvariables = {
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
         "range_plot": False,    
-        "force_recompute": True,
+        "force_recompute": False,
     },
 }
 

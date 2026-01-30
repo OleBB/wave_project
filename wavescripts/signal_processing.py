@@ -12,9 +12,9 @@ import numpy as np
 from scipy.signal import find_peaks
 from scipy.signal import welch
 from scipy.optimize import brentq
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
-
+from wavescripts.constants import AMPLITUDE, MEASUREMENT, SIGNAL
 #signal_processing.py
 
 def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
@@ -85,8 +85,7 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
                 continue
             
             psd_df = None
-            desired_resolution = 0.125 #Hz per steg i Psd'en.
-            npersegment = int(fs/desired_resolution)
+            npersegment = int(MEASUREMENT.SAMPLING_RATE / SIGNAL.PSD.FREQUENCY_RESOLUTION)
             for i in range(1, 5):
                 signal = _extract_probe_signal(df, row, i)
                 nperseg = max(1, min(npersegment, len(signal)))
@@ -94,7 +93,7 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
                 if signal is not None:
 
                     # nperseg = npersegment #har noen mye kortere signaler
-                    noverlap = nperseg // 2  # or int(0.75 * nperseg)
+                    noverlap = nperseg * SIGNAL.PSD_OVERLAP_FRACTION  # or int(0.75 * nperseg)
                     
                     f, pxx = welch(
                         signal, fs=fs,
@@ -170,11 +169,12 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
         print(f"=== FFT Complete: {len(amplitude_records)} records ===\n")
     return fft_dict, amplitude_records
 
-
-    
-    
-def _extract_probe_signal(df: pd.DataFrame, row: pd.Series, probe_num: int) -> np.ndarray | None:
-    """Extract and validate signal data for a specific probe."""
+def _extract_probe_signal(
+    df: pd.DataFrame, 
+    row: pd.Series, 
+    probe_num: int
+) -> Optional[np.ndarray]:
+    """Your original function - unchanged."""
     col = f"eta_{probe_num}"
     start_val = row.get(f"Computed Probe {probe_num} start")
     end_val = row.get(f"Computed Probe {probe_num} end")
@@ -193,10 +193,20 @@ def _extract_probe_signal(df: pd.DataFrame, row: pd.Series, probe_num: int) -> n
     
     signal = df[col].iloc[s_idx:e_idx+1].dropna().to_numpy()
     return signal if signal.size > 0 else None
+    
 
-def _extract_probe_amplitude(df: pd.DataFrame, row: pd.Series, probe_num: int) -> float | None:
-    """Extract amplitude for a specific probe."""
+def _extract_probe_amplitude(
+    df: pd.DataFrame, 
+    row: pd.Series, 
+    probe_num: int
+) -> Optional[float]:
+    """Finner høyeste percentil a=h/2 for én og én probe."""
     signal = _extract_probe_signal(df, row, probe_num)
     if signal is None:
         return None
-    return float((np.percentile(signal, 99.5) - np.percentile(signal, 0.5)) / 2.0)
+    
+    upper_p = np.percentile(signal, AMPLITUDE.UPPER_PERCENTILE)
+    lower_p = np.percentile(signal, AMPLITUDE.LOWER_PERCENTILE)
+    
+    return float((upper_p - lower_p) / AMPLITUDE.AMPLITUDE_DIVISOR)
+
