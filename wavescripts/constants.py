@@ -36,6 +36,7 @@ PHYSICS = PhysicalConstants()
 class MeasurementConstants:
     """Hardware and sampling parameters."""
     SAMPLING_RATE: float = 250.0  # Hz (samples per second)
+    STILLWATER_SAMPLES: int = 250 # Dette brukes av data_loader til å hente stilltilstand fra en no-wind-run. 
     NUM_PROBES: int = 4
     PROBE_NAMES: tuple = ("Probe 1", "Probe 2", "Probe 3", "Probe 4")
     
