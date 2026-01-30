@@ -1217,8 +1217,295 @@ def plot_frequency_spectrum(
     
     return fig, axes
 
-# %%
+# %% gpt 3 plots for swell
 
+# python
+import numpy as np
+from pathlib import Path
+from typing import Optional
+
+def plot_swell_comparison_scatter(
+    band_amplitudes,
+    freqplotvar,
+    p2_col="Probe 2 swell amplitude",
+    p3_col="Probe 3 swell amplitude",
+    color_p2="#1f77b4",
+    color_p3="#ff7f0e",
+    title="Swell amplitude: Before (P2) vs After (P3)",
+    ylabel="P3 (after) amplitude (mm)",
+    xlabel="P2 (before) amplitude (mm)",
+    annotate_with="path",  # set to None to disable
+    alpha=0.8,
+    save_path: Optional[Path] = None,
+    show=True,
+):
+    # Extract values
+    p2 = np.asarray(band_amplitudes[p2_col], dtype=float)
+    p3 = np.asarray(band_amplitudes[p3_col], dtype=float)
+
+    # Filter to finite pairs
+    mask = np.isfinite(p2) & np.isfinite(p3)
+    p2 = p2[mask]
+    p3 = p3[mask]
+    paths = None
+    if annotate_with and annotate_with in band_amplitudes.columns:
+        paths = np.asarray(band_amplitudes[annotate_with], dtype=object)[mask]
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.scatter(p2, p3, s=40, c=color_p3, edgecolor="white", linewidth=0.7, alpha=alpha)
+
+    # Reference line y = x
+    low = float(min(np.min(p2), np.min(p3)))
+    high = float(max(np.max(p2), np.max(p3)))
+    pad = 0.05 * (high - low) if high > low else 1.0
+    ax.plot([low - pad, high + pad], [low - pad, high + pad], color="#888", linestyle="--", label="y = x")
+
+    ax.set_xlim(low - pad, high + pad)
+    ax.set_ylim(low - pad, high + pad)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+
+    # Optional lightweight annotations (short filenames)
+    if paths is not None:
+        for x, y, p in zip(p2, p3, paths):
+            name = Path(str(p)).stem
+            ax.annotate(name, (x, y), textcoords="offset points", xytext=(6, 4), fontsize=8, alpha=0.8)
+
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150)
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+
+
+def plot_swell_comparison_bars(
+    band_amplitudes,
+    freqplotvar,
+    p2_col="Probe 2 swell amplitude",
+    p3_col="Probe 3 swell amplitude",
+    color_p2="#1f77b4",
+    color_p3="#ff7f0e",
+    ylabel="Amplitude (mm)",
+    title="Swell amplitude comparison (P2 vs P3)",
+    label_from="path",  # column to use for x labels; set to None for indices
+    rotate=45,
+    save_path: Optional[Path] = None,
+    show=True,
+    common_ylim=True,
+):
+    # Collect data
+    p2 = np.asarray(band_amplitudes[p2_col], dtype=float)
+    p3 = np.asarray(band_amplitudes[p3_col], dtype=float)
+    labels = band_amplitudes[label_from].astype(str).tolist() if label_from in band_amplitudes.columns else [str(i) for i in range(len(band_amplitudes))]
+
+    # Replace NaNs with 0 for plotting; you can also drop rows with NaNs
+    p2 = np.nan_to_num(p2, nan=0.0)
+    p3 = np.nan_to_num(p3, nan=0.0)
+
+    x = np.arange(len(p2))
+    w = 0.4
+
+    fig, ax = plt.subplots(figsize=(max(8, len(p2) * 0.4), 5))
+    ax.bar(x - w/2, p2, width=w, label="P2 (before)", color=color_p2)
+    ax.bar(x + w/2, p3, width=w, label="P3 (after)", color=color_p3)
+
+    ax.set_xticks(x, [Path(l).stem for l in labels] if label_from == "path" else labels)
+    if rotate:
+        plt.setp(ax.get_xticklabels(), rotation=rotate, ha="right")
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+
+    _apply_legend_3(ax, freqplotvar)
+    ax.grid(True, axis="y", alpha=0.3)
+
+    if common_ylim:
+        ymax = float(max(np.max(p2), np.max(p3)))
+        ax.set_ylim(0, ymax * 1.1 if ymax > 0 else 1.0)
+
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150)
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+#gpt option c
+# python
+def plot_swell_delta(
+    band_amplitudes,
+    freqplotvar,
+    p2_col="Probe 2 swell amplitude",
+    p3_col="Probe 3 swell amplitude",
+    color="#2ca02c",
+    ylabel="Δ amplitude (P3 − P2) (mm)",
+    title="Swell amplitude change",
+    label_from="path",
+):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from pathlib import Path
+
+    p2 = np.asarray(band_amplitudes[p2_col], dtype=float)
+    p3 = np.asarray(band_amplitudes[p3_col], dtype=float)
+    delta = p3 - p2
+
+    labels = band_amplitudes[label_from].astype(str).tolist() if label_from in band_amplitudes.columns else [str(i) for i in range(len(band_amplitudes))]
+
+    x = np.arange(len(delta))
+    fig, ax = plt.subplots(figsize=(max(8, len(delta) * 0.4), 4))
+    ax.bar(x, delta, color=color)
+    ax.axhline(0, color="#888", linewidth=1)
+    ax.set_xticks(x, [Path(l).stem for l in labels] if label_from == "path" else labels)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout()
+    plt.show()
+
+
+# python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from pathlib import Path
+from typing import Optional, Sequence
+
+def plot_swell_p2_vs_p3_by_wind(
+    band_amplitudes: pd.DataFrame,
+    meta_df: pd.DataFrame,
+    p2_col: str = "Probe 2 swell amplitude",
+    p3_col: str = "Probe 3 swell amplitude",
+    path_col: str = "path",
+    wind_col: str = "WindCondition",
+    panel_col: str = "PanelCondition",
+    figsize_per_facet=(4.5, 4.2),
+    ncols: int = 3,
+    alpha: float = 0.85,
+    annotate: bool = False,         # set True to annotate with filename stems
+    show: bool = True,
+    save_path: Optional[Path] = None,
+    title: Optional[str] = "Swell amplitude: Before (P2) vs After (P3) by wind",
+    xlabel: str = "P2 (before) amplitude (mm)",
+    ylabel: str = "P3 (after) amplitude (mm)",
+    wind_order: Optional[Sequence[str]] = None,  # fix facet order if desired
+):
+    """
+    Scatter comparison of swell amplitudes P2 (before) vs P3 (after), faceted by wind condition.
+    - One subplot per wind condition
+    - Diagonal y=x reference
+    - Shared axes limits for fair visual comparison
+    """
+    # Merge to get wind/panel per record
+    cols_needed = [path_col, wind_col, panel_col]
+    meta_use = meta_df[cols_needed].drop_duplicates(subset=[path_col])
+    df = band_amplitudes.merge(meta_use, on=path_col, how="left")
+
+    # Extract finite pairs
+    p2_all = np.asarray(df[p2_col], dtype=float)
+    p3_all = np.asarray(df[p3_col], dtype=float)
+    mask_all = np.isfinite(p2_all) & np.isfinite(p3_all)
+    df = df.loc[mask_all].copy()
+
+    if df.empty:
+        print("No finite P2/P3 swell amplitude pairs to plot.")
+        return None, None
+
+    # Determine wind categories and order
+    winds = pd.unique(df[wind_col])
+    if wind_order is not None:
+        winds = [w for w in wind_order if w in set(winds)]
+        # Append any winds not specified in wind_order
+        winds += [w for w in pd.unique(df[wind_col]) if w not in winds]
+    else:
+        winds = list(winds)
+
+    # Shared limits (with padding)
+    p2 = np.asarray(df[p2_col], dtype=float)
+    p3 = np.asarray(df[p3_col], dtype=float)
+    lo = float(np.min([p2.min(), p3.min()]))
+    hi = float(np.max([p2.max(), p3.max()]))
+    if hi == lo:
+        lo, hi = (0.0, max(1.0, hi * 1.1))
+    pad = 0.05 * (hi - lo)
+    xlim = (lo - pad, hi + pad)
+    ylim = (lo - pad, hi + pad)
+
+    # Subplot grid
+    n = len(winds)
+    ncols = max(1, ncols)
+    nrows = (n + ncols - 1) // ncols
+    figsize = (figsize_per_facet[0] * ncols, figsize_per_facet[1] * nrows)
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False, dpi=120)
+    axes_flat = axes.ravel()
+
+    # Plot each wind facet
+    for i, wind in enumerate(winds):
+        ax = axes_flat[i]
+        df_w = df[df[wind_col] == wind]
+        if df_w.empty:
+            ax.set_visible(False)
+            continue
+
+        x = np.asarray(df_w[p2_col], dtype=float)
+        y = np.asarray(df_w[p3_col], dtype=float)
+
+        # Color by wind, fallback if not found
+        col = WIND_COLORS.get(wind, "#333333") if "WIND_COLORS" in globals() else "#1f77b4"
+
+        ax.scatter(x, y, s=40, c=col, edgecolor="white", linewidth=0.7, alpha=alpha)
+
+        # y=x reference
+        ax.plot(xlim, xlim, color="#888", linestyle="--", linewidth=1.0, label="y = x")
+
+        ax.set_title(f"Wind: {wind}\n(n={len(df_w)})", fontsize=9)
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.grid(True, alpha=0.3)
+        if i % ncols == 0:
+            ax.set_ylabel(ylabel)
+        else:
+            ax.set_ylabel("")
+        ax.set_xlabel(xlabel)
+
+        if annotate and path_col in df_w:
+            for xi, yi, p in zip(x, y, df_w[path_col].astype(str).values):
+                ax.annotate(Path(p).stem, (xi, yi), textcoords="offset points",
+                            xytext=(6, 4), fontsize=7, alpha=0.85)
+
+        # Optional quick stats in the corner (mean delta)
+        delta = (y - x)
+        ax.text(0.02, 0.98, f"Δ mean = {np.mean(delta):.2f}",
+                transform=ax.transAxes, ha="left", va="top", fontsize=8, color="#444")
+
+    # Hide unused axes
+    for j in range(len(winds), len(axes_flat)):
+        axes_flat[j].set_visible(False)
+
+    if title:
+        fig.suptitle(title, y=0.995, fontsize=11)
+
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=150)
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return fig, axes
 
 
 
