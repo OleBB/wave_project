@@ -410,8 +410,8 @@ def compute_amplitude_by_band(psd_dictionary, freq_bands=None):
     """Compute band amplitudes by integrating PSD using the actual frequency axis."""
     if freq_bands is None:
         freq_bands = {
-            'swell': (0.0, 2.9999),
-            'wind_waves': (3, 10.0),
+            'swell': (0.0, 2.6),
+            'wind_waves': (2.6001, 10.0),
             'total': (0.0, 10.0),
         }
 
@@ -489,7 +489,7 @@ def plot_p2_p3_bars(band_amplitudes):
         plt.bar(x + w/2, values_p3, width=w, label='P3')
         plt.xticks(x, bands)
         plt.ylabel('Amplitude')
-        plt.title(path)
+        plt.title(path[30:])
         plt.legend()
         plt.grid(True, axis='y', alpha=0.3)
         plt.tight_layout()
