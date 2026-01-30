@@ -17,19 +17,119 @@ from typing import Dict, List, Tuple, Optional
 from wavescripts.constants import AMPLITUDE, MEASUREMENT, SIGNAL
 #signal_processing.py
 
-def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
-    """Compute wave amplitudes from np.percentile"""
+#todo - fjerne denne
+# def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
+#     """Compute wave amplitudes from np.percentile"""
+#     records = []
+#     for path, df in processed_dfs.items():
+#         subset_meta = meta_row[meta_row["path"] == path]
+#         for _, row in subset_meta.iterrows():
+#             row_out = {"path": path}
+#             for i in range(1, 5):
+#                 amplitude = _extract_probe_amplitude(df, row, i)
+#                 if amplitude is not None:
+#                     row_out[f"Probe {i} Amplitude"] = amplitude
+#             records.append(row_out)
+#     return pd.DataFrame.from_records(records)
+
+def compute_amplitudes(
+    processed_dfs: dict,
+    meta_row: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Use matrix approach when possible, fall back otherwise.
+    
+    """
     records = []
+    
     for path, df in processed_dfs.items():
         subset_meta = meta_row[meta_row["path"] == path]
+        
         for _, row in subset_meta.iterrows():
             row_out = {"path": path}
-            for i in range(1, 5):
-                amplitude = _extract_probe_amplitude(df, row, i)
-                if amplitude is not None:
-                    row_out[f"Probe {i} Amplitude"] = amplitude
+            
+            # Try fast matrix extraction first
+            probe_data, valid_probes = _extract_probe_matrix(df, row)
+            
+            if probe_data is not None and len(valid_probes) == 4:
+                # Fast path: all 4 probes with same range
+                amplitudes = _compute_matrix_amplitudes(probe_data)
+                for probe_idx, amp in zip(valid_probes, amplitudes):
+                    row_out[f"Probe {probe_idx} Amplitude"] = amp
+            
+            else:
+                # Slow path: extract individually (handles mismatched ranges)
+                for i in range(1, 5):
+                    amplitude = _extract_probe_amplitude(df, row, i)
+                    if amplitude is not None:
+                        row_out[f"Probe {i} Amplitude"] = amplitude
+            
             records.append(row_out)
+    
     return pd.DataFrame.from_records(records)
+
+def _extract_probe_matrix(
+    df: pd.DataFrame,
+    row: pd.Series
+) -> tuple[Optional[np.ndarray], list[int]]:
+    """
+    Extract probe signals as a 2D matrix where possible.
+    
+    Returns:
+        (matrix, valid_probe_numbers) or (None, []) if extraction fails
+        Matrix shape: (n_samples, n_valid_probes)
+    """
+    # Find which probes have same start/end indices
+    probe_ranges = {}
+    for i in range(1, 5):
+        start = row.get(f"Computed Probe {i} start")
+        end = row.get(f"Computed Probe {i} end")
+        
+        if pd.notna(start) and pd.notna(end):
+            try:
+                s_idx = max(0, int(start))
+                e_idx = min(len(df) - 1, int(end))
+                if s_idx < e_idx:
+                    probe_ranges[i] = (s_idx, e_idx)
+            except (TypeError, ValueError):
+                pass
+    
+    if not probe_ranges:
+        return None, []
+    
+    # Check if all valid probes have the same range
+    ranges = list(probe_ranges.values())
+    if len(set(ranges)) == 1:
+        # All probes have identical range - can extract as matrix!
+        s_idx, e_idx = ranges[0]
+        valid_probes = sorted(probe_ranges.keys())
+        
+        cols = [f"eta_{i}" for i in valid_probes]
+        if all(col in df.columns for col in cols):
+            matrix = df[cols].iloc[s_idx:e_idx+1].values
+            return matrix, valid_probes
+    
+    # Fall back to individual extraction
+    return None, []
+
+
+def _compute_matrix_amplitudes(matrix: np.ndarray) -> list[float]:
+    """
+    Compute amplitudes for all columns at once.
+    
+    Args:
+        matrix: Shape (n_samples, n_probes)
+    
+    Returns:
+        List of amplitudes (one per probe)
+    """
+    # Vectorized percentile calculation across axis=0 (for each column/probe)
+    upper = np.percentile(matrix, AMPLITUDE.UPPER_PERCENTILE, axis=0)
+    lower = np.percentile(matrix, AMPLITUDE.LOWER_PERCENTILE, axis=0)
+    
+    amplitudes = (upper - lower) / AMPLITUDE.AMPLITUDE_DIVISOR
+    
+    return amplitudes.tolist()
 
 def compute_amplitudes_from_psd(f, pxx, target_freq, window=0.5):
     """Hent amplituden fra PSD ved gitt frekvens"""
@@ -85,7 +185,7 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
                 continue
             
             psd_df = None
-            npersegment = int(MEASUREMENT.SAMPLING_RATE / SIGNAL.PSD.FREQUENCY_RESOLUTION)
+            npersegment = int(MEASUREMENT.SAMPLING_RATE / SIGNAL.PSD_FREQUENCY_RESOLUTION)
             for i in range(1, 5):
                 signal = _extract_probe_signal(df, row, i)
                 nperseg = max(1, min(npersegment, len(signal)))

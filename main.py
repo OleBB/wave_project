@@ -60,11 +60,11 @@ processvariables = {
         "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
-        "debug": False,
+        "debug": True,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
         "range_plot": False,    
-        "force_recompute": False,
+        "force_recompute": True,
     },
 }
 
