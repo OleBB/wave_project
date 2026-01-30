@@ -64,7 +64,7 @@ processvariables = {
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
         "range_plot": False,    
-        "force_recompute": True,
+        "force_recompute": False,
     },
 }
 
@@ -481,7 +481,7 @@ def compute_amplitude_by_band(
 
 
 band_amplitudes = compute_amplitude_by_band(psd_dictionary)
-print(band_amplitudes)
+
 
 # %% band scatter
 import matplotlib.pyplot as plt
@@ -536,9 +536,73 @@ def plot_p2_p3_bars(band_amplitudes):
 # Example:
 plot_p2_p3_bars(band_amplitudes)
 
+# %% Gpt urørt
 
 
+# python
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+from typing import Optional
 
+def plot_swell_comparison_scatter(
+    band_amplitudes,
+    p2_col="Probe 2 swell amplitude",
+    p3_col="Probe 3 swell amplitude",
+    color_p2="#1f77b4",
+    color_p3="#ff7f0e",
+    title="Swell amplitude: Before (P2) vs After (P3)",
+    ylabel="P3 (after) amplitude (mm)",
+    xlabel="P2 (before) amplitude (mm)",
+    annotate_with="path",  # set to None to disable
+    alpha=0.8,
+    save_path: Optional[Path] = None,
+    show=True,
+):
+    # Extract values
+    p2 = np.asarray(band_amplitudes[p2_col], dtype=float)
+    p3 = np.asarray(band_amplitudes[p3_col], dtype=float)
+
+    # Filter to finite pairs
+    mask = np.isfinite(p2) & np.isfinite(p3)
+    p2 = p2[mask]
+    p3 = p3[mask]
+    paths = None
+    if annotate_with and annotate_with in band_amplitudes.columns:
+        paths = np.asarray(band_amplitudes[annotate_with], dtype=object)[mask]
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.scatter(p2, p3, s=40, c=color_p3, edgecolor="white", linewidth=0.7, alpha=alpha)
+
+    # Reference line y = x
+    low = float(min(np.min(p2), np.min(p3)))
+    high = float(max(np.max(p2), np.max(p3)))
+    pad = 0.05 * (high - low) if high > low else 1.0
+    ax.plot([low - pad, high + pad], [low - pad, high + pad], color="#888", linestyle="--", label="y = x")
+
+    ax.set_xlim(low - pad, high + pad)
+    ax.set_ylim(low - pad, high + pad)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+
+    # Optional lightweight annotations (short filenames)
+    if paths is not None:
+        for x, y, p in zip(p2, p3, paths):
+            name = Path(str(p)).stem
+            ax.annotate(name, (x, y), textcoords="offset points", xytext=(6, 4), fontsize=8, alpha=0.8)
+
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150)
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+plot_swell_comparison_scatter(band_amplitudes)
 # %% damping
 
 
