@@ -21,7 +21,7 @@ from typing import Dict
 @dataclass(frozen=True)
 class PhysicalConstants:
     """Universal physical constants - these never change."""
-    GRAVITY: float = 9.81  # m/s²
+    GRAVITY: float = 9.80665  # m/s²
     WATER_SURFACE_TENSION: float = 0.074  # N/m at 20°C
     WATER_DENSITY: float = 1000.0  # kg/m³
 
