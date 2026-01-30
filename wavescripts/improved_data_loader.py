@@ -624,7 +624,7 @@ def load_or_update(
 
     # Final metadata DataFrame
     meta_df = pd.DataFrame(all_meta_list)
-    meta_df = meta_df.astype(dtype_map)
+    meta_df = apply_dtypes(meta_df)
     
     mode = "recomputed" if force_recompute else "loaded"
     print(f"\nFinished! Total {len(all_dfs)} files {mode} from {len(folders)} experiment(s)")
