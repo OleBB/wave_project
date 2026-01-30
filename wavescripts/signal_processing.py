@@ -155,7 +155,7 @@ def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.
     return amplitude
 
 
-def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250, debug:bool=False) -> Tuple[dict, list]:
+def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs, debug:bool=False) -> Tuple[dict, list]:
     """Compute Power Spectral Density for each probe."""
     psd_dict = {}
     amplitude_records = []
@@ -207,7 +207,7 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs:
         print(f"=== PSD Complete: {len(amplitude_records)} records ===\n")
     return psd_dict, amplitude_records
 
-def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs: float = 250, debug:bool=False) -> Tuple[dict, list]:
+def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs , debug:bool=False) -> Tuple[dict, list]:
     """Compute FFT for each probe. and calculate amplitude"""
     fft_dict = {}
     amplitude_records = []
