@@ -17,20 +17,7 @@ from typing import Dict, List, Tuple, Optional
 from wavescripts.constants import AMPLITUDE, MEASUREMENT, SIGNAL
 #signal_processing.py
 
-#todo - fjerne denne
-# def compute_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame) -> pd.DataFrame:
-#     """Compute wave amplitudes from np.percentile"""
-#     records = []
-#     for path, df in processed_dfs.items():
-#         subset_meta = meta_row[meta_row["path"] == path]
-#         for _, row in subset_meta.iterrows():
-#             row_out = {"path": path}
-#             for i in range(1, 5):
-#                 amplitude = _extract_probe_amplitude(df, row, i)
-#                 if amplitude is not None:
-#                     row_out[f"Probe {i} Amplitude"] = amplitude
-#             records.append(row_out)
-#     return pd.DataFrame.from_records(records)
+
 
 def compute_amplitudes(
     processed_dfs: dict,
