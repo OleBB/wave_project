@@ -30,9 +30,9 @@ Og så er det kode som sammenlikner data når hele mappen er prosessert en gang
 dataset_paths = [
     #Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
     
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
