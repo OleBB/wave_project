@@ -14,6 +14,8 @@ import pandas as pd
 import os
 from datetime import datetime
 
+from wavescripts.constants import MEASUREMENT
+
 
 dtype_map = {
 
@@ -207,7 +209,7 @@ def load_or_update(
 
                 # Formatting
                 for probe in range(1, 5):
-                    df[f"Probe {probe}"] *= 1000
+                    df[f"Probe {probe}"] *= MEASUREMENT.M_TO_MM
                 df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y %H:%M:%S.%f")
 
                 dfs[key] = df
@@ -277,8 +279,7 @@ def load_or_update(
                     "experiment_folder": experiment_name
                 })
 
-                stillwater_samples = 250 #bruker æ fortsatt denne?
-
+                stillwater_samples = MEASUREMENT.STILLWATER_SAMPLES #x antall samples fra no-wind runs som skal brukes for å finne vanntillstanden denne dagen.
                 # Wind
                 wind_match = re.search(r'-([A-Za-z]+)wind-', filename)
                 if wind_match:
@@ -325,9 +326,9 @@ def load_or_update(
 
                 # Wave parameters
                 if m := re.search(r'-amp([A-Za-z0-9]+)-', filename):
-                    metadata["WaveAmplitudeInput [Volt]"] = int(m.group(1)) / 1000.0
+                    metadata["WaveAmplitudeInput [Volt]"] = int(m.group(1)) * MEASUREMENT.MM_TO_M
                 if m := re.search(r'-freq(\d+)-', filename):
-                    metadata["WaveFrequencyInput [Hz]"] = int(m.group(1)) / 1000.0
+                    metadata["WaveFrequencyInput [Hz]"] = int(m.group(1)) * MEASUREMENT.MM_TO_M
                 if m := re.search(r'-per(\d+)-', filename):
                     metadata["WavePeriodInput"] = int(m.group(1))
                 if m := re.search(r'-depth([A-Za-z0-9]+)', filename):
@@ -478,14 +479,14 @@ def save_processed_dataframes(dfs: dict, meta_df: pd.DataFrame, processed_root=N
 
 
 
-
-def apply_updates_to_metadata(metadata_list, updates):
-    # metadata_list is a list[dict] like in your JSON
-    for obj in metadata_list:
-        p = 1
-        if p in updates:
-            obj.update(updates[p])
-    return metadata_list
+#  ikke i bruk
+# def apply_updates_to_metadata(metadata_list, updates):
+#     # metadata_list is a list[dict] like in your JSON
+#     for obj in metadata_list:
+#         p = 1
+#         if p in updates:
+#             obj.update(updates[p])
+#     return metadata_list
 
 
 FOLDER1 = Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")

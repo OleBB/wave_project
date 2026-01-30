@@ -93,17 +93,12 @@ def ensure_stillwater_columns(
     return meta
 
 
-
-
-
 def remove_outliers():
     #lag noe basert på steepness, kanskje tilogmed ak. Hvis ak er for bratt
     # og datapunktet for høyt, så må den markeres, og så fjernes.
     #se Karens script
     return
 
-
-"claude=============="
 def _extract_stillwater_levels(meta_full: pd.DataFrame, debug: bool) -> dict:
     """Extract stillwater levels from metadata."""
     stillwater = {}
@@ -263,7 +258,7 @@ def process_selected_data(
     4. Regner PSD og FFT med tilhørende 
     5. Oppdaterer meta
     """
-    fs = 250 #samplerate -foreløpig hardkodet mange steder.
+    fs = MEASUREMENT.SAMPLE_RATE
     # 0. unpack processvariables
     # overordnet = processvariables.get("overordnet", {})
     prosessering = processvariables.get("prosessering", {})
