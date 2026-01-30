@@ -470,23 +470,6 @@ def load_meta_from_processed(folder_name: str) -> pd.DataFrame:
     
     return df
 
-def save_processed_dataframes(dfs: dict, meta_df: pd.DataFrame, processed_root=None):
-    for key, df in dfs.items():
-        row = meta_df[meta_df["path"] == key].iloc[0]
-        processed_folder = row.get("PROCESSED_folder") or f"PROCESSED-{Path(key).parent.name}"
-        cache_dir = Path(processed_root or "waveprocessed") / processed_folder
-        pd.to_pickle(dfs, cache_dir / "dfs.pkl")
-
-
-
-#  ikke i bruk
-# def apply_updates_to_metadata(metadata_list, updates):
-#     # metadata_list is a list[dict] like in your JSON
-#     for obj in metadata_list:
-#         p = 1
-#         if p in updates:
-#             obj.update(updates[p])
-#     return metadata_list
 
 
 FOLDER1 = Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")
