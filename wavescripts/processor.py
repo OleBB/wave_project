@@ -16,6 +16,8 @@ from wavescripts.wave_detection import find_wave_range
 from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes
 from wavescripts.wave_physics import calculate_wavenumbers, calculate_wavedimensions, calculate_windspeed
 
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
+
 PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
 
 

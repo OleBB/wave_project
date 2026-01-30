@@ -19,6 +19,7 @@ from scipy.signal import welch
 from scipy.optimize import brentq
 from typing import Dict, List, Tuple
 
+from wavescripts.constants import get_smoothing_window
 
 def find_wave_range(
     df,
@@ -29,14 +30,9 @@ def find_wave_range(
     debug: bool,
 ):
     
-    if (meta_row["WindCondition"]) == "full":
-        detect_win = 15
-    elif (meta_row["WindCondition"]) == "low":
-        detect_win = 10
-    elif (meta_row["WindCondition"]) == "no":
-        detect_win = 1
-    else:
-        detect_win = 1
+        
+    wind_condition = meta_row["WindCondition"]
+    detect_win = get_smoothing_window(wind_condition)
     # ==========================================================
     # 1. smoothe signalet med moving average vindu: detect_win
     # ==========================================================
@@ -169,7 +165,15 @@ def find_wave_range(
                 good_end_idx = P3handcalc + keep_idx
                 #return good_start_idx, good_end_idx, debug_info"""
 
-    
+#TODO: claude sitt forslag til bruk av konstanter
+    # def detect_baseline_AFTER(signal_smooth):
+    #     """NEW VERSION."""
+    #     baseline_samples = int(SIGNAL.BASELINE_DURATION_SEC * MEASUREMENT.SAMPLING_RATE)
+    #     baseline = signal_smooth[:baseline_samples]
+    #     baseline_mean = np.mean(baseline)
+    #     baseline_std = np.std(baseline)
+    #     threshold = baseline_mean + SIGNAL.BASELINE_SIGMA_FACTOR * baseline_std
+    #     return threshold
     baseline_seconds = 2
     sigma_factor=1.0
     skip_periods=None
@@ -291,6 +295,15 @@ def find_wave_range(
         if best_start == -1:
             return None
         return best_start, best_end, seq[best_start:best_end + 1]
+    CLAUDE
+    def find_best_ramp_AFTER(seq):
+        # All parameters come from constants
+        return _find_ramp_core(
+            seq,
+            min_len=RAMP.MIN_RAMP_PEAKS,
+            max_len=RAMP.MAX_RAMP_PEAKS,
+            max_dips=RAMP.MAX_DIPS_ALLOWED,
+            min_growth=RAMP.MIN_GROWTH_FACTOR
     # ==========================================================
     # Kjører "find_best_ramp(...)"
     # ==========================================================
