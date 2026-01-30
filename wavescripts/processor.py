@@ -258,7 +258,7 @@ def process_selected_data(
     4. Regner PSD og FFT med tilhørende 
     5. Oppdaterer meta
     """
-    fs = MEASUREMENT.SAMPLE_RATE
+    fs = MEASUREMENT.SAMPLING_RATE
     # 0. unpack processvariables
     # overordnet = processvariables.get("overordnet", {})
     prosessering = processvariables.get("prosessering", {})
