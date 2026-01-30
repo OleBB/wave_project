@@ -171,35 +171,35 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
                     print(f"Advarsel: Ingen Input frequency {freq} for {path}, skipping")
                 continue
             
-            psd_df = None
+            series_list = []
             npersegment = int(MEASUREMENT.SAMPLING_RATE / SIGNAL.PSD_FREQUENCY_RESOLUTION)
             for i in range(1, 5):
                 signal = _extract_probe_signal(df, row, i)
-                nperseg = max(1, min(npersegment, len(signal)))
-                    
-                if signal is not None:
-
-                    # nperseg = npersegment #har noen mye kortere signaler
-                    noverlap = nperseg * SIGNAL.PSD_OVERLAP_FRACTION  # or int(0.75 * nperseg)
-                    
-                    f, pxx = welch(
-                        signal, fs=fs,
-                        window='hann',
-                        nperseg=nperseg,
-                        noverlap=noverlap,
-                        detrend='constant',
-                        scaling='density'
-                    )
-                    if psd_df is None:
-                        psd_df = pd.DataFrame(index=f)
-                        psd_df.index.name = "Frequencies"  
-                    psd_df[f"Pxx {i}"] = pxx
-                    # - - - amplitude
-                    amplitude = compute_amplitudes_from_psd(f, pxx, freq)
-                    if debug:
-                        print("amplitden inni PSD loopen er ", amplitude)
-                    row_out[f"Probe {i} Amplitude (PSD)"] = amplitude
-            if psd_df is not None:
+                if signal is None or len(signal) < 2:
+                    print('for this probe - no signal')
+                    continue #skip very short signals
+                nperseg = max(2, min(npersegment, len(signal))) #ensure 2 for spectrum
+                overlap_fraction = SIGNAL.PSD_OVERLAP_FRACTION
+                noverlap = int(overlap_fraction * nperseg) if nperseg > 1 else 0
+                noverlap = min(noverlap, nperseg - 1)  # Ensure < nperseg
+                   
+                f, pxx = welch(
+                    signal, fs=fs,
+                    window='hann',
+                    nperseg=nperseg,
+                    noverlap=noverlap,
+                    detrend='constant',
+                    scaling='density'
+                )
+                series_list.append(pd.Series(pxx, index=f, name = f"Pxx {i}"))
+                # - - - amplitude
+                amplitude = compute_amplitudes_from_psd(f, pxx, freq)
+                if debug:
+                    print("amplitden inni PSD loopen er ", amplitude)
+                row_out[f"Probe {i} Amplitude (PSD)"] = amplitude
+            if series_list:
+                psd_df = pd.concat(series_list, axis=1).sort_index()
+                psd_df.index.name = "Frequencies"
                 psd_dict[path] = psd_df
             amplitude_records.append(row_out)
 
