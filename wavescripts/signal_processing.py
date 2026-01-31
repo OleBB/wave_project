@@ -9,51 +9,55 @@ Created on Fri Jan 30 09:47:15 2026
 
 import pandas as pd
 import numpy as np
-from scipy.signal import find_peaks
 from scipy.signal import welch
-from scipy.optimize import brentq
+
 from typing import Dict, List, Tuple, Optional
 
 from wavescripts.constants import AMPLITUDE, MEASUREMENT, SIGNAL
-#signal_processing.py
 
+# %% - Fysisk amplitude
 
+def _extract_probe_signal(
+    df: pd.DataFrame, 
+    row: pd.Series, 
+    probe_num: int
+) -> Optional[np.ndarray]:
+    """Your original function - unchanged."""
+    col = f"eta_{probe_num}"
+    start_val = row.get(f"Computed Probe {probe_num} start")
+    end_val = row.get(f"Computed Probe {probe_num} end")
+    
+    if pd.isna(start_val) or pd.isna(end_val) or col not in df.columns:
+        return None
+    
+    try:
+        s_idx = max(0, int(start_val))
+        e_idx = min(len(df) - 1, int(end_val))
+    except (TypeError, ValueError):
+        return None
+    
+    if s_idx >= e_idx:
+        return None
+    
+    signal = df[col].iloc[s_idx:e_idx+1].dropna().to_numpy()
+    return signal if signal.size > 0 else None
+    
 
-def compute_amplitudes(
-    processed_dfs: dict,
-    meta_row: pd.DataFrame
-) -> pd.DataFrame:
-    """
-    Use matrix approach when possible, fall back otherwise.
+def _extract_probe_amplitude(
+    df: pd.DataFrame, 
+    row: pd.Series, 
+    probe_num: int
+) -> Optional[float]:
+    """Finner høyeste percentil a=h/2 for én og én probe."""
+    signal = _extract_probe_signal(df, row, probe_num)
+    if signal is None:
+        return None
     
-    """
-    records = []
+    upper_p = np.percentile(signal, AMPLITUDE.UPPER_PERCENTILE)
+    lower_p = np.percentile(signal, AMPLITUDE.LOWER_PERCENTILE)
     
-    for path, df in processed_dfs.items():
-        subset_meta = meta_row[meta_row["path"] == path]
-        
-        for _, row in subset_meta.iterrows():
-            row_out = {"path": path}
-            
-            # Try fast matrix extraction first
-            probe_data, valid_probes = _extract_probe_matrix(df, row)
-            
-            if probe_data is not None and len(valid_probes) == 4:
-                # Fast path: all 4 probes with same range
-                amplitudes = _compute_matrix_amplitudes(probe_data)
-                for probe_idx, amp in zip(valid_probes, amplitudes):
-                    row_out[f"Probe {probe_idx} Amplitude"] = amp
-            
-            else:
-                # Slow path: extract individually (handles mismatched ranges)
-                for i in range(1, 5):
-                    amplitude = _extract_probe_amplitude(df, row, i)
-                    if amplitude is not None:
-                        row_out[f"Probe {i} Amplitude"] = amplitude
-            
-            records.append(row_out)
-    
-    return pd.DataFrame.from_records(records)
+    return float((upper_p - lower_p) / AMPLITUDE.AMPLITUDE_DIVISOR)
+
 
 def _extract_probe_matrix(
     df: pd.DataFrame,
@@ -118,6 +122,43 @@ def _compute_matrix_amplitudes(matrix: np.ndarray) -> list[float]:
     
     return amplitudes.tolist()
 
+def compute_amplitudes(
+    processed_dfs: dict,
+    meta_row: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Use matrix approach when possible, fall back otherwise.
+    
+    """
+    records = []
+    
+    for path, df in processed_dfs.items():
+        subset_meta = meta_row[meta_row["path"] == path]
+        
+        for _, row in subset_meta.iterrows():
+            row_out = {"path": path}
+            
+            # Try fast matrix extraction first
+            probe_data, valid_probes = _extract_probe_matrix(df, row)
+            
+            if probe_data is not None and len(valid_probes) == 4:
+                # Fast path: all 4 probes with same range
+                amplitudes = _compute_matrix_amplitudes(probe_data)
+                for probe_idx, amp in zip(valid_probes, amplitudes):
+                    row_out[f"Probe {probe_idx} Amplitude"] = amp
+            
+            else:
+                # Slow path: extract individually (handles mismatched ranges)
+                for i in range(1, 5):
+                    amplitude = _extract_probe_amplitude(df, row, i)
+                    if amplitude is not None:
+                        row_out[f"Probe {i} Amplitude"] = amplitude
+            
+            records.append(row_out)
+    
+    return pd.DataFrame.from_records(records)
+
+# %% - PSD og FFT
 def compute_amplitudes_from_psd(f, pxx, target_freq, window=0.5):
     """Hent amplituden fra PSD ved gitt frekvens"""
     mask = (f >= target_freq - window) & (f <= target_freq + window)
@@ -222,7 +263,7 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs 
                 if debug:
                     print(f"advarsel: No input frequency {freq} for {path}, skipping")
                 continue
-            
+            #todo - vurdere å zero-padde de kortere signalene
             fft_df = None
             series_list = []
             for i in range(1, 5):
@@ -256,44 +297,7 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs 
         print(f"=== FFT Complete: {len(amplitude_records)} records ===\n")
     return fft_dict, amplitude_records
 
-def _extract_probe_signal(
-    df: pd.DataFrame, 
-    row: pd.Series, 
-    probe_num: int
-) -> Optional[np.ndarray]:
-    """Your original function - unchanged."""
-    col = f"eta_{probe_num}"
-    start_val = row.get(f"Computed Probe {probe_num} start")
-    end_val = row.get(f"Computed Probe {probe_num} end")
-    
-    if pd.isna(start_val) or pd.isna(end_val) or col not in df.columns:
-        return None
-    
-    try:
-        s_idx = max(0, int(start_val))
-        e_idx = min(len(df) - 1, int(end_val))
-    except (TypeError, ValueError):
-        return None
-    
-    if s_idx >= e_idx:
-        return None
-    
-    signal = df[col].iloc[s_idx:e_idx+1].dropna().to_numpy()
-    return signal if signal.size > 0 else None
-    
 
-def _extract_probe_amplitude(
-    df: pd.DataFrame, 
-    row: pd.Series, 
-    probe_num: int
-) -> Optional[float]:
-    """Finner høyeste percentil a=h/2 for én og én probe."""
-    signal = _extract_probe_signal(df, row, probe_num)
-    if signal is None:
-        return None
-    
-    upper_p = np.percentile(signal, AMPLITUDE.UPPER_PERCENTILE)
-    lower_p = np.percentile(signal, AMPLITUDE.LOWER_PERCENTILE)
-    
-    return float((upper_p - lower_p) / AMPLITUDE.AMPLITUDE_DIVISOR)
+
+
 
