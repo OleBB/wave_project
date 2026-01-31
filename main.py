@@ -63,7 +63,7 @@ processvariables = {
         "debug": True,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
-        "range_plot": False,    
+        "range_plot": True,    
         "force_recompute": True,
     },
 }
