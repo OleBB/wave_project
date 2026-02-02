@@ -499,9 +499,10 @@ def get_data_files(folder: Path) -> Iterator[Path]:
 # Updated function – saves per-experiment cache in waveprocessed/
 # ----------------------------------------------------------------------
 def load_or_update(
-    *folders: Path | str,  #force evertyghin  following stjerne * to be keyword only
+    *folders: Path | str,  #make evertyghin  following stjerne * to be keyword only
    
     force_recompute: bool = False,
+    total_reset: bool = False
 ) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
     """
     For each input folder (e.g. wavedata/20251110-tett6roof-lowM-ekte580),
@@ -554,19 +555,24 @@ def load_or_update(
         # Load existing cache for this experiment
         dfs: Dict[str, pd.DataFrame] = {}
         meta_list: list[dict] = []
-
-        if dfs_path.exists() and meta_path.exists() and not force_recompute:
+        
+        if dfs_path.exists() and not total_reset:
             try:
                 dfs = pd.read_pickle(dfs_path)
+            except Exception as e:
+                dfs = {}
+                
+        if meta_path.exists() and not force_recompute:
+            try:
                 meta_list = json.loads(meta_path.read_text(encoding="utf-8"))
                 # grokk snakka om dette: TK New robust way — always get a DataFrame with predictable columns
                 #meta_df = pd.read_json(meta_path, orient="records", dtype=False)
                 print(f"   Loaded {len(dfs)} cached files")
             except Exception as e:
                 print(f"   Cache corrupted ({e}) → rebuilding")
-                dfs, meta_list = {}, []
-        elif force_recompute and dfs_path.exists():
-            print(f"Du har valgt -> Force recompute: ignoring existing cache")
+                meta_list = []
+        elif force_recompute:
+            print(f"Du har valgt -> Force recompute: ignoring existing json")
         
         if force_recompute:
             new_files = list(get_data_files(folder_path))
@@ -591,7 +597,7 @@ def load_or_update(
             try:
                 suffix = path.suffix.lower()
                 if suffix == ".csv":
-                    df = pd.read_csv(path, names=["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"])
+                    df = pd.read_csv(path, dtype={}, engine=pyarrow,names=["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"])
                 else:
                     print(f"   Skipping unsupported: {path.name}")
                     continue
