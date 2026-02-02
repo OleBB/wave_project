@@ -98,9 +98,9 @@ def compute_amplitude_by_band(
     # ----------------------------------------------------------------------
     if freq_bands is None:
         freq_bands = {
-            "swell":      (0.0, 2.6),
-            "wind_waves": (2.60000001, 16.0),
-            "total":      (0.0, 16.0),
+            "Swell":      (0.0, 2.6),
+            "Wind": (2.60000001, 16.0),
+            "Total":      (0.0, 16.0),
         }
 
     # ----------------------------------------------------------------------
@@ -169,7 +169,7 @@ def compute_amplitude_by_band(
                             f"  Probe {i} – {band_name}: "
                             f"NO DATA POINTS in [{f_low}, {f_high}] Hz → amplitude=0"
                         )
-                    row[f"Probe {i} {band_name} amplitude"] = amplitude
+                    row[f"Probe {i} {band_name} amplitude (PSD)"] = amplitude
                     continue
 
                 # ------------------------------------------------------------
@@ -202,36 +202,165 @@ def compute_amplitude_by_band(
     #  Convert list‑of‑dicts → DataFrame (preserves column order)
     # ----------------------------------------------------------------------
     return pd.DataFrame(rows)
+# %%
+# def gpt_update_more_metrics(
+#     psd_dict: dict,
+#     fft_dict: dict,
+#     meta_sel: pd.DataFrame,
+# ) -> pd.DataFrame:
+#     """
+#     Overwrite/compute ratio columns and add band amplitudes aligned by 'path'.
+#     Assumes meta_sel already contains Probe 1..4 Amplitude columns.
+#     """
+#     # Explicit copy and stable index
+#     meta_indexed = meta_sel.set_index("path").copy()
+
+#     # -----------------------------
+#     # Ratios (fail-fast and aligned)
+#     # -----------------------------
+#     required_amp_cols = [
+#         "Probe 1 Amplitude",
+#         "Probe 2 Amplitude",
+#         "Probe 3 Amplitude",
+#         "Probe 4 Amplitude",
+#     ]
+#     missing = [c for c in required_amp_cols if c not in meta_indexed.columns]
+#     if missing:
+#         raise KeyError(f"Missing required amplitude columns: {missing}")
+
+#     with np.errstate(divide="ignore", invalid="ignore"):
+#         meta_indexed["P2/P1"] = meta_indexed["Probe 2 Amplitude"] / meta_indexed["Probe 1 Amplitude"]
+#         meta_indexed["P3/P2"] = meta_indexed["Probe 3 Amplitude"] / meta_indexed["Probe 2 Amplitude"]
+#         meta_indexed["P4/P3"] = meta_indexed["Probe 4 Amplitude"] / meta_indexed["Probe 3 Amplitude"]
+
+#     ratio_cols = ["P2/P1", "P3/P2", "P4/P3"]
+#     meta_indexed.loc[:, ratio_cols] = (
+#         meta_indexed[ratio_cols]
+#         .replace([np.inf, -np.inf], np.nan)
+#     )
+
+#     # ------------------------------------------
+#     # Add PSD-based band amplitudes by 'path'
+#     # ------------------------------------------
+#     band_amplitudes = compute_amplitude_by_band(psd_dict)
+#     if not isinstance(band_amplitudes, pd.DataFrame) or "path" not in band_amplitudes.columns:
+#         raise ValueError("compute_amplitude_by_band(psd_dict) must return a DataFrame with a 'path' column.")
+
+#     ba = band_amplitudes.set_index("path")
+#     # Ensure we only select real columns (fail-fast on missing)
+#     ba_cols = [c for c in ba.columns]
+#     # Align to meta_indexed index (overwrite semantics)
+#     meta_indexed.loc[:, ba_cols] = ba.reindex(meta_indexed.index)[ba_cols]
+
+#     # ------------------------------------------
+#     # Optionally, add FFT-based band amplitudes
+#     # ------------------------------------------
+#     # If you have a corresponding function that returns DataFrame with 'path'
+#     if 'compute_fft_amplitude_by_band' in globals():
+#         fft_band_amplitudes = compute_fft_amplitude_by_band(fft_dict)
+#         if isinstance(fft_band_amplitudes, pd.DataFrame) and "path" in fft_band_amplitudes.columns:
+#             fba = fft_band_amplitudes.set_index("path")
+#             fba_cols = [c for c in fba.columns]
+#             meta_indexed.loc[:, fba_cols] = fba.reindex(meta_indexed.index)[fba_cols]
+
+#     return meta_indexed.reset_index()
+
 
 def _update_more_metrics(
-        psd_dict: dict,
-        fft_dict: dict,
-        meta_sel: pd.DataFrame
-        ) -> pd.DataFrame():
-    meta_indexed = meta_sel.set_index("path")
-    
+    psd_dict: dict,
+    fft_dict: dict,
+    meta_sel: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Compute additional derived metrics (ratios + band amplitudes)
+    and add/overwrite them in the metadata.
+    """
+    # Start from a clean indexed copy
     meta_indexed = meta_sel.set_index("path").copy()
-    
-    # ==========================================================
-    #  plz help below
-    # ==========================================================
-    cols = ["path", "Probe 1 Amplitude","Probe 2 Amplitude", "Probe 3 Amplitude","Probe 4 Amplitude",]
-    sub_df = mdf[cols].copy()
-    sub_df["P2/P1"] = sub_df["Probe 2 Amplitude"] / sub_df["Probe 1 Amplitude"]
-    sub_df["P3/P2"] = sub_df["Probe 3 Amplitude"] / sub_df["Probe 2 Amplitude"]
-    sub_df["P4/P3"] = sub_df["Probe 4 Amplitude"] / sub_df["Probe 3 Amplitude"]
-    sub_df.replace([np.inf, -np.inf], np.nan, inplace=True) #infinite values  div 0
-    mdf_indexed = mdf.set_index("path") # set index to join back on "path"
-    ratios_by_path = sub_df.set_index("path")[["P2/P1", "P3/P2", "P4/P3"]]
-    mdf_indexed[["P2/P1", "P3/P2", "P4/P3"]] = ratios_by_path
-    mdf = mdf_indexed.reset_index() #reset index 
-        
+
+    # ── Probe amplitude ratios ───────────────────────────────────────
+    amp_cols = [
+        "Probe 1 Amplitude (FFT)",
+        "Probe 2 Amplitude (FFT)",
+        "Probe 3 Amplitude (FFT)",
+        "Probe 4 Amplitude (FFT)",
+    ]
+
+    # Only proceed if we have the needed columns
+    missing = [col for col in amp_cols if col not in meta_indexed.columns]
+    if missing:
+        print(f"Warning: missing amplitude columns for ratios: {missing}")
+        # or raise ValueError(...) if you prefer to fail loudly
+
+    # Compute ratios directly (vectorized)
+    ratios = pd.DataFrame(index=meta_indexed.index)
+
+    ratios["P2/P1"] = (
+        meta_indexed["Probe 2 Amplitude (FFT)"] / meta_indexed["Probe 1 Amplitude (FFT)"]
+    )
+    ratios["P3/P2"] = (
+        meta_indexed["Probe 3 Amplitude (FFT)"] / meta_indexed["Probe 2 Amplitude (FFT)"]
+    )
+    ratios["P4/P3"] = (
+        meta_indexed["Probe 4 Amplitude (FFT)"] / meta_indexed["Probe 3 Amplitude (FFT)"]
+    )
+
+    # Replace inf/-inf with NaN (e.g. division by zero)
+    ratios = ratios.replace([np.inf, -np.inf], np.nan)
+
+    # Assign / overwrite the ratio columns
+    ratio_cols = ["P2/P1", "P3/P2", "P4/P3"]
+    meta_indexed[ratio_cols] = ratios[ratio_cols]
+
+    # ── Band amplitudes ──────────────────────────────────────────────
+    # Assuming compute_amplitude_by_band returns a DataFrame with "path" column
     band_amplitudes = compute_amplitude_by_band(psd_dict)
+
+    if not band_amplitudes.empty:
+        # Set same index and select only the band columns you want to add
+        band_indexed = band_amplitudes.set_index("path")
+
+        # Option A: aggressive overwrite of whatever columns come back
+        meta_indexed[band_indexed.columns] = band_indexed
+
+        # Option B: more controlled — only specific columns
+        # band_cols = [c for c in band_indexed.columns if "band" in c.lower()]  # example
+        # meta_indexed[band_cols] = band_indexed[band_cols]
+
+    # You can add more blocks here later (e.g. using fft_dict)
+
+    # Return to normal shape
+    return meta_indexed.reset_index(names="path")
+
+# def _update_more_metrics(
+#         psd_dict: dict,
+#         fft_dict: dict,
+#         meta_sel: pd.DataFrame
+#         ) -> pd.DataFrame():
+#     meta_indexed = meta_sel.set_index("path")
+    
+#     meta_indexed = meta_sel.set_index("path").copy()
+    
+#     # ==========================================================
+#     #  plz help below
+#     # ==========================================================
+#     cols = ["path", "Probe 1 Amplitude","Probe 2 Amplitude", "Probe 3 Amplitude","Probe 4 Amplitude",]
+#     sub_df = mdf[cols].copy()
+#     sub_df["P2/P1"] = sub_df["Probe 2 Amplitude"] / sub_df["Probe 1 Amplitude"]
+#     sub_df["P3/P2"] = sub_df["Probe 3 Amplitude"] / sub_df["Probe 2 Amplitude"]
+#     sub_df["P4/P3"] = sub_df["Probe 4 Amplitude"] / sub_df["Probe 3 Amplitude"]
+#     sub_df.replace([np.inf, -np.inf], np.nan, inplace=True) #infinite values  div 0
+#     mdf_indexed = mdf.set_index("path") # set index to join back on "path"
+#     ratios_by_path = sub_df.set_index("path")[["P2/P1", "P3/P2", "P4/P3"]]
+#     mdf_indexed[["P2/P1", "P3/P2", "P4/P3"]] = ratios_by_path
+#     mdf = mdf_indexed.reset_index() #reset index 
+        
+#     band_amplitudes = compute_amplitude_by_band(psd_dict)
     
     
     
     
-    return meta_indexed.reset_index
+#     return meta_indexed.reset_index
     
 
 # %% kjøres

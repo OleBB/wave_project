@@ -20,6 +20,8 @@ from matplotlib.patches import Circle, Ellipse
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.offsetbox import AnchoredOffsetbox   # or AnchoredOffsetBox
 
+from wavescripts.constants import MEASUREMENT
+
 def draw_anchored_text(ax, txt="Figuren", loc="upper left", fontsize=9,
                        facecolor="white", edgecolor="gray", alpha=0.85):
     """
@@ -402,8 +404,6 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
     plt.show()
 
 #%% ## Ramp detection
-
-
 def plot_ramp_detection(df, meta_sel, data_col,
                         signal,
                         baseline_mean,
@@ -424,7 +424,8 @@ def plot_ramp_detection(df, meta_sel, data_col,
 
     t0 = df["Date"].iat[0]
     # time in milliseconds
-    time_ms = (df["Date"] - t0).dt.total_seconds().to_numpy() * 1000.0
+
+    time_ms = (df["Date"] - t0).dt.total_seconds().to_numpy() * MEASUREMENT.M_TO_MM
     raw = df[data_col].to_numpy()
 
     n = len(time_ms)
@@ -457,7 +458,7 @@ def plot_ramp_detection(df, meta_sel, data_col,
     # NOTE: time_ms is in milliseconds; the angular frequency below must be in rad/ms.
     # If you prefer Hz, convert to seconds and use 2*pi*f*t_sec instead.
     amp_in = float(meta_sel["WaveAmplitudeInput [Volt]"])
-    amp = amp_in if amp_in is not None else 10
+    amp = amp_in if amp_in is not None else 20
 
     t_cut = time_ms[good_start_i:good_end_i]
 
@@ -480,7 +481,7 @@ def plot_ramp_detection(df, meta_sel, data_col,
     # 4) Good stable interval
     ax.axvline(time_ms[good_start_i], color="green", linewidth=3, label=f"Stable start #{good_start_i}")
     ax.axvline(time_ms[good_end_i], color="purple", linewidth=2, linestyle="--", label=f"End #{good_end_i}")
-    ax.axvspan(time_ms[good_start_i], time_ms[good_end_i], color="green", alpha=0.15, label="Stable region")
+    ax.axvspan(time_ms[good_start_i], time_ms[good_end_i], color="green", alpha=0.08, label="Stable region")
 
     # 5) Optional: peaks and ramp-up
     if peaks is not None and len(peaks) > 0:
@@ -495,7 +496,8 @@ def plot_ramp_detection(df, meta_sel, data_col,
                 label=f"Ramp-up ({len(rpi)} peaks)")
 
     # Zoom around baseline to make waves visible
-    zoom_margin = amp*1.3  # mm 
+    zoom_margin = amp*100  # 0.1amp * 100 = 10 mm? 
+    print(f"zoom margin er {zoom_margin}")
     ax.set_ylim(baseline_mean - zoom_margin, baseline_mean + zoom_margin)
     
     """TODO:
