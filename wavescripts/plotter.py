@@ -1092,256 +1092,266 @@ def plot_damping_combined_old(
     
     
 # %% plot daming (basert på den fleksible plot_freq_spectrum)
-def plot_damp(
-    fft_dict: dict,
-    meta_df: pd.DataFrame,
-    freqplotvar: dict, 
-    data_type: str = "fft"
-) -> tuple:
-    """
-    Flexible frequency spectrum plotter with extensive customization options.
+# # begynte å kopiere den under... men starter med å bruke groupern til å hente ny amplitude. fra band_amplitudes
+# def plot_swell_damping(
+#     fft_dict: dict,
+#     band_amp: pd.DataFrame,
+#     meta_df: pd.DataFrame,
+#     freqplotvar: dict, 
+#     data_type: str = "fft"
+# ) -> tuple:
+#     """
+#     Flexible swell plotter with extensive customization options.
     
-    Parameters
-    ----------
-    fft_dict : dict
-        Dictionary mapping file paths to FFT/PSD DataFrames
-    meta_df : pd.DataFrame
-        Metadata with columns: path, WindCondition, PanelCondition, etc.
-    freqplotvar : dict
-        Configuration with structure:
-        {
-            "filters": {"WaveFrequencyInput [Hz]": [value], ...},
-            "plotting": {
-                "figsize": tuple or None,
-                "facet_by": "probe" | "wind" | "panel" | None,
-                "probes": [1, 2, 3, 4],
-                "peaks": int or None,
-                "logaritmic": bool,
-                "legend": "inside" | "outside_right" | "below" | "above" | None,
-                "max_points": int (default 100),
-                "xlim": tuple or None,
-                "grid": bool (default True),
-                "show": bool (default True)
-            }
-        }
-    
-    Returns
-    -------
-    tuple
-        (fig, axes) - matplotlib figure and axes objects
-    """
-    
-    # ===== STYLE DEFINITIONS =====
-    PANEL_STYLES = {
-        "no": "solid",
-        "full": "dashed",
-        "reverse": "dashdot"
-    }
-    
-    MARKER_STYLES = {
-        "full": "*",
-        "no": "<",
-        "lowest": ">"
-    }
-    #TODO: vurdere å markere ulike prober.. 
-    #TODO: videre, fikse legend til å være mer beskrivende
-    # ===== EXTRACT CONFIGURATION =====
-    plotting = freqplotvar.get("plotting", {})
-    
-    facet_by = plotting.get("facet_by", None)  # None, 'probe', 'wind', 'panel'
-    probes = plotting.get("probes", [1])
-    if not isinstance(probes, (list, tuple)):
-        probes = [probes]
-    
-    n_peaks = plotting.get("peaks", None)
-    log_scale = plotting.get("logaritmic", False)
-    max_points = plotting.get("max_points", 120)
-    legend_position = plotting.get("legend", "outside_right")
-    show_grid = plotting.get("grid", True)
-    show_plot = plotting.get("show", True)
-    xlim = plotting.get("xlim", (0, 10))
-    linewidth = plotting.get("linewidth", 1.0)
-    fontsize = 7
-    
-    # Extract base frequency for tick locators
-    #not-todo: eventuelt gjøre om denne til å hente fra meta-sel, dersom man skulle ville hatt flere frekvenser men det blir kanksje dumt for fft'en.
-    base_freq_val = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
-    base_freq = None
-    if isinstance(base_freq_val, (list, tuple, np.ndarray, pd.Series)):
-        base_freq = float(base_freq_val[0]) if len(base_freq_val) > 0 else None
-    elif base_freq_val is not None:
-        base_freq = float(base_freq_val)
-    use_locators = base_freq is not None and base_freq > 0
-    
-    if data_type.lower() == "psd":
-       col_prefix = "Pxx"
-       ylabel = "PSD"
-    else:
-       col_prefix = "FFT"
-       ylabel = "FFT"
-    
-    # ===== DETERMINE FACET STRUCTURE =====
-    if facet_by == "probe":
-        facet_groups = list(probes)
-        facet_labels = [f"Probe {p}" for p in facet_groups]
-    elif facet_by == "wind":
-        facet_groups = list(pd.unique(meta_df["WindCondition"]))
-        facet_labels = [f"Wind: {w}" for w in facet_groups]
-    elif facet_by == "panel":
-        facet_groups = list(pd.unique(meta_df["PanelCondition"]))
-        facet_labels = [f"Panel: {p}" for p in facet_groups]
-    else:
-        facet_groups = [None]
-        facet_labels = ["All Data"]
-    
-    n_facets = len(facet_groups)
-    
-    # ===== CREATE FIGURE =====
-    default_figsize = (12, 4 * n_facets) if n_facets > 1 else (18,10)
-    figsize = plotting.get("figsize") or default_figsize
+#     Parameters
+#     ----------
+#     # fft_dict : dict
+#         # Dictionary mapping file paths to FFT/PSD DataFrames
+#     band_amp: pd. DataFrame
+#         Kalkulert fra FFTen - 
+        
+#         Index(['path', 'Probe 1 swell amplitude', 'Probe 1 wind_waves amplitude',
+#        'Probe 1 total amplitude', 'Probe 2 swell amplitude',
+#        'Probe 2 wind_waves amplitude', 'Probe 2 total amplitude',
+#        'Probe 3 swell amplitude', 'Probe 3 wind_waves amplitude',
+#        'Probe 3 total amplitude', 'Probe 4 swell amplitude',
+#        'Probe 4 wind_waves amplitude', 'Probe 4 total amplitude'],
+#       dtype='object')
 
-    fig, axes = plt.subplots(
-        n_facets, 
-        figsize=figsize,
-        sharex=True,
-        squeeze=False,
-        dpi=120
-    )
-    axes = axes.flatten()  # Always work with 1D array
+#     meta_df : pd.DataFrame
+#         Metadata with columns: path, WindCondition, PanelCondition, etc.
+#     freqplotvar : dict
+#         Configuration with structure:
+#         {
+#             "filters": {"WaveFrequencyInput [Hz]": [value], ...},
+#             "plotting": {
+#                 "figsize": tuple or None,
+#                 "facet_by": "probe" | "wind" | "panel" | None,
+#                 "probes": [1, 2, 3, 4],
+#                 "peaks": int or None,
+#                 "logaritmic": bool,
+#                 "legend": "inside" | "outside_right" | "below" | "above" | None,
+#                 "max_points": int (default 100),
+#                 "xlim": tuple or None,
+#                 "grid": bool (default True),
+#                 "show": bool (default True)
+#             }
+#         }
     
-    # ===== PLOTTING LOOP =====
-    for facet_idx, (group, facet_label) in enumerate(zip(facet_groups, facet_labels)):
-        ax = axes[facet_idx]
-        
-        # Filter data for this facet
-        if facet_by == "wind":
-            subset = meta_df[meta_df["WindCondition"] == group]
-        elif facet_by == "panel":
-            subset = meta_df[meta_df["PanelCondition"] == group]
-        else:
-            subset = meta_df
-        
-        # Plot each row in the subset
-        for _, row in subset.iterrows():
-            path = row["path"]
-            
-            if path not in fft_dict:
-                continue
-            
-            df_fft = fft_dict[path]
-            
-            # Extract styling information
-            windcond = row.get("WindCondition", "unknown")
-            colla = WIND_COLORS.get(windcond, "black")
-            panelcond = row.get("PanelCondition", "unknown")
-            linjestil = PANEL_STYLES.get(panelcond, "solid")
-            peak_marker = MARKER_STYLES.get(windcond, ".")
-            
-            # Generate label
-            label_base = _make_label(row) if "_make_label" in dir() else f"{windcond}_{panelcond}"
-            
-            # Determine which probes to plot for this facet
-            if facet_by == "probe":
-                probes_to_plot = [group]  # Only plot the faceted probe
-            else:
-                probes_to_plot = probes  # Plot all requested probes
-            
-            # Plot each probe
-            for probe_num in probes_to_plot:
-                col = f"{col_prefix} {probe_num}"
-                
-                if col not in df_fft:
-                    continue
-                
-                # Extract data
-                y = df_fft[col].dropna().iloc[:max_points]
-                if y.empty:
-                    continue
-                
-                x = y.index.values
-                
-                # Create label for this line
-                if facet_by == "probe":
-                    plot_label = label_base
-                elif len(probes_to_plot) > 1:
-                    plot_label = f"{label_base}_P{probe_num}"
-                else:
-                    plot_label = label_base
-                
-                # Plot line
-                ax.plot(
-                    x, y.values,
-                    linewidth=linewidth,
-                    label=plot_label,
-                    linestyle=linjestil,
-                    color=colla,
-                    antialiased=False #merk
-                )
-                
-                # Plot peaks if requested
-                if n_peaks and n_peaks > 0:
-                    vals = y.values
-                    top_idx_local = _top_k_indices(vals, n_peaks)
-                    ax.scatter(
-                        x[top_idx_local],
-                        vals[top_idx_local],
-                        color=colla,
-                        s=80,
-                        zorder=5,
-                        marker=peak_marker,
-                        edgecolors=None,#denna er visstnok dyr
-                        linewidths=0.7
-                    )
-        
-        # ===== FORMATTING FOR THIS FACET =====
-        
-        # Title
-        if facet_label:
-            ax.set_title(facet_label, fontsize=fontsize, fontweight='normal')
-        
-        # Y-axis
-        ax.set_ylabel(ylabel, fontsize=fontsize)
-        if log_scale:
-            ax.set_yscale('log')
-        
-        # X-axis limits
-        if xlim:
-            ax.set_xlim(xlim)
-        
-        # Tick locators
-        if use_locators:
-            ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
-            ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
-        else:
-            ax.xaxis.set_major_locator(ticker.MaxNLocator(10))
-            ax.yaxis.set_major_locator(ticker.MaxNLocator(8))
-        ax.tick_params(axis='both', labelsize=8)
-        
-        # ax.set_frame_on(False) didnt help
-        # Grid
-        if show_grid:
-            ax.grid(which='major', linestyle='--', alpha=0.6)
-            ax.grid(which='minor', linestyle='-.', alpha=0.3)
-        
-        # Legend
-        _apply_legend_3(ax, freqplotvar)
+#     Returns
+#     -------
+#     tuple
+#         (fig, axes) - matplotlib figure and axes objects
+#     """
     
-    # ===== FINAL TOUCHES =====
+#     # ===== STYLE DEFINITIONS =====
+#     PANEL_STYLES = {
+#         "no": "solid",
+#         "full": "dashed",
+#         "reverse": "dashdot"
+#     }
     
-    # X-label only on bottom plot
-    axes[-1].set_xlabel(col_prefix, fontsize=fontsize)
+#     MARKER_STYLES = {
+#         "full": "*",
+#         "no": "<",
+#         "lowest": ">"
+#     }
+#     #TODO: vurdere å markere ulike prober.. 
+#     #TODO: videre, fikse legend til å være mer beskrivende
+#     # ===== EXTRACT CONFIGURATION =====
+#     plotting = freqplotvar.get("plotting", {})
     
-    draw_anchored_text(ax,"tekstboks")
+#     facet_by = plotting.get("facet_by", None)  # None, 'probe', 'wind', 'panel'
+#     probes = plotting.get("probes", [1])
+#     if not isinstance(probes, (list, tuple)):
+#         probes = [probes]
     
-    plt.tight_layout()
+#     n_peaks = plotting.get("peaks", None)
+#     log_scale = plotting.get("logaritmic", False)
+#     max_points = plotting.get("max_points", 120)
+#     legend_position = plotting.get("legend", "outside_right")
+#     show_grid = plotting.get("grid", True)
+#     show_plot = plotting.get("show", True)
+#     xlim = plotting.get("xlim", (0, 10))
+#     linewidth = plotting.get("linewidth", 1.0)
+#     fontsize = 7
     
-    if show_plot:
-        plt.show()
+#     # Extract base frequency for tick locators
+#     #not-todo: eventuelt gjøre om denne til å hente fra meta-sel, dersom man skulle ville hatt flere frekvenser men det blir kanksje dumt for fft'en.
+#     base_freq_val = freqplotvar.get("filters", {}).get("WaveFrequencyInput [Hz]")
+#     base_freq = None
+#     if isinstance(base_freq_val, (list, tuple, np.ndarray, pd.Series)):
+#         base_freq = float(base_freq_val[0]) if len(base_freq_val) > 0 else None
+#     elif base_freq_val is not None:
+#         base_freq = float(base_freq_val)
+#     use_locators = base_freq is not None and base_freq > 0
     
-    return fig, axes
+#     if data_type.lower() == "psd":
+#        col_prefix = "Pxx"
+#        ylabel = "PSD"
+#     else:
+#        col_prefix = "FFT"
+#        ylabel = "FFT"
+    
+#     # ===== DETERMINE FACET STRUCTURE =====
+#     if facet_by == "probe":
+#         facet_groups = list(probes)
+#         facet_labels = [f"Probe {p}" for p in facet_groups]
+#     elif facet_by == "wind":
+#         facet_groups = list(pd.unique(meta_df["WindCondition"]))
+#         facet_labels = [f"Wind: {w}" for w in facet_groups]
+#     elif facet_by == "panel":
+#         facet_groups = list(pd.unique(meta_df["PanelCondition"]))
+#         facet_labels = [f"Panel: {p}" for p in facet_groups]
+#     else:
+#         facet_groups = [None]
+#         facet_labels = ["All Data"]
+    
+#     n_facets = len(facet_groups)
+    
+#     # ===== CREATE FIGURE =====
+#     default_figsize = (12, 4 * n_facets) if n_facets > 1 else (18,10)
+#     figsize = plotting.get("figsize") or default_figsize
 
-
-
+#     fig, axes = plt.subplots(
+#         n_facets, 
+#         figsize=figsize,
+#         sharex=True,
+#         squeeze=False,
+#         dpi=120
+#     )
+#     axes = axes.flatten()  # Always work with 1D array
+    
+#     # ===== PLOTTING LOOP =====
+#     for facet_idx, (group, facet_label) in enumerate(zip(facet_groups, facet_labels)):
+#         ax = axes[facet_idx]
+        
+#         # Filter data for this facet
+#         if facet_by == "wind":
+#             subset = meta_df[meta_df["WindCondition"] == group]
+#         elif facet_by == "panel":
+#             subset = meta_df[meta_df["PanelCondition"] == group]
+#         else:
+#             subset = meta_df
+        
+#         # Plot each row in the subset
+#         for _, row in subset.iterrows():
+#             path = row["path"]
+            
+#             if path not in fft_dict:
+#                 continue
+            
+#             df_fft = fft_dict[path]
+            
+#             # Extract styling information
+#             windcond = row.get("WindCondition", "unknown")
+#             colla = WIND_COLORS.get(windcond, "black")
+#             panelcond = row.get("PanelCondition", "unknown")
+#             linjestil = PANEL_STYLES.get(panelcond, "solid")
+#             peak_marker = MARKER_STYLES.get(windcond, ".")
+            
+#             # Generate label
+#             label_base = _make_label(row) if "_make_label" in dir() else f"{windcond}_{panelcond}"
+            
+#             # Determine which probes to plot for this facet
+#             if facet_by == "probe":
+#                 probes_to_plot = [group]  # Only plot the faceted probe
+#             else:
+#                 probes_to_plot = probes  # Plot all requested probes
+            
+#             # Plot each probe
+#             for probe_num in probes_to_plot:
+#                 col = f"{col_prefix} {probe_num}"
+                
+#                 if col not in df_fft:
+#                     continue
+                
+#                 # Extract data
+#                 y = df_fft[col].dropna().iloc[:max_points]
+#                 if y.empty:
+#                     continue
+                
+#                 x = y.index.values
+                
+#                 # Create label for this line
+#                 if facet_by == "probe":
+#                     plot_label = label_base
+#                 elif len(probes_to_plot) > 1:
+#                     plot_label = f"{label_base}_P{probe_num}"
+#                 else:
+#                     plot_label = label_base
+                
+#                 # Plot line
+#                 ax.plot(
+#                     x, y.values,
+#                     linewidth=linewidth,
+#                     label=plot_label,
+#                     linestyle=linjestil,
+#                     color=colla,
+#                     antialiased=False #merk
+#                 )
+                
+#                 # Plot peaks if requested
+#                 if n_peaks and n_peaks > 0:
+#                     vals = y.values
+#                     top_idx_local = _top_k_indices(vals, n_peaks)
+#                     ax.scatter(
+#                         x[top_idx_local],
+#                         vals[top_idx_local],
+#                         color=colla,
+#                         s=80,
+#                         zorder=5,
+#                         marker=peak_marker,
+#                         edgecolors=None,#denna er visstnok dyr
+#                         linewidths=0.7
+#                     )
+        
+#         # ===== FORMATTING FOR THIS FACET =====
+        
+#         # Title
+#         if facet_label:
+#             ax.set_title(facet_label, fontsize=fontsize, fontweight='normal')
+        
+#         # Y-axis
+#         ax.set_ylabel(ylabel, fontsize=fontsize)
+#         if log_scale:
+#             ax.set_yscale('log')
+        
+#         # X-axis limits
+#         if xlim:
+#             ax.set_xlim(xlim)
+        
+#         # Tick locators
+#         if use_locators:
+#             ax.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
+#             ax.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
+#         else:
+#             ax.xaxis.set_major_locator(ticker.MaxNLocator(10))
+#             ax.yaxis.set_major_locator(ticker.MaxNLocator(8))
+#         ax.tick_params(axis='both', labelsize=8)
+        
+#         # ax.set_frame_on(False) didnt help
+#         # Grid
+#         if show_grid:
+#             ax.grid(which='major', linestyle='--', alpha=0.6)
+#             ax.grid(which='minor', linestyle='-.', alpha=0.3)
+        
+#         # Legend
+#         _apply_legend_3(ax, freqplotvar)
+    
+#     # ===== FINAL TOUCHES =====
+    
+#     # X-label only on bottom plot
+#     axes[-1].set_xlabel(col_prefix, fontsize=fontsize)
+    
+#     draw_anchored_text(ax,"tekstboks")
+    
+#     plt.tight_layout()
+    
+#     if show_plot:
+#         plt.show()
+    
+#     return fig, axes
 # %% fleksibel fft-plotter
 def plot_frequency_spectrum(
     fft_dict: dict,
