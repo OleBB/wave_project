@@ -636,7 +636,7 @@ def _load_csv_files(
             if suffix == ".csv":
                 df = pd.read_csv(
                     path, 
-                    # engine='pyarrow',
+                    engine='pyarrow',
                     names=["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]
                 )
                 
