@@ -467,7 +467,7 @@ def plot_ramp_detection(df, meta_sel, data_col,
     sinewave = baseline_mean + (100.0 * amp) * np.sin(omega_rad_per_ms * t_cut)
 
     # Uncomment to draw the sine reference
-    # ax.plot(t_cut, sinewave, color="red", linestyle="--", label="Ref sine")
+    ax.plot(t_cut, sinewave, color="red", linestyle="--", label="Ref sine")
 
     # 2) Baseline & threshold
     ax.axhline(baseline_mean, color="blue", linestyle="--", label=f"Baseline = {baseline_mean:.2f} mm")
