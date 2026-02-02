@@ -71,7 +71,6 @@ processvariables = {
 #   reloade csv.'ene. det trengs vel bare 1 gang.
 #todo: bli enig om hva som er forskjellen på force recompute og full resett (tror dei e like no)? 
 # Loop through each dataset
-#todo: flytte denne todoen, og finne ut koffør 0.3 amp ikke fyller hele tabellen sin
 for i, data_path in enumerate(dataset_paths):
     print(f"\n{'='*50}")
     print(f"Processing dataset {i+1}/{len(dataset_paths)}: {data_path.name}")
@@ -79,10 +78,12 @@ for i, data_path in enumerate(dataset_paths):
     try:
         prosessering = processvariables.get("prosessering", {})
         force =prosessering.get("force_recompute", False)
-        dfs, meta = load_or_update(data_path, force_recompute=force)
         
         print('# === Filter === #') #dette filteret er egentlig litt unøding, når jeg ønsker å prossesere hele sulamitten
         meta_sel = filter_chosen_files(meta, processvariables)
+        
+        print('forsøkte å flytte denna ned')
+        dfs, meta = load_or_update(data_path, force_recompute=force)
         
         print('# === Single probe process === #')
         processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, meta_sel, meta, processvariables)
