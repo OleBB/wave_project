@@ -47,8 +47,8 @@ all_processed_dfs = []
 
 processvariables = {
     "overordnet": {
-        "chooseAll": True,
-        "chooseFirst": False,
+        "chooseAll": False,
+        "chooseFirst": True,
     },
     "filters": {
         "amp": [0.1],  # 0.1, 0.2, 0.3 
