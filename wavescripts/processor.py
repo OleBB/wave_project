@@ -180,7 +180,7 @@ def _update_all_metrics(
     amplitudes_fft_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """Kalkuler og oppdater all computed metrics in metadata."""
-    meta_indexed = meta_sel.set_index("path")
+    meta_indexed = meta_sel.set_index("path").copy()
     
     # Amplitudes from np.percentile
     amplitudes = compute_amplitudes(processed_dfs, meta_sel)
@@ -263,11 +263,11 @@ def process_selected_data(
     # overordnet = processvariables.get("overordnet", {})
     prosessering = processvariables.get("prosessering", {})
     
+    force_recompute =prosessering.get("force_recompute", False)
     debug = prosessering.get("debug", False)
     win = prosessering.get("smoothing_window", 1)
     find_range =prosessering.get("find_range", False)
     range_plot =prosessering.get("range_plot", False)
-    force_recompute =prosessering.get("force_recompute", False)
     
     # 1. Ensure stillwater levels are computed
     meta_full = ensure_stillwater_columns(dfs, meta_full)

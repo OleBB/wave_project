@@ -47,7 +47,7 @@ all_processed_dfs = []
 
 processvariables = {
     "overordnet": {
-        "chooseAll": False,
+        "chooseAll": True,
         "chooseFirst": True,
     },
     "filters": {
@@ -60,7 +60,7 @@ processvariables = {
         "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
-        "total_reset": True, #laster også csv'ene på nytt
+        "total_reset": False, #laster også csv'ene på nytt
         "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
         "debug": True,
         "smoothing_window": 10, #kontrollere denne senere
@@ -120,6 +120,7 @@ if all_meta_sel:
 # """PRINT RESULTS"""
 # from wavescripts.wavestudyer import wind_damping_analysis
 # damping_analysis_results = wind_damping_analysis(combined_meta_sel)
+
 
 
 

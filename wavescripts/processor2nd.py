@@ -11,31 +11,8 @@ import pandas as pd
 from wavescripts.improved_data_loader import update_processed_metadata
 from typing import Mapping, Any, Optional, Sequence, Dict, Tuple, Iterable
 
-""""
-def probe_comparisor(meta_df):
-    df = meta_df.copy()
-
-    for idx, row, in df.iterrows():
-        P1 = row["Probe 1 Amplitude"]
-        P2 = row["Probe 2 Amplitude"]
-        P3 = row["Probe 3 Amplitude"]
-        P4 = row["Probe 4 Amplitude"]
-        
-        if P1 != 0:
-            df.at[idx, "P2/P1"] = P2/P1
-            
-        if P2 != 0:
-            df.at[idx, "P3/P2"] = P3/P2
-        
-        if P3 != 0:
-            df.at[idx, "P4/P3"] = P4/P3
-         
-    return df"""
-
-
 
 # %% Band
-
 def compute_amplitude_by_band(
     psd_dict: Mapping[str, pd.DataFrame],
     *,
