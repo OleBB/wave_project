@@ -33,33 +33,8 @@ def probe_comparisor(meta_df):
     return df"""
 
 
-def process_processed_data(
-        meta_sel: pd.DataFrame,
-) -> pd.DataFrame:
-    """ nu kjører vi funksjoner som krever en df som allerede har verdier for alle probene"""
-    mdf = meta_sel.copy()
-    
-    print("kjører process_processed_data fra processsor2nd.py")
-    
-    # ==========================================================
-    #  regne ratioer. Oppdatere mdf
-    # ==========================================================
-    cols = ["path", "Probe 1 Amplitude","Probe 2 Amplitude", "Probe 3 Amplitude","Probe 4 Amplitude",]
-    sub_df = mdf[cols].copy()
-    sub_df["P2/P1"] = sub_df["Probe 2 Amplitude"] / sub_df["Probe 1 Amplitude"]
-    sub_df["P3/P2"] = sub_df["Probe 3 Amplitude"] / sub_df["Probe 2 Amplitude"]
-    sub_df["P4/P3"] = sub_df["Probe 4 Amplitude"] / sub_df["Probe 3 Amplitude"]
-    sub_df.replace([np.inf, -np.inf], np.nan, inplace=True) #infinite values  div 0
-    mdf_indexed = mdf.set_index("path") # set index to join back on "path"
-    ratios_by_path = sub_df.set_index("path")[["P2/P1", "P3/P2", "P4/P3"]]
-    mdf_indexed[["P2/P1", "P3/P2", "P4/P3"]] = ratios_by_path
-    mdf = mdf_indexed.reset_index() #reset index 
-        
-    
-    """VIKTIG - denne oppdaterer .JSON-filen"""
-    update_processed_metadata(mdf)
-    return mdf
 
+# %% Band
 
 def compute_amplitude_by_band(
     psd_dict: Mapping[str, pd.DataFrame],
@@ -227,3 +202,66 @@ def compute_amplitude_by_band(
     #  Convert list‑of‑dicts → DataFrame (preserves column order)
     # ----------------------------------------------------------------------
     return pd.DataFrame(rows)
+
+def _update_more_metrics(
+        psd_dict: dict,
+        fft_dict: dict,
+        meta_sel: pd.DataFrame
+        ) -> pd.DataFrame():
+    meta_indexed = meta_sel.set_index("path")
+    
+    meta_indexed = meta_sel.set_index("path").copy()
+    
+    # ==========================================================
+    #  plz help below
+    # ==========================================================
+    cols = ["path", "Probe 1 Amplitude","Probe 2 Amplitude", "Probe 3 Amplitude","Probe 4 Amplitude",]
+    sub_df = mdf[cols].copy()
+    sub_df["P2/P1"] = sub_df["Probe 2 Amplitude"] / sub_df["Probe 1 Amplitude"]
+    sub_df["P3/P2"] = sub_df["Probe 3 Amplitude"] / sub_df["Probe 2 Amplitude"]
+    sub_df["P4/P3"] = sub_df["Probe 4 Amplitude"] / sub_df["Probe 3 Amplitude"]
+    sub_df.replace([np.inf, -np.inf], np.nan, inplace=True) #infinite values  div 0
+    mdf_indexed = mdf.set_index("path") # set index to join back on "path"
+    ratios_by_path = sub_df.set_index("path")[["P2/P1", "P3/P2", "P4/P3"]]
+    mdf_indexed[["P2/P1", "P3/P2", "P4/P3"]] = ratios_by_path
+    mdf = mdf_indexed.reset_index() #reset index 
+        
+    band_amplitudes = compute_amplitude_by_band(psd_dict)
+    
+    
+    
+    
+    return meta_indexed.reset_index
+    
+
+# %% kjøres
+from wavescripts.processor import _set_output_folder
+def process_processed_data(
+        psd_dict: dict,
+        fft_dict: dict,
+        meta_sel: pd.DataFrame,
+        meta_full: pd.DataFrame, #trenger kanskje ikke denne, men _set_output_folder vil ha den.
+        processvariables: dict 
+) -> pd.DataFrame:
+    """ 
+    Forklaring:
+        nu kjører vi funksjoner som krever en df som allerede har verdier for
+        alle probene
+    Returns:
+        oppgradert meta_data_df
+    Saves:
+        oppdaterer json-filen
+    """
+    prosessering =  processvariables.get("prosessering",{})
+    debug = prosessering.get("debug", False)
+    force_recompute =prosessering.get("force_recompute", False)
+    if debug:
+        print("kjører process_processed_data fra processsor2nd.py")
+    
+    meta_sel = _update_more_metrics(psd_dict, fft_dict, meta_sel)
+
+    meta_sel = _set_output_folder(meta_sel, meta_full, debug)
+    """VIKTIG - denne oppdaterer .JSON-filen"""
+    update_processed_metadata(meta_sel, force_recompute=force_recompute)
+    
+    return meta_sel

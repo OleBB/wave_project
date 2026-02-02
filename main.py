@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from wavescripts.improved_data_loader import load_or_update
 from wavescripts.filters import filter_chosen_files
 from wavescripts.processor import process_selected_data
-from wavescripts.processor2nd import process_processed_data
+from wavescripts.processor2nd import process_processed_data 
 
 file_dir = Path(__file__).resolve().parent
 os.chdir(file_dir) # Make the script always run from the folder where THIS file lives
@@ -84,12 +84,11 @@ for i, data_path in enumerate(dataset_paths):
         print('# === Single probe process === #')
         processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, meta_sel, meta, processvariables)
         
-        print('arbeider her, med FFT av alle disse per folder')
-        print('# === FTT on each separate signal, saved to a dict of dfs')
-        # ftt_dfs = process_psd(processed_dfs)
+        # print('# === FTT on each separate signal, saved to a dict of dfs')
+
         
         print('# === Probe comparison processing === #')
-        meta_sel = process_processed_data(meta_sel)
+        meta_sel = process_processed_data(psd_dictionary, fft_dictionary, meta_sel, meta)
         all_meta_sel.append(meta_sel)
         all_processed_dfs.append(processed_dfs)
         print(f"Successfully processed {len(meta_sel)} selections from {data_path.name}")
@@ -206,7 +205,7 @@ dampingplotvariables = {
         "chooseFirst": False,
     }, 
     "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],# 0.2, 0.3], #0.1, 0.2, 0.3 
+        "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
         "WaveFrequencyInput [Hz]": [1.3],# 0.65], #bruk et tall  
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
@@ -358,17 +357,6 @@ swell_filtrert = filter_for_swell(combined_meta_sel, swellplotvariables)
 # %% plotting damping frequencies seaborn
 from wavescripts.plotter import facet_swell
 facet_swell(damping_filtrert, swellplotvariables)
-
-
-""" ======================"""
-# %% amplitude by BAND
-
-import pandas as pd
-from wavescripts.processor2nd import compute_amplitude_by_band
-
-
-
-band_amplitudes = compute_amplitude_by_band(psd_dictionary)
 
 
 # %% band scatter
