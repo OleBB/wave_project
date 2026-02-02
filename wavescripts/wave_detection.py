@@ -17,7 +17,9 @@ from wavescripts.improved_data_loader import update_processed_metadata
 from scipy.signal import find_peaks
 from scipy.signal import welch
 from scipy.optimize import brentq
+from scipy import signal
 from typing import Dict, List, Tuple, Any
+import matplotlib.pyplot as plt
 
 from wavescripts.constants import get_smoothing_window
 
@@ -383,7 +385,6 @@ def find_wave_range(
     # 5.b) Plotting – safe version that works with your current plot_ramp_detection
     # ==========================================================
     if range_plot:
-        try:
             from wavescripts.plotter import plot_ramp_detection
 
             # Build kwargs only with arguments your current function actually accepts
@@ -397,6 +398,7 @@ def find_wave_range(
                 "first_motion_idx": first_motion_idx,
                 "good_start_idx": good_start_idx,
                 "good_range": good_range,
+                "good_end_idx": good_end_idx,
                 "title": f"Smart Ramp Detection – {data_col}"
             }
 
@@ -408,10 +410,14 @@ def find_wave_range(
                 ramp_peak_samples = peaks[ramp_result[0]:ramp_result[1]+1]
                 plot_kwargs["ramp_peak_indices"] = ramp_peak_samples
             """
-            plot_ramp_detection(**plot_kwargs)
-
-        except Exception as e:
-            print(f"Plot failed (will work after you update plotter): {e}")
+            try: 
+                fig, ax = plot_ramp_detection(**plot_kwargs)
+                plt.show()
+            except Exception as e:
+                import traceback
+                print("plot failed fordi:", e)
+                traceback.print_exc()
+                print(f"Plot failed (will work after you update plotter): {e}")
 
     debug_info = {
         "baseline_mean": baseline_mean,

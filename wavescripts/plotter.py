@@ -411,6 +411,120 @@ def plot_ramp_detection(df, meta_sel, data_col,
                         first_motion_idx,
                         good_start_idx,
                         good_range,
+                        good_end_idx,
+                        peaks=None,
+                        peak_amplitudes=None,
+                        ramp_peak_indices=None,
+                        title="Ramp Detection Debug"):
+    # --- Build time (ms) and raw as NumPy arrays ---
+    if "Date" not in df.columns:
+        raise ValueError("df must contain a 'Date' column")
+    if data_col not in df.columns:
+        raise ValueError(f"df must contain the '{data_col}' column")
+
+    t0 = df["Date"].iat[0]
+    # time in milliseconds
+    time_ms = (df["Date"] - t0).dt.total_seconds().to_numpy() * 1000.0
+    raw = df[data_col].to_numpy()
+
+    n = len(time_ms)
+    if len(signal) != n:
+        raise ValueError(f"signal length ({len(signal)}) != df length ({n})")
+    if not (0 <= first_motion_idx < n):
+        raise ValueError(f"first_motion_idx out of bounds: {first_motion_idx}")
+
+    # --- Compute good range safely (don’t overwrite inputs) ---
+    good_start_i = int(good_start_idx)
+    # If good_end_idx is provided, honor it; otherwise derive from good_range
+    if good_end_idx is not None:
+        good_end_i = int(good_end_idx)
+    else:
+        good_end_i = good_start_i + int(good_range)
+
+    # Clamp to valid bounds and ensure start < end
+    good_start_i = max(0, min(good_start_i, n - 2))
+    good_end_i = max(good_start_i + 1, min(good_end_i, n - 1))
+
+    # --- Create figure/axes and start plotting immediately ---
+    fig, ax = plt.subplots(figsize=(15, 7))
+    fig.suptitle(title)
+
+    # 1) Plot raw + smoothed
+    ax.plot(time_ms, raw, color="lightgray", alpha=0.6, label="Raw signal")
+    ax.plot(time_ms, signal, color="black", linewidth=2, label=f"Smoothed {data_col}")
+
+    # Optional: reference sine over the selected range
+    # NOTE: time_ms is in milliseconds; the angular frequency below must be in rad/ms.
+    # If you prefer Hz, convert to seconds and use 2*pi*f*t_sec instead.
+    try:
+        amp = float(meta_sel["WaveAmplitudeInput [Volt]"])
+    except Exception:
+        amp = 1.0  # fallback if meta key missing
+    t_cut = time_ms[good_start_i:good_end_i]
+
+    # Example sine using your form: sin(omega * t_ms), where omega is in rad/ms.
+    omega_rad_per_ms = 0.004 * 1.3  # adjust to your wave
+    sinewave = baseline_mean + (100.0 * amp) * np.sin(omega_rad_per_ms * t_cut)
+
+    # Uncomment to draw the sine reference
+    # ax.plot(t_cut, sinewave, color="red", linestyle="--", label="Ref sine")
+
+    # 2) Baseline & threshold
+    ax.axhline(baseline_mean, color="blue", linestyle="--", label=f"Baseline = {baseline_mean:.2f} mm")
+    ax.axhline(baseline_mean + threshold, color="red", linestyle=":", alpha=0.7)
+    ax.axhline(baseline_mean - threshold, color="red", linestyle=":", alpha=0.7)
+
+    # 3) First motion
+    ax.axvline(time_ms[first_motion_idx], color="orange", linewidth=2, linestyle="--",
+               label=f"First motion #{first_motion_idx}")
+
+    # 4) Good stable interval
+    ax.axvline(time_ms[good_start_i], color="green", linewidth=3, label=f"Stable start #{good_start_i}")
+    ax.axvline(time_ms[good_end_i], color="purple", linewidth=2, linestyle="--", label=f"End #{good_end_i}")
+    ax.axvspan(time_ms[good_start_i], time_ms[good_end_i], color="green", alpha=0.15, label="Stable region")
+
+    # 5) Optional: peaks and ramp-up
+    if peaks is not None and len(peaks) > 0:
+        peaks = np.asarray(peaks, dtype=int)
+        peaks = peaks[(peaks >= 0) & (peaks < n)]
+        ax.plot(time_ms[peaks], signal[peaks], "ro", markersize=6, alpha=0.7, label="Detected peaks")
+    if ramp_peak_indices is not None and len(ramp_peak_indices) > 0:
+        rpi = np.asarray(ramp_peak_indices, dtype=int)
+        rpi = rpi[(rpi >= 0) & (rpi < n)]
+        ax.plot(time_ms[rpi], signal[rpi],
+                "o", color="lime", markersize=10, markeredgecolor="darkgreen", markeredgewidth=2,
+                label=f"Ramp-up ({len(rpi)} peaks)")
+
+    # Zoom around baseline to make waves visible
+    zoom_margin = 15.0  # mm
+    ax.set_ylim(baseline_mean - zoom_margin, baseline_mean + zoom_margin)
+
+    # Title from metadata path
+    try:
+        path_value = meta_sel["path"] if isinstance(meta_sel, pd.Series) else meta_sel["path"].iloc[0]
+        filename = str(path_value).split("/")[-1]
+        ax.set_title(f"{filename}  →  {data_col}", fontsize=14, pad=20)
+    except Exception:
+        pass  # keep suptitle only if path missing
+
+    ax.set_xlabel("Time [ms]")
+    ax.set_ylabel("Water level [mm]")
+    ax.grid(True, alpha=0.1)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
+    fig.tight_layout()
+    return fig, ax
+
+
+
+"""
+def old_plot_ramp_detection(df, meta_sel, data_col,
+                        signal,
+                        baseline_mean,
+                        threshold,
+                        first_motion_idx,
+                        good_start_idx,
+                        good_range,
+                        good_end_idx,
                         peaks=None,
                         peak_amplitudes=None,
                         ramp_peak_indices=None,
@@ -420,10 +534,18 @@ def plot_ramp_detection(df, meta_sel, data_col,
     raw = df[data_col].values #bør jeg sette minus for å flippe hele greien?
 
     plt.figure(figsize=(15, 7))
+    
+    
+    amp = meta_sel["WaveAmplitudeInput [Volt]"]
 
-    # 1. Plot raw + smoothed
+    time_cut = time[good_start_idx:good_end_idx]
+    # print(time_cut)
+    sinewave = 100*amp*np.sin(0.004*1.3*time_cut)+baseline_mean
+    
+    # 1. Plot raw + smoothed + sine
     plt.plot(time, raw, color="lightgray", alpha=0.6, label="Raw signal")
     plt.plot(time, signal, color="black", linewidth=2, label=f"Smoothed {data_col}")
+    # plt.plot(time_cut, sinewave, color="red", linestyle="--")
 
     # 2. Baseline & threshold
     plt.axhline(baseline_mean, color="blue", linestyle="--", label=f"Baseline = {baseline_mean:.2f} mm")
@@ -465,8 +587,8 @@ def plot_ramp_detection(df, meta_sel, data_col,
     plt.ylabel("Water level [mm]")
     plt.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
     plt.grid(True, alpha=0.1)
-    plt.tight_layout()
-    plt.show()
+    plt.tight_layout()"""
+
 
 #%% physical probe plot
 def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
