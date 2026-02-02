@@ -13,26 +13,41 @@ Created on Fri Jan 30 09:44:49 2026
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from wavescripts.data_loader import update_processed_metadata
+from wavescripts.improved_data_loader import update_processed_metadata
 from scipy.signal import find_peaks
 from scipy.signal import welch
 from scipy.optimize import brentq
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 
 from wavescripts.constants import get_smoothing_window
 
 def find_wave_range(
-    df,
-    meta_row,  # metadata for selected files
-    data_col,
-    detect_win,
-    range_plot: bool,
-    debug: bool,
-):
+    df: pd.DataFrame, 
+    meta_row: pd.DataFrame,  # metadata for selected files
+    data_col: str,
+    detect_win: int,
+    range_plot: bool = False,
+    debug: bool = False,
+) -> Tuple[int, int, dict[str, Any]] :
+    """
+     
+    Finner waverange.
     
+    Args:
+        utvalgt signal, tilhørende metadatarad, Probe {i}, detect-vindu
+    
+    Toggle:
+        Smoothing Window, Range-plot, Debug
+    
+    Returns:
+        good_start_idx, good_end_idx, debug_info 
+    
+    Raises:
+        ?Error: legg til
+    """
         
     wind_condition = meta_row["WindCondition"]
-    detect_win = get_smoothing_window(wind_condition)
+    detect_win = detect_win if detect_win is not None else get_smoothing_window(wind_condition)
     # ==========================================================
     # 1. smoothe signalet med moving average vindu: detect_win
     # ==========================================================
@@ -79,7 +94,7 @@ def find_wave_range(
     good_range = keep_idx
 
     # MANUELL CALCULERING for 1.3 Hz
-    P1amp01frwq13eyeball = 4500
+    P1amp01frwq13eyeball = 4600
     P2handcalc = P1amp01frwq13eyeball+100 #tidligere: 62.5 fra 250målinger på ett sekund, ganget et kvart sekund, estimert reisetid for bølgen på 1.3hz  
     P3handcalc = P2handcalc+1700 #tidligere: en 1.3hz gir periode på 700idx? 250 målinger per sek
     
@@ -295,6 +310,7 @@ def find_wave_range(
         if best_start == -1:
             return None
         return best_start, best_end, seq[best_start:best_end + 1]
+    #TODO
     CLAUDE
     def find_best_ramp_AFTER(seq):
         # All parameters come from constants

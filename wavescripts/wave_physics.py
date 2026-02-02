@@ -8,7 +8,7 @@ Created on Fri Jan 30 09:42:29 2026
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from wavescripts.data_loader import update_processed_metadata
+from wavescripts.improved_data_loader import update_processed_metadata
 from scipy.signal import find_peaks
 from scipy.signal import welch
 from scipy.optimize import brentq

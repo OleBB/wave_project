@@ -8,7 +8,7 @@ Created on Fri Dec 19 10:37:28 2025
 import numpy as np
 import pandas as pd
 
-from wavescripts.data_loader import update_processed_metadata
+from wavescripts.improved_data_loader import update_processed_metadata
 from typing import Mapping, Any, Optional, Sequence, Dict, Tuple, Iterable
 
 """"

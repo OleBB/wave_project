@@ -11,7 +11,7 @@ import numpy as np
 
 from typing import Dict, List, Tuple
 
-from wavescripts.data_loader import update_processed_metadata
+from wavescripts.improved_data_loader import update_processed_metadata
 from wavescripts.wave_detection import find_wave_range
 from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes
 from wavescripts.wave_physics import calculate_wavenumbers, calculate_wavedimensions, calculate_windspeed
@@ -303,4 +303,3 @@ def process_selected_data(
         print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
     
     return processed_dfs, meta_sel, psd_dict, fft_dict
-
