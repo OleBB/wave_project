@@ -90,13 +90,13 @@ def find_wave_range(
     
     # ─────── velge antall perioder ─────── 
     input_periods = (meta_row["WavePeriodInput"])
-    keep_periods= round((input_periods-13)*1.0) #trekke fra perioder, -per15- er det bare 4 gode, mens på -per40- per er ish 30 gode. TK todo velge en bedre skalering
+    keep_periods= round((input_periods-13)*0.9) #trekke fra perioder, -per15- er det bare 4 gode, mens på -per40- per er ish 30 gode. TK todo velge en bedre skalering
     keep_seconds= keep_periods/input_freq
     keep_idx = keep_seconds*250 # 1 sek = 250 målinger
     good_range = keep_idx
 
     # MANUELL CALCULERING for 1.3 Hz
-    P1amp01frwq13eyeball = 4600
+    P1amp01frwq13eyeball = 4700
     P2handcalc = P1amp01frwq13eyeball+100 #tidligere: 62.5 fra 250målinger på ett sekund, ganget et kvart sekund, estimert reisetid for bølgen på 1.3hz  
     P3handcalc = P2handcalc+1700 #tidligere: en 1.3hz gir periode på 700idx? 250 målinger per sek
     

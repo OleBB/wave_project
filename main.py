@@ -29,10 +29,10 @@ Og så er det kode som sammenlikner data når hele mappen er prosessert en gang
 # List of dataset paths you want to process
 dataset_paths = [
     #Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"), #mstop 10
     
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"), #per15 (few runs)
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
@@ -47,7 +47,7 @@ all_processed_dfs = []
 
 processvariables = {
     "overordnet": {
-        "chooseAll": False,
+        "chooseAll": True,
         "chooseFirst": True,
     },
     "filters": {
@@ -206,7 +206,7 @@ dampingplotvariables = {
         "chooseFirst": False,
     }, 
     "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
+        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],# 0.2, 0.3], #0.1, 0.2, 0.3 
         "WaveFrequencyInput [Hz]": [1.3],# 0.65], #bruk et tall  
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all

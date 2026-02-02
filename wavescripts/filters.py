@@ -390,7 +390,7 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
     
     columns = ["path", "WindCondition", "PanelCondition",
         "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
-        "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude",
+        "Probe 1 Amplitude (FFT)", "Probe 2 Amplitude (FFT)", "Probe 3 Amplitude (FFT)", "Probe 4 Amplitude (FFT)",
         "kL", "P2/P1", "P3/P2", "P4/P3"
     ]
     rmdf = cmdf[columns].copy()
@@ -413,10 +413,10 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
                 n_runs=("path", "nunique"),
                 paths=("path", lambda s: pd.unique(s).tolist()),  # unique paths, order preserved
                 # Uncomment if you want probe amplitude means as well:
-                mean_A_Probe1=("Probe 1 Amplitude", "mean"),
-                mean_A_Probe2=("Probe 2 Amplitude", "mean"),
-                mean_A_Probe3=("Probe 3 Amplitude", "mean"),
-                mean_A_Probe4=("Probe 4 Amplitude", "mean"),
+                mean_A_Probe1=("Probe 1 Amplitude (FFT)", "mean"),
+                mean_A_Probe2=("Probe 2 Amplitude (FFT)", "mean"),
+                mean_A_Probe3=("Probe 3 Amplitude (FFT)", "mean"),
+                mean_A_Probe4=("Probe 4 Amplitude (FFT)", "mean"),
                 mean_kL=("kL", "mean")
             )
             .reset_index()
