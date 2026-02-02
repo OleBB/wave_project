@@ -289,6 +289,10 @@ def _initialize_metadata_dict(file_path: str, experiment_name: str) -> dict:
         metadata[f"Probe {i} Amplitude"] = None
         metadata[f"Probe {i} Amplitude (PSD)"] = None
         metadata[f"Probe {i} Amplitude (FFT)"] = None
+        metadata[f"Probe {i} Swell Amplitude (FFT)"] = None
+        metadata[f"Probe {i} Wind Amplitude (FFT)"] = None
+        metadata[f"Probe {i} Total Amplitude (FFT)"] = None
+        
         metadata[f"Probe {i} WavePeriod (FFT)"] = None #new
         metadata[f"Probe {i} Wavenumber (FFT)"] = None #new
         metadata[f"Probe {i} Wavelength (FFT)"] = None #new

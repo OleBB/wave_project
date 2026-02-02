@@ -63,12 +63,15 @@ processvariables = {
         "debug": True,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
-        "range_plot": True,    
+        "range_plot": False,    
         "force_recompute": True,
     },
 }
-
+#todo: fikse slik at jeg kan plotte range, eller kjøre ting på nytt, uten å 
+#   reloade csv.'ene. det trengs vel bare 1 gang.
+#todo: bli enig om hva som er forskjellen på force recompute og full resett (tror dei e like no)? 
 # Loop through each dataset
+#todo: flytte denne todoen, og finne ut koffør 0.3 amp ikke fyller hele tabellen sin
 for i, data_path in enumerate(dataset_paths):
     print(f"\n{'='*50}")
     print(f"Processing dataset {i+1}/{len(dataset_paths)}: {data_path.name}")
@@ -88,7 +91,7 @@ for i, data_path in enumerate(dataset_paths):
 
         
         print('# === Probe comparison processing === #')
-        meta_sel = process_processed_data(psd_dictionary, fft_dictionary, meta_sel, meta)
+        meta_sel = process_processed_data(psd_dictionary, fft_dictionary, meta_sel, meta, processvariables)
         all_meta_sel.append(meta_sel)
         all_processed_dfs.append(processed_dfs)
         print(f"Successfully processed {len(meta_sel)} selections from {data_path.name}")
@@ -549,6 +552,24 @@ plot_damping_combined(
     m_damping_filtrert,
     amplitudeplotvariables=amplitudeplotvariables
 )
+# %% printe utvalgte kolonner fra metasel
+
+prdf = combined_meta_sel.copy()
+cols= ["WindCondition", 
+       "PanelCondition",
+       "WaveAmplitudeInput [Volt]",
+       "WaveFrequencyInput [Hz]", 
+       # "Probe 2 Amplitude", 
+       # "Probe 3 Amplitude", 
+       "P3/P2",
+       "Probe 3 Amplitude (FFT)", 
+       "Probe 2 Amplitude (FFT)", 
+       # "Probe 2 Swell amplitude", 
+       # "Probe 3 Swell amplitude"
+       ]
+# pos = [3] + [5] + list(range(6,8)) 
+prnt = prdf[cols]
+
 
 
 
