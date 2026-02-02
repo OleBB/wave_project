@@ -18,6 +18,7 @@ import pandas as pd
 import os
 from datetime import datetime
 from dataclasses import dataclass
+# import pyarrow
 
 
 from wavescripts.constants import MEASUREMENT
@@ -417,49 +418,6 @@ def get_configuration_for_date(target_date: datetime) -> ProbeConfiguration:
     raise ValueError(f"No configuration found for {target_date}")
 
 
-# =============================================================================
-# EXAMPLE: HOW TO ADD NEW PROBE CONFIGURATION
-# =============================================================================
-
-"""
-When you change probe positions on [DATE], do this:
-
-1. Add new ProbeConfiguration to PROBE_CONFIGS list:
-
-    ProbeConfiguration(
-        name="jan2026_adjustment",  # descriptive name
-        valid_from=datetime(2026, 1, 15),  # date of change
-        valid_until=None,  # None = current config
-        distances_mm={
-            1: 8900.0,  # NEW positions in mm
-            2: 9500.0,
-            3: 12600.0,
-            4: 12601.0,
-        },
-        notes="Moved probes after tank maintenance on Jan 15, 2026"
-    ),
-
-2. Update the previous config's valid_until:
-   
-    Change:  valid_until=None
-    To:      valid_until=datetime(2026, 1, 15)
-
-3. That's it! The code automatically:
-   - Uses correct positions based on file date
-   - Validates no gaps/overlaps
-   - Works for both old and new data
-
-NO MORE HARDCODED IF-STATEMENTS IN YOUR LOGIC!
-"""
-
-
-# =============================================================================
-# YOUR ORIGINAL FUNCTIONS (minimally modified)
-# =============================================================================
-
-# ... (keep get_data_files, load_or_update, update_processed_metadata as before,
-#      but replace the probe position logic with calls to get_probe_positions())
-
 # -------------------------------------------------
 # File discovery
 # -------------------------------------------------
@@ -495,12 +453,8 @@ def get_data_files(folder: Path) -> Iterator[Path]:
     if total == 0:
         print(f"  No data files found in {folder}")
 
-# ----------------------------------------------------------------------
-# Updated function – saves per-experiment cache in waveprocessed/
-# ----------------------------------------------------------------------
 def load_or_update(
-    *folders: Path | str,  #make evertyghin  following stjerne * to be keyword only
-   
+    *folders: Path | str,
     force_recompute: bool = False,
     total_reset: bool = False
 ) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
@@ -508,34 +462,29 @@ def load_or_update(
     For each input folder (e.g. wavedata/20251110-tett6roof-lowM-ekte580),
     automatically uses or creates:
         waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580/
-    containing dfs.pkl and meta.json
+    containing dfs.parquet (cached DataFrames) and meta.json (metadata)
+    
+    Args:
+        folders: One or more paths to raw data folders
+        force_recompute: If True, recompute metadata from cached DataFrames (skip loading CSVs)
+        total_reset: If True, ignore all cache and reload everything from CSV files
     """
-    # processed_root: Path | str | None = None, #fjernet fordi ikke i bruk
-    # --------------------------------------------------------------
-    # 1. Find project root (so everything is independent of cwd)
-    # --------------------------------------------------------------
+    # Find project root
     current_file = Path(__file__).resolve()
-    project_root = None
-    for parent in current_file.parents:
-        if (parent / "main.py").exists() or (parent / ".git").exists():
-            project_root = parent
-            break
-    if project_root is None:
-        project_root = current_file.parent.parent  # safe fallback
+    project_root = next(
+        (p for p in current_file.parents if (p / "main.py").exists() or (p / ".git").exists()),
+        current_file.parent.parent
+    )
 
-    # --------------------------------------------------------------
-    # 2. Define base folder for all processed experiments
-    # --------------------------------------------------------------
-    processed_root = Path(project_root / "waveprocessed") #processed_root or 
+    # Define base folder for all processed experiments
+    processed_root = Path(project_root / "waveprocessed")
     processed_root.mkdir(parents=True, exist_ok=True)
 
     # Global containers
     all_dfs: Dict[str, pd.DataFrame] = {}
     all_meta_list: List[dict] = []
 
-    # --------------------------------------------------------------
-    # 3. Process each folder independently
-    # --------------------------------------------------------------
+    # Process each folder independently
     for folder in folders:
         folder_path = Path(folder).resolve()
         if not folder_path.is_dir():
@@ -546,87 +495,119 @@ def load_or_update(
         cache_dir = processed_root / f"PROCESSED-{experiment_name}"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-        dfs_path = cache_dir / "dfs.pkl"
+        dfs_cache_path = cache_dir / "dfs.parquet"
         meta_path = cache_dir / "meta.json"
 
         print(f"\nProcessing experiment: {experiment_name}")
         print(f"   Cache folder: {cache_dir.relative_to(project_root)}")
 
-        # Load existing cache for this experiment
+        # Initialize containers
         dfs: Dict[str, pd.DataFrame] = {}
         meta_list: list[dict] = []
-        
-        if dfs_path.exists() and not total_reset:
+
+        # ============================================================
+        # Step 1: Load or rebuild DataFrame cache (dfs.parquet)
+        # ============================================================
+        if total_reset:
+            print(f"   Total reset: Reloading all CSVs from scratch")
+            # Load all CSVs fresh
+            csv_files = list(get_data_files(folder_path))
+            dfs = _load_csv_files(csv_files, experiment_name)
+            
+        elif dfs_cache_path.exists():
+            print(f"   Loading cached DataFrames from {dfs_cache_path.name}")
             try:
-                dfs = pd.read_pickle(dfs_path)
-            except Exception as e:
-                dfs = {}
+                # Load from parquet - reconstruct the dict
+                cached_df = pd.read_parquet(dfs_cache_path)
+                # Parquet stores as single DF with 'path' column, need to split back
+                for path in cached_df['_path'].unique():
+                    dfs[path] = cached_df[cached_df['_path'] == path].drop(columns=['_path'])
+                print(f"   Loaded {len(dfs)} cached DataFrames")
                 
-        if meta_path.exists() and not force_recompute:
+                # Check for new CSV files not in cache
+                seen_keys = set(dfs.keys())
+                new_csv_files = [
+                    p for p in get_data_files(folder_path)
+                    if str(p.resolve()) not in seen_keys
+                ]
+                
+                if new_csv_files:
+                    print(f"   Found {len(new_csv_files)} new CSV file(s), loading...")
+                    new_dfs = _load_csv_files(new_csv_files, experiment_name)
+                    dfs.update(new_dfs)
+                    
+            except Exception as e:
+                print(f"   Cache corrupted ({e}) → rebuilding from CSVs")
+                csv_files = list(get_data_files(folder_path))
+                dfs = _load_csv_files(csv_files, experiment_name)
+        else:
+            print(f"   No cache found, loading all CSVs")
+            csv_files = list(get_data_files(folder_path))
+            dfs = _load_csv_files(csv_files, experiment_name)
+
+        # ============================================================
+        # Step 2: Compute or recompute metadata (meta.json)
+        # ============================================================
+        if force_recompute or total_reset:
+            mode = "total reset" if total_reset else "force recompute"
+            print(f"   {mode.capitalize()}: Extracting metadata from {len(dfs)} DataFrames")
+            # Extract metadata from all loaded DataFrames
+            for path, df in dfs.items():
+                filename = Path(path).name
+                metadata = extract_metadata_from_filename(filename, Path(path), df, experiment_name)
+                meta_list.append(metadata)
+                
+        elif meta_path.exists():
+            print(f"   Loading existing metadata from {meta_path.name}")
             try:
                 meta_list = json.loads(meta_path.read_text(encoding="utf-8"))
-                # grokk snakka om dette: TK New robust way — always get a DataFrame with predictable columns
-                #meta_df = pd.read_json(meta_path, orient="records", dtype=False)
-                print(f"   Loaded {len(dfs)} cached files")
-            except Exception as e:
-                print(f"   Cache corrupted ({e}) → rebuilding")
-                meta_list = []
-        elif force_recompute:
-            print(f"Du har valgt -> Force recompute: ignoring existing json")
-        
-        if force_recompute:
-            new_files = list(get_data_files(folder_path))
-            print(f" Force recompute: processing all {len(new_files)} files...")
-        else:
-            seen_keys = set(dfs.keys())
-            new_files = [
-                p for p in get_data_files(folder_path)
-                if str(p.resolve()) not in seen_keys
-            ]
-    
-            if not new_files:
-                print("   No new files → using cache only")
-            else:
-                print(f"   Loading {len(new_files)} new file(s)...")
-
-        # ------------------------------------------------------------------
-        # Load and process new files
-        # ------------------------------------------------------------------
-        for i, path in enumerate(new_files, 1):
-            key = str(path.resolve())
-            try:
-                suffix = path.suffix.lower()
-                if suffix == ".csv":
-                    df = pd.read_csv(path, dtype={}, engine=pyarrow,names=["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"])
-                else:
-                    print(f"   Skipping unsupported: {path.name}")
-                    continue
-
-                # Formatting
-                for probe in range(1, 5):
-                    df[f"Probe {probe}"] *= MEASUREMENT.M_TO_MM #eller er dette fra 1300 til 1.3 Hz
-                df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y %H:%M:%S.%f")
-
-                dfs[key] = df
-
-                # ------------------- METADATA EXTRACTION -------------------
-                filename = path.name
-                metadata = extract_metadata_from_filename(filename, path, df, experiment_name)
-                #
+                print(f"   Loaded metadata for {len(meta_list)} files")
                 
-
-                meta_list.append(metadata)
-                print(f"   [{i}/{len(new_files)}] Loaded {path.name} → {len(df):,} rows")
-
+                # Check if we have new DataFrames that need metadata
+                existing_paths = {m['path'] for m in meta_list}
+                new_paths = set(dfs.keys()) - existing_paths
+                
+                if new_paths:
+                    print(f"   Extracting metadata for {len(new_paths)} new file(s)")
+                    for path in new_paths:
+                        filename = Path(path).name
+                        metadata = extract_metadata_from_filename(
+                            filename, Path(path), dfs[path], experiment_name
+                        )
+                        meta_list.append(metadata)
+                        
             except Exception as e:
-                print(f"   Failed {path.name}: {e}")
+                print(f"   Metadata corrupted ({e}) → rebuilding")
+                for path, df in dfs.items():
+                    filename = Path(path).name
+                    metadata = extract_metadata_from_filename(filename, Path(path), df, experiment_name)
+                    meta_list.append(metadata)
+        else:
+            print(f"   No metadata found, extracting from {len(dfs)} DataFrames")
+            for path, df in dfs.items():
+                filename = Path(path).name
+                metadata = extract_metadata_from_filename(filename, Path(path), df, experiment_name)
+                meta_list.append(metadata)
 
-        # Save this experiment's cache
-        if new_files or not dfs_path.exists():
-            pd.to_pickle(dfs, dfs_path)
-            meta_path.write_text(json.dumps(meta_list, indent=2), encoding="utf-8")
-            mode = "rebuilt" if force_recompute else "updated"
-            print(f"   Cache {mode} → {len(dfs)} files")
+        # ============================================================
+        # Step 3: Save cache
+        # ============================================================
+        # Save DataFrame cache to parquet (if new/updated)
+        if dfs and (total_reset or not dfs_cache_path.exists() or len(dfs) != len(meta_list)):
+            print(f"   Saving DataFrame cache to {dfs_cache_path.name}")
+            # Combine all dfs into single DataFrame for parquet
+            combined_list = []
+            for path, df in dfs.items():
+                df_copy = df.copy()
+                df_copy['_path'] = path  # Add path identifier
+                combined_list.append(df_copy)
+            combined_df = pd.concat(combined_list, ignore_index=True)
+            combined_df.to_parquet(dfs_cache_path, index=False, engine='pyarrow')
+        
+        # Save metadata to JSON
+        if meta_list:
+            meta_path.write_text(json.dumps(meta_list, indent=2, default=str), encoding="utf-8")
+            print(f"   Saved metadata for {len(meta_list)} files")
 
         # Merge into global result
         all_dfs.update(dfs)
@@ -636,10 +617,43 @@ def load_or_update(
     meta_df = pd.DataFrame(all_meta_list)
     meta_df = apply_dtypes(meta_df)
     
-    mode = "recomputed" if force_recompute else "loaded"
-    print(f"\nFinished! Total {len(all_dfs)} files {mode} from {len(folders)} experiment(s)")
+    mode = "reset" if total_reset else ("recomputed metadata" if force_recompute else "loaded")
+    print(f"\nFinished! Total {len(all_dfs)} files ({mode}) from {len(folders)} experiment(s)")
     return all_dfs, meta_df
-################
+
+
+def _load_csv_files(
+    csv_files: List[Path], 
+    experiment_name: str
+) -> Dict[str, pd.DataFrame]:
+    """Helper function to load CSV files and return dict of DataFrames."""
+    dfs = {}
+    
+    for i, path in enumerate(csv_files, 1):
+        key = str(path.resolve())
+        try:
+            suffix = path.suffix.lower()
+            if suffix == ".csv":
+                df = pd.read_csv(
+                    path, 
+                    # engine='pyarrow',
+                    names=["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]
+                )
+                
+                # Formatting
+                for probe in range(1, 5):
+                    df[f"Probe {probe}"] *= MEASUREMENT.M_TO_MM
+                df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y %H:%M:%S.%f")
+                
+                dfs[key] = df
+                print(f"   [{i}/{len(csv_files)}] Loaded {path.name} → {len(df):,} rows")
+            else:
+                print(f"   Skipping unsupported: {path.name}")
+                
+        except Exception as e:
+            print(f"   Failed {path.name}: {e}")
+    
+    return dfs
 
 # --------------------------------------------------
 # Takes in a modified meta-dataframe, and updates the meta.JSON and meta excel

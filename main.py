@@ -29,7 +29,7 @@ Og så er det kode som sammenlikner data når hele mappen er prosessert en gang
 # List of dataset paths you want to process
 dataset_paths = [
     #Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"), #mstop 10
+    # Path("/Users/ole/Kodevik/wave_project/w-avedata/20251110-tett6roof-lowMooring"), #mstop 10
     
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"), #per15 (few runs)
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
@@ -47,7 +47,7 @@ all_processed_dfs = []
 
 processvariables = {
     "overordnet": {
-        "chooseAll": True,
+        "chooseAll": False,
         "chooseFirst": True,
     },
     "filters": {
@@ -60,11 +60,12 @@ processvariables = {
         "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
+        "total_reset": True, #laster også csv'ene på nytt
+        "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
         "debug": True,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
         "range_plot": False,    
-        "force_recompute": True,
     },
 }
 #todo: fikse slik at jeg kan plotte range, eller kjøre ting på nytt, uten å 
@@ -77,13 +78,14 @@ for i, data_path in enumerate(dataset_paths):
     print(f"{'='*50}")
     try:
         prosessering = processvariables.get("prosessering", {})
+        total_reset =prosessering.get("total_reset", False)
+        if total_reset:
+            input("TOTAL RESET! press enter if you want to continue")
         force =prosessering.get("force_recompute", False)
+        dfs, meta = load_or_update(data_path, force_recompute=force, total_reset=total_reset)
         
         print('# === Filter === #') #dette filteret er egentlig litt unøding, når jeg ønsker å prossesere hele sulamitten
         meta_sel = filter_chosen_files(meta, processvariables)
-        
-        print('forsøkte å flytte denna ned')
-        dfs, meta = load_or_update(data_path, force_recompute=force)
         
         print('# === Single probe process === #')
         processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, meta_sel, meta, processvariables)
