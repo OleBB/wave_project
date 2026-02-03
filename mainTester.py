@@ -5,75 +5,125 @@ Created on Tue Nov 18 08:41:03 2025
 @author: ole
 """
 
-#TODO: 
+
 import os
 from pathlib import Path
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
-# ------------------------------------------------------------------
-# Make the script always run from the folder where THIS file lives
-# ------------------------------------------------------------------
+from wavescripts.improved_data_loader import load_or_update
+from wavescripts.filters import filter_chosen_files
+from wavescripts.processor import process_selected_data
+from wavescripts.processor2nd import process_processed_data 
+
 file_dir = Path(__file__).resolve().parent
-os.chdir(file_dir)
-# ------------------------------------------------------------------
-#%%
-from wavescripts.data_loader import load_or_update
-dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"))
-# dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580")) #per15
-# (Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2")) #per15
+os.chdir(file_dir) # Make the script always run from the folder where THIS file lives
 
-#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"))
-#dfs, meta = load_or_update(Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"))
-#%%
-# === Config ===
-chooseAll = False
-chooseFirst = True
-# range debug and plot
-debug=False
-win=10
-find_range = True
-range_plot = False
+"""
+Overordnet: Enhver mappe er en egen kjøring, som deler samme vanndyp og probestilltilstand.
+En rekke prossesseringer skjer på likt for hele mappen.
+Og så er det kode som sammenlikner data når hele mappen er prosessert en gang
+"""
+
+# List of dataset paths you want to process
+dataset_paths = [
+    #Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
+    # Path("/Users/ole/Kodevik/wave_project/w-avedata/20251110-tett6roof-lowMooring"), #mstop 10
+    
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"), #per15 (few runs)
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+    
+    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
+    
+]
+#%% kjør
+# Initialize containers for all results
+all_meta_sel = []
+all_processed_dfs = []
 
 processvariables = {
+    "overordnet": {
+        "chooseAll": False,
+        "chooseFirst": True,
+    },
     "filters": {
-        "amp": 0.1, #0.1, 0.2, 0.3 
-        "freq": 1.3, #bruk et tall  
-        "per": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "wind": "full", #full, no, lowest
+        "amp": [0.1],  # 0.1, 0.2, 0.3 
+        "freq": 1.3,  # bruk et tall  
+        "per": None,  # bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "wind": None,#["full"],  # full, no, lowest
         "tunnel": None,
         "mooring": "low",
-        "panel": ["full", "reverse"], # no, full, reverse, 
+        "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
+    }, 
+    "prosessering": {
+        "total_reset": False, #laster også csv'ene på nytt
+        "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
+        "debug": True,
+        "smoothing_window": 10, #kontrollere denne senere
+        "find_range": True,
+        "range_plot": False,    
     },
-    "processing": {
-        "chosenprobe": "Probe 3", #ikkje i bruk
-        "rangestart": None, #ikkje i bruk
-        "rangeend": None, #ikkje i bruk
-        "data_cols": ["Probe 2"],#ikkje i bruk
-        "win": 11 #ikkje i bruk
-    },
-    "plotting": {
-        "figsize": None,
-        "separate":True,
-        "overlay": False   
-    }
 }
-# alternativt importere plotvariabler
-#import json
-#with open("plotsettings.json") as f:_
-#      plotvariables = json.load(f)
-print('# === Filter === #')
-from wavescripts.filters import filter_chosen_files
-meta_sel = filter_chosen_files(meta,
-                             processvariables)
-#nå har vi de utvalgte: meta_sel altså metadataframes_selected
-#%%
-print('# === Process === #')
-from wavescripts.processor import process_selected_data
-# - and optional check: DEBUG gir noen ekstra printa linjer
-processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, 
-                                                meta_sel, 
-                                                meta, processvariables)
-#TODO fiks slik at find_wave_range starter ved null eller ved en topp?
-# nå tar den first_motion_idx+ gitt antall bølger.
+#todo: fikse slik at jeg kan plotte range, eller kjøre ting på nytt, uten å 
+#   reloade csv.'ene. det trengs vel bare 1 gang.
+#todo: bli enig om hva som er forskjellen på force recompute og full resett (tror dei e like no)? 
+# Loop through each dataset
+for i, data_path in enumerate(dataset_paths):
+    print(f"\n{'='*50}")
+    print(f"Processing dataset {i+1}/{len(dataset_paths)}: {data_path.name}")
+    print(f"{'='*50}")
+    try:
+        prosessering = processvariables.get("prosessering", {})
+        total_reset =prosessering.get("total_reset", False)
+        if total_reset:
+            input("TOTAL RESET! press enter if you want to continue")
+        force =prosessering.get("force_recompute", False)
+        dfs, meta = load_or_update(data_path, force_recompute=force, total_reset=total_reset)
+        
+        print('# === Filter === #') #dette filteret er egentlig litt unøding, når jeg ønsker å prossesere hele sulamitten
+        meta_sel = filter_chosen_files(meta, processvariables)
+        
+        print('# === Single probe process === #')
+        processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, meta_sel, meta, processvariables)
+        
+        # print('# === FTT on each separate signal, saved to a dict of dfs')
+
+        
+        print('# === Probe comparison processing === #')
+        meta_sel = process_processed_data(psd_dictionary, fft_dictionary, meta_sel, meta, processvariables)
+        all_meta_sel.append(meta_sel)
+        all_processed_dfs.append(processed_dfs)
+        print(f"Successfully processed {len(meta_sel)} selections from {data_path.name}")
+        
+    except Exception as e:
+        print(f"Error processing {data_path.name}: {str(e)}")
+        continue
+print(f"\n{'='*50}")
+print(f"PROCESSING COMPLETE - Total datasets processed: {len(all_meta_sel)}")
+print(f"Total selections across all datasets: {sum(len(sel) for sel in all_meta_sel)}")
+print(f"{'='*50}")
+
+if all_meta_sel:
+    combined_meta_sel = pd.concat(all_meta_sel, ignore_index=True)
+    print("\nCombined meta_selections ready for analysis:")
+    print(combined_meta_sel.head())
+    
+    # You can now analyze the combined data
+    # For example:
+    # - Count selections by dataset
+    # - Analyze properties across all selections
+    # - Compare results between different datasets
+# """PRINT RESULTS"""
+# from wavescripts.wavestudyer import wind_damping_analysis
+# damping_analysis_results = wind_damping_analysis(combined_meta_sel)
+
+# %%
+
+#TODO: rydde i maintester. kopierte det over fra main.
 
 # %%
 
