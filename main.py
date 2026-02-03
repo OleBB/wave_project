@@ -574,6 +574,14 @@ cols= ["WindCondition",
 # pos = [3] + [5] + list(range(6,8)) 
 prnt = prdf[cols]
 
+# %% todo: lage funksjon for å kjøre range_plot utenom prosessering
+
+from wavescripts.plotter import plot_ramp_detection
+
+forløkke velge fil. 
+hente ut index
+figr, axr  = plot_ramp_detection(df, meta_sel, data_col, signal, baseline_mean, threshold, first_motion_idx, good_start_idx, good_range, good_end_idx)
+
 
 
 
