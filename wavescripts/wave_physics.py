@@ -11,13 +11,20 @@ import numpy as np
 from wavescripts.improved_data_loader import update_processed_metadata
 from scipy.signal import find_peaks
 from scipy.signal import welch
-from scipy.optimize import brentq
+# from scipy.optimize import brentq
+from scipy.optimize import newton
+
 from typing import Dict, List, Tuple
 
 from wavescripts.constants import PHYSICS, WAVENUMBER, MEASUREMENT
-#wave_physics.py
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
+from wavescripts.constants import (
+    ProbeColumns as PC, 
+    GlobalColumns as GC, 
+    ColumnGroups as CG,
+    CalculationResultColumns as RC
+)
 
-from scipy.optimize import newton
 
 def calculate_wavenumbers_vectorized(frequencies, heights):
     """

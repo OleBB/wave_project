@@ -21,6 +21,13 @@ from matplotlib.offsetbox import AnchoredText
 from matplotlib.offsetbox import AnchoredOffsetbox   # or AnchoredOffsetBox
 
 from wavescripts.constants import MEASUREMENT
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
+from wavescripts.constants import (
+    ProbeColumns as PC, 
+    GlobalColumns as GC, 
+    ColumnGroups as CG,
+    CalculationResultColumns as RC
+)
 
 def draw_anchored_text(ax, txt="Figuren", loc="upper left", fontsize=9,
                        facecolor="white", edgecolor="gray", alpha=0.85):
@@ -689,7 +696,7 @@ def facet_plot_freq_vs_mean(df, ampvar):
             ax.errorbar(gsub[x], gsub['mean_P3P2'], yerr=gsub['std_P3P2'],
                         fmt='none', capsize=3, alpha=0.6)
     sns.move_legend(
-    ax, "lower center",
+    g, "lower center",
     bbox_to_anchor=(.5, 1), ncol=3, title=None, frameon=False)
     plt.tight_layout()
     plt.show()
@@ -721,7 +728,7 @@ def facet_plot_amp_vs_mean(df, ampvar):
             ax.errorbar(gsub[x], gsub['mean_P3P2'], yerr=gsub['std_P3P2'],
                         fmt='none', capsize=3, alpha=0.6)
     sns.move_legend(
-    ax, "lower center",
+    g, "lower center",
     bbox_to_anchor=(.5, 1), ncol=3, title=None, frameon=False)
     plt.tight_layout()
     plt.show()

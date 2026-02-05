@@ -14,6 +14,13 @@ from scipy.signal import welch
 from typing import Dict, List, Tuple, Optional
 
 from wavescripts.constants import AMPLITUDE, MEASUREMENT, SIGNAL
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
+from wavescripts.constants import (
+    ProbeColumns as PC, 
+    GlobalColumns as GC, 
+    ColumnGroups as CG,
+    CalculationResultColumns as RC
+)
 
 # %% - Fysisk amplitude
 

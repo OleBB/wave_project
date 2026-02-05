@@ -158,5 +158,25 @@ Check what value you're using:
     print(f"Using baseline sigma = {SIGNAL.BASELINE_SIGMA_FACTOR}")
 """
 
+"""
+USAGE EXAMPLES - CONSTANTS
+from constants import (
+    ProbeColumns as PC,
+    GlobalColumns as GC,
+    ColumnGroups as CG,
+    CalculationResultColumns as RC,
+    ProcessedDataColumns as PDC
+)
+
+# Single probe column
+amp_col = PC.AMPLITUDE_FFT.format(i=2)  # "Probe 2 Amplitude (FFT)"
+
+# All probe columns (pre-computed, fast)
+all_amps = CG.FFT_AMPLITUDE_COLS
+
+# DataFrame operations
+meta_indexed[CG.FFT_AMPLITUDE_COLS] = fft_df[CG.FFT_AMPLITUDE_COLS]
+"""
+
 if __name__ == "__main__":
     print(__doc__)
