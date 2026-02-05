@@ -287,24 +287,29 @@ def _initialize_metadata_dict(file_path: str, experiment_name: str) -> dict:
         metadata[f"Stillwater Probe {i}"] = None
         metadata[f"Computed Probe {i} start"] = None
         metadata[f"Computed Probe {i} end"] = None
-        metadata[f"Probe {i} Amplitude"] = None
-        metadata[f"Probe {i} Amplitude (PSD)"] = None
+        metadata[f"Probe {i} Amplitude"] = None #fysisk - TK vurdere nytt navn.
         metadata[f"Probe {i} Amplitude (FFT)"] = None
+        metadata[f"Probe {i} Amplitude (PSD)"] = None
         metadata[f"Probe {i} Swell Amplitude (PSD)"] = None
         metadata[f"Probe {i} Wind Amplitude (PSD)"] = None
         metadata[f"Probe {i} Total Amplitude (PSD)"] = None
         
-        metadata[f"Probe {i} WavePeriod (FFT)"] = None #new
-        metadata[f"Probe {i} Wavenumber (FFT)"] = None #new
-        metadata[f"Probe {i} Wavelength (FFT)"] = None #new
-        metadata[f"Probe {i} Significant Wave Height Hm0 (FFT)"] = None #new
+        metadata[f"Probe {i} WavePeriod (FFT)"] = None 
+        metadata[f"Probe {i} Wavenumber (FFT)"] = None 
+        metadata[f"Probe {i} Wavelength (FFT)"] = None 
+        metadata[f"Probe {i} kL (FFT)"] = None 
+        metadata[f"Probe {i} ak (FFT)"] = None 
+        metadata[f"Probe {i} tanh(kH) (FFT)"] = None 
+        metadata[f"Probe {i} Celerity (FFT)"] = None 
+        metadata[f"Probe {i} Significant Wave Height Hs (FFT)"] = None 
+        metadata[f"Probe {i} Significant Wave Height Hm0 (FFT)"] = None 
         
     
     # Add computed fields
-    for field in ["Wavefrequency", "Waveperiod", "Wavenumber", "Wavelength",
-                  "kL", "ak", "kH", "tanh(kH)", "Celerity",
-                  "Significant Wave Height Hs", "Significant Wave Height Hm0",
-                  "Windspeed", "P2/P1", "P3/P2", "P4/P3"]:
+    for field in ["Wavefrequency (given)", "Waveperiod (given)", "Wavenumber (given)", "Wavelength (given)",
+                  "kL (given)", "ak (given)", "kH (given)", "tanh(kH) (given)", "Celerity (given)",
+                  "Significant Wave Height Hs (given)", "Significant Wave Height Hm0 (given)",
+                  "Windspeed", "P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]:
         metadata[field] = None
     
     return metadata
