@@ -12,6 +12,14 @@ import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, correlate
 from pathlib import Path
 
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
+from wavescripts.constants import (
+    ProbeColumns as PC, 
+    GlobalColumns as GC, 
+    ColumnGroups as CG,
+    CalculationResultColumns as RC
+)
+
 
 def compare_probe_amplitudes_and_lag(df, 
                                    col1, 

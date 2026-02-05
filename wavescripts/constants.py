@@ -206,6 +206,324 @@ def get_panel_length(panel_condition: str) -> float:
     """Get panel length in meters for given condition."""
     return PANEL_LENGTHS.get(panel_condition.lower().strip(), 0.0)
 
+# =============================================================================
+# COLUMN NAMES
+# =============================================================================
+
+class ProbeColumns:
+    """Column name templates for probe-specific data.
+    
+    Use .format(i=probe_number) to get the actual column name.
+    Example: ProbeColumns.AMPLITUDE.format(i=1) → "Probe 1 Amplitude"
+    """
+    
+    # Physical setup
+    MM_FROM_PADDLE = "Probe {i} mm from paddle"
+    STILLWATER = "Stillwater Probe {i}"
+    
+    # Computed analysis ranges
+    START = "Computed Probe {i} start"
+    END = "Computed Probe {i} end"
+    
+    # Basic amplitude (from percentile method)
+    AMPLITUDE = "Probe {i} Amplitude"
+    
+    # PSD-derived metrics
+    AMPLITUDE_PSD = "Probe {i} Amplitude (PSD)"
+    SWELL_AMPLITUDE_PSD = "Probe {i} Swell Amplitude (PSD)"
+    WIND_AMPLITUDE_PSD = "Probe {i} Wind Amplitude (PSD)"
+    TOTAL_AMPLITUDE_PSD = "Probe {i} Total Amplitude (PSD)"
+    
+    # FFT-derived metrics
+    AMPLITUDE_FFT = "Probe {i} Amplitude (FFT)"
+    FREQUENCY_FFT = "Probe {i} Frequency (FFT)"
+    PERIOD_FFT = "Probe {i} WavePeriod (FFT)"
+    WAVENUMBER_FFT = "Probe {i} Wavenumber (FFT)"
+    WAVELENGTH_FFT = "Probe {i} Wavelength (FFT)"
+    KL_FFT = "Probe {i} kL (FFT)"
+    AK_FFT = "Probe {i} ak (FFT)"
+    TANH_KH_FFT = "Probe {i} tanh(kH) (FFT)"
+    CELERITY_FFT = "Probe {i} Celerity (FFT)"
+    HS_FFT = "Probe {i} Significant Wave Height Hs (FFT)"
+    HM0_FFT = "Probe {i} Significant Wave Height Hm0 (FFT)"
+
+
+class GlobalColumns:
+    """Non-probe-specific column names."""
+    
+    # Identifiers
+    PATH = "path"
+    EXPERIMENT_FOLDER = "experiment_folder"
+    FILE_DATE = "file_date"
+    RUN_NUMBER = "Run number"
+    PROCESSED_FOLDER = "PROCESSED_folder"
+    
+    # Experimental conditions
+    WIND_CONDITION = "WindCondition"
+    TUNNEL_CONDITION = "TunnelCondition"
+    PANEL_CONDITION = "PanelCondition"
+    MOORING = "Mooring"
+    
+    # Input parameters
+    WAVE_AMPLITUDE_INPUT = "WaveAmplitudeInput [Volt]"
+    WAVE_FREQUENCY_INPUT = "WaveFrequencyInput [Hz]"
+    WAVE_PERIOD_INPUT = "WavePeriodInput"
+    WATER_DEPTH = "WaterDepth [mm]"
+    EXTRA_SECONDS = "Extra seconds"
+    
+    # Computed global metrics (from input frequency)
+    WAVENUMBER = "Wavenumber"
+    WAVELENGTH = "Wavelength"
+    KL = "kL"
+    AK = "ak"
+    KH = "kH"
+    TANH_KH = "tanh(kH)"
+    CELERITY = "Celerity"
+    WINDSPEED = "Windspeed"
+    
+    # "Given" metrics (legacy columns - consider deprecating)
+    WAVE_FREQUENCY_GIVEN = "Wavefrequency (given)"
+    WAVE_PERIOD_GIVEN = "Waveperiod (given)"
+    WAVENUMBER_GIVEN = "Wavenumber (given)"
+    WAVELENGTH_GIVEN = "Wavelength (given)"
+    KL_GIVEN = "kL (given)"
+    AK_GIVEN = "ak (given)"
+    KH_GIVEN = "kH (given)"
+    TANH_KH_GIVEN = "tanh(kH) (given)"
+    CELERITY_GIVEN = "Celerity (given)"
+    HS_GIVEN = "Significant Wave Height Hs (given)"
+    HM0_GIVEN = "Significant Wave Height Hm0 (given)"
+    
+    # Probe ratios
+    P2_P1_FFT = "P2/P1 (FFT)"
+    P3_P2_FFT = "P3/P2 (FFT)"
+    P4_P3_FFT = "P4/P3 (FFT)"
+
+
+class CalculationResultColumns:
+    """Column names returned by calculation functions.
+    
+    These are the keys in DataFrames returned by functions like
+    calculate_wavedimensions() and need to be mapped to metadata columns.
+    """
+    
+    # Individual column names
+    WAVELENGTH = "Wavelength"
+    KL = "kL"
+    AK = "ak"
+    KH = "kH"
+    TANH_KH = "tanh(kH)"
+    CELERITY = "Celerity"
+    
+    # Pre-built column lists for bulk operations
+    WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ak", "tanh(kH)", "Celerity"]
+    WAVE_DIMENSION_COLS_WITH_KH = ["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]
+
+
+class ColumnGroups:
+    """Pre-computed column name lists for bulk operations.
+    
+    These are computed once at module load time for performance.
+    Use these instead of calling helper functions repeatedly.
+    """
+    
+    # Basic amplitude columns (from percentile method)
+    BASIC_AMPLITUDE_COLS = [f"Probe {i} Amplitude" for i in range(1, 5)]
+    
+    # PSD-derived columns
+    PSD_AMPLITUDE_COLS = [f"Probe {i} Amplitude (PSD)" for i in range(1, 5)]
+    PSD_SWELL_AMPLITUDE_COLS = [f"Probe {i} Swell Amplitude (PSD)" for i in range(1, 5)]
+    PSD_WIND_AMPLITUDE_COLS = [f"Probe {i} Wind Amplitude (PSD)" for i in range(1, 5)]
+    PSD_TOTAL_AMPLITUDE_COLS = [f"Probe {i} Total Amplitude (PSD)" for i in range(1, 5)]
+    
+    # FFT-derived columns
+    FFT_AMPLITUDE_COLS = [f"Probe {i} Amplitude (FFT)" for i in range(1, 5)]
+    FFT_FREQUENCY_COLS = [f"Probe {i} Frequency (FFT)" for i in range(1, 5)]
+    FFT_PERIOD_COLS = [f"Probe {i} WavePeriod (FFT)" for i in range(1, 5)]
+    FFT_WAVENUMBER_COLS = [f"Probe {i} Wavenumber (FFT)" for i in range(1, 5)]
+    FFT_WAVELENGTH_COLS = [f"Probe {i} Wavelength (FFT)" for i in range(1, 5)]
+    FFT_KL_COLS = [f"Probe {i} kL (FFT)" for i in range(1, 5)]
+    FFT_AK_COLS = [f"Probe {i} ak (FFT)" for i in range(1, 5)]
+    FFT_TANH_KH_COLS = [f"Probe {i} tanh(kH) (FFT)" for i in range(1, 5)]
+    FFT_CELERITY_COLS = [f"Probe {i} Celerity (FFT)" for i in range(1, 5)]
+    FFT_HS_COLS = [f"Probe {i} Significant Wave Height Hs (FFT)" for i in range(1, 5)]
+    FFT_HM0_COLS = [f"Probe {i} Significant Wave Height Hm0 (FFT)" for i in range(1, 5)]
+    
+    # Physical setup columns
+    STILLWATER_COLS = [f"Stillwater Probe {i}" for i in range(1, 5)]
+    MM_FROM_PADDLE_COLS = [f"Probe {i} mm from paddle" for i in range(1, 5)]
+    
+    # Computed range columns
+    START_COLS = [f"Computed Probe {i} start" for i in range(1, 5)]
+    END_COLS = [f"Computed Probe {i} end" for i in range(1, 5)]
+    
+    # Global wave dimension columns
+    GLOBAL_WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]
+    
+    # Probe ratio columns
+    PROBE_RATIO_COLS = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]
+    
+    @staticmethod
+    def fft_wave_dimension_cols(probe_num: int) -> list[str]:
+        """Get all FFT-derived wave dimension columns for a specific probe.
+        
+        This is the only dynamic helper - use for probe-specific operations.
+        
+        Args:
+            probe_num: Probe number (1-4)
+            
+        Returns:
+            List of column names for that probe's FFT wave dimensions
+        """
+        return [
+            f"Probe {probe_num} Wavelength (FFT)",
+            f"Probe {probe_num} kL (FFT)",
+            f"Probe {probe_num} ak (FFT)",
+            f"Probe {probe_num} tanh(kH) (FFT)",
+            f"Probe {probe_num} Celerity (FFT)",
+        ]
+    
+    @staticmethod
+    def all_probe_cols_for_category(category: str) -> list[str]:
+        """Get all columns for a specific category across all probes.
+        
+        Args:
+            category: One of 'amplitude', 'fft', 'psd', 'setup'
+            
+        Returns:
+            Flat list of all relevant columns
+        """
+        category_map = {
+            'amplitude': ColumnGroups.BASIC_AMPLITUDE_COLS,
+            'fft': (ColumnGroups.FFT_AMPLITUDE_COLS + 
+                   ColumnGroups.FFT_FREQUENCY_COLS + 
+                   ColumnGroups.FFT_PERIOD_COLS),
+            'psd': (ColumnGroups.PSD_AMPLITUDE_COLS + 
+                   ColumnGroups.PSD_SWELL_AMPLITUDE_COLS + 
+                   ColumnGroups.PSD_WIND_AMPLITUDE_COLS),
+            'setup': ColumnGroups.STILLWATER_COLS + ColumnGroups.MM_FROM_PADDLE_COLS,
+        }
+        return category_map.get(category.lower(), [])
+
+
+# =============================================================================
+# DATAFRAME COLUMN NAMES (for raw CSV data)
+# =============================================================================
+
+class RawDataColumns:
+    """Column names in the raw CSV files from the wave flume.
+    
+    These are the actual column headers in your measurement data.
+    """
+    TIME = "Time [s]"
+    PROBE_1 = "Probe 1"
+    PROBE_2 = "Probe 2"
+    PROBE_3 = "Probe 3"
+    PROBE_4 = "Probe 4"
+    
+    # All probe columns as a list
+    ALL_PROBES = [PROBE_1, PROBE_2, PROBE_3, PROBE_4]
+
+
+class ProcessedDataColumns:
+    """Column names in processed DataFrames (after zeroing and smoothing)."""
+    
+    TIME = "Time [s]"
+    
+    # Zeroed signals
+    ETA_1 = "eta_1"
+    ETA_2 = "eta_2"
+    ETA_3 = "eta_3"
+    ETA_4 = "eta_4"
+    
+    # Moving averages
+    ETA_1_MA = "eta_1_ma"
+    ETA_2_MA = "eta_2_ma"
+    ETA_3_MA = "eta_3_ma"
+    ETA_4_MA = "eta_4_ma"
+    
+    # All eta columns
+    ALL_ETA = [ETA_1, ETA_2, ETA_3, ETA_4]
+    ALL_ETA_MA = [ETA_1_MA, ETA_2_MA, ETA_3_MA, ETA_4_MA]
+
+
+# =============================================================================
+# COLUMN NAME HELPERS
+# =============================================================================
+
+def get_probe_column(probe_num: int, column_template: str) -> str:
+    """Get a specific probe's column name from a template.
+    
+    Args:
+        probe_num: Probe number (1-4)
+        column_template: Template string with {i} placeholder
+        
+    Returns:
+        Formatted column name
+        
+    Example:
+        >>> get_probe_column(2, ProbeColumns.AMPLITUDE_FFT)
+        'Probe 2 Amplitude (FFT)'
+    """
+    if not 1 <= probe_num <= MEASUREMENT.NUM_PROBES:
+        raise ValueError(f"Probe number must be 1-{MEASUREMENT.NUM_PROBES}, got {probe_num}")
+    return column_template.format(i=probe_num)
+
+
+def validate_columns_exist(df, required_columns: list[str], context: str = "") -> None:
+    """Validate that all required columns exist in a DataFrame.
+    
+    Args:
+        df: DataFrame to check
+        required_columns: List of column names that must exist
+        context: Description of where this check is happening (for error message)
+        
+    Raises:
+        ValueError: If any required columns are missing
+    """
+    missing = set(required_columns) - set(df.columns)
+    if missing:
+        ctx = f" in {context}" if context else ""
+        raise ValueError(f"Missing required columns{ctx}: {sorted(missing)}")
+
+
+# =============================================================================
+# VALIDATION
+# =============================================================================
+
+def validate_column_constants():
+    """Sanity check column name constants."""
+    
+    # Check that pre-computed lists have correct length
+    assert len(ColumnGroups.BASIC_AMPLITUDE_COLS) == MEASUREMENT.NUM_PROBES
+    assert len(ColumnGroups.FFT_AMPLITUDE_COLS) == MEASUREMENT.NUM_PROBES
+    assert len(ColumnGroups.STILLWATER_COLS) == MEASUREMENT.NUM_PROBES
+    
+    # Check that templates work
+    test_col = ProbeColumns.AMPLITUDE.format(i=1)
+    assert test_col == "Probe 1 Amplitude"
+    
+    # Check raw data columns match expected count
+    assert len(RawDataColumns.ALL_PROBES) == MEASUREMENT.NUM_PROBES
+    assert len(ProcessedDataColumns.ALL_ETA) == MEASUREMENT.NUM_PROBES
+    
+    print("✓ All column constants validated")
+
+
+# Update the main validation function
+def validate_constants():
+    """Sanity check all constants. Call this at startup."""
+    assert MEASUREMENT.SAMPLING_RATE > 0, "Sampling rate must be positive"
+    assert 0 < SIGNAL.PSD_OVERLAP_FRACTION < 1, "Overlap must be between 0 and 1"
+    assert RAMP.MIN_RAMP_PEAKS < RAMP.MAX_RAMP_PEAKS, "Min ramp peaks must be < max"
+    assert AMPLITUDE.AMPLITUDE_DIVISOR != 0, "Amplitude divisor cannot be zero"
+    
+    # Also validate column constants
+    validate_column_constants()
+    
+    print("✓ All constants validated")
+
+
 
 # =============================================================================
 # CONFIGURATION PROFILES (OPTIONAL)
@@ -273,5 +591,11 @@ if __name__ == "__main__":
     print("\n=== PANEL LENGTHS ===")
     for condition, length in PANEL_LENGTHS.items():
         print(f"{condition:10s}: {length} m")
+    
+    print("\n=== COLUMN NAMES ===")
+    print(f"Number of probes: {len(ColumnGroups.BASIC_AMPLITUDE_COLS)}")
+    print(f"Sample amplitude column: {ProbeColumns.AMPLITUDE.format(i=1)}")
+    print(f"FFT amplitude columns: {ColumnGroups.FFT_AMPLITUDE_COLS}")
+    print(f"Global columns sample: {GlobalColumns.PATH}, {GlobalColumns.WATER_DEPTH}")
     
     validate_constants()

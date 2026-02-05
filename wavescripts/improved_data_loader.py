@@ -20,8 +20,14 @@ from datetime import datetime
 from dataclasses import dataclass
 # import pyarrow
 
-
 from wavescripts.constants import MEASUREMENT
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
+from wavescripts.constants import (
+    ProbeColumns as PC, 
+    GlobalColumns as GC, 
+    ColumnGroups as CG,
+    CalculationResultColumns as RC
+)
 
 # Only list the exceptions (non-floats)
 NON_FLOAT_COLUMNS = {
@@ -306,9 +312,9 @@ def _initialize_metadata_dict(file_path: str, experiment_name: str) -> dict:
         
     
     # Add computed fields
-    for field in ["Wavefrequency", "Waveperiod", "Wavenumber", "Wavelength",
+    for field in ["Waveperiod", "Wavenumber", "Wavelength",
                   "kL", "ak", "kH", "tanh(kH)", "Celerity",
-                  "Significant Wave Height Hs", "Significant Wave Height Hm0", "Reynoldsnumber (Water)"
+                  "Significant Wave Height Hs", "Significant Wave Height Hm0", "Reynoldsnumber (Water)",
                   "Windspeed", "Reynoldsnumber (Wind)", "P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]:
         metadata[field] = None
     

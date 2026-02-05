@@ -17,8 +17,12 @@ from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_f
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
-
-PROBES = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
+from wavescripts.constants import (
+    ProbeColumns as PC, 
+    GlobalColumns as GC, 
+    ColumnGroups as CG,
+    CalculationResultColumns as RC
+)
 
 
 # ========================================================== #
@@ -172,6 +176,110 @@ def run_find_wave_ranges(
     return meta_sel
 
 
+# def _update_all_metrics(
+#     processed_dfs: dict,
+#     meta_sel: pd.DataFrame,
+#     stillwater: dict,
+#     amplitudes_psd_df: pd.DataFrame,
+#     amplitudes_fft_df: pd.DataFrame,
+# ) -> pd.DataFrame:
+#     """
+#     Calculate and update all computed metrics in metadata.
+    
+#     This function handles TWO types of updates:
+#     1. DIRECT ASSIGNMENT: Pre-computed amplitudes from PSD/FFT analysis
+#     2. DERIVED CALCULATIONS: Wavenumbers, wavelengths, etc. based on the amplitudes
+#     """
+#     meta_indexed = meta_sel.set_index("path").copy()
+    
+#     # ============================================================================
+#     # SECTION 1: DIRECT ASSIGNMENT of pre-computed values
+#     # ============================================================================
+    
+#     # Amplitudes from np.percentile
+#     amplitudes = compute_amplitudes(processed_dfs, meta_sel)
+#     amp_cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
+#     meta_indexed.update(amplitudes.set_index("path")[amp_cols])
+    
+#     # Amplitudes from PSD
+#     psd_cols = [f"Probe {i} Amplitude (PSD)" for i in range(1, 5)]
+#     meta_indexed[psd_cols] = amplitudes_psd_df.set_index("path")[psd_cols]
+    
+#     # Amplitudes AND periods from FFT (both needed for downstream calculations)
+#     fft_amplitude_cols = [f"Probe {i} Amplitude (FFT)" for i in range(1, 5)]
+#     fft_period_cols = [f"Probe {i} WavePeriod (FFT)" for i in range(1, 5)]
+#     fft_freq_cols = [f"Probe {i} Frequency (FFT)" for i in range(1, 5)]
+    
+#     fft_df_indexed = amplitudes_fft_df.set_index("path")
+#     meta_indexed[fft_amplitude_cols] = fft_df_indexed[fft_amplitude_cols]
+#     meta_indexed[fft_period_cols] = fft_df_indexed[fft_period_cols]
+#     meta_indexed[fft_freq_cols] = fft_df_indexed[fft_freq_cols]
+    
+#     # ============================================================================
+#     # SECTION 2: DERIVED CALCULATIONS using the assigned values
+#     # ============================================================================
+    
+#     # Define probe configurations
+#     probe_config = {
+#         1: ("Probe 1 Frequency (FFT)", "Probe 1 Wavenumber (FFT)"),
+#         2: ("Probe 2 Frequency (FFT)", "Probe 2 Wavenumber (FFT)"),
+#         3: ("Probe 3 Frequency (FFT)", "Probe 3 Wavenumber (FFT)"),
+#         4: ("Probe 4 Frequency (FFT)", "Probe 4 Wavenumber (FFT)"),
+#     }
+
+#     # Process all probes - vectorized for speed
+#     for i, (freq_col, k_col) in probe_config.items():
+#         # Convert Period to Frequency: f = 1/T
+#         freq_data = meta_indexed[freq_col]
+        
+#         # Vectorized Wavenumber Calculation
+#         meta_indexed[k_col] = calculate_wavenumbers_vectorized(
+#             frequencies=freq_data,
+#             heights=meta_indexed["WaterDepth [mm]"]
+#         )
+        
+#         # Vectorized Dimension Calculation
+#         res = calculate_wavedimensions(
+#             k=meta_indexed[k_col],
+#             H=meta_indexed["WaterDepth [mm]"],
+#             PC=meta_indexed["PanelCondition"],
+#             amp=meta_indexed[f"Probe {i} Amplitude"]
+#         )
+        
+#         # Bulk assign results
+#         target_cols = [f"Probe {i} Wavelength (FFT)", f"Probe {i} kL (FFT)", 
+#                        f"Probe {i} ak (FFT)", f"Probe {i} tanh(kH) (FFT)", 
+#                        f"Probe {i} Celerity (FFT)"]
+#         source_cols = ["Wavelength", "kL", "ak", "tanh(kH)", "Celerity"]
+#         meta_indexed[target_cols] = res[source_cols]
+
+#     # Process the 'Given' / 'Global' columns
+#     meta_indexed["Wavenumber"] = calculate_wavenumbers_vectorized(
+#         frequencies=meta_indexed["WaveFrequencyInput [Hz]"],
+#         heights=meta_indexed["WaterDepth [mm]"]
+#     )
+    
+#     global_res = calculate_wavedimensions(
+#         k=meta_indexed["Wavenumber"],
+#         H=meta_indexed["WaterDepth [mm]"],
+#         PC=meta_indexed["PanelCondition"],
+#         amp=meta_indexed["Probe 2 Amplitude"]
+#     )
+
+#     final_cols = ["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]
+#     meta_indexed[final_cols] = global_res[final_cols]
+    
+#     # Windspeed
+#     meta_indexed["Windspeed"] = calculate_windspeed(meta_indexed["WindCondition"])
+    
+#     # Add stillwater columns if missing
+#     for i in range(1, 5):
+#         col = f"Stillwater Probe {i}"
+#         if col not in meta_indexed.columns:
+#             meta_indexed[col] = stillwater[i]
+    
+#     return meta_indexed.reset_index()
+
 def _update_all_metrics(
     processed_dfs: dict,
     meta_sel: pd.DataFrame,
@@ -179,14 +287,8 @@ def _update_all_metrics(
     amplitudes_psd_df: pd.DataFrame,
     amplitudes_fft_df: pd.DataFrame,
 ) -> pd.DataFrame:
-    """
-    Calculate and update all computed metrics in metadata.
-    
-    This function handles TWO types of updates:
-    1. DIRECT ASSIGNMENT: Pre-computed amplitudes from PSD/FFT analysis
-    2. DERIVED CALCULATIONS: Wavenumbers, wavelengths, etc. based on the amplitudes
-    """
-    meta_indexed = meta_sel.set_index("path").copy()
+    """..."""
+    meta_indexed = meta_sel.set_index(GC.PATH).copy()
     
     # ============================================================================
     # SECTION 1: DIRECT ASSIGNMENT of pre-computed values
@@ -194,83 +296,66 @@ def _update_all_metrics(
     
     # Amplitudes from np.percentile
     amplitudes = compute_amplitudes(processed_dfs, meta_sel)
-    amp_cols = [f"Probe {i} Amplitude" for i in range(1, 5)]
-    meta_indexed.update(amplitudes.set_index("path")[amp_cols])
+    meta_indexed.update(amplitudes.set_index(GC.PATH)[CG.BASIC_AMPLITUDE_COLS])
     
-    # Amplitudes from PSD
-    psd_cols = [f"Probe {i} Amplitude (PSD)" for i in range(1, 5)]
-    meta_indexed[psd_cols] = amplitudes_psd_df.set_index("path")[psd_cols]
+    # Amplitudes from PSD - NO function call overhead
+    meta_indexed[CG.PSD_AMPLITUDE_COLS] = (
+        amplitudes_psd_df.set_index(GC.PATH)[CG.PSD_AMPLITUDE_COLS]
+    )
     
-    # Amplitudes AND periods from FFT (both needed for downstream calculations)
-    fft_amplitude_cols = [f"Probe {i} Amplitude (FFT)" for i in range(1, 5)]
-    fft_period_cols = [f"Probe {i} WavePeriod (FFT)" for i in range(1, 5)]
-    fft_freq_cols = [f"Probe {i} Frequency (FFT)" for i in range(1, 5)]
-    
-    fft_df_indexed = amplitudes_fft_df.set_index("path")
-    meta_indexed[fft_amplitude_cols] = fft_df_indexed[fft_amplitude_cols]
-    meta_indexed[fft_period_cols] = fft_df_indexed[fft_period_cols]
-    meta_indexed[fft_freq_cols] = fft_df_indexed[fft_freq_cols]
+    # Amplitudes, frequencies, and periods from FFT
+    fft_df_indexed = amplitudes_fft_df.set_index(GC.PATH)
+    meta_indexed[CG.FFT_AMPLITUDE_COLS] = fft_df_indexed[CG.FFT_AMPLITUDE_COLS]
+    meta_indexed[CG.FFT_PERIOD_COLS] = fft_df_indexed[CG.FFT_PERIOD_COLS]
+    meta_indexed[CG.FFT_FREQUENCY_COLS] = fft_df_indexed[CG.FFT_FREQUENCY_COLS]
     
     # ============================================================================
     # SECTION 2: DERIVED CALCULATIONS using the assigned values
     # ============================================================================
     
-    # Define probe configurations
-    probe_config = {
-        1: ("Probe 1 Frequency (FFT)", "Probe 1 Wavenumber (FFT)"),
-        2: ("Probe 2 Frequency (FFT)", "Probe 2 Wavenumber (FFT)"),
-        3: ("Probe 3 Frequency (FFT)", "Probe 3 Wavenumber (FFT)"),
-        4: ("Probe 4 Frequency (FFT)", "Probe 4 Wavenumber (FFT)"),
-    }
-
     # Process all probes - vectorized for speed
-    for i, (freq_col, k_col) in probe_config.items():
-        # Convert Period to Frequency: f = 1/T
+    for i in range(1, 5):
+        freq_col = PC.FREQUENCY_FFT.format(i=i)
+        k_col = PC.WAVENUMBER_FFT.format(i=i)
+        
         freq_data = meta_indexed[freq_col]
         
-        # Vectorized Wavenumber Calculation
         meta_indexed[k_col] = calculate_wavenumbers_vectorized(
             frequencies=freq_data,
-            heights=meta_indexed["WaterDepth [mm]"]
+            heights=meta_indexed[GC.WATER_DEPTH]
         )
         
-        # Vectorized Dimension Calculation
         res = calculate_wavedimensions(
             k=meta_indexed[k_col],
-            H=meta_indexed["WaterDepth [mm]"],
-            PC=meta_indexed["PanelCondition"],
-            amp=meta_indexed[f"Probe {i} Amplitude"]
+            H=meta_indexed[GC.WATER_DEPTH],
+            PC=meta_indexed[GC.PANEL_CONDITION],
+            amp=meta_indexed[PC.AMPLITUDE.format(i=i)]
         )
         
-        # Bulk assign results
-        target_cols = [f"Probe {i} Wavelength (FFT)", f"Probe {i} kL (FFT)", 
-                       f"Probe {i} ak (FFT)", f"Probe {i} tanh(kH) (FFT)", 
-                       f"Probe {i} Celerity (FFT)"]
-        source_cols = ["Wavelength", "kL", "ak", "tanh(kH)", "Celerity"]
-        meta_indexed[target_cols] = res[source_cols]
+        # This still calls the function, but only 4 times total (acceptable)
+        meta_indexed[CG.fft_wave_dimension_cols(i)] = res[RC.WAVE_DIMENSION_COLS]
 
-    # Process the 'Given' / 'Global' columns
-    meta_indexed["Wavenumber"] = calculate_wavenumbers_vectorized(
-        frequencies=meta_indexed["WaveFrequencyInput [Hz]"],
-        heights=meta_indexed["WaterDepth [mm]"]
+    # Process global columns
+    meta_indexed[GC.WAVENUMBER] = calculate_wavenumbers_vectorized(
+        frequencies=meta_indexed[GC.WAVE_FREQUENCY_INPUT],
+        heights=meta_indexed[GC.WATER_DEPTH]
     )
     
     global_res = calculate_wavedimensions(
-        k=meta_indexed["Wavenumber"],
-        H=meta_indexed["WaterDepth [mm]"],
-        PC=meta_indexed["PanelCondition"],
-        amp=meta_indexed["Probe 2 Amplitude"]
+        k=meta_indexed[GC.WAVENUMBER],
+        H=meta_indexed[GC.WATER_DEPTH],
+        PC=meta_indexed[GC.PANEL_CONDITION],
+        amp=meta_indexed[PC.AMPLITUDE.format(i=2)]
     )
 
-    final_cols = ["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]
-    meta_indexed[final_cols] = global_res[final_cols]
+    meta_indexed[CG.GLOBAL_WAVE_DIMENSION_COLS] = global_res[RC.WAVE_DIMENSION_COLS_WITH_KH]
     
     # Windspeed
-    meta_indexed["Windspeed"] = calculate_windspeed(meta_indexed["WindCondition"])
+    meta_indexed[GC.WINDSPEED] = calculate_windspeed(meta_indexed[GC.WIND_CONDITION])
     
     # Add stillwater columns if missing
     for i in range(1, 5):
-        col = f"Stillwater Probe {i}"
+        col = PC.STILLWATER.format(i=i)
         if col not in meta_indexed.columns:
             meta_indexed[col] = stillwater[i]
     
