@@ -129,6 +129,10 @@ if all_meta_sel:
 # %% fysisk plott
 chooseAll = False
 amplitudeplotvariables = {
+    "overordnet": {
+        "chooseAll": True,
+        "chooseFirst": True,
+    },
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1,0.2,0.3], #0.1, 0.2, 0.3 
         "WaveFrequencyInput [Hz]": 1.3, #bruk et tall  
