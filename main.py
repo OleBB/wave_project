@@ -68,8 +68,6 @@ processvariables = {
         "range_plot": False,    
     },
 }
-#todo: fikse slik at jeg kan plotte range, eller kjøre ting på nytt, uten å 
-#   reloade csv.'ene. det trengs vel bare 1 gang.
 #todo: bli enig om hva som er forskjellen på force recompute og full resett (tror dei e like no)? 
 # Loop through each dataset
 for i, data_path in enumerate(dataset_paths):

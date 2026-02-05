@@ -23,7 +23,12 @@ class PhysicalConstants:
     """Universal physical constants - these never change."""
     GRAVITY: float = 9.80665  # m/s²
     WATER_SURFACE_TENSION: float = 0.074  # N/m at 20°C
-    WATER_DENSITY: float = 1000.0  # kg/m³
+    WATER_DENSITY: float = 998  #ved 20 graderkg/m³
+    AIR_DENSITY: float = 1.205  #ved 20 grader kg/m³
+    KINEMATIC_VISCOSITY_WATER = 0.000001 #ved 20 grader, m^2/s
+    KINEMATIC_VISCOSITY_AIR = 0.000015 #ved 20grader, Newman. m^2/s
+
+#vanntemperaturen er ikke nødvendigvis like varm som luften, pga påfyll av nytt vann.
 
 PHYSICS = PhysicalConstants()
 
