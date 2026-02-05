@@ -7,6 +7,8 @@ Created on Wed Nov 19 16:18:36 2025
 """
 import pandas as pd
 import numpy as np
+from typing import Mapping, Any, Sequence, Callable, Union
+
 #For å mappe dictionary fra input json(eller bare tilsvarende input rett i main)
 #denne mappingen sørger for at dictionaryen kan sjekkes mot metadataene
 #målet er å filtrere slik at jeg bare prosesserer og plotter utvalgte filer.
@@ -76,9 +78,66 @@ def filter_chosen_files(meta, processvariables):
     print(df_sel["path"])
     
     return df_sel
+# %%
 
 
-def filter_for_amplitude_plot(meta_df:pd.DataFrame, amplotvars: dict) -> pd.DataFrame:
+def filter_for_amplitude_plot(meta_df: pd.DataFrame, amplotvars: dict) -> pd.DataFrame:
+    overordnet = amplotvars.get("overordnet", {})
+    chooseAll = overordnet.get("chooseAll", False)
+    chooseFirst = overordnet.get("chooseFirst", False)
+
+    df = meta_df.copy()
+    n_original = len(df)
+    
+    if chooseAll:
+        print("No filtering — chooseAll = True")
+        return df.copy()
+    
+    if chooseFirst:
+        print("Selected only first row — chooseFirst = True")
+        return df.iloc[[0]].copy()
+
+    filters = amplotvars.get("filters", {})
+    mask = pd.Series(True, index=df.index)
+    print("Starting with full dataset:", n_original, "rows")
+    
+    for key, value in filters.items():
+        if value is None:
+            continue
+            
+        col_name = column_map.get(key, key)
+        if col_name not in df.columns:
+            print(f"  ✗ Column '{col_name}' not found → skipping {key}")
+            continue
+
+        before = mask.sum()
+        
+        if isinstance(value, (list, tuple, set, np.ndarray)):
+            if "all" in [v.lower() if isinstance(v,str) else v for v in value]:
+                print(f"  ✓ {key}: 'all' in list → no filter applied")
+                continue
+            mask &= df[col_name].isin(value)
+            applied = f"isin({value})"
+        elif callable(value):
+            mask &= value(df[col_name])
+            applied = "custom function"
+        else:
+            if value == "all":
+                print(f"  ✓ {key}: 'all' → no filter")
+                continue
+            mask &= df[col_name] == value
+            applied = f"== {value!r}"
+        
+        after = mask.sum()
+        removed = before - after
+        print(f"  ✓ {key}: {applied}  → kept {after} rows (removed {removed})")
+
+    filtered_df = df[mask].copy()
+    
+    print(f"Final result: {len(filtered_df)} rows (removed {n_original - len(filtered_df)})")
+    return filtered_df
+
+def old_filter_for_amplitude_plot(meta_df:pd.DataFrame, amplotvars: dict) -> pd.DataFrame:
     
     overordnet = amplotvars.get("overordnet", {})
     chooseAll = overordnet.get("chooseAll", False)
@@ -87,8 +146,10 @@ def filter_for_amplitude_plot(meta_df:pd.DataFrame, amplotvars: dict) -> pd.Data
     df = meta_df.copy()    
 
     if chooseAll:
+        print(f"chooseAll = TRUE - {len(df)} rader valgt (filter_for_amplitude_plot)")
         return df.copy()
     elif overordnet.get("chooseFirst", False):
+        print("chooseFirst = TRUE - første rad valgt (filter_for_amplitude_plot)")
         return df.iloc[[0]].copy()
     
     
@@ -132,8 +193,9 @@ def filter_for_amplitude_plot(meta_df:pd.DataFrame, amplotvars: dict) -> pd.Data
             
     return df[mask].copy()
 
+# %%
 
-from typing import Mapping, Any, Sequence, Callable, Union
+
 
 def filter_for_damping(
     df: pd.DataFrame,

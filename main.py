@@ -130,8 +130,8 @@ if all_meta_sel:
 chooseAll = False
 amplitudeplotvariables = {
     "overordnet": {
-        "chooseAll": True,
-        "chooseFirst": True,
+        "chooseAll": False,
+        "chooseFirst": False,
     },
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1,0.2,0.3], #0.1, 0.2, 0.3 
@@ -160,7 +160,8 @@ amplitudeplotvariables = {
 
 """unikt filter for å se på amplitudene sjæl"""
 from wavescripts.filters import filter_for_amplitude_plot
-m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables, chooseAll)
+m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables)
+
 # %% Plot_all_probes plotter alt den tar inn
 from wavescripts.plotter import plot_all_probes
 plot_all_probes(m_filtrert, amplitudeplotvariables)
