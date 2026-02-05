@@ -172,7 +172,7 @@ def compute_amplitudes_from_psd(f, pxx, target_freq, window=0.5):
 
 def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.5):
     """
-    Extract amplitude from FFT at a given frequency.
+    Extract amplitude and corresponding frequency from FFT at a given target frequency.
     
     Args:
         fft_freqs: Frequency array from FFT
@@ -181,19 +181,25 @@ def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.
         window: Frequency window around target (Hz). Default 0.5 Hz.
     
     Returns:
-        Amplitude at target frequency
+        tuple: (amplitude, frequency) - amplitude at peak and its corresponding frequency
     """
     mask = (fft_freqs >= target_freq - window) & (fft_freqs <= target_freq + window)
     
     if not mask.any():
         # No frequencies in range - fallback to closest
         closest_idx = np.argmin(np.abs(fft_freqs - target_freq))
-        return fft_magnitude[closest_idx]
+        return fft_magnitude[closest_idx], fft_freqs[closest_idx]
     
-    # Return the maximum amplitude in the window (peak)
-    amplitude = fft_magnitude[mask].max()
+    # Find the index of maximum amplitude in the window
+    masked_magnitudes = fft_magnitude[mask]
+    masked_freqs = fft_freqs[mask]
     
-    return amplitude
+    max_idx = np.argmax(masked_magnitudes)
+    
+    amplitude = masked_magnitudes[max_idx]
+    frequency = masked_freqs[max_idx]
+    
+    return amplitude, frequency
 
 
 def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs, debug:bool=False) -> Tuple[dict, list]:
@@ -248,8 +254,8 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
         print(f"=== PSD Complete: {len(amplitude_records)} records ===\n")
     return psd_dict, amplitude_records
 
-def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs , debug:bool=False) -> Tuple[dict, list]:
-    """Compute FFT for each probe. and calculate amplitude"""
+def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs, debug:bool=False) -> Tuple[dict, list]:
+    """Compute FFT for each probe and calculate amplitude, frequency, and period"""
     fft_dict = {}
     amplitude_records = []
     for path, df in processed_dfs.items():
@@ -263,36 +269,42 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs 
                 if debug:
                     print(f"advarsel: No input frequency {freq} for {path}, skipping")
                 continue
-            #todo - vurdere å zero-padde de kortere signalene
+            
             fft_df = None
             series_list = []
             for i in range(1, 5):
                 
-                if (signal := _extract_probe_signal(df, row, i) )is not None: #Walrus operator := sjekker om den ikke er None
+                if (signal := _extract_probe_signal(df, row, i)) is not None:
                     N = len(signal)
-                    fft_vals = np.fft.rfft(signal)  # rfft only returns positive frequencies
+                    fft_vals = np.fft.rfft(signal)
                     fft_freqs = np.fft.rfftfreq(N, d=1/fs)
                     
                     amplitudar = np.abs(fft_vals) * 2 / N
-                    amplitudar[0] = amplitudar[0] / 2 #0hz should not be doubled
+                    amplitudar[0] = amplitudar[0] / 2  # 0hz should not be doubled
                     
                     if N % 2 == 0:
-                        amplitudar[-1] = amplitudar[-1] / 2 #if N is even, Nyquist freq should not be doubled
+                        amplitudar[-1] = amplitudar[-1] / 2  # if N is even, Nyquist freq should not be doubled
                     
                     series_list.append(pd.Series(amplitudar, index=fft_freqs, name=f"FFT {i}"))
-                    # amplitude entall
-                    amplitude = compute_amplitudes_from_fft(fft_freqs, amplitudar, freq)
+                    
+                    # Extract amplitude and frequency from FFT
+                    amplitude, frequency = compute_amplitudes_from_fft(fft_freqs, amplitudar, freq)
+                    
+                    # Store all FFT-derived metrics
                     row_out[f"Probe {i} Amplitude (FFT)"] = amplitude
+                    row_out[f"Probe {i} Frequency (FFT)"] = frequency
+                    row_out[f"Probe {i} WavePeriod (FFT)"] = 1.0 / frequency if frequency > 0 else np.nan
                     
                     if debug:
-                        print(f"  Probe {i}: Amplitude = {amplitude:.3f} mm at {freq:.3f} Hz")
+                        print(f"  Probe {i}: Amplitude = {amplitude:.3f} mm at {frequency:.3f} Hz (T = {1.0/frequency:.3f} s)")
             
             if series_list:  # Only create DataFrame if we have data
                 fft_df = pd.concat(series_list, axis=1)
-                fft_df = fft_df.sort_index()  # sorterer
+                fft_df = fft_df.sort_index()
                 fft_df.index.name = "Frequencies"
                 fft_dict[path] = fft_df
             amplitude_records.append(row_out)
+    
     if debug:
         print(f"=== FFT Complete: {len(amplitude_records)} records ===\n")
     return fft_dict, amplitude_records

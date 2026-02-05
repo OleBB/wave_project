@@ -108,7 +108,7 @@ print(f"{'='*50}")
 if all_meta_sel:
     combined_meta_sel = pd.concat(all_meta_sel, ignore_index=True)
     print("\nCombined meta_selections ready for analysis:")
-    print(combined_meta_sel.head())
+#     print(combined_meta_sel.head())
     
     # You can now analyze the combined data
     # For example:

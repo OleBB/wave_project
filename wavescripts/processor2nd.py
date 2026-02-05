@@ -286,7 +286,7 @@ def _update_more_metrics(
     ratios = ratios.replace([np.inf, -np.inf], np.nan)
 
     # Assign / overwrite the ratio columns
-    ratio_cols = ["P2/P1", "P3/P2", "P4/P3"]
+    ratio_cols = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]
     meta_indexed[ratio_cols] = ratios[ratio_cols]
 
     # ── Band amplitudes ──────────────────────────────────────────────

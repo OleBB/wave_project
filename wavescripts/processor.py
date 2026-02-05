@@ -195,7 +195,8 @@ def _update_all_metrics(
     amp_fft_cols = [f"Probe {i} Amplitude (FFT)" for i in range(1, 5)]
     meta_indexed[amp_fft_cols] = amplitudes_fft_df.set_index("path")[amp_fft_cols]  # Direct assignment
 
-    
+
+    period_fft_cols = [f"Probe {i} "] # her må vi jo bare plukke den samme som amplituden ble valgt på  
     # # Wavenumber
     # meta_indexed["Wavenumber"] = calculate_wavenumbers(
     #     meta_indexed["WaveFrequencyInput [Hz]"], 
@@ -262,7 +263,7 @@ def _update_all_metrics(
     #     k=meta_indexed["Wavenumber"],
     #     H=meta_indexed["WaterDepth [mm]"],
     #     PC=meta_indexed["PanelCondition"],
-    #     P2A=meta_indexed["Probe 2 Amplitude"],
+    #     amp=meta_indexed["Probe 2 Amplitude"],
     # )
     # meta_indexed[["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]] = wave_dims
     
