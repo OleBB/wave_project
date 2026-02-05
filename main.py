@@ -123,7 +123,9 @@ if all_meta_sel:
 
 
 
+# %%
 
+# TODO: grue ønsker bare den 1.3-hz frekvensen. 
 # %% fysisk plott
 chooseAll = False
 amplitudeplotvariables = {

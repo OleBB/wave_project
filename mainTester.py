@@ -47,7 +47,7 @@ all_processed_dfs = []
 
 processvariables = {
     "overordnet": {
-        "chooseAll": False,
+        "chooseAll": True,
         "chooseFirst": True,
     },
     "filters": {
@@ -61,7 +61,7 @@ processvariables = {
     }, 
     "prosessering": {
         "total_reset": False, #laster også csv'ene på nytt
-        "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
+        "force_recompute": False, #kjører alt på nytt, ignorerer gammal json
         "debug": True,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
@@ -89,7 +89,7 @@ for i, data_path in enumerate(dataset_paths):
         
         print('# === Single probe process === #')
         processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, meta_sel, meta, processvariables)
-        
+        # 
         # print('# === FTT on each separate signal, saved to a dict of dfs')
 
         
