@@ -78,11 +78,20 @@ def filter_chosen_files(meta, processvariables):
     return df_sel
 
 
-def filter_for_amplitude_plot(meta_df:pd.DataFrame, amplotvars: dict, chooseAll: bool = False) -> pd.DataFrame:
-    if chooseAll:
-        return meta_df
+def filter_for_amplitude_plot(meta_df:pd.DataFrame, amplotvars: dict) -> pd.DataFrame:
     
-    df = meta_df.copy()
+    overordnet = amplotvars.get("overordnet", {})
+    chooseAll = overordnet.get("chooseAll", False)
+    chooseFirst = overordnet.get("chooseFirst", False)
+
+    df = meta_df.copy()    
+
+    if chooseAll:
+        return df.copy()
+    elif overordnet.get("chooseFirst", False):
+        return df.iloc[[0]].copy()
+    
+    
 
     filters = amplotvars.get("filters", {})
     
