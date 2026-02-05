@@ -137,61 +137,6 @@ def filter_for_amplitude_plot(meta_df: pd.DataFrame, amplotvars: dict) -> pd.Dat
     print(f"Final result: {len(filtered_df)} rows (removed {n_original - len(filtered_df)})")
     return filtered_df
 
-def old_filter_for_amplitude_plot(meta_df:pd.DataFrame, amplotvars: dict) -> pd.DataFrame:
-    
-    overordnet = amplotvars.get("overordnet", {})
-    chooseAll = overordnet.get("chooseAll", False)
-    chooseFirst = overordnet.get("chooseFirst", False)
-
-    df = meta_df.copy()    
-
-    if chooseAll:
-        print(f"chooseAll = TRUE - {len(df)} rader valgt (filter_for_amplitude_plot)")
-        return df.copy()
-    elif overordnet.get("chooseFirst", False):
-        print("chooseFirst = TRUE - første rad valgt (filter_for_amplitude_plot)")
-        return df.iloc[[0]].copy()
-    
-    
-
-    filters = amplotvars.get("filters", {})
-    
-    mask = pd.Series(True, index=df.index)
-        
-    for key, value in filters.items():
-        if value is None:
-            continue
-        col_name = column_map.get(key, key)
-        
-        if isinstance(value, (list, tuple, set, np.ndarray)):
-            mask &= df[col_name].isin(value)
-
-        elif callable(value):
-            # The callable must return a boolean Series of the same length
-            mask &= value(df[col_name])
-
-        else:   
-            if key == "wind":
-                # Allowed values: "full", "no", "lowest", "all"
-                # "all" = no windfilter on this column.
-                if value == "all":
-                    continue          # skip – keep current mask unchanged
-                mask &= df[col_name] == value
-
-            elif key == "mooring":
-                if value == "all":
-                    continue
-                mask &= df[col_name] == value
-            elif key == "panel":
-                if value == "all":
-                    continue
-                mask &= df[col_name] == value
-            #TK - denne logikken klarer ikke listen ["all"] 
-            else:
-                mask &= df[col_name] == value
-            
-            
-    return df[mask].copy()
 
 # %%
 
@@ -447,43 +392,128 @@ def filter_dataframe(
 
 # %% GROUPERS
 
+# def damping_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Aggregates P3/P2 (and optional probe amplitudes) by:
+#       - WaveAmplitudeInput [Volt]
+#       - Frekvens, men byttes med kL senere(?) 
+#       - PanelConditionGrouped (full|reverse -> all; no stays no)
+#       - WindCondition
+
+#     Returns mean/std for P3/P2 (extendable with more metrics).
+#     """
+#     cmdf = combined_meta_df.copy()
+    
+#     columns = ["path", "WindCondition", "PanelCondition",
+#         "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
+#         "Probe 1 Amplitude (FFT)", "Probe 2 Amplitude (FFT)", "Probe 3 Amplitude (FFT)", "Probe 4 Amplitude (FFT)",
+#         "kL", "P2/P1", "P3/P2", "P4/P3"
+#     ]
+#     rmdf = cmdf[columns].copy()
+
+#     # Group PanelCondition: "full" and "reverse" -> "all"; keep "no" as "no"
+#     rmdf["PanelConditionGrouped"] = rmdf["PanelCondition"].replace({"full": "all", "reverse": "all"})
+
+#     grouping_keys = [
+#         "WaveAmplitudeInput [Volt]",
+#         "WaveFrequencyInput [Hz]",
+#         "PanelConditionGrouped",
+#         "WindCondition",
+#     ]
+
+#     stats = (
+#         rmdf.groupby(grouping_keys)
+#             .agg(
+#                 mean_P3P2=("P3/P2", "mean"),
+#                 std_P3P2=("P3/P2", "std"),
+#                 n_runs=("path", "nunique"),
+#                 paths=("path", lambda s: pd.unique(s).tolist()),  # unique paths, order preserved
+#                 # Uncomment if you want probe amplitude means as well:
+#                 mean_A_Probe1=("Probe 1 Amplitude (FFT)", "mean"),
+#                 mean_A_Probe2=("Probe 2 Amplitude (FFT)", "mean"),
+#                 mean_A_Probe3=("Probe 3 Amplitude (FFT)", "mean"),
+#                 mean_A_Probe4=("Probe 4 Amplitude (FFT)", "mean"),
+#                 mean_kL=("kL", "mean")
+#             )
+#             .reset_index()
+#     )
+    
+#     wide = stats.pivot_table(index=["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"],
+#                              columns ="WindCondition", 
+#                              values = ["mean_P3P2", "std_P3P2"])
+#     #optionally flatten the columns
+#     wide.columns = ["_".join(map(str,col)).strip() for col in wide.columns]
+#     wide = wide.reset_index()
+    
+# #     wide = stats.explode("paths").rename(columns={"paths": "path"})
+# # # Optional: set a MultiIndex including path
+# # wide = wide.set_index(["WaveAmplitudeInput [Volt]", "kL", "PanelConditionGrouped", "WindCondition", "path"])
+#     return stats, wide
 def damping_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
     """
     Aggregates P3/P2 (and optional probe amplitudes) by:
       - WaveAmplitudeInput [Volt]
-      - Frekvens, men byttes med kL senere(?) 
+      - Frekvens, men byttes med kL senere(?)
       - PanelConditionGrouped (full|reverse -> all; no stays no)
       - WindCondition
-
     Returns mean/std for P3/P2 (extendable with more metrics).
     """
     cmdf = combined_meta_df.copy()
     
-    columns = ["path", "WindCondition", "PanelCondition",
+    print(f"Input dataframe shape: {cmdf.shape}")
+    print(f"Unique PanelCondition values: {cmdf['PanelCondition'].unique().tolist()}")
+    print(f"Unique WindCondition values: {cmdf['WindCondition'].unique().tolist()}")
+    
+    columns = [
+        "path", "WindCondition", "PanelCondition",
         "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
-        "Probe 1 Amplitude (FFT)", "Probe 2 Amplitude (FFT)", "Probe 3 Amplitude (FFT)", "Probe 4 Amplitude (FFT)",
+        "Probe 1 Amplitude (FFT)", "Probe 2 Amplitude (FFT)", 
+        "Probe 3 Amplitude (FFT)", "Probe 4 Amplitude (FFT)",
         "kL", "P2/P1", "P3/P2", "P4/P3"
     ]
+    
+    # Quick safety check
+    missing_cols = [c for c in columns if c not in cmdf.columns]
+    if missing_cols:
+        print(f"WARNING: Missing columns: {missing_cols}")
+    
     rmdf = cmdf[columns].copy()
-
-    # Group PanelCondition: "full" and "reverse" -> "all"; keep "no" as "no"
+    
+    # ─── Panel grouping step ───
     rmdf["PanelConditionGrouped"] = rmdf["PanelCondition"].replace({"full": "all", "reverse": "all"})
-
+    
+    print("\nAfter PanelCondition grouping:")
+    print(rmdf["PanelConditionGrouped"].value_counts().to_string())
+    # or more detailed:
+    # print(rmdf.groupby("PanelCondition")["PanelConditionGrouped"].value_counts())
+    
     grouping_keys = [
         "WaveAmplitudeInput [Volt]",
         "WaveFrequencyInput [Hz]",
         "PanelConditionGrouped",
         "WindCondition",
     ]
-
+    
+    # Very useful: see how many unique combinations exist before aggregation
+    n_combinations = rmdf[grouping_keys].drop_duplicates().shape[0]
+    print(f"\nNumber of unique grouping combinations: {n_combinations}")
+    
+    # Optional: see distribution of groups
+    group_sizes = rmdf.groupby(grouping_keys).size()
+    print("\nGroup sizes (number of rows per group):")
+    print(group_sizes.describe())
+    # if you want extremes:
+    # print("Largest groups:\n", group_sizes.nlargest(5))
+    # print("Smallest groups:\n", group_sizes.nsmallest(5))
+    
+    # ─── The aggregation ───
     stats = (
         rmdf.groupby(grouping_keys)
             .agg(
                 mean_P3P2=("P3/P2", "mean"),
                 std_P3P2=("P3/P2", "std"),
                 n_runs=("path", "nunique"),
-                paths=("path", lambda s: pd.unique(s).tolist()),  # unique paths, order preserved
-                # Uncomment if you want probe amplitude means as well:
+                paths=("path", lambda s: pd.unique(s).tolist()),
                 mean_A_Probe1=("Probe 1 Amplitude (FFT)", "mean"),
                 mean_A_Probe2=("Probe 2 Amplitude (FFT)", "mean"),
                 mean_A_Probe3=("Probe 3 Amplitude (FFT)", "mean"),
@@ -493,16 +523,34 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
             .reset_index()
     )
     
-    wide = stats.pivot_table(index=["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"],
-                             columns ="WindCondition", 
-                             values = ["mean_P3P2", "std_P3P2"])
-    #optionally flatten the columns
-    wide.columns = ["_".join(map(str,col)).strip() for col in wide.columns]
+    print(f"\nAfter aggregation — stats dataframe shape: {stats.shape}")
+    print(f"Number of groups after aggregation: {len(stats)}")
+    print("Columns in stats:", stats.columns.tolist())
+    
+    # Very informative: how many groups have low number of runs
+    low_n = stats[stats["n_runs"] <= 2]
+    if not low_n.empty:
+        print(f"\nWARNING: {len(low_n)} groups have ≤ 2 runs:")
+        print(low_n[["WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]", 
+                     "PanelConditionGrouped", "WindCondition", "n_runs"]])
+    
+    # ─── Pivot ───
+    wide = stats.pivot_table(
+        index=["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"],
+        columns="WindCondition",
+        values=["mean_P3P2", "std_P3P2"]
+    )
+    
+    wide.columns = ["_".join(map(str, col)).strip() for col in wide.columns]
     wide = wide.reset_index()
     
-#     wide = stats.explode("paths").rename(columns={"paths": "path"})
-# # Optional: set a MultiIndex including path
-# wide = wide.set_index(["WaveAmplitudeInput [Volt]", "kL", "PanelConditionGrouped", "WindCondition", "path"])
+    print(f"\nWide (pivoted) shape: {wide.shape}")
+    print("Wide columns:", wide.columns.tolist())
+    
+    # Optional: quick look at the result
+    print("\nFirst few rows of wide format:")
+    print(wide.head().to_string(index=False))
+    
     return stats, wide
 
 

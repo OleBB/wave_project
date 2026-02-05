@@ -60,7 +60,7 @@ processvariables = {
         "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
-        "total_reset": False, #laster også csv'ene på nytt
+        "total_reset": True, #laster også csv'ene på nytt
         "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
         "debug": True,
         "smoothing_window": 10, #kontrollere denne senere

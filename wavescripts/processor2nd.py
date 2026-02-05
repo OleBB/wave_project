@@ -146,7 +146,7 @@ def compute_amplitude_by_band(
                             f"  Probe {i} – {band_name}: "
                             f"NO DATA POINTS in [{f_low}, {f_high}] Hz → amplitude=0"
                         )
-                    row[f"Probe {i} {band_name} amplitude (PSD)"] = amplitude
+                    row[f"Probe {i} {band_name} Amplitude (PSD)"] = amplitude
                     continue
 
                 # ------------------------------------------------------------
@@ -171,7 +171,7 @@ def compute_amplitude_by_band(
                         f"{n_points} points, variance={variance:.6e}, amplitude={amplitude:.4f}"
                     )
 
-                row[f"Probe {i} {band_name} amplitude"] = amplitude
+                row[f"Probe {i} {band_name} Amplitude (PSD)"] = amplitude
 
         rows.append(row)
 
