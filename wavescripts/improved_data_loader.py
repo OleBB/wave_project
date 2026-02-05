@@ -306,10 +306,10 @@ def _initialize_metadata_dict(file_path: str, experiment_name: str) -> dict:
         
     
     # Add computed fields
-    for field in ["Wavefrequency (given)", "Waveperiod (given)", "Wavenumber (given)", "Wavelength (given)",
-                  "kL (given)", "ak (given)", "kH (given)", "tanh(kH) (given)", "Celerity (given)",
-                  "Significant Wave Height Hs (given)", "Significant Wave Height Hm0 (given)",
-                  "Windspeed", "P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]:
+    for field in ["Wavefrequency", "Waveperiod", "Wavenumber", "Wavelength",
+                  "kL", "ak", "kH", "tanh(kH)", "Celerity",
+                  "Significant Wave Height Hs", "Significant Wave Height Hm0", "Reynoldsnumber (Water)"
+                  "Windspeed", "Reynoldsnumber (Wind)", "P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]:
         metadata[field] = None
     
     return metadata
