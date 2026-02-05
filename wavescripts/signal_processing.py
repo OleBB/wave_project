@@ -202,7 +202,7 @@ def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.
     return amplitude, frequency
 
 
-def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs, debug:bool=False) -> Tuple[dict, list]:
+def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs, debug:bool=False) -> Tuple[dict, pd.DataFrame]:
     """Compute Power Spectral Density for each probe."""
     psd_dict = {}
     amplitude_records = []
@@ -252,9 +252,9 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
 
     if debug:
         print(f"=== PSD Complete: {len(amplitude_records)} records ===\n")
-    return psd_dict, amplitude_records
+    return psd_dict, pd.DataFrame(amplitude_records)
 
-def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs, debug:bool=False) -> Tuple[dict, list]:
+def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs, debug:bool=False) -> Tuple[dict, pd.DataFrame]:
     """Compute FFT for each probe and calculate amplitude, frequency, and period"""
     fft_dict = {}
     amplitude_records = []
@@ -307,7 +307,7 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
     
     if debug:
         print(f"=== FFT Complete: {len(amplitude_records)} records ===\n")
-    return fft_dict, amplitude_records
+    return fft_dict, pd.DataFrame(amplitude_records)
 
 
 
