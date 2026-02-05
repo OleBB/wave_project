@@ -694,7 +694,7 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
     columns = ["path", "WindCondition", "PanelCondition",
         "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
         "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude",
-        "Wavenumber", "kL", "P2/P1", "P3/P2", "P4/P3"
+        "Wavenumber", "kL", GC.P2_P1_FFT,  GC.P3_P2_FFT,  GC.P4_P3_FFT
     ]
     rmdf = cmdf[columns].copy()
 
