@@ -14,7 +14,7 @@ from typing import Dict, List, Tuple
 from wavescripts.improved_data_loader import update_processed_metadata
 from wavescripts.wave_detection import find_wave_range
 from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes
-from wavescripts.wave_physics import calculate_wavenumbers, calculate_wavedimensions, calculate_windspeed
+from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 
@@ -196,20 +196,75 @@ def _update_all_metrics(
     meta_indexed[amp_fft_cols] = amplitudes_fft_df.set_index("path")[amp_fft_cols]  # Direct assignment
 
     
-    # Wavenumbers
-    meta_indexed["Wavenumber"] = calculate_wavenumbers(
-        meta_indexed["WaveFrequencyInput [Hz]"], 
-        meta_indexed["WaterDepth [mm]"]
+    # # Wavenumber
+    # meta_indexed["Wavenumber"] = calculate_wavenumbers(
+    #     meta_indexed["WaveFrequencyInput [Hz]"], 
+    #     meta_indexed["WaterDepth [mm]"]
+    # )
+    
+    # 1. Define your probe configurations
+    # Key: Probe Number, Value: (Frequency Source Column, Target Wavenumber Column)
+    probe_config = {
+        1: ("Probe 1 WavePeriod (FFT)", "Probe 1 Wavenumber (FFT)"),
+        2: ("Probe 2 WavePeriod (FFT)", "Probe 2 Wavenumber (FFT)"),
+        3: ("Probe 3 WavePeriod (FFT)", "Probe 3 Wavenumber (FFT)"),
+        4: ("Probe 4 WavePeriod (FFT)", "Probe 4 Wavenumber (FFT)"),
+    }
+
+    # 2. Process all probes
+    for i, (f_col, k_col) in probe_config.items():
+        # Convert Period to Frequency: f = 1/T
+        # We replace 0 with NaN to avoid division by zero
+        freq_data = 1.0 / meta_indexed[f_col].replace(0, np.nan)
+        
+        # Vectorized Wavenumber Calculation
+        meta_indexed[k_col] = calculate_wavenumbers_vectorized(
+            frequencies=freq_data,
+            heights=meta_indexed["WaterDepth [mm]"]
+        )
+        
+        # Vectorized Dimension Calculation (using the function from before)
+        res = calculate_wavedimensions(
+            k=meta_indexed[k_col],
+            H=meta_indexed["WaterDepth [mm]"],
+            PC=meta_indexed["PanelCondition"],
+            amp=meta_indexed[f"Probe {i} Amplitude"]
+        )
+        
+        # Bulk assign the results
+        target_cols = [f"Probe {i} Wavelength (FFT)", f"Probe {i} kL (FFT)", 
+                       f"Probe {i} ak (FFT)", f"Probe {i} tanh(kH) (FFT)", 
+                       f"Probe {i} Celerity (FFT)"]
+        
+        source_cols = ["Wavelength", "kL", "ak", "tanh(kH)", "Celerity"]
+        meta_indexed[target_cols] = res[source_cols]
+
+    # 3. Process the 'Given' / 'Global' columns
+    meta_indexed["Wavenumber"] = calculate_wavenumbers_vectorized(
+        frequencies=meta_indexed["WaveFrequencyInput [Hz]"],
+        heights=meta_indexed["WaterDepth [mm]"]
     )
     
-    # Wave dimensions
-    wave_dims = calculate_wavedimensions(
+    global_res = calculate_wavedimensions(
         k=meta_indexed["Wavenumber"],
         H=meta_indexed["WaterDepth [mm]"],
         PC=meta_indexed["PanelCondition"],
-        P2A=meta_indexed["Probe 2 Amplitude"],
+        amp=meta_indexed["Probe 2 Amplitude"] # Choosing P2 as the 'standard' amplitude
     )
-    meta_indexed[["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]] = wave_dims
+
+    # Fill the final set of general columns
+    final_cols = ["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]
+    meta_indexed[final_cols] = global_res[final_cols]
+    
+    # #TODO: LOOPE DENNE, eller bare servere den 4 kolonner?
+    # # Wave dimensions
+    # wave_dims = calculate_wavedimensions(
+    #     k=meta_indexed["Wavenumber"],
+    #     H=meta_indexed["WaterDepth [mm]"],
+    #     PC=meta_indexed["PanelCondition"],
+    #     P2A=meta_indexed["Probe 2 Amplitude"],
+    # )
+    # meta_indexed[["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]] = wave_dims
     
     # Windspeed
     meta_indexed["Windspeed"] = calculate_windspeed(meta_indexed["WindCondition"])

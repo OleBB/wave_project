@@ -272,13 +272,13 @@ def _update_more_metrics(
     # Compute ratios directly (vectorized)
     ratios = pd.DataFrame(index=meta_indexed.index)
 
-    ratios["P2/P1"] = (
+    ratios["P2/P1 (FFT)"] = (
         meta_indexed["Probe 2 Amplitude (FFT)"] / meta_indexed["Probe 1 Amplitude (FFT)"]
     )
-    ratios["P3/P2"] = (
+    ratios["P3/P2 (FFT)"] = (
         meta_indexed["Probe 3 Amplitude (FFT)"] / meta_indexed["Probe 2 Amplitude (FFT)"]
     )
-    ratios["P4/P3"] = (
+    ratios["P4/P3 (FFT)"] = (
         meta_indexed["Probe 4 Amplitude (FFT)"] / meta_indexed["Probe 3 Amplitude (FFT)"]
     )
 
