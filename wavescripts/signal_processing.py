@@ -171,6 +171,11 @@ def get_positive_spectrum(fft_df):
     """Extract only positive frequencies from full FFT DataFrame"""
     return fft_df[fft_df.index >= 0]
 
+def get_complex_spectrum(fft_df):
+    """Extract only complex-valued columns"""
+    complex_cols = [c for c in fft_df.columns if 'complex' in c]
+    return fft_df[complex_cols]
+
 
 def compute_amplitudes_from_psd(f, pxx, target_freq, window=0.5):
     """Hent amplituden fra PSD ved gitt frekvens"""
@@ -299,9 +304,15 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
                         amplitudar[-1] = amplitudar[-1] / 2  # if N is even, Nyquist freq should not be doubled
                     
                     series_list.append(pd.Series(amplitudar, index=fft_freqs, name=f"FFT {i}"))
+                    series_list.append(pd.Series(fft_vals, index=fft_freqs, name=f"FFT {i} complex"))
+
+                    pos_mask = fft_freqs >= 0
                     
-                    # Extract amplitude and frequency from FFT
-                    amplitude, frequency = compute_amplitudes_from_fft(fft_freqs, amplitudar, freq)
+                    # Extract amplitude and positiv frequency from FFT
+                    amplitude, frequency = compute_amplitudes_from_fft(
+                        fft_freqs[pos_mask],
+                        amplitudar[pos_mask],
+                        freq)
                     
                     # Store all FFT-derived metrics
                     row_out[f"Probe {i} Amplitude (FFT)"] = amplitude

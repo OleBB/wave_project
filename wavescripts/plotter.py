@@ -20,6 +20,9 @@ from matplotlib.patches import Circle, Ellipse
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.offsetbox import AnchoredOffsetbox   # or AnchoredOffsetBox
 
+from wavescripts.signal_processing import get_positive_spectrum
+
+
 from wavescripts.constants import MEASUREMENT
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
@@ -1522,9 +1525,10 @@ def plot_frequency_spectrum(
                 
                 if col not in df_fft:
                     continue
-                
+                df_fft_pos = get_positive_spectrum(df_fft)
                 # Extract data
-                y = df_fft[col].dropna().iloc[:max_points]
+                y = df_fft_pos[col].dropna().iloc[:max_points]
+
                 if y.empty:
                     continue
                 
@@ -1725,7 +1729,6 @@ def plot_reconstructed(fft_dict: dict,
                 f = y.values
                 window = SIGNAL.FFT_FREQUENCY_WINDOW #ønsker å lete ved min forventa frekvens.
                 target_freq = row[GC.WAVE_FREQUENCY_INPUT]
-                print(target_freq)
                 mask = (f >= target_freq - window) & (f <= target_freq + window)
                 # #reconstruere
                 y_single_f = y[mask].values

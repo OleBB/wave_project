@@ -67,8 +67,8 @@ processvariables = {
         "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
-        "total_reset": False, #laster også csv'ene på nytt
-        "force_recompute": False, #kjører alt på nytt, ignorerer gammal json
+        "total_reset": True, #laster også csv'ene på nytt
+        "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
         "debug": True,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
@@ -630,7 +630,7 @@ freqplotvariables = {
         "annotate": False, #
         "max_points": 120, #spørs på oppløsning av fft'en.
         "xlim": (0,5.2), #4x 1.3
-        "legend": "inside", #"outside_right", # inside, below, above #med mer!
+        "legend": None, #"outside_right", # inside, below, above #med mer!
         "logaritmic": False, 
         "peaks": 3, 
         "probes": [2,3]
