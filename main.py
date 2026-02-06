@@ -67,8 +67,8 @@ processvariables = {
         "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
-        "total_reset": True, #laster også csv'ene på nytt
-        "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
+        "total_reset": False, #laster også csv'ene på nytt
+        "force_recompute": False, #kjører alt på nytt, ignorerer gammal json
         "debug": True,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
@@ -594,6 +594,72 @@ forløkke velge fil.
 hente ut index
 figr, axr  = plot_ramp_detection(df, meta_sel, data_col, signal, baseline_mean, threshold, first_motion_idx, good_start_idx, good_range, good_end_idx)
 
+
+
+# %% FFT-SPEKTRUM  initiert
+freqplotvariables = {
+    "overordnet": {
+        "chooseAll": False, 
+        "chooseFirst": False,
+        "chooseFirstUnique": True,
+    }, 
+    "filters": {
+        "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
+        "WaveFrequencyInput [Hz]": [1.3],# 0.65], #bruk et tall  
+        "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
+        "TunnelCondition": None,
+        "Mooring": None,
+        "PanelCondition": "reverse", #["no", "full", "reverse"], # no, full, reverse,  #kan grupperes i filters.
+        
+    },
+    "processing": {
+        "chosenprobe": 1, #[1,2,3,4]
+        "rangestart": None,
+        "rangeend": None,
+        "data_cols": ["Probe 2"],
+        "win": 11 #Ingen av disse er egt i bruk
+    },
+    "plotting": {
+        "show_plot": True,
+        "figsize": (10,12), #(10,10),
+        "linewidth": 0.7,
+        "separate":False,
+        "facet_by": "probe", #wind", #wind, panel, probe 
+        "overlay": False, #
+        "annotate": False, #
+        "max_points": 120, #spørs på oppløsning av fft'en.
+        "xlim": (0,5.2), #4x 1.3
+        "legend": "inside", #"outside_right", # inside, below, above #med mer!
+        "logaritmic": False, 
+        "peaks": 3, 
+        "probes": [2,3]
+    }   
+}
+#lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.
+
+from wavescripts.filters import filter_for_frequencyspectrum
+filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
+
+# %% kopiert fra oven plotter fft facet
+# from wavescripts.plotter import plot_frequency_spectrum
+# fig, axes = plot_frequency_spectrum()
+#     fft_dictionary,
+#     filtrert_frequencies,
+#     freqplotvariables,
+#     data_type="fft"
+# )
+# TODO: lage plot av en typisk vindbølge,  rekonstruert med 1.3 hz og resten av bølgen. 
+# da er det vel lettest å ta en fft'dict - hente ut peak amp og freq. [mask], og ta resten anti-mask.
+
+# les av fft_dict -> les av tabell. loope probe 2 og 3. 
+# plotte probe 2 dekomponert. 
+from wavescripts.plotter import plot_reconstructed
+
+fig, axes = plot_reconstructed(fft_dictionary, 
+                               filtrert_frequencies,
+                               freqplotvariables,
+                               data_type="fft")
 
 
 
