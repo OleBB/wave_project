@@ -22,8 +22,9 @@ from wavescripts.constants import (
     CalculationResultColumns as RC
 )
 
-# %% - Fysisk amplitude
 
+
+# %% - Fysisk amplitude
 def _extract_probe_signal(
     df: pd.DataFrame, 
     row: pd.Series, 
@@ -166,6 +167,11 @@ def compute_amplitudes(
     return pd.DataFrame.from_records(records)
 
 # %% - PSD og FFT
+def get_positive_spectrum(fft_df):
+    """Extract only positive frequencies from full FFT DataFrame"""
+    return fft_df[fft_df.index >= 0]
+
+
 def compute_amplitudes_from_psd(f, pxx, target_freq, window=0.5):
     """Hent amplituden fra PSD ved gitt frekvens"""
     mask = (f >= target_freq - window) & (f <= target_freq + window)
@@ -283,8 +289,8 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
                 
                 if (signal := _extract_probe_signal(df, row, i)) is not None:
                     N = len(signal)
-                    fft_vals = np.fft.rfft(signal)
-                    fft_freqs = np.fft.rfftfreq(N, d=1/fs)
+                    fft_vals = np.fft.fft(signal)
+                    fft_freqs = np.fft.fftfreq(N, d=1/fs) #fjerna rfft fordi jeg ønsker å rekonstruere siden
                     
                     amplitudar = np.abs(fft_vals) * 2 / N
                     amplitudar[0] = amplitudar[0] / 2  # 0hz should not be doubled
