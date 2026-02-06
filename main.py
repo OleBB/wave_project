@@ -67,8 +67,8 @@ processvariables = {
         "panel": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
-        "total_reset": True, #laster også csv'ene på nytt
-        "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
+        "total_reset": False, #laster også csv'ene på nytt
+        "force_recompute": False, #kjører alt på nytt, ignorerer gammal json
         "debug": True,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
@@ -380,14 +380,24 @@ facet_swell(damping_filtrert, swellplotvariables)
 
 # %% band scatter
 import matplotlib.pyplot as plt
+path = GC.PATH
+kols = CG.PSD_SWELL_AMPLITUDE_COLS
+print([path,kols])
+
+# %%
+
+pathnkols = path.append(kols)
+band_amplitudes = combined_meta_sel[pathnkols]
+# %%
+
 
 def plot_p2_vs_p3_scatter(band_amplitudes):
-    bands = ['swell', 'wind_waves', 'total']
+    bands = ['Swell', 'Wind', 'Total']
     fig, axes = plt.subplots(1, len(bands), figsize=(12, 4), sharex=False, sharey=False)
 
     for ax, band in zip(axes, bands):
-        p2 = band_amplitudes[f'Probe 2 {band} amplitude'].to_numpy()
-        p3 = band_amplitudes[f'Probe 3 {band} amplitude'].to_numpy()
+        p2 = band_amplitudes[PC.SWELL_AMPLITUDE_PSD.format(i=2)].to_numpy()
+        p3 = band_amplitudes[PC.SWELL_AMPLITUDE_PSD.format(i=3)].to_numpy()
         ax.scatter(p2, p3, alpha=0.7)
         lim = max(p2.max(), p3.max()) * 1.05 if len(p2) else 1.0
         ax.plot([0, lim], [0, lim], 'k--', linewidth=1)  # y = x reference
@@ -403,16 +413,17 @@ def plot_p2_vs_p3_scatter(band_amplitudes):
 plot_p2_vs_p3_scatter(band_amplitudes)
 
 # %% band bars looop
-
 import numpy as np
 import matplotlib.pyplot as plt
 
+"""FUNKEJE... ?"""
 def plot_p2_p3_bars(band_amplitudes):
-    bands = ['swell', 'wind_waves', 'total']
+    bands = ['Swell', 'Wind', 'Total']
     for _, row in band_amplitudes.iterrows():
-        path = row['path']
-        values_p2 = [row[f'Probe 2 {b} amplitude'] for b in bands]
-        values_p3 = [row[f'Probe 3 {b} amplitude'] for b in bands]
+        # print(row[GC.PATH])
+        # path = row[GC.PATH] #funka ikkje .. er "path" 
+        values_p2 = [row[PC.SWELL_AMPLITUDE_PSD.format(i=2)] for b in bands]
+        values_p3 = [row[PC.SWELL_AMPLITUDE_PSD.format(i=3)] for b in bands]
 
         x = np.arange(len(bands))
         w = 0.35
@@ -422,7 +433,7 @@ def plot_p2_p3_bars(band_amplitudes):
         plt.bar(x + w/2, values_p3, width=w, label='P3')
         plt.xticks(x, bands)
         plt.ylabel('Amplitude')
-        plt.title(path[40:])
+        plt.title(row[40:])
         plt.legend()
         plt.grid(True, axis='y', alpha=0.3)
         plt.tight_layout()
