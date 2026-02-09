@@ -40,11 +40,11 @@ dataset_paths = [
     
     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"), #per15 (few runs)
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
     
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
     
 ]
 #%% kjør
@@ -135,7 +135,7 @@ if all_meta_sel:
 chooseAll = False
 amplitudeplotvariables = {
     "overordnet": {
-        "chooseAll": False,
+        "chooseAll": True,
         "chooseFirst": False,
     },
     "filters": {
@@ -176,7 +176,9 @@ print("======== Amplituder P1234 PLOTTA ===========")
 #%% grouper - slår i hop
 from wavescripts.filters import damping_grouper
 damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
+
 # %% damping variables initiert
+
 chooseAll = False
 dampingplotvariables = {
     "overordnet": {"chooseAll": False}, 
@@ -217,7 +219,6 @@ from wavescripts.plotter import facet_plot_amp_vs_mean
 facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
 
 # %% slår alle i hop
-chooseAll = False
 dampingplotvariables = {
     "overordnet": {
         "chooseAll": False, 
@@ -243,7 +244,7 @@ dampingplotvariables = {
     "plotting": {
         "figsize": None,
         "separate":False,
-        "facet_by": "panel", #wind, panel, probe 
+        "facet_by": None, #wind, panel, probe 
         "overlay": False,
         "annotate": True, 
         "legend": "outside_right", # inside, below, above #med mer!
@@ -256,11 +257,17 @@ dampingplotvariables = {
 
 from wavescripts.filters import damping_all_amplitude_grouper
 damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
+# %%
+from wavescripts.plotter import plot_damping_results
+plot_damping_results(damping_groupedallruns_df)
 
 # damping_all_amplitudes_filtrert = filter_for_damping(damping_groupedallruns_df, dampingplotvariables["filters"])
 # %% plotter damping_groupedallruns
 from wavescripts.plotter import facet_amp
 facet_amp(damping_groupedallruns_df, dampingplotvariables)
+# %%
+from wavescripts.plotter import plot_damping_scatter
+plot_damping_scatter(damping_groupedallruns_df)
 
 # %% FFT-SPEKTRUM filter initiert
 freqplotvariables = {
@@ -379,22 +386,30 @@ facet_swell(damping_filtrert, swellplotvariables)
 
 
 # %% band scatter
-import matplotlib.pyplot as plt
-path = GC.PATH
-kols = CG.PSD_SWELL_AMPLITUDE_COLS
-print([path,kols])
 
+paff = GC.PATH#.copy()
+kolo1 =  CG.PSD_SWELL_AMPLITUDE_COLS#.copy()
+kolo2 =  CG.PSD_WIND_AMPLITUDE_COLS#.copy()
+kolo3 =  CG.PSD_TOTAL_AMPLITUDE_COLS#.copy()
+print(f'pn:{paff}')
+print(f'kolo:{kolo}')
+# %%
+lis = kolo1.copy()
+lis.append(paff)
+li = lis + kolo2 + kolo3
+
+print(f"li er {li}")
 # %%
 
-pathnkols = path.append(kols)
-band_amplitudes = combined_meta_sel[pathnkols]
+
+band_amplitudes = combined_meta_sel[li]
 # %%
 
 
 def plot_p2_vs_p3_scatter(band_amplitudes):
     bands = ['Swell', 'Wind', 'Total']
     fig, axes = plt.subplots(1, len(bands), figsize=(12, 4), sharex=False, sharey=False)
-
+    kolos = 
     for ax, band in zip(axes, bands):
         p2 = band_amplitudes[PC.SWELL_AMPLITUDE_PSD.format(i=2)].to_numpy()
         p3 = band_amplitudes[PC.SWELL_AMPLITUDE_PSD.format(i=3)].to_numpy()
