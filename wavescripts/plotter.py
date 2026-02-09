@@ -741,7 +741,7 @@ def facet_plot_amp_vs_mean(df, ampvar):
 def facet_amp(df, ampvar):
     # df should be your aggregated stats (mean_P3P2, std_P3P2)
     fig, ax = plt.subplots()
-    x="Wavenumber" #WaveFrequencyInput [Hz]"
+    x="WaveFrequencyInput [Hz]"
     sns.set_style("ticks",{'axes.grid' : True})
     g = sns.scatterplot(
         data=df.sort_values([x]),
@@ -767,11 +767,265 @@ def facet_amp(df, ampvar):
 
     plt.tight_layout()
     plt.show()
+    
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def plot_damping_scatter(stats_df: pd.DataFrame, 
+                         save_path: str = None,
+                         figsize: tuple = (10, 6)):
+    """
+    Single scatter plot showing all damping data points.
+    Each group combination becomes one point.
+    
+    Args:
+        stats_df: Output from damping_all_amplitude_grouper()
+        save_path: Optional path to save figure
+        figsize: Figure size (width, height)
+    """
+    
+
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    sns.set_style("ticks", {'axes.grid': True})
+    
+    # Sort for cleaner plotting
+    plot_data = stats_df.sort_values([GC.WAVE_FREQUENCY_INPUT])
+    
+    # Main scatter plot
+    sns.scatterplot(
+        data=plot_data,
+        x=GC.WAVE_FREQUENCY_INPUT,
+        y='mean_P3P2',
+        hue=GC.WIND_CONDITION,
+        palette=WIND_COLORS,
+        style=GC.PANEL_CONDITION_GROUPED,
+        style_order=["no", "all"],
+        size=GC.WAVE_AMPLITUDE_INPUT,  # Size by amplitude (optional)
+        sizes=(50, 200),                # Min/max marker sizes
+        alpha=0.7,
+        ax=ax
+    )
+    
+    # Optional: Add error bars
+    for _, row in plot_data.iterrows():
+        color = WIND_COLORS.get(row[GC.WIND_CONDITION], 'gray')
+        ax.errorbar(
+            row[GC.WAVE_FREQUENCY_INPUT],
+            row['mean_P3P2'],
+            yerr=row['std_P3P2'],
+            fmt='none',
+            ecolor=color,
+            elinewidth=1,
+            capsize=3,
+            alpha=0.5
+        )
+    
+    ax.set_xlabel('Frequency [Hz]', fontsize=12)
+    ax.set_ylabel('P3/P2 (mean ± std)', fontsize=12)
+    ax.set_title('Damping Ratio: All Conditions', fontsize=14)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Figure saved to: {save_path}")
+    
+    plt.show()
+
+
+# Usage:
+# stats = damping_all_amplitude_grouper(combined_meta_df)
+# plot_damping_scatter(stats, save_path='damping_scatter.png')
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+# grok made, not working
+def nu_facet_amp(df, ampvar):
+    """
+    Faceted damping plot — fixed version.
+    Uses dampingplotvariables["plotting"]["facet_by"] to decide layout.
+    """
+    plotting = ampvar["plotting"]
+    filters = ampvar["filters"]
+
+    # Work on a copy + basic sorting
+    plot_df = df.copy()
+    plot_df = plot_df.sort_values(["WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]"])
+
+    # Light filtering based on your config (optional — can move outside)
+    if filters["WaveAmplitudeInput [Volt]"]:
+        plot_df = plot_df[plot_df["WaveAmplitudeInput [Volt]"].isin(filters["WaveAmplitudeInput [Volt]"])]
+    if filters["WaveFrequencyInput [Hz]"]:
+        plot_df = plot_df[plot_df["WaveFrequencyInput [Hz]"].isin(filters["WaveFrequencyInput [Hz]"])]
+
+    # Decide faceting / aesthetics based on config
+    if plotting["facet_by"] == "panel":
+        col = "PanelConditionGrouped"
+        hue = "WindCondition"
+        style = None
+    elif plotting["facet_by"] == "wind":
+        col = "WindCondition"
+        hue = "PanelConditionGrouped"
+        style = None
+    else:
+        # default: no facet, use hue + style
+        col = None
+        hue = "WindCondition"
+        style = "PanelConditionGrouped"
+
+    # Figure setup
+    sns.set_style("ticks", {"axes.grid": True, "grid.color": ".92"})
+
+    g = sns.FacetGrid(
+        data=plot_df,
+        col=col,
+        hue=hue,
+        # palette=WIND_COLORS,             # ← uncomment if you have this defined
+        height=4.5,
+        aspect=1.3,
+        sharex=True,
+        sharey=True,
+        legend_out=(plotting["legend"] == "outside_right"),
+    )
+
+    # ─── Main line plot ───
+    g.map(
+        sns.lineplot,
+        "WaveFrequencyInput [Hz]",
+        "mean_P3P2",
+        style=style,
+        data=plot_df,                    # ← critical fix: pass data here
+        markers=True,
+        dashes=False,
+        linewidth=2.2,
+        sort=True,
+    )
+
+    # ─── Scatter points on top ───
+    g.map(
+        sns.scatterplot,
+        "WaveFrequencyInput [Hz]",
+        "mean_P3P2",
+        style=style,
+        data=plot_df,                    # ← critical fix: pass data here
+        s=90,
+        edgecolor="white",
+        linewidth=0.8,
+        legend=False,
+    )
+
+    # Optional: add error bands from std_P3P2
+    def add_errorband(x, y, yerr, **kwargs):
+        ax = plt.gca()
+        color = kwargs.get("color", "gray")
+        ax.fill_between(x, y - yerr, y + yerr, alpha=0.15, color=color, linewidth=0)
+
+    g.map(
+        add_errorband,
+        "WaveFrequencyInput [Hz]",
+        "mean_P3P2",
+        "std_P3P2",
+    )
+
+    # ─── Labels & cosmetics ───
+    g.set_axis_labels("Wave frequency (Hz)", "Mean P3/P2 ratio")
+    g.set_titles(col_template="{col_name}")
+
+    # Legend placement
+    if plotting["legend"] == "outside_right":
+        g.add_legend(bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0.)
+    elif plotting["legend"] == "below":
+        g.add_legend(bbox_to_anchor=(0.5, -0.18), loc="upper center", ncol=4)
+
+    plt.tight_layout()
+    plt.show()
+# %%
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_damping_results(stats_df: pd.DataFrame, 
+                         save_path: str = None,
+                         figsize: tuple = (14, 10)):
+    """
+    Simple plotter for damping aggregation results.
+    
+    Creates subplots showing P3/P2 ratio vs. frequency for different conditions.
+    
+    Args:
+        stats_df: Output from damping_all_amplitude_grouper()
+        save_path: Optional path to save figure
+        figsize: Figure size (width, height)
+    """
+    
+    # Get unique conditions
+    panel_conditions = stats_df[GC.PANEL_CONDITION_GROUPED].unique()
+    wind_conditions = stats_df[GC.WIND_CONDITION].unique()
+    
+    n_panels = len(panel_conditions)
+    n_winds = len(wind_conditions)
+    
+    fig, axes = plt.subplots(n_panels, n_winds, figsize=figsize, squeeze=False, sharex=True, sharey=True)
+    fig.suptitle('Damping Ratio (P3/P2) vs Frequency', fontsize=16, y=0.995)
+    
+    for i, panel in enumerate(panel_conditions):
+        for j, wind in enumerate(wind_conditions):
+            ax = axes[i, j]
+            
+            # Filter data for this subplot
+            mask = (stats_df[GC.PANEL_CONDITION_GROUPED] == panel) & \
+                   (stats_df[GC.WIND_CONDITION] == wind)
+            subset = stats_df[mask]
+            
+            if subset.empty:
+                ax.text(0.5, 0.5, 'No data', ha='center', va='center', 
+                       transform=ax.transAxes)
+                ax.set_title(f'{panel} / {wind}')
+                continue
+            
+            # Plot each amplitude as separate line
+            for amp in subset[GC.WAVE_AMPLITUDE_INPUT].unique():
+                amp_data = subset[subset[GC.WAVE_AMPLITUDE_INPUT] == amp]
+                amp_data = amp_data.sort_values(GC.WAVE_FREQUENCY_INPUT)
+                
+                ax.errorbar(
+                    amp_data[GC.WAVE_FREQUENCY_INPUT],
+                    amp_data['mean_P3P2'],
+                    yerr=amp_data['std_P3P2'],
+                    marker='o',
+                    label=f'{amp:.2f} V',
+                    capsize=3,
+                    alpha=0.7
+                )
+            
+            ax.set_xlabel('Frequency [Hz]')
+            ax.set_ylabel('P3/P2')
+            ax.set_title(f'{panel}panel / {wind}wind')
+            ax.grid(True, alpha=0.3)
+            ax.legend(title='Amplitude', fontsize=8)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Figure saved to: {save_path}")
+    
+    plt.show()
+
+
+# Usage:
+# stats = damping_all_amplitude_grouper(combined_meta_df)
+# plot_damping_results(stats, save_path='damping_plot.png')
 
 
 
 
-
+# %%
 
 
 def plot_damping_combined_2(

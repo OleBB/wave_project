@@ -264,6 +264,9 @@ class GlobalColumns:
     PANEL_CONDITION = "PanelCondition"
     MOORING = "Mooring"
     
+    #Grouping conditions
+    PANEL_CONDITION_GROUPED = "PanelConditionGrouped"
+    
     # Input parameters
     WAVE_AMPLITUDE_INPUT = "WaveAmplitudeInput [Volt]"
     WAVE_FREQUENCY_INPUT = "WaveFrequencyInput [Hz]"

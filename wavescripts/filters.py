@@ -679,55 +679,168 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
     return stats, wide
 
 
+# def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Aggregates P3/P2 (and optional probe amplitudes) by:
+#       - WaveAmplitudeInput [Volt]
+#       - Frekvens, men byttes med kL senere(?) 
+#       - PanelConditionGrouped (full|reverse -> all; no stays no)
+#       - WindCondition
+
+#     Returns mean/std for P3/P2 (extendable with more metrics).
+#     """
+#     cmdf = combined_meta_df.copy()
+    
+#     columns = ["path", "WindCondition", "PanelCondition",
+#         "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
+#         "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude",
+#         "Wavenumber", "kL", GC.P2_P1_FFT,  GC.P3_P2_FFT,  GC.P4_P3_FFT
+#     ]
+#     rmdf = cmdf[columns].copy()
+
+#     # Group PanelCondition: "full" and "reverse" -> "all"; keep "no" as "no"
+#     rmdf["PanelConditionGrouped"] = rmdf["PanelCondition"].replace({"full": "all", "reverse": "all"})
+
+#     grouping_keys = [
+#         "WaveFrequencyInput [Hz]",
+#         "Wavenumber",
+#         "PanelConditionGrouped",
+#         "WindCondition",
+#     ]
+
+#     stats = (
+#         rmdf.groupby(grouping_keys)
+#             .agg(
+#                 mean_P3P2=("P3/P2 (FFT)", "mean"),
+#                 std_P3P2=("P3/P2 (FFT)", "std"),
+#                 n_runs=("path", "nunique"),
+#                 paths=("path", lambda s: pd.unique(s).tolist()),  # unique paths, order preserved
+#                 mean_A_Probe1=("Probe 1 Amplitude", "mean"),
+#                 mean_A_Probe2=("Probe 2 Amplitude", "mean"),
+#                 mean_A_Probe3=("Probe 3 Amplitude", "mean"),
+#                 mean_A_Probe4=("Probe 4 Amplitude", "mean"),
+#                 mean_Wavenumber=("Wavenumber", "mean"),
+#                 mean_kL=("kL", "mean")
+                
+#             )
+#             .reset_index()
+#     )
+    
+#     return stats
+
+
+# Assuming these are already imported/defined:
+# from your_constants import GLOBALCONSTANTS as GC
+# from your_probe_constants import PC
+# CG.FFT_AMPLITUDE_COLS = [PC.AMPLITUDE_FFT.format(i=i) for i in 1..4]
+
 def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Aggregates P3/P2 (and optional probe amplitudes) by:
+    Aggregates damping-related metrics (mainly P3/P2 ratio + probe amplitudes)
+    grouped by:
       - WaveAmplitudeInput [Volt]
-      - Frekvens, men byttes med kL senere(?) 
-      - PanelConditionGrouped (full|reverse -> all; no stays no)
+      - WaveFrequencyInput [Hz]  (can later switch to kL)
+      - PanelConditionGrouped ("full" & "reverse" → "all"; "no" stays "no")
       - WindCondition
 
-    Returns mean/std for P3/P2 (extendable with more metrics).
+    Returns:
+        pd.DataFrame: aggregated statistics (means, stds, run counts, etc.)
     """
     cmdf = combined_meta_df.copy()
-    
-    columns = ["path", "WindCondition", "PanelCondition",
-        "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
-        "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude",
-        "Wavenumber", "kL", GC.P2_P1_FFT,  GC.P3_P2_FFT,  GC.P4_P3_FFT
+
+    print(f"Input dataframe shape: {cmdf.shape}")
+    print(f"Unique {GC.PANEL_CONDITION}: {cmdf[GC.PANEL_CONDITION].unique().tolist()}")
+    print(f"Unique {GC.WIND_CONDITION}: {cmdf[GC.WIND_CONDITION].unique().tolist()}")
+
+    # ─── Select relevant columns using constants ───
+    columns = [
+        GC.PATH,
+        GC.WIND_CONDITION,
+        GC.PANEL_CONDITION,
+        GC.WAVE_AMPLITUDE_INPUT,
+        GC.WAVE_FREQUENCY_INPUT,
+        *CG.FFT_AMPLITUDE_COLS,           # Probe 1–4 FFT amplitudes
+        GC.KL,
+        GC.P2_P1_FFT,
+        GC.P3_P2_FFT,
+        GC.P4_P3_FFT,
     ]
+
+    missing_cols = [c for c in columns if c not in cmdf.columns]
+    if missing_cols:
+        print(f"WARNING: Missing columns: {missing_cols}")
+
     rmdf = cmdf[columns].copy()
 
-    # Group PanelCondition: "full" and "reverse" -> "all"; keep "no" as "no"
-    rmdf["PanelConditionGrouped"] = rmdf["PanelCondition"].replace({"full": "all", "reverse": "all"})
+    # ─── Panel grouping (same logic as damping_grouper) ───
+    PANEL_CONDITION_GROUPED = "PanelConditionGrouped"
+    rmdf[PANEL_CONDITION_GROUPED] = rmdf[GC.PANEL_CONDITION].replace({
+        "full": "all",
+        "reverse": "all"
+    })
 
+    print(f"\nAfter {PANEL_CONDITION_GROUPED} mapping:")
+    print(rmdf[PANEL_CONDITION_GROUPED].value_counts().to_string())
+
+    # ─── Grouping keys ───
     grouping_keys = [
-        "WaveFrequencyInput [Hz]",
-        "Wavenumber",
-        "PanelConditionGrouped",
-        "WindCondition",
+        GC.WAVE_AMPLITUDE_INPUT,
+        GC.WAVE_FREQUENCY_INPUT,
+        PANEL_CONDITION_GROUPED,
+        GC.WIND_CONDITION,
     ]
+
+    # Diagnostic: data coverage
+    n_combinations = rmdf[grouping_keys].drop_duplicates().shape[0]
+    print(f"\nNumber of unique grouping combinations: {n_combinations}")
+
+    group_sizes = rmdf.groupby(grouping_keys).size()
+    print("\nGroup sizes (rows per group):")
+    print(group_sizes.describe())
+
+    # ─── Aggregation ───
+    agg_dict = {
+        "mean_P3P2":    (GC.P3_P2_FFT, "mean"),
+        "std_P3P2":     (GC.P3_P2_FFT, "std"),
+        "n_runs":       (GC.PATH, "nunique"),
+        "paths":        (GC.PATH, lambda s: pd.unique(s).tolist()),
+        "mean_kL":      (GC.KL, "mean"),
+        # Probe amplitudes
+        "mean_A_Probe1": (PC.AMPLITUDE_FFT.format(i=1), "mean"),
+        "mean_A_Probe2": (PC.AMPLITUDE_FFT.format(i=2), "mean"),
+        "mean_A_Probe3": (PC.AMPLITUDE_FFT.format(i=3), "mean"),
+        "mean_A_Probe4": (PC.AMPLITUDE_FFT.format(i=4), "mean"),
+    }
+
+    # Optional additions (uncomment if needed):
+    # "mean_P2P1":    (GC.P2_P1_FFT, "mean"),
+    # "mean_P4P3":    (GC.P4_P3_FFT, "mean"),
+    # "median_P3P2":  (GC.P3_P2_FFT, "median"),
+    # "min_P3P2":     (GC.P3_P2_FFT, "min"),
+    # "max_P3P2":     (GC.P3_P2_FFT, "max"),
 
     stats = (
         rmdf.groupby(grouping_keys)
-            .agg(
-                mean_P3P2=("P3/P2 (FFT)", "mean"),
-                std_P3P2=("P3/P2 (FFT)", "std"),
-                n_runs=("path", "nunique"),
-                paths=("path", lambda s: pd.unique(s).tolist()),  # unique paths, order preserved
-                mean_A_Probe1=("Probe 1 Amplitude", "mean"),
-                mean_A_Probe2=("Probe 2 Amplitude", "mean"),
-                mean_A_Probe3=("Probe 3 Amplitude", "mean"),
-                mean_A_Probe4=("Probe 4 Amplitude", "mean"),
-                mean_Wavenumber=("Wavenumber", "mean"),
-                mean_kL=("kL", "mean")
-                
-            )
+            .agg(**agg_dict)
             .reset_index()
     )
-    
-    return stats
 
+    print(f"\nAfter aggregation — stats shape: {stats.shape}")
+    print("Columns in stats:", stats.columns.tolist())
+
+    # Warn about groups with very few runs
+    low_n = stats[stats["n_runs"] <= 2]
+    if not low_n.empty:
+        print(f"\nWARNING: {len(low_n)} groups have ≤ 2 runs:")
+        print(low_n[[
+            GC.WAVE_AMPLITUDE_INPUT,
+            GC.WAVE_FREQUENCY_INPUT,
+            PANEL_CONDITION_GROUPED,
+            GC.WIND_CONDITION,
+            "n_runs"
+        ]].to_string(index=False))
+
+    return stats
     
 
 
