@@ -22,6 +22,7 @@ from matplotlib.offsetbox import AnchoredOffsetbox   # or AnchoredOffsetBox
 
 from wavescripts.signal_processing import get_positive_spectrum
 
+from wavescripts.filters import filter_for_amplitude_plot
 
 from wavescripts.constants import MEASUREMENT
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
@@ -1240,7 +1241,8 @@ def plot_damping_combined_old(
 
     plt.tight_layout()
     plt.show()
-    
+
+
     
 # %% plot daming (basert på den fleksible plot_freq_spectrum)
 # # begynte å kopiere den under... men starter med å bruke groupern til å hente ny amplitude. fra band_amplitudes
@@ -2253,9 +2255,186 @@ def plot_swell_p2_vs_p3_by_wind(
 
     return fig, axes
 
-
-
-
+# %% claude  - caller filter internt
+def plot_p2_vs_p3_scatter(meta_df: pd.DataFrame, filter_vars: dict):
+    """
+    Plot P2 vs P3 amplitudes for different spectral bands with detailed metadata.
+    
+    Args:
+        meta_df: Full metadata dataframe (BEFORE filtering)
+        filter_vars: Dictionary with filter settings (swellplotvariables)
+    """
+    
+    # Color/style mappings
+    WIND_COLORS = {
+        "full": "red",
+        "no": "blue",
+        "lowest": "green"
+    }
+    
+    PANEL_MARKERS = {
+        "no": "o",
+        "full": "s",
+        "reverse": "^"
+    }
+    
+    band_constants = {
+        'Swell': PC.SWELL_AMPLITUDE_PSD,
+        'Wind': PC.WIND_AMPLITUDE_PSD,
+        'Total': PC.TOTAL_AMPLITUDE_PSD,
+    }
+    
+    # Check if filtering is active
+    overordnet = filter_vars.get("overordnet", {})
+    chooseAll = overordnet.get("chooseAll", False)
+    chooseFirst = overordnet.get("chooseFirst", False)
+    filters_active = not chooseAll  # Filters only active if NOT chooseAll
+    # Apply filtering
+    print("\n" + "="*60)
+    print("FILTERING DATA FOR PLOT")
+    print("="*60)
+    band_amplitudes = filter_for_amplitude_plot(meta_df, filter_vars)
+    
+    # CHECK IF DATAFRAME IS EMPTY AFTER FILTERING
+    if len(band_amplitudes) == 0:
+        print("\n" + "="*60)
+        print("ERROR: No data remaining after filtering!")
+        return
+    
+    print(f"\n✓ Filtered data has {len(band_amplitudes)} rows\n")
+    
+    # Check which metadata columns exist
+    has_wind = GC.WIND_CONDITION in band_amplitudes.columns
+    has_panel = GC.PANEL_CONDITION in band_amplitudes.columns
+    has_freq = GC.WAVE_FREQUENCY_INPUT in band_amplitudes.columns
+    has_amp = GC.WAVE_AMPLITUDE_INPUT in band_amplitudes.columns
+    
+    # Extract metadata
+    n_points = len(band_amplitudes)
+    unique_winds = band_amplitudes[GC.WIND_CONDITION].unique() if has_wind else ['N/A']
+    unique_panels = band_amplitudes[GC.PANEL_CONDITION].unique() if has_panel else ['N/A']
+    unique_freqs = band_amplitudes[GC.WAVE_FREQUENCY_INPUT].unique() if has_freq else ['N/A']
+    unique_amps = band_amplitudes[GC.WAVE_AMPLITUDE_INPUT].unique() if has_amp else ['N/A']
+    
+    # Create figure
+    n_bands = len(band_constants)
+    fig = plt.figure(figsize=(14, 5))
+    
+    # Create gridspec for main plots + info panel
+    gs = fig.add_gridspec(1, n_bands + 1, width_ratios=[1, 1, 1, 0.4])
+    axes = [fig.add_subplot(gs[0, i]) for i in range(n_bands)]
+    info_ax = fig.add_subplot(gs[0, -1])
+    info_ax.axis('off')
+    
+    # Build info text
+    info_text = "DATA SUMMARY\n" + "="*25 + "\n\n"
+    info_text += f"N points: {n_points}\n\n"
+    
+    info_text += "Wind:\n"
+    for w in unique_winds:
+        count = (band_amplitudes[GC.WIND_CONDITION] == w).sum() if has_wind else 0
+        info_text += f"  • {w}: {count}\n"
+    
+    info_text += "\nPanel:\n"
+    for p in unique_panels:
+        count = (band_amplitudes[GC.PANEL_CONDITION] == p).sum() if has_panel else 0
+        info_text += f"  • {p}: {count}\n"
+    
+    info_text += f"\nFreq [Hz]:\n"
+    for f in unique_freqs:
+        if f != 'N/A':
+            info_text += f"  • {f:.3f}\n"
+    
+    info_text += f"\nAmp [V]:\n"
+    for a in unique_amps:
+        if a != 'N/A':
+            info_text += f"  • {a:.2f}\n"
+    
+    if filters_active:
+        info_text += "\n" + "="*25 + "\nFILTERS APPLIED\n" + "="*25 + "\n"
+        filters = filter_vars.get('filters', {})
+        for key, val in filters.items():
+            if val is not None:
+                # Shorten long lists
+                if isinstance(val, (list, tuple)) and len(val) > 3:
+                    val_str = f"[{val[0]}, ..., {val[-1]}]"
+                else:
+                    val_str = str(val)
+                info_text += f"{key}:\n  {val_str}\n"
+    else:
+        info_text += "\n" + "="*25 + "\nNO FILTERS\n" + "="*25 + "\n"
+        info_text += "(chooseAll=True)\n"
+        if chooseFirst:
+            info_text += "(chooseFirst=True)\n"
+    
+    info_ax.text(0.05, 0.95, info_text, 
+                 transform=info_ax.transAxes,
+                 fontsize=7,
+                 verticalalignment='top',
+                 fontfamily='monospace',
+                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+    
+    # Plot each band
+    for ax, (band_name, constant_template) in zip(axes, band_constants.items()):
+        p2_col = constant_template.format(i=2)
+        p3_col = constant_template.format(i=3)
+        
+        # Check if columns exist
+        if p2_col not in band_amplitudes.columns or p3_col not in band_amplitudes.columns:
+            ax.text(0.5, 0.5, f'Missing\ncolumns', 
+                   ha='center', va='center', transform=ax.transAxes, fontsize=10)
+            ax.set_title(f'{band_name} Band', fontweight='bold')
+            continue
+        
+        p2 = band_amplitudes[p2_col].to_numpy()
+        p3 = band_amplitudes[p3_col].to_numpy()
+        
+        # Color by wind, marker by panel
+        if has_wind and has_panel:
+            for wind in unique_winds:
+                for panel in unique_panels:
+                    mask = (band_amplitudes[GC.WIND_CONDITION] == wind) & \
+                           (band_amplitudes[GC.PANEL_CONDITION] == panel)
+                    
+                    if mask.sum() > 0:
+                        ax.scatter(
+                            p2[mask], 
+                            p3[mask], 
+                            alpha=0.7,
+                            color=WIND_COLORS.get(wind, 'gray'),
+                            marker=PANEL_MARKERS.get(panel, 'o'),
+                            s=80,
+                            label=f'{wind}/{panel}',
+                            edgecolors='black',
+                            linewidths=0.5
+                        )
+        else:
+            # Fallback: simple scatter
+            ax.scatter(p2, p3, alpha=0.7, s=80, edgecolors='black', linewidths=0.5)
+        
+        # Reference line
+        valid_mask = ~(np.isnan(p2) | np.isnan(p3))
+        if valid_mask.sum() > 0:
+            lim = max(p2[valid_mask].max(), p3[valid_mask].max()) * 1.05
+            ax.plot([0, lim], [0, lim], 'k--', linewidth=1, alpha=0.5, zorder=1)
+            ax.set_xlim(0, lim)
+            ax.set_ylim(0, lim)
+        
+        ax.set_title(f'{band_name} Band', fontweight='bold')
+        ax.set_xlabel('P2 amplitude', fontsize=10)
+        ax.set_ylabel('P3 amplitude', fontsize=10)
+        ax.grid(True, alpha=0.3)
+        ax.set_aspect('equal')
+        
+        # Add legend
+        if has_wind and has_panel:
+            handles, labels = ax.get_legend_handles_labels()
+            if len(handles) > 0:
+                ax.legend(fontsize=7, loc='upper left', framealpha=0.9)
+    
+    plt.suptitle('P2 vs P3 Amplitude Comparison', fontsize=14, fontweight='bold', y=0.98)
+    plt.tight_layout()
+    plt.show()
 
 
 
