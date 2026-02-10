@@ -18,19 +18,19 @@ from wavescripts.constants import (
 #denne mappingen sørger for at dictionaryen kan sjekkes mot metadataene
 #målet er å filtrere slik at jeg bare prosesserer og plotter utvalgte filer.
 
-column_map = {
-    "amp":   "WaveAmplitudeInput [Volt]",
-    "freq":  "WaveFrequencyInput [Hz]",
-    "per":   "WavePeriodInput",               # 
-    "wind":  "WindCondition",                 # 
-    "tunnel":"TunnelCondition",               # 
-    "mooring":"Mooring",
-    "panel": "PanelCondition" 
-}
+# column_map = {
+#     "amp":   "WaveAmplitudeInput [Volt]",
+#     "freq":  "WaveFrequencyInput [Hz]",
+#     "per":   "WavePeriodInput",               # 
+#     "wind":  "WindCondition",                 # 
+#     "tunnel":"TunnelCondition",               # 
+#     "mooring":"Mooring",
+#     "panel": "PanelCondition" 
+# }
 
 def filter_chosen_files(meta, processvariables):
     """
-    meta: pd.DataFrame with columns referenced in column_map
+    meta: pd.DataFrame with columns referenced in columnmap
     plotvariables: dict with nested "filters" mapping short keys -> value or list-of-values
     Behavior:
       - If a filter value is None or empty string -> skip that filter (no restriction)
@@ -42,12 +42,16 @@ def filter_chosen_files(meta, processvariables):
     overordnet = processvariables.get("overordnet", {})
     chooseAll = overordnet.get("chooseAll", False)
     chooseFirst = overordnet.get("chooseFirst", False)
+    
+    filter_variables = processvariables.get("filters", {})
+    
 
     # === Førstemann til mølla! This one overrides === #
     if chooseAll:
         print("Alle valgt, fordi chooseAll=True")
         return meta
     elif chooseFirst:
+        print('Første valgt, fordi chooseFirst = True!')
         return meta.iloc[0:1]
     # === === === #
     df_sel = meta.copy()
@@ -59,8 +63,8 @@ def filter_chosen_files(meta, processvariables):
     """
 
     applied = []  # collect applied filters for debug
-    
-    for var_key, col_name in column_map.items():
+
+    for var_key, col_name in filter_variables.items():
         if var_key not in filter_values:
             continue
         value = filter_values[var_key]
