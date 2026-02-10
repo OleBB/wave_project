@@ -54,7 +54,7 @@ all_processed_dfs = []
 
 processvariables = {
     "overordnet": {
-        "chooseAll": False,
+        "chooseAll": True,
         "chooseFirst": True, #velger første i hver mappe
     },
     "filters": {
@@ -257,17 +257,15 @@ dampingplotvariables = {
 
 from wavescripts.filters import damping_all_amplitude_grouper
 damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
-# %% plotter seaborn facet med dempning for 
+# %% plotter seaborn facet med dempning 
 from wavescripts.plotter import plot_damping_results
 plot_damping_results(damping_groupedallruns_df)
 
 # damping_all_amplitudes_filtrert = filter_for_damping(damping_groupedallruns_df, dampingplotvariables["filters"])
-# %% plotter damping_groupedallruns
-from wavescripts.plotter import facet_amp
-facet_amp(damping_groupedallruns_df, dampingplotvariables)
-# %% plot
+
+# %% plotter damping scatter 
 from wavescripts.plotter import plot_damping_scatter
-plot_damping_scatter(damping_groupedallruns_df)
+plot_damping_scatter(damping_groupedallruns_df,save_path=None,show_errorbars=True, size_by_amplitude=False)
 
 # %% FFT-SPEKTRUM filter initiert
 freqplotvariables = {

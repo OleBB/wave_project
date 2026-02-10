@@ -739,100 +739,102 @@ def facet_plot_amp_vs_mean(df, ampvar):
     
 
 
-def facet_amp(df, ampvar):
-    # df should be your aggregated stats (mean_P3P2, std_P3P2)
-    fig, ax = plt.subplots()
-    x="WaveFrequencyInput [Hz]"
-    sns.set_style("ticks",{'axes.grid' : True})
-    g = sns.scatterplot(
-        data=df.sort_values([x]),
-        x=x,
-        y='mean_P3P2',
-        hue='WindCondition',          # color by condition
-        palette=WIND_COLORS,
-        style='PanelConditionGrouped',# differentiate panel
-        style_order=["no", "all"],
-        #col='WaveFrequencyInput [Hz]',  # one column per amplitude
-        #kind='line',
-        marker=True,
-        #facet_kws={'sharex': True, 'sharey': True},
-        #height=3.0,
-        #aspect=1.2,
-        #errorbar=True,              # add std manually if desired
-    )
-    # Optional: manually draw std error bars per facet
-    collas = ["red", "green", "blue"]
-            # Add errorbars matching the marker colors
-    # for xi, yi, err, c in zip(x, df["mean_P3P2"], df["std_P3P2"], collas):
-        # ax.errorbar(xi, yi, yerr=err, fmt='none', ecolor=c, elinewidth=1.5, capsize=6)
-
-    plt.tight_layout()
-    plt.show()
-    
-import seaborn as sns
-import matplotlib.pyplot as plt
-
 def plot_damping_scatter(stats_df: pd.DataFrame, 
                          save_path: str = None,
+                         show_errorbars: bool = True,
+                         size_by_amplitude: bool = True,
                          figsize: tuple = (10, 6)):
     """
     Single scatter plot showing all damping data points.
-    Each group combination becomes one point.
     
     Args:
         stats_df: Output from damping_all_amplitude_grouper()
         save_path: Optional path to save figure
+        show_errorbars: Add error bars for std_P3P2
+        size_by_amplitude: Vary marker size by amplitude
         figsize: Figure size (width, height)
     """
     
-
-    fig, ax = plt.subplots(figsize=figsize)
+    WIND_COLORS = {
+        "full": "red",
+        "no": "blue",
+        "lowest": "green"
+    }
     
+    fig, ax = plt.subplots(figsize=figsize)
     sns.set_style("ticks", {'axes.grid': True})
     
     # Sort for cleaner plotting
     plot_data = stats_df.sort_values([GC.WAVE_FREQUENCY_INPUT])
     
+    # Prepare kwargs for scatterplot
+    scatter_kwargs = {
+        'data': plot_data,
+        'x': GC.WAVE_FREQUENCY_INPUT,
+        'y': 'mean_P3P2',
+        'hue': GC.WIND_CONDITION,
+        'palette': WIND_COLORS,
+        'style': GC.PANEL_CONDITION_GROUPED,
+        'style_order': ["no", "all"],
+        'alpha': 0.7,
+        'ax': ax,
+        'legend': 'auto',  # Better legend handling
+    }
+    
+    # Optionally add size encoding
+    if size_by_amplitude:
+        scatter_kwargs['size'] = GC.WAVE_AMPLITUDE_INPUT
+        scatter_kwargs['sizes'] = (50, 200)
+    else:
+        scatter_kwargs['s'] = 80  # Fixed size
+    
     # Main scatter plot
-    sns.scatterplot(
-        data=plot_data,
-        x=GC.WAVE_FREQUENCY_INPUT,
-        y='mean_P3P2',
-        hue=GC.WIND_CONDITION,
-        palette=WIND_COLORS,
-        style=GC.PANEL_CONDITION_GROUPED,
-        style_order=["no", "all"],
-        size=GC.WAVE_AMPLITUDE_INPUT,  # Size by amplitude (optional)
-        sizes=(50, 200),                # Min/max marker sizes
-        alpha=0.7,
-        ax=ax
-    )
+    sns.scatterplot(**scatter_kwargs)
     
-    # Optional: Add error bars
-    for _, row in plot_data.iterrows():
-        color = WIND_COLORS.get(row[GC.WIND_CONDITION], 'gray')
-        ax.errorbar(
-            row[GC.WAVE_FREQUENCY_INPUT],
-            row['mean_P3P2'],
-            yerr=row['std_P3P2'],
-            fmt='none',
-            ecolor=color,
-            elinewidth=1,
-            capsize=3,
-            alpha=0.5
-        )
+    # Add error bars if requested
+    if show_errorbars and 'std_P3P2' in plot_data.columns:
+        # Vectorized approach - much faster than loop
+        for wind in plot_data[GC.WIND_CONDITION].unique():
+            wind_data = plot_data[plot_data[GC.WIND_CONDITION] == wind]
+            color = WIND_COLORS.get(wind, 'gray')
+            
+            ax.errorbar(
+                wind_data[GC.WAVE_FREQUENCY_INPUT],
+                wind_data['mean_P3P2'],
+                yerr=wind_data['std_P3P2'],
+                fmt='none',
+                ecolor=color,
+                elinewidth=1,
+                capsize=3,
+                alpha=0.4,
+                zorder=1  # Behind the markers
+            )
     
+    # Formatting
     ax.set_xlabel('Frequency [Hz]', fontsize=12)
     ax.set_ylabel('P3/P2 (mean ± std)', fontsize=12)
-    ax.set_title('Damping Ratio: All Conditions', fontsize=14)
+    ax.set_title('Damping Ratio: All Conditions', fontsize=14, fontweight='bold')
+    
+    # Improve legend
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, 
+              loc='best', 
+              frameon=True, 
+              framealpha=0.9,
+              fontsize=10)
     
     plt.tight_layout()
     
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"Figure saved to: {save_path}")
+        print(f"✓ Figure saved to: {save_path}")
     
     plt.show()
+
+
+
+# %%
+
 
 
 def plot_damping_results(stats_df: pd.DataFrame, 
