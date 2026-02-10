@@ -128,7 +128,7 @@ if all_meta_sel:
 
 
 
-# %%
+# %% 
 
 # TODO: grue ønsker bare den 1.3-hz frekvensen. 
 # %% fysisk plott
@@ -266,6 +266,7 @@ plot_damping_results(damping_groupedallruns_df)
 # %% plotter damping scatter 
 from wavescripts.plotter import plot_damping_scatter
 plot_damping_scatter(damping_groupedallruns_df,save_path=None,show_errorbars=True, size_by_amplitude=False)
+#kunne lagt til plotvariabler her og.. 
 
 # %% FFT-SPEKTRUM filter initiert
 freqplotvariables = {
@@ -950,13 +951,17 @@ prnt = prdf[cols]
 
 # %% todo: lage funksjon for å kjøre range_plot utenom prosessering
 
-from wavescripts.plotter import plot_ramp_detection
+# from wavescripts.plotter import plot_ramp_detection
 
-forløkke velge fil. 
-hente ut index
-figr, axr  = plot_ramp_detection(df, meta_sel, data_col, signal, baseline_mean, threshold, first_motion_idx, good_start_idx, good_range, good_end_idx)
+# forløkke velge fil. 
+# hente ut index
+# figr, axr  = plot_ramp_detection(df, meta_sel, data_col, signal, baseline_mean, threshold, first_motion_idx, good_start_idx, good_range, good_end_idx)
 
+# %% åssen endrer bølgetallet seg?
 
+colls = [CG.fft_wave_dimension_cols(i) for i in range(1,5)]
+meta_sel_wavenumberstudy = combined_meta_sel.copy()
+hey = [CG.FFT_WAVENUMBER_COLS].copy()
 
 # %% FFT-SPEKTRUM  initiert
 freqplotvariables = {
