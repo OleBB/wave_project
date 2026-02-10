@@ -257,7 +257,7 @@ dampingplotvariables = {
 
 from wavescripts.filters import damping_all_amplitude_grouper
 damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
-# %%
+# %% plotter seaborn facet med dempning for 
 from wavescripts.plotter import plot_damping_results
 plot_damping_results(damping_groupedallruns_df)
 
@@ -265,7 +265,7 @@ plot_damping_results(damping_groupedallruns_df)
 # %% plotter damping_groupedallruns
 from wavescripts.plotter import facet_amp
 facet_amp(damping_groupedallruns_df, dampingplotvariables)
-# %%
+# %% plot
 from wavescripts.plotter import plot_damping_scatter
 plot_damping_scatter(damping_groupedallruns_df)
 
@@ -344,7 +344,7 @@ swellplotvariables = {
         "chooseFirstUnique": True,
     }, 
     "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
+        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],# 0.2, 0.3], #0.1, 0.2, 0.3 
         "WaveFrequencyInput [Hz]": [1.3],# 0.65], #bruk et tall  
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
@@ -377,8 +377,8 @@ swellplotvariables = {
     }   
 }
 
-from wavescripts.filters import filter_for_swell
-swell_filtrert = filter_for_swell(combined_meta_sel, swellplotvariables)
+# from wavescripts.filters import filter_for_swell
+swell_filtrert = filter_for_amplitude_plot(combined_meta_sel, swellplotvariables)
 
 # %% plotting damping frequencies seaborn
 from wavescripts.plotter import facet_swell
@@ -392,7 +392,7 @@ kolo1 =  CG.PSD_SWELL_AMPLITUDE_COLS#.copy()
 kolo2 =  CG.PSD_WIND_AMPLITUDE_COLS#.copy()
 kolo3 =  CG.PSD_TOTAL_AMPLITUDE_COLS#.copy()
 print(f'pn:{paff}')
-print(f'kolo:{kolo}')
+print(f'kolo1:{kolo1}')
 # %%
 lis = kolo1.copy()
 lis.append(paff)
@@ -402,25 +402,193 @@ print(f"li er {li}")
 # %%
 
 
-band_amplitudes = combined_meta_sel[li]
+# band_amplitudes = swell_filtrert[li].dropna()
+band_amplitudes = swell_filtrert.dropna()
+# %%claude
+def plot_p2_vs_p3_scatter(band_amplitudes, filter_vars=None):
+    """
+    Plot P2 vs P3 amplitudes for different spectral bands with detailed metadata.
+    
+    Args:
+        band_amplitudes: DataFrame with probe amplitude columns
+        filter_vars: Dictionary with filter settings (swellplotvariables)
+    """
+    
+    # Color/style mappings
+    WIND_COLORS = {
+        "full": "red",
+        "no": "blue",
+        "lowest": "green"
+    }
+    
+    PANEL_MARKERS = {  # Use markers instead of line styles for scatter
+        "no": "o",       # circle
+        "full": "s",     # square
+        "reverse": "^"   # triangle
+    }
+    
+    band_constants = {
+        'Swell': PC.SWELL_AMPLITUDE_PSD,
+        'Wind': PC.WIND_AMPLITUDE_PSD,
+        'Total': PC.TOTAL_AMPLITUDE_PSD,
+    }
+    
+    n_bands = len(band_constants)
+    fig = plt.figure(figsize=(14, 5))
+    
+    # Create gridspec for main plots + info panel
+    gs = fig.add_gridspec(1, n_bands + 1, width_ratios=[1, 1, 1, 0.4])
+    axes = [fig.add_subplot(gs[0, i]) for i in range(n_bands)]
+    info_ax = fig.add_subplot(gs[0, -1])
+    info_ax.axis('off')
+    
+    # Extract metadata from dataframe
+    n_points = len(band_amplitudes)
+    unique_winds = band_amplitudes[GC.WIND_CONDITION].unique() if GC.WIND_CONDITION in band_amplitudes.columns else ['N/A']
+    unique_panels = band_amplitudes[GC.PANEL_CONDITION].unique() if GC.PANEL_CONDITION in band_amplitudes.columns else ['N/A']
+    unique_freqs = band_amplitudes[GC.WAVE_FREQUENCY_INPUT].unique() if GC.WAVE_FREQUENCY_INPUT in band_amplitudes.columns else ['N/A']
+    unique_amps = band_amplitudes[GC.WAVE_AMPLITUDE_INPUT].unique() if GC.WAVE_AMPLITUDE_INPUT in band_amplitudes.columns else ['N/A']
+    
+    # Build info text
+    info_text = "DATA SUMMARY\n" + "="*25 + "\n\n"
+    info_text += f"N points: {n_points}\n\n"
+    
+    info_text += "Wind Conditions:\n"
+    for w in unique_winds:
+        count = (band_amplitudes[GC.WIND_CONDITION] == w).sum() if GC.WIND_CONDITION in band_amplitudes.columns else 0
+        info_text += f"  • {w}: {count}\n"
+    
+    info_text += "\nPanel Conditions:\n"
+    for p in unique_panels:
+        count = (band_amplitudes[GC.PANEL_CONDITION] == p).sum() if GC.PANEL_CONDITION in band_amplitudes.columns else 0
+        info_text += f"  • {p}: {count}\n"
+    
+    info_text += f"\nFrequencies [Hz]:\n"
+    for f in unique_freqs:
+        info_text += f"  • {f:.2f}\n"
+    
+    info_text += f"\nAmplitudes [V]:\n"
+    for a in unique_amps:
+        info_text += f"  • {a:.2f}\n"
+    
+    # Add filter info if provided
+    if filter_vars:
+        info_text += "\n" + "="*25 + "\nFILTERS APPLIED\n" + "="*25 + "\n"
+        
+        filters = filter_vars.get('filters', {})
+        for key, val in filters.items():
+            if val is not None:
+                info_text += f"\n{key}:\n  {val}\n"
+        
+        # Add processing info
+        proc = filter_vars.get('processing', {})
+        if proc:
+            info_text += f"\nProbe: {proc.get('chosenprobe', 'N/A')}\n"
+        
+        # Add plotting info
+        plot_opts = filter_vars.get('plotting', {})
+        if plot_opts:
+            info_text += f"xlim: {plot_opts.get('xlim', 'auto')}\n"
+    
+    info_ax.text(0.05, 0.95, info_text, 
+                 transform=info_ax.transAxes,
+                 fontsize=8,
+                 verticalalignment='top',
+                 fontfamily='monospace',
+                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+    
+    # Plot each band
+    for ax, (band_name, constant_template) in zip(axes, band_constants.items()):
+        p2_col = constant_template.format(i=2)
+        p3_col = constant_template.format(i=3)
+        
+        p2 = band_amplitudes[p2_col].to_numpy()
+        p3 = band_amplitudes[p3_col].to_numpy()
+        
+        # Color by wind, marker by panel
+        if GC.WIND_CONDITION in band_amplitudes.columns and GC.PANEL_CONDITION in band_amplitudes.columns:
+            for wind in unique_winds:
+                for panel in unique_panels:
+                    mask = (band_amplitudes[GC.WIND_CONDITION] == wind) & \
+                           (band_amplitudes[GC.PANEL_CONDITION] == panel)
+                    
+                    if mask.sum() > 0:
+                        ax.scatter(
+                            p2[mask], 
+                            p3[mask], 
+                            alpha=0.7,
+                            color=WIND_COLORS.get(wind, 'gray'),
+                            marker=PANEL_MARKERS.get(panel, 'o'),
+                            s=80,
+                            label=f'{wind}/{panel}',
+                            edgecolors='black',
+                            linewidths=0.5
+                        )
+        else:
+            # Fallback: simple scatter
+            ax.scatter(p2, p3, alpha=0.7)
+        
+        # Reference line
+        valid_mask = ~(np.isnan(p2) | np.isnan(p3))
+        if valid_mask.sum() > 0:
+            lim = max(p2[valid_mask].max(), p3[valid_mask].max()) * 1.05
+            ax.plot([0, lim], [0, lim], 'k--', linewidth=1, alpha=0.5, zorder=1)
+            ax.set_xlim(0, lim)
+            ax.set_ylim(0, lim)
+        
+        ax.set_title(f'{band_name} Band', fontweight='bold')
+        ax.set_xlabel('P2 amplitude', fontsize=10)
+        ax.set_ylabel('P3 amplitude', fontsize=10)
+        ax.grid(True, alpha=0.3)
+        ax.set_aspect('equal')
+        
+        # Add legend
+        if GC.WIND_CONDITION in band_amplitudes.columns:
+            ax.legend(fontsize=7, loc='upper left', framealpha=0.9)
+    
+    plt.suptitle('P2 vs P3 Amplitude Comparison', fontsize=14, fontweight='bold', y=0.98)
+    plt.tight_layout()
+    plt.show()
+
+
+# Usage:
+plot_p2_vs_p3_scatter(band_amplitudes, filter_vars=swellplotvariables)
+
 # %%
 
 
 def plot_p2_vs_p3_scatter(band_amplitudes):
-    bands = ['Swell', 'Wind', 'Total']
-    fig, axes = plt.subplots(1, len(bands), figsize=(12, 4), sharex=False, sharey=False)
-    kolos = 
-    for ax, band in zip(axes, bands):
-        p2 = band_amplitudes[PC.SWELL_AMPLITUDE_PSD.format(i=2)].to_numpy()
-        p3 = band_amplitudes[PC.SWELL_AMPLITUDE_PSD.format(i=3)].to_numpy()
+    band_name = ['Swell', 'Wind', 'Total']
+    fig, axes = plt.subplots(1, len(band_name), figsize=(12, 4), sharex=False, sharey=False)
+    band_constants = {
+        'Swell': PC.SWELL_AMPLITUDE_PSD,
+        'Wind': PC.WIND_AMPLITUDE_PSD,
+        'Total': PC.TOTAL_AMPLITUDE_PSD,
+    }
+    
+    for ax, (band_name, constant_template) in zip(axes, band_constants.items()):
+        p2 = band_amplitudes[constant_template.format(i=2)].to_numpy()
+        p3 = band_amplitudes[constant_template.format(i=3)].to_numpy()
+        print(p2)
+        print(p3)
         ax.scatter(p2, p3, alpha=0.7)
+        
+        # Calculate limits
         lim = max(p2.max(), p3.max()) * 1.05 if len(p2) else 1.0
-        ax.plot([0, lim], [0, lim], 'k--', linewidth=1)  # y = x reference
-        ax.set_title(f'{band}')
+
+        # Plot reference line FIRST (or use zorder)
+        ax.plot([0, lim], [0, lim], 'k--', linewidth=1, label='y=x', zorder=1)
+        
+        # Set axis limits to show the reference line
+        ax.set_xlim(0, lim)
+        ax.set_ylim(0, lim)
+        
+        ax.set_title(f'{band_name}')
         ax.set_xlabel('P2 amplitude')
         ax.set_ylabel('P3 amplitude')
         ax.grid(True, alpha=0.3)
-
+        ax.set_aspect('equal')  # Optional: makes it a square plot
+    
     plt.tight_layout()
     plt.show()
 
