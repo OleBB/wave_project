@@ -336,10 +336,11 @@ fig, axes = plot_frequency_spectrum(
 #hopp over foreløig from wavescripts.filters import swell_grouper
 #hopp over swell_groupedruns_df, swell_pivot_wide = swell_grouper(combined_meta_sel)
 # %% damping variables initiert
+from wavescripts.filters import filter_for_amplitude_plot
 swellplotvariables = {
     "overordnet": {
         "chooseAll": False, 
-        "chooseFirst": False,
+        "chooseFirst": True,
         "chooseFirstUnique": False,
     }, 
     "filters": {
@@ -387,83 +388,14 @@ from wavescripts.plotter import facet_swell
 from wavescripts.plotter import plot_p2_vs_p3_scatter
 plot_p2_vs_p3_scatter(combined_meta_sel, filter_vars=swellplotvariables)
 
-# %% band scatter 
-band_amplitudes = swell_filtrert#.dropna()
-
-# %%
-
-
-def old_plot_p2_vs_p3_scatter(band_amplitudes):
-    band_name = ['Swell', 'Wind', 'Total']
-    fig, axes = plt.subplots(1, len(band_name), figsize=(12, 4), sharex=False, sharey=False)
-    band_constants = {
-        'Swell': PC.SWELL_AMPLITUDE_PSD,
-        'Wind': PC.WIND_AMPLITUDE_PSD,
-        'Total': PC.TOTAL_AMPLITUDE_PSD,
-    }
-    
-    for ax, (band_name, constant_template) in zip(axes, band_constants.items()):
-        p2_in = band_amplitudes[constant_template.format(i=2)].to_numpy()
-        p3_in = band_amplitudes[constant_template.format(i=3)].to_numpy()
-        # print(p2)
-        # print(p3)
-        # CREATE VALID MASK - remove NaN and inf
-        valid_mask = np.isfinite(p2_in) & np.isfinite(p3_in)
-        p2 = p2_in[valid_mask]
-        p3 = p3_in[valid_mask]
-        
-        ax.scatter(p2, p3, alpha=0.7)
-        
-        # Calculate limits
-        lim = max(p2.max(), p3.max()) * 1.05 if len(p2) else 1.0
-
-        # Plot reference line FIRST (or use zorder)
-        ax.plot([0, lim], [0, lim], 'k--', linewidth=1, label='y=x', zorder=1)
-        
-        # Set axis limits to show the reference line
-        ax.set_xlim(0, lim)
-        ax.set_ylim(0, lim)
-        
-        ax.set_title(f'{band_name}')
-        ax.set_xlabel('P2 amplitude')
-        ax.set_ylabel('P3 amplitude')
-        ax.grid(True, alpha=0.3)
-        ax.set_aspect('equal')  # Optional: makes it a square plot
-    
-    plt.tight_layout()
-    plt.show()
-
-# Example:
+# %% enfarget facet plott x:p2, y:p3. visuell sammenlikning
+band_amplitudes = swell_filtrert
+# %% 
+from wavescripts.plotter import old_plot_p2_vs_p3_scatter
 old_plot_p2_vs_p3_scatter(band_amplitudes)
 
 # %% band bars looop
-import numpy as np
-import matplotlib.pyplot as plt
-
-"""FUNKEJE... ?"""
-def plot_p2_p3_bars(band_amplitudes):
-    bands = ['Swell', 'Wind', 'Total']
-    for _, row in band_amplitudes.iterrows():
-        # print(row[GC.PATH])
-        # path = row[GC.PATH] #funka ikkje .. er "path" 
-        values_p2 = [row[PC.SWELL_AMPLITUDE_PSD.format(i=2)] for b in bands]
-        values_p3 = [row[PC.SWELL_AMPLITUDE_PSD.format(i=3)] for b in bands]
-
-        x = np.arange(len(bands))
-        w = 0.35
-
-        plt.figure(figsize=(8, 4))
-        plt.bar(x - w/2, values_p2, width=w, label='P2')
-        plt.bar(x + w/2, values_p3, width=w, label='P3')
-        plt.xticks(x, bands)
-        plt.ylabel('Amplitude')
-        plt.title(row[40:])
-        plt.legend()
-        plt.grid(True, axis='y', alpha=0.3)
-        plt.tight_layout()
-        plt.show()
-
-# Example:
+from wavescripts.plotter import plot_p2_p3_bars
 plot_p2_p3_bars(band_amplitudes)
 
 
