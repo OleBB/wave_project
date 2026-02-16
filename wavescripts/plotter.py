@@ -1977,8 +1977,6 @@ from typing import Optional
 def plot_swell_comparison_scatter(
     band_amplitudes,
     freqplotvar,
-    p2_col="Probe 2 swell amplitude",
-    p3_col="Probe 3 swell amplitude",
     color_p2="#1f77b4",
     color_p3="#ff7f0e",
     title="Swell amplitude: Before (P2) vs After (P3)",
@@ -1989,6 +1987,8 @@ def plot_swell_comparison_scatter(
     save_path: Optional[Path] = None,
     show=True,
 ):
+    p2_col=PC.SWELL_AMPLITUDE_PSD.format(i=2)
+    p3_col=PC.SWELL_AMPLITUDE_PSD.format(i=3)
     # Extract values
     p2 = np.asarray(band_amplitudes[p2_col], dtype=float)
     p3 = np.asarray(band_amplitudes[p3_col], dtype=float)
@@ -2038,8 +2038,6 @@ def plot_swell_comparison_scatter(
 def plot_swell_comparison_bars(
     band_amplitudes,
     freqplotvar,
-    p2_col="Probe 2 swell amplitude",
-    p3_col="Probe 3 swell amplitude",
     color_p2="#1f77b4",
     color_p3="#ff7f0e",
     ylabel="Amplitude (mm)",
@@ -2050,6 +2048,9 @@ def plot_swell_comparison_bars(
     show=True,
     common_ylim=True,
 ):
+    p2_col=PC.SWELL_AMPLITUDE_PSD.format(i=2)
+    p3_col=PC.SWELL_AMPLITUDE_PSD.format(i=3)
+
     # Collect data
     p2 = np.asarray(band_amplitudes[p2_col], dtype=float)
     p3 = np.asarray(band_amplitudes[p3_col], dtype=float)
@@ -2091,8 +2092,6 @@ def plot_swell_comparison_bars(
 def plot_swell_delta(
     band_amplitudes,
     freqplotvar,
-    p2_col="Probe 2 swell amplitude",
-    p3_col="Probe 3 swell amplitude",
     color="#2ca02c",
     ylabel="Δ amplitude (P3 − P2) (mm)",
     title="Swell amplitude change",
@@ -2101,6 +2100,8 @@ def plot_swell_delta(
     import numpy as np
     import matplotlib.pyplot as plt
     from pathlib import Path
+    p2_col=PC.SWELL_AMPLITUDE_PSD.format(i=2)
+    p3_col=PC.SWELL_AMPLITUDE_PSD.format(i=3)
 
     p2 = np.asarray(band_amplitudes[p2_col], dtype=float)
     p3 = np.asarray(band_amplitudes[p3_col], dtype=float)
