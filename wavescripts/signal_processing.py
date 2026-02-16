@@ -276,8 +276,10 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
     """Compute FFT for each probe and calculate amplitude, frequency, and period"""
     fft_dict = {}
     amplitude_records = []
+    
     for path, df in processed_dfs.items():
         subset_meta = meta_row[meta_row["path"] == path]
+        
         for _, row in subset_meta.iterrows():
             row_out = {"path": path}
             
@@ -290,29 +292,46 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
             
             fft_df = None
             series_list = []
+            
             for i in range(1, 5):
-                
                 if (signal := _extract_probe_signal(df, row, i)) is not None:
                     N = len(signal)
+                    
+                    # Compute FFT (returns negative and positive frequencies)
                     fft_vals = np.fft.fft(signal)
-                    fft_freqs = np.fft.fftfreq(N, d=1/fs) #fjerna rfft fordi jeg ønsker å rekonstruere siden
+                    fft_freqs = np.fft.fftfreq(N, d=1/fs)
                     
-                    amplitudar = np.abs(fft_vals) * 2 / N
-                    amplitudar[0] = amplitudar[0] / 2  # 0hz should not be doubled
+                    # ═══════════════════════════════════════════════
+                    # CORRECTED AMPLITUDE CALCULATION
+                    # ═══════════════════════════════════════════════
+                    # For full FFT (not rfft), the amplitude is just:
+                    # A = |FFT[k]| / N  (no factor of 2 needed!)
+                    # The factor of 2 is only for rfft where negative freqs are implicit
                     
-                    if N % 2 == 0:
-                        amplitudar[-1] = amplitudar[-1] / 2  # if N is even, Nyquist freq should not be doubled
+                    amplitudes = np.abs(fft_vals) / N
                     
-                    series_list.append(pd.Series(amplitudar, index=fft_freqs, name=f"FFT {i}"))
+                    # DC component (0 Hz) is special - it's real and not doubled
+                    # Actually, no special treatment needed for full FFT!
+                    
+                    # Store both amplitude and complex coefficients
+                    series_list.append(pd.Series(amplitudes, index=fft_freqs, name=f"FFT {i}"))
                     series_list.append(pd.Series(fft_vals, index=fft_freqs, name=f"FFT {i} complex"))
-
-                    pos_mask = fft_freqs >= 0
                     
-                    # Extract amplitude and positiv frequency from FFT
+                    # ═══════════════════════════════════════════════
+                    # For peak finding, use POSITIVE frequencies only
+                    # ═══════════════════════════════════════════════
+                    pos_mask = fft_freqs > 0  # Exclude 0 Hz
+                    
+                    # But for positive frequencies, we DO need factor of 2
+                    # because negative mirror contributes equally
+                    amplitudes_pos = 2 * np.abs(fft_vals[pos_mask]) / N
+                    
+                    # Extract amplitude at target frequency
                     amplitude, frequency = compute_amplitudes_from_fft(
                         fft_freqs[pos_mask],
-                        amplitudar[pos_mask],
-                        freq)
+                        amplitudes_pos,
+                        freq
+                    )
                     
                     # Store all FFT-derived metrics
                     row_out[f"Probe {i} Amplitude (FFT)"] = amplitude
@@ -322,15 +341,17 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
                     if debug:
                         print(f"  Probe {i}: Amplitude = {amplitude:.3f} mm at {frequency:.3f} Hz (T = {1.0/frequency:.3f} s)")
             
-            if series_list:  # Only create DataFrame if we have data
+            if series_list:
                 fft_df = pd.concat(series_list, axis=1)
                 fft_df = fft_df.sort_index()
                 fft_df.index.name = "Frequencies"
                 fft_dict[path] = fft_df
+                
             amplitude_records.append(row_out)
     
     if debug:
         print(f"=== FFT Complete: {len(amplitude_records)} records ===\n")
+    
     return fft_dict, pd.DataFrame(amplitude_records)
 
 
