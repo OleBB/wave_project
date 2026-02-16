@@ -69,7 +69,7 @@ processvariables = {
     "prosessering": {
         "total_reset": False, #laster også csv'ene på nytt
         "force_recompute": False, #kjører alt på nytt, ignorerer gammal json
-        "debug": True,
+        "debug": False,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
         "range_plot": False,    
@@ -338,9 +338,9 @@ fig, axes = plot_frequency_spectrum(
 # %% damping variables initiert
 swellplotvariables = {
     "overordnet": {
-        "chooseAll": True, 
+        "chooseAll": False, 
         "chooseFirst": False,
-        "chooseFirstUnique": True,
+        "chooseFirstUnique": False,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],# 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -381,19 +381,19 @@ swell_filtrert = filter_for_amplitude_plot(combined_meta_sel, swellplotvariables
 
 # %% plotting damping frequencies seaborn
 from wavescripts.plotter import facet_swell
-facet_swell(damping_filtrert, swellplotvariables)
+# funkekje! # facet_swell(damping_filtrert, swellplotvariables)
 
 # %% claude, som caller filter internt
 from wavescripts.plotter import plot_p2_vs_p3_scatter
 plot_p2_vs_p3_scatter(combined_meta_sel, filter_vars=swellplotvariables)
 
 # %% band scatter 
-band_amplitudes = swell_filtrert.dropna()
+band_amplitudes = swell_filtrert#.dropna()
 
 # %%
 
 
-def plot_p2_vs_p3_scatter(band_amplitudes):
+def old_plot_p2_vs_p3_scatter(band_amplitudes):
     band_name = ['Swell', 'Wind', 'Total']
     fig, axes = plt.subplots(1, len(band_name), figsize=(12, 4), sharex=False, sharey=False)
     band_constants = {
@@ -403,10 +403,15 @@ def plot_p2_vs_p3_scatter(band_amplitudes):
     }
     
     for ax, (band_name, constant_template) in zip(axes, band_constants.items()):
-        p2 = band_amplitudes[constant_template.format(i=2)].to_numpy()
-        p3 = band_amplitudes[constant_template.format(i=3)].to_numpy()
-        print(p2)
-        print(p3)
+        p2_in = band_amplitudes[constant_template.format(i=2)].to_numpy()
+        p3_in = band_amplitudes[constant_template.format(i=3)].to_numpy()
+        # print(p2)
+        # print(p3)
+        # CREATE VALID MASK - remove NaN and inf
+        valid_mask = np.isfinite(p2_in) & np.isfinite(p3_in)
+        p2 = p2_in[valid_mask]
+        p3 = p3_in[valid_mask]
+        
         ax.scatter(p2, p3, alpha=0.7)
         
         # Calculate limits
@@ -429,7 +434,7 @@ def plot_p2_vs_p3_scatter(band_amplitudes):
     plt.show()
 
 # Example:
-plot_p2_vs_p3_scatter(band_amplitudes)
+old_plot_p2_vs_p3_scatter(band_amplitudes)
 
 # %% band bars looop
 import numpy as np

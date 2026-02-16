@@ -114,7 +114,7 @@ def filter_for_amplitude_plot(meta_df: pd.DataFrame, amplotvars: dict) -> pd.Dat
         if value is None:
             continue
             
-        col_name = column_map.get(key, key)
+        col_name = filters.get("filters", key) # column_map.get(key, key)
         if col_name not in df.columns:
             print(f"  ✗ Column '{col_name}' not found → skipping {key}")
             continue
