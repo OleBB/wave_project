@@ -1046,7 +1046,62 @@ def plot_damping_combined_2(
     plt.show()
 
 
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import seaborn as sns
 
+def plot_damping_pro(df: pd.DataFrame, amplitudeplotvariables: dict):
+    # 1. Setup & Defaults
+    plotting = amplitudeplotvariables.get("plotting", {})
+    figsize = plotting.get("figsize", (12, 7))
+    
+    # Use Semantic naming for the "Story"
+    x_col, y_col = GC.WAVE_AMPLITUDE_INPUT, "mean_P3P2"
+    err_col, hue_col = "std_P3P2", "WindCondition"
+    
+    sns.set_style("whitegrid")
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # 2. The "Baseline" - Gives the data a benchmark
+    # If P3/P2 is a damping ratio, 1.0 is often a critical threshold.
+    ax.axhline(1.0, color='black', linestyle='--', alpha=0.5, label='Unity (No Damping)')
+
+    # 3. Plotting with Seaborn for better "Storytelling"
+    # We use lineplot because it handles the aggregation and error bands elegantly
+    palette = "viridis" # Or your custom WIND_COLORS
+    
+    sns.lineplot(
+        data=df, x=x_col, y=y_col, hue=hue_col, 
+        marker="o", err_style="bars", err_kws={'capsize': 3},
+        palette=palette, ax=ax, markersize=8, linewidth=2
+    )
+
+    # 4. Adding a "Rug" to show data distribution
+    sns.rugplot(data=df, x=x_col, hue=hue_col, ax=ax, alpha=0.5)
+
+    # 5. Scientific Polish
+    ax.set_title("Damping Ratio ($P_3/P_2$) vs. Dimensionless Wavenumber ($kL$)", 
+                 fontsize=14, pad=15, loc='left', fontweight='bold')
+    ax.set_xlabel(f"Dimensionless Wavenumber ${x_col}$", fontsize=12)
+    ax.set_ylabel("Damping Ratio $\zeta$ (Mean $P_3/P_2$)", fontsize=12)
+    
+    # Use Log scale if kL covers multiple orders of magnitude
+    # ax.set_xscale('log') 
+
+    # Clean up legend
+    ax.legend(title="Wind Condition", bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    # 6. Annotation: The "Insight"
+    # You can programmatically highlight the peak damping
+    max_idx = df[y_col].idxmax()
+    ax.annotate('Peak Damping', 
+                xy=(df.loc[max_idx, x_col], df.loc[max_idx, y_col]),
+                xytext=(20, 20), textcoords='offset points',
+                arrowprops=dict(arrowstyle='->', color='red'))
+
+    plt.tight_layout()
+    plt.show()
 
 
 def plot_damping_combined(
@@ -1062,8 +1117,8 @@ def plot_damping_combined(
 
     # 1) Resolve column names from the DataFrame (fall back to defaults if absent)
     default_x = "kL"
-    default_y = "mean_P3P2"
-    default_err = "std_P3P2"
+    default_y = "P3/P2 (FFT)"
+    default_err = "P3/P2 (FFT)"
     default_hue = "WindCondition"
 
     x_col = default_x if default_x in df.columns else df.columns[0]
