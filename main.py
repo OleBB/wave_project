@@ -478,37 +478,18 @@ g.set_titles(col_template='{col_name}')
 
 
 
-# %% damping comb - under arbeid gpt plot
-
+# %% damping - facet damping plot 3 over hverandre basert på vind.
 from wavescripts.filters import filter_dataframe
 m_damping_filtrert = filter_dataframe(
     damping_groupedruns_df,
     amplitudeplotvariables, 
     ignore_missing_columns=True
 )
-
 from wavescripts.plotter import plot_damping_combined
 plot_damping_combined(
     m_damping_filtrert,
     amplitudeplotvariables=amplitudeplotvariables
 )
-# %% printe utvalgte kolonner fra metasel
-
-prdf = combined_meta_sel.copy()
-cols= ["WindCondition", 
-       "PanelCondition",
-       "WaveAmplitudeInput [Volt]",
-       "WaveFrequencyInput [Hz]", 
-       # "Probe 2 Amplitude", 
-       # "Probe 3 Amplitude", 
-       "P3/P2",
-       "Probe 3 Amplitude (FFT)", 
-       "Probe 2 Amplitude (FFT)", 
-       # "Probe 2 Swell amplitude", 
-       # "Probe 3 Swell amplitude"
-       ]
-# pos = [3] + [5] + list(range(6,8)) 
-prnt = prdf[cols]
 
 # %% todo: lage funksjon for å kjøre range_plot utenom prosessering
 
@@ -588,8 +569,28 @@ fig, axes = plot_reconstructed(fft_dictionary,
                                filtrert_frequencies,
                                freqplotvariables,
                                data_type="fft")
+# fig, axes = plot_reconstructed(fft_dictionary, 
+#                                filtrert_frequencies,
+#                                freqplotvariables,
+#                                data_type="fft")
 
+# %%
 
+# Debug: Check what your FFT data actually looks like
+paf = list(fft_dictionary.keys())[0]  # Get first path
+df_fft = fft_dictionary[paf]
+
+print("FFT DataFrame info:")
+print(f"Shape: {df_fft.shape}")
+print(f"Index (first 10): {df_fft.index[:10].tolist()}")
+print(f"Index (last 10): {df_fft.index[-10:].tolist()}")
+print(f"Columns: {df_fft.columns.tolist()}")
+print(f"\nIndex name: {df_fft.index.name}")
+print(f"Index dtype: {df_fft.index.dtype}")
+
+# Check if there's a frequency column instead
+if 'frequency' in df_fft.columns or 'freq' in df_fft.columns:
+    print("\n⚠️ Frequency is a COLUMN, not the index!")
 
 # %% __main__
 
