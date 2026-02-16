@@ -54,7 +54,7 @@ all_processed_dfs = []
 
 processvariables = {
     "overordnet": {
-        "chooseAll": True,
+        "chooseAll": False,
         "chooseFirst": True, #velger første i hver mappe
     },
     "filters": {
@@ -67,8 +67,8 @@ processvariables = {
         "PanelCondition": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
-        "total_reset": False, #laster også csv'ene på nytt
-        "force_recompute": False, #kjører alt på nytt, ignorerer gammal json
+        "total_reset": True, #laster også csv'ene på nytt
+        "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
         "debug": False,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
@@ -508,7 +508,7 @@ hey = [CG.FFT_WAVENUMBER_COLS].copy()
 # %% FFT-SPEKTRUM  initiert
 freqplotvariables = {
     "overordnet": {
-        "chooseAll": False, 
+        "chooseAll": True, 
         "chooseFirst": False,
         "chooseFirstUnique": True,
     }, 
@@ -531,8 +531,11 @@ freqplotvariables = {
     },
     "plotting": {
         "show_plot": True,
-        "figsize": (10,12), #(10,10),
-        "linewidth": 0.7,
+        "figsize": (18,18), #(10,10),
+        "linewidth": 1,
+        "grid": True,
+        "show_full_signal": True,
+        "dual_yaxis": True, #for å skalere opp vindstøyen og se den tydeligere.
         "separate":False,
         "facet_by": "probe", #wind", #wind, panel, probe 
         "overlay": False, #
@@ -548,7 +551,7 @@ freqplotvariables = {
 #lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.
 
 from wavescripts.filters import filter_for_frequencyspectrum
-filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
+filtrert_frequencies = filter_for_frequencyspectrum(combined_meta_sel, freqplotvariables)
 
 # %% kopiert fra oven plotter fft facet
 # from wavescripts.plotter import plot_frequency_spectrum
@@ -569,10 +572,14 @@ fig, axes = plot_reconstructed(fft_dictionary,
                                filtrert_frequencies,
                                freqplotvariables,
                                data_type="fft")
-# fig, axes = plot_reconstructed(fft_dictionary, 
-#                                filtrert_frequencies,
-#                                freqplotvariables,
-#                                data_type="fft")
+# %% med RMS for å sammenlikne amplitude med sann amplitude
+from wavescripts.plotter import plot_reconstructed_rms
+
+
+fig, axes = plot_reconstructed_rms(fft_dictionary, 
+                               filtrert_frequencies,
+                               freqplotvariables,
+                               data_type="fft")
 
 # %%
 
