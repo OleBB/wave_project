@@ -2259,7 +2259,7 @@ def plot_reconstructed(
 ) -> Tuple[Optional[plt.Figure], Optional[np.ndarray]]:
     """
     Plot reconstructed swell as a pure sine wave vs the rest of the signal.
-    Uses separate y-axes to make both components visible.
+    Uses dual y-axes to make both components visible.
     """
     meta_df = filtrert_frequencies.copy()
     plotting = freqplotvariables.get("plotting", {})
@@ -2270,12 +2270,13 @@ def plot_reconstructed(
     probes = [probes] if not isinstance(probes, (list, tuple)) else probes
     
     show_grid = plotting.get("grid", True)
-    show_plot = plotting.get("show", True)
+    show_plot = plotting.get("show_plot", True)
     linewidth = plotting.get("linewidth", 1.2)
     fontsize = 9
     
-    # Search window for finding the swell peak
-    search_window = 0.2  # Hz
+    # New options for reconstruction plot
+    show_full_signal = plotting.get("show_full_signal", False)  # Default OFF
+    dual_yaxis = plotting.get("dual_yaxis", True)  # Use dual y-axes by default
     
     # Determine facets
     if facet_by == "probe":
@@ -2293,9 +2294,9 @@ def plot_reconstructed(
     
     n_facets = len(facet_groups)
     
-    # Create figure with DUAL Y-AXES
+    # Create figure
     default_figsize = (16, 5 * n_facets) if n_facets > 1 else (16, 7)
-    figsize = plotting.get("figsize") or default_figsize
+    figsize = plotting.get("figsize", default_figsize)
     
     fig, axes = plt.subplots(
         n_facets, 1,
@@ -2309,7 +2310,12 @@ def plot_reconstructed(
     # Plotting loop
     for facet_idx, (group, facet_label) in enumerate(zip(facet_groups, facet_labels)):
         ax_swell = axes[facet_idx]
-        ax_wind = ax_swell.twinx()  # Create second y-axis for wind
+        
+        # Create second y-axis only if dual_yaxis is True
+        if dual_yaxis:
+            ax_wind = ax_swell.twinx()
+        else:
+            ax_wind = ax_swell  # Use same axis
         
         # Subset data for this facet
         if facet_by == "wind":
@@ -2335,7 +2341,8 @@ def plot_reconstructed(
             # Styling
             windcond = row.get("WindCondition", "unknown")
             color_swell = WIND_COLORS.get(windcond, "black")
-            color_wind = "darkred"  # Different color for wind
+            color_wind = "darkred" if dual_yaxis else "orange"  # Different color for single axis
+            color_full = "gray"
             panelcond = row.get("PanelCondition", "unknown")
             linestyle = PANEL_STYLES.get(panelcond, "-")
             
@@ -2349,7 +2356,6 @@ def plot_reconstructed(
             probes_to_plot = [group] if facet_by == "probe" else probes
             
             for probe_num in probes_to_plot:
-                # Use complex FFT coefficients
                 col = f"FFT {probe_num} complex"
                 
                 if col not in df_fft:
@@ -2368,70 +2374,63 @@ def plot_reconstructed(
                 print(f"Processing: {Path(path).stem} | Probe {probe_num}")
                 print(f"Target swell: {target_freq:.3f} Hz")
                 
-                # Reconstruct full signal
-                signal_full = np.real(np.fft.ifft(fft_complex))
-                
-                # Create time axis
-                n_samples = len(signal_full)
+                # Reorder FFT from sorted to fftfreq order
+                N = len(fft_complex)
                 df_freq = freq_bins[1] - freq_bins[0]
-                sampling_rate = abs(df_freq * n_samples)
-                time_axis = np.arange(n_samples) / sampling_rate
+                sampling_rate = abs(df_freq * N)
+                correct_fftfreq_order = np.fft.fftfreq(N, d=1/sampling_rate)
                 
-                print(f"  → Full signal RMS: {np.sqrt(np.mean(signal_full**2)):.4f}")
+                fft_reordered = np.zeros(N, dtype=complex)
+                for i, target_f in enumerate(correct_fftfreq_order):
+                    closest_idx = np.argmin(np.abs(freq_bins - target_f))
+                    if np.abs(freq_bins[closest_idx] - target_f) < 1e-6:
+                        fft_reordered[i] = fft_complex[closest_idx]
                 
-                # ═══════════════════════════════════════════════
-                # Find SINGLE CLOSEST bin to target (no window!)
-                # ═══════════════════════════════════════════════
-                # Positive frequencies only
-                pos_mask = freq_bins > 0
-                pos_freqs = freq_bins[pos_mask]
+                # Reconstruct full signal
+                signal_full = np.real(np.fft.ifft(fft_reordered))
+                time_axis = np.arange(N) / sampling_rate
                 
-                # Find the single closest bin
-                closest_idx_in_pos = np.argmin(np.abs(pos_freqs - target_freq))
-                actual_freq = pos_freqs[closest_idx_in_pos]
+                # Find target frequency bins
+                pos_mask = correct_fftfreq_order > 0
+                pos_freqs = correct_fftfreq_order[pos_mask]
                 
-                # Get the actual index in the full array
-                peak_full_idx = np.where(freq_bins == actual_freq)[0][0]
+                closest_pos_idx = np.argmin(np.abs(pos_freqs - target_freq))
+                actual_freq = pos_freqs[closest_pos_idx]
                 
-                print(f"  → Using SINGLE bin at: {actual_freq:.6f} Hz (bin {peak_full_idx})")
+                peak_idx = np.where(np.abs(correct_fftfreq_order - actual_freq) < 1e-6)[0][0]
+                mirror_idx = np.where(np.abs(correct_fftfreq_order + actual_freq) < 1e-6)[0][0]
                 
-                # ═══════════════════════════════════════════════
-                # Create FFT with ONLY this single bin + mirror
-                # ═══════════════════════════════════════════════
-                fft_swell_only = np.zeros_like(fft_complex, dtype=complex)
-                fft_swell_only[peak_full_idx] = fft_complex[peak_full_idx]
+                # Create swell-only FFT
+                fft_swell = np.zeros_like(fft_reordered, dtype=complex)
+                fft_swell[peak_idx] = fft_reordered[peak_idx]
+                fft_swell[mirror_idx] = fft_reordered[mirror_idx]
                 
-                # Find negative mirror
-                mirror_freq = -actual_freq
-                mirror_idx = np.argmin(np.abs(freq_bins - mirror_freq))
-                fft_swell_only[mirror_idx] = fft_complex[mirror_idx]
-                
-                print(f"  → Mirror bin at: {freq_bins[mirror_idx]:.6f} Hz (bin {mirror_idx})")
-                
-                # Check: should be EXACTLY 2 non-zero entries
-                n_nonzero = np.count_nonzero(fft_swell_only)
-                print(f"  → Non-zero FFT bins: {n_nonzero} (should be 2)")
-                
-                # IFFT to get pure sine wave
-                signal_swell = np.real(np.fft.ifft(fft_swell_only))
-                
-                print(f"  → Swell RMS: {np.sqrt(np.mean(signal_swell**2)):.4f}")
-                
-                # Wind = everything else
+                # Reconstruct
+                signal_swell = np.real(np.fft.ifft(fft_swell))
                 signal_wind = signal_full - signal_swell
                 
+                print(f"  → Swell RMS: {np.sqrt(np.mean(signal_swell**2)):.4f}")
                 print(f"  → Wind RMS: {np.sqrt(np.mean(signal_wind**2)):.4f}")
-                print(f"  → Wind range: {signal_wind.min():.4f} to {signal_wind.max():.4f}")
                 
-                # ═══════════════════════════════════════════════
-                # Plot on SEPARATE Y-AXES
-                # ═══════════════════════════════════════════════
+                # Plot
                 plot_label = (
                     f"{label_base}_P{probe_num}" if len(probes_to_plot) > 1 
                     else label_base
                 )
                 
-                # Swell on left axis (primary)
+                # Full signal (optional)
+                if show_full_signal:
+                    ax_swell.plot(
+                        time_axis, signal_full,
+                        linewidth=linewidth * 0.7,
+                        label=f"{plot_label} (full)",
+                        linestyle="-",
+                        color=color_full,
+                        alpha=0.4,
+                        zorder=1
+                    )
+                
+                # Swell component
                 ax_swell.plot(
                     time_axis, signal_swell,
                     linewidth=linewidth * 1.5,
@@ -2442,27 +2441,30 @@ def plot_reconstructed(
                     zorder=3
                 )
                 
-                # Wind on right axis (secondary) - MORE VISIBLE
+                # Wind component
                 ax_wind.plot(
                     time_axis, signal_wind,
-                    linewidth=linewidth * 1.2,
+                    linewidth=linewidth * (1.2 if dual_yaxis else 1.0),
                     label=f"{plot_label} (wind+noise)",
-                    linestyle="-",
+                    linestyle=":" if dual_yaxis else "--",
                     color=color_wind,
-                    alpha=0.7,
+                    alpha=0.7 if dual_yaxis else 0.8,
                     zorder=2
                 )
         
-        # ═══════════════════════════════════════════════
         # Formatting
-        # ═══════════════════════════════════════════════
         ax_swell.set_title(facet_label, fontsize=fontsize + 2, fontweight='bold')
         ax_swell.set_xlabel('Time (s)', fontsize=fontsize)
-        ax_swell.set_ylabel('Swell Amplitude', fontsize=fontsize, color=color_swell)
-        ax_wind.set_ylabel('Wind+Noise Amplitude', fontsize=fontsize, color=color_wind)
         
-        ax_swell.tick_params(axis='y', labelcolor=color_swell, labelsize=fontsize - 1)
-        ax_wind.tick_params(axis='y', labelcolor=color_wind, labelsize=fontsize - 1)
+        if dual_yaxis:
+            ax_swell.set_ylabel('Swell Amplitude', fontsize=fontsize, color=color_swell)
+            ax_wind.set_ylabel('Wind+Noise Amplitude', fontsize=fontsize, color=color_wind)
+            ax_swell.tick_params(axis='y', labelcolor=color_swell, labelsize=fontsize - 1)
+            ax_wind.tick_params(axis='y', labelcolor=color_wind, labelsize=fontsize - 1)
+        else:
+            ax_swell.set_ylabel('Amplitude', fontsize=fontsize)
+            ax_swell.tick_params(axis='y', labelsize=fontsize - 1)
+        
         ax_swell.tick_params(axis='x', labelsize=fontsize - 1)
         
         if show_grid:
@@ -2470,23 +2472,31 @@ def plot_reconstructed(
             ax_swell.grid(which='minor', linestyle=':', alpha=0.15, linewidth=0.5)
             ax_swell.minorticks_on()
         
-        # Legends
+        # Legend
         lines_swell, labels_swell = ax_swell.get_legend_handles_labels()
-        lines_wind, labels_wind = ax_wind.get_legend_handles_labels()
         
-        if lines_swell or lines_wind:
+        if dual_yaxis:
+            lines_wind, labels_wind = ax_wind.get_legend_handles_labels()
+            all_lines = lines_swell + lines_wind
+            all_labels = labels_swell + labels_wind
+        else:
+            all_lines = lines_swell
+            all_labels = labels_swell
+        
+        if all_lines:
             ax_swell.legend(
-                lines_swell + lines_wind,
-                labels_swell + labels_wind,
+                all_lines, all_labels,
                 loc='upper right',
                 fontsize=fontsize - 1,
                 framealpha=0.95
             )
         
         ax_swell.axhline(0, color='black', linewidth=0.5, alpha=0.3, zorder=0)
-        ax_wind.axhline(0, color='darkred', linewidth=0.5, alpha=0.2, zorder=0)
+        if dual_yaxis:
+            ax_wind.axhline(0, color='darkred', linewidth=0.5, alpha=0.2, zorder=0)
     
-    plt.suptitle('Signal Decomposition: Pure Swell Sine vs Wind+Noise (Dual Y-axes)', 
+    title_suffix = "(Dual Y-axes)" if dual_yaxis else "(Single Y-axis)"
+    plt.suptitle(f'Signal Decomposition: Swell vs Wind+Noise {title_suffix}', 
                  fontsize=fontsize + 4, fontweight='bold', y=0.995)
     fig.tight_layout()
     
@@ -2494,6 +2504,339 @@ def plot_reconstructed(
         plt.show()
     else:
         plt.close(fig)
+    
+    return fig, axes
+# %%
+def plot_reconstructed_rms(
+    fft_dict: Dict[str, pd.DataFrame],
+    filtrert_frequencies: pd.DataFrame,
+    freqplotvariables: dict,
+    data_type: str = "fft"
+) -> Tuple[Optional[plt.Figure], Optional[np.ndarray]]:
+    """
+    Plot reconstructed swell as a pure sine wave vs the rest of the signal.
+    Calculates and reports amplitude differences between full signal and swell extraction.
+    """
+    meta_df = filtrert_frequencies.copy()
+    plotting = freqplotvariables.get("plotting", {})
+    
+    # Configuration
+    facet_by = plotting.get("facet_by", None)
+    probes = plotting.get("probes", [1])
+    probes = [probes] if not isinstance(probes, (list, tuple)) else probes
+    
+    show_grid = plotting.get("grid", True)
+    show_plot = plotting.get("show_plot", True)
+    linewidth = plotting.get("linewidth", 1.2)
+    fontsize = 9
+    
+    show_full_signal = plotting.get("show_full_signal", False)
+    dual_yaxis = plotting.get("dual_yaxis", True)
+    show_amplitude_stats = plotting.get("show_amplitude_stats", True)  # New option
+    
+    # Determine facets
+    if facet_by == "probe":
+        facet_groups = probes
+        facet_labels = [f"Probe {p}" for p in facet_groups]
+    elif facet_by == "wind":
+        facet_groups = pd.unique(meta_df["WindCondition"]).tolist()
+        facet_labels = [f"Wind: {w}" for w in facet_groups]
+    elif facet_by == "panel":
+        facet_groups = pd.unique(meta_df["PanelCondition"]).tolist()
+        facet_labels = [f"Panel: {p}" for p in facet_groups]
+    else:
+        facet_groups = [None]
+        facet_labels = ["All Data"]
+    
+    n_facets = len(facet_groups)
+    
+    # Create figure
+    default_figsize = (16, 5 * n_facets) if n_facets > 1 else (16, 7)
+    figsize = plotting.get("figsize", default_figsize)
+    
+    fig, axes = plt.subplots(
+        n_facets, 1,
+        figsize=figsize,
+        sharex=False,
+        squeeze=False,
+        dpi=120
+    )
+    axes = axes.flatten()
+    
+    # Storage for amplitude comparison stats
+    amplitude_comparison = []
+    
+    # Plotting loop
+    for facet_idx, (group, facet_label) in enumerate(zip(facet_groups, facet_labels)):
+        ax_swell = axes[facet_idx]
+        
+        if dual_yaxis:
+            ax_wind = ax_swell.twinx()
+        else:
+            ax_wind = ax_swell
+        
+        # Subset data for this facet
+        if facet_by == "wind":
+            subset = meta_df[meta_df["WindCondition"] == group]
+        elif facet_by == "panel":
+            subset = meta_df[meta_df["PanelCondition"] == group]
+        else:
+            subset = meta_df
+        
+        if len(subset) == 0:
+            ax_swell.text(0.5, 0.5, 'No data', ha='center', va='center', 
+                   transform=ax_swell.transAxes, fontsize=12)
+            ax_swell.set_title(facet_label, fontsize=fontsize)
+            continue
+        
+        for row_idx, row in subset.iterrows():
+            path = row["path"]
+            if path not in fft_dict:
+                continue
+            
+            df_fft = fft_dict[path]
+            
+            # Styling
+            windcond = row.get("WindCondition", "unknown")
+            color_swell = WIND_COLORS.get(windcond, "black")
+            color_wind = "darkred" if dual_yaxis else "orange"
+            color_full = "gray"
+            panelcond = row.get("PanelCondition", "unknown")
+            linestyle = PANEL_STYLES.get(panelcond, "-")
+            
+            # Get target swell frequency
+            target_freq = row.get(GC.WAVE_FREQUENCY_INPUT, None)
+            if target_freq is None or target_freq <= 0:
+                print(f"Skipping {Path(path).name}: invalid target frequency")
+                continue
+            
+            label_base = f"{windcond}/{panelcond}"
+            probes_to_plot = [group] if facet_by == "probe" else probes
+            
+            for probe_num in probes_to_plot:
+                col = f"FFT {probe_num} complex"
+                
+                if col not in df_fft:
+                    col = f"FFT {probe_num}"
+                    if col not in df_fft:
+                        continue
+                
+                fft_series = df_fft[col].dropna()
+                if len(fft_series) == 0:
+                    continue
+                
+                freq_bins = fft_series.index.values
+                fft_complex = fft_series.values
+                
+                print(f"\n{'='*60}")
+                print(f"Processing: {Path(path).stem} | Probe {probe_num}")
+                print(f"Target swell: {target_freq:.3f} Hz")
+                
+                # Reorder FFT from sorted to fftfreq order
+                N = len(fft_complex)
+                df_freq = freq_bins[1] - freq_bins[0]
+                sampling_rate = abs(df_freq * N)
+                correct_fftfreq_order = np.fft.fftfreq(N, d=1/sampling_rate)
+                
+                fft_reordered = np.zeros(N, dtype=complex)
+                for i, target_f in enumerate(correct_fftfreq_order):
+                    closest_idx = np.argmin(np.abs(freq_bins - target_f))
+                    if np.abs(freq_bins[closest_idx] - target_f) < 1e-6:
+                        fft_reordered[i] = fft_complex[closest_idx]
+                
+                # Reconstruct full signal
+                signal_full = np.real(np.fft.ifft(fft_reordered))
+                time_axis = np.arange(N) / sampling_rate
+                
+                # Find target frequency bins
+                pos_mask = correct_fftfreq_order > 0
+                pos_freqs = correct_fftfreq_order[pos_mask]
+                
+                closest_pos_idx = np.argmin(np.abs(pos_freqs - target_freq))
+                actual_freq = pos_freqs[closest_pos_idx]
+                
+                peak_idx = np.where(np.abs(correct_fftfreq_order - actual_freq) < 1e-6)[0][0]
+                mirror_idx = np.where(np.abs(correct_fftfreq_order + actual_freq) < 1e-6)[0][0]
+                
+                # Create swell-only FFT
+                fft_swell = np.zeros_like(fft_reordered, dtype=complex)
+                fft_swell[peak_idx] = fft_reordered[peak_idx]
+                fft_swell[mirror_idx] = fft_reordered[mirror_idx]
+                
+                # Reconstruct
+                signal_swell = np.real(np.fft.ifft(fft_swell))
+                signal_wind = signal_full - signal_swell
+                
+                # ═══════════════════════════════════════════════
+                # AMPLITUDE ANALYSIS
+                # ═══════════════════════════════════════════════
+                
+                # Peak-to-peak amplitudes
+                full_p2p = np.max(signal_full) - np.min(signal_full)
+                swell_p2p = np.max(signal_swell) - np.min(signal_swell)
+                wind_p2p = np.max(signal_wind) - np.min(signal_wind)
+                
+                # Peak amplitudes (max absolute value)
+                full_peak = np.max(np.abs(signal_full))
+                swell_peak = np.max(np.abs(signal_swell))
+                wind_peak = np.max(np.abs(signal_wind))
+                
+                # RMS values
+                full_rms = np.sqrt(np.mean(signal_full**2))
+                swell_rms = np.sqrt(np.mean(signal_swell**2))
+                wind_rms = np.sqrt(np.mean(signal_wind**2))
+                
+                # Differences and ratios
+                peak_diff = full_peak - swell_peak
+                peak_ratio = (full_peak / swell_peak) if swell_peak > 0 else np.nan
+                peak_percent = (peak_diff / full_peak * 100) if full_peak > 0 else np.nan
+                
+                rms_diff = full_rms - swell_rms
+                rms_ratio = (full_rms / swell_rms) if swell_rms > 0 else np.nan
+                
+                # Store comparison
+                amplitude_comparison.append({
+                    'path': Path(path).stem,
+                    'probe': probe_num,
+                    'wind': windcond,
+                    'panel': panelcond,
+                    'full_peak': full_peak,
+                    'swell_peak': swell_peak,
+                    'wind_peak': wind_peak,
+                    'full_rms': full_rms,
+                    'swell_rms': swell_rms,
+                    'wind_rms': wind_rms,
+                    'peak_diff': peak_diff,
+                    'peak_ratio': peak_ratio,
+                    'peak_percent_diff': peak_percent,
+                    'full_p2p': full_p2p,
+                    'swell_p2p': swell_p2p
+                })
+                
+                # Print detailed comparison
+                print(f"\n  AMPLITUDE COMPARISON:")
+                print(f"  {'='*50}")
+                print(f"  Peak Amplitude:")
+                print(f"    Full signal:  {full_peak:8.4f}")
+                print(f"    Swell only:   {swell_peak:8.4f}")
+                print(f"    Difference:   {peak_diff:8.4f} ({peak_percent:+.2f}%)")
+                print(f"    Ratio:        {peak_ratio:.4f}x")
+                print(f"    Wind peak:    {wind_peak:8.4f}")
+                print(f"\n  Peak-to-Peak:")
+                print(f"    Full signal:  {full_p2p:8.4f}")
+                print(f"    Swell only:   {swell_p2p:8.4f}")
+                print(f"\n  RMS:")
+                print(f"    Full signal:  {full_rms:8.4f}")
+                print(f"    Swell only:   {swell_rms:8.4f}")
+                print(f"    Difference:   {rms_diff:8.4f}")
+                print(f"    Ratio:        {rms_ratio:.4f}x")
+                print(f"    Wind RMS:     {wind_rms:8.4f}")
+                
+                # Plot
+                plot_label = (
+                    f"{label_base}_P{probe_num}" if len(probes_to_plot) > 1 
+                    else label_base
+                )
+                
+                # Full signal (optional)
+                if show_full_signal:
+                    ax_swell.plot(
+                        time_axis, signal_full,
+                        linewidth=linewidth * 0.7,
+                        label=f"{plot_label} (full, pk={full_peak:.2f})",
+                        linestyle="-",
+                        color=color_full,
+                        alpha=0.4,
+                        zorder=1
+                    )
+                
+                # Swell component
+                swell_label = f"{plot_label} (swell {actual_freq:.2f}Hz, pk={swell_peak:.2f})"
+                if show_amplitude_stats and show_full_signal:
+                    swell_label += f" [{peak_percent:+.1f}%]"
+                
+                ax_swell.plot(
+                    time_axis, signal_swell,
+                    linewidth=linewidth * 1.5,
+                    label=swell_label,
+                    linestyle=linestyle,
+                    color=color_swell,
+                    alpha=0.9,
+                    zorder=3
+                )
+                
+                # Wind component
+                ax_wind.plot(
+                    time_axis, signal_wind,
+                    linewidth=linewidth * (1.2 if dual_yaxis else 1.0),
+                    label=f"{plot_label} (wind+noise, pk={wind_peak:.2f})",
+                    linestyle=":" if dual_yaxis else "--",
+                    color=color_wind,
+                    alpha=0.7 if dual_yaxis else 0.8,
+                    zorder=2
+                )
+        
+        # Formatting
+        ax_swell.set_title(facet_label, fontsize=fontsize + 2, fontweight='bold')
+        ax_swell.set_xlabel('Time (s)', fontsize=fontsize)
+        
+        if dual_yaxis:
+            ax_swell.set_ylabel('Swell Amplitude', fontsize=fontsize, color=color_swell)
+            ax_wind.set_ylabel('Wind+Noise Amplitude', fontsize=fontsize, color=color_wind)
+            ax_swell.tick_params(axis='y', labelcolor=color_swell, labelsize=fontsize - 1)
+            ax_wind.tick_params(axis='y', labelcolor=color_wind, labelsize=fontsize - 1)
+        else:
+            ax_swell.set_ylabel('Amplitude', fontsize=fontsize)
+            ax_swell.tick_params(axis='y', labelsize=fontsize - 1)
+        
+        ax_swell.tick_params(axis='x', labelsize=fontsize - 1)
+        
+        if show_grid:
+            ax_swell.grid(which='major', linestyle='--', alpha=0.3, linewidth=0.8)
+            ax_swell.grid(which='minor', linestyle=':', alpha=0.15, linewidth=0.5)
+            ax_swell.minorticks_on()
+        
+        # Legend
+        lines_swell, labels_swell = ax_swell.get_legend_handles_labels()
+        
+        if dual_yaxis:
+            lines_wind, labels_wind = ax_wind.get_legend_handles_labels()
+            all_lines = lines_swell + lines_wind
+            all_labels = labels_swell + labels_wind
+        else:
+            all_lines = lines_swell
+            all_labels = labels_swell
+        
+        if all_lines:
+            ax_swell.legend(
+                all_lines, all_labels,
+                loc='upper right',
+                fontsize=fontsize - 1,
+                framealpha=0.95
+            )
+        
+        ax_swell.axhline(0, color='black', linewidth=0.5, alpha=0.3, zorder=0)
+        if dual_yaxis:
+            ax_wind.axhline(0, color='darkred', linewidth=0.5, alpha=0.2, zorder=0)
+    
+    title_suffix = "(Dual Y-axes)" if dual_yaxis else "(Single Y-axis)"
+    plt.suptitle(f'Signal Decomposition: Swell vs Wind+Noise {title_suffix}', 
+                 fontsize=fontsize + 4, fontweight='bold', y=0.995)
+    fig.tight_layout()
+    
+    if show_plot:
+        plt.show()
+    else:
+        plt.close(fig)
+    
+    # Print summary table
+    if amplitude_comparison and show_amplitude_stats:
+        print(f"\n{'='*80}")
+        print("AMPLITUDE COMPARISON SUMMARY")
+        print(f"{'='*80}")
+        df_comparison = pd.DataFrame(amplitude_comparison)
+        print(df_comparison.to_string(index=False))
+        print(f"{'='*80}\n")
     
     return fig, axes
 # %%
