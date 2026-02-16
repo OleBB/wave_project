@@ -271,9 +271,9 @@ plot_damping_scatter(damping_groupedallruns_df,save_path=None,show_errorbars=Tru
 # %% FFT-SPEKTRUM filter initiert
 freqplotvariables = {
     "overordnet": {
-        "chooseAll": False, 
+        "chooseAll": True, 
         "chooseFirst": False,
-        "chooseFirstUnique": True,
+        "chooseFirstUnique": False,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -340,8 +340,8 @@ from wavescripts.filters import filter_for_amplitude_plot
 swellplotvariables = {
     "overordnet": {
         "chooseAll": False, 
-        "chooseFirst": True,
-        "chooseFirstUnique": False,
+        "chooseFirst": False,
+        "chooseFirstUnique": True,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],# 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -379,9 +379,9 @@ swellplotvariables = {
 
 # from wavescripts.filters import filter_for_swell
 swell_filtrert = filter_for_amplitude_plot(combined_meta_sel, swellplotvariables)
-
+band_amplitudes = swell_filtrert
 # %% plotting damping frequencies seaborn
-from wavescripts.plotter import facet_swell
+# from wavescripts.plotter import facet_swell
 # funkekje! # facet_swell(damping_filtrert, swellplotvariables)
 
 # %% claude, som caller filter internt
@@ -389,8 +389,7 @@ from wavescripts.plotter import plot_p2_vs_p3_scatter
 plot_p2_vs_p3_scatter(combined_meta_sel, filter_vars=swellplotvariables)
 
 # %% enfarget facet plott x:p2, y:p3. visuell sammenlikning
-band_amplitudes = swell_filtrert
-# %% 
+
 from wavescripts.plotter import old_plot_p2_vs_p3_scatter
 old_plot_p2_vs_p3_scatter(band_amplitudes)
 
@@ -399,16 +398,14 @@ from wavescripts.plotter import plot_p2_p3_bars
 plot_p2_p3_bars(band_amplitudes)
 
 
-# %%gpt 3 plott
 
+# %% Disse tre - laget av GPT er retardert
 from wavescripts.plotter import plot_swell_comparison_bars, plot_swell_comparison_scatter, plot_swell_delta
 
-# %%
 plot_swell_comparison_scatter(band_amplitudes, freqplotvariables)
 
-# %%
 plot_swell_comparison_bars(band_amplitudes, freqplotvariables)
-# %%
+
 plot_swell_delta(band_amplitudes, freqplotvariables)
 
 # %%
