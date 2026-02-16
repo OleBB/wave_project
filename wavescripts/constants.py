@@ -285,6 +285,7 @@ class GlobalColumns:
     WINDSPEED = "Windspeed"
     
     # "Given" metrics (legacy columns - consider deprecating)
+    #DE umerka over (de gamle) er jo basert på input-frekvens. 
     WAVE_FREQUENCY_GIVEN = "Wavefrequency (given)"
     WAVE_PERIOD_GIVEN = "Waveperiod (given)"
     WAVENUMBER_GIVEN = "Wavenumber (given)"
@@ -513,18 +514,7 @@ def validate_column_constants():
     print("✓ All column constants validated")
 
 
-# Update the main validation function
-def validate_constants():
-    """Sanity check all constants. Call this at startup."""
-    assert MEASUREMENT.SAMPLING_RATE > 0, "Sampling rate must be positive"
-    assert 0 < SIGNAL.PSD_OVERLAP_FRACTION < 1, "Overlap must be between 0 and 1"
-    assert RAMP.MIN_RAMP_PEAKS < RAMP.MAX_RAMP_PEAKS, "Min ramp peaks must be < max"
-    assert AMPLITUDE.AMPLITUDE_DIVISOR != 0, "Amplitude divisor cannot be zero"
-    
-    # Also validate column constants
-    validate_column_constants()
-    
-    print("✓ All constants validated")
+
 
 
 
