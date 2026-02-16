@@ -54,7 +54,7 @@ all_processed_dfs = []
 
 processvariables = {
     "overordnet": {
-        "chooseAll": False,
+        "chooseAll": True,
         "chooseFirst": True, #velger første i hver mappe
     },
     "filters": {
@@ -67,8 +67,8 @@ processvariables = {
         "PanelCondition": None #["reverse"]#, "reverse"],  # no, full, reverse, 
     }, 
     "prosessering": {
-        "total_reset": True, #laster også csv'ene på nytt
-        "force_recompute": True, #kjører alt på nytt, ignorerer gammal json
+        "total_reset": False, #laster også csv'ene på nytt
+        "force_recompute": False, #kjører alt på nytt, ignorerer gammal json
         "debug": False,
         "smoothing_window": 10, #kontrollere denne senere
         "find_range": True,
@@ -174,14 +174,14 @@ print("======== Amplituder P1234 PLOTTA ===========")
 
 #%% grouper - slår i hop
 from wavescripts.filters import damping_grouper
-damping_groupedruns_df, damping_pivot_wide = damping_grouper(m_filtrert)
+damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
 
 # %% damping variables initiert
 dampingplotvariables = {
-    "overordnet": 
-        {"chooseAll": False,
-                   "chooseFirst": False,
-                   "chooseFirstUnique": False,
+    "overordnet": {
+        "chooseAll": True,
+        "chooseFirst": False,
+        "chooseFirstUnique": False,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -396,7 +396,7 @@ old_plot_p2_vs_p3_scatter(band_amplitudes)
 
 # %% band bars looop
 from wavescripts.plotter import plot_p2_p3_bars
-plot_p2_p3_bars(band_amplitudes)
+# plot_p2_p3_bars(band_amplitudes)
 
 # %% seaborn plot med 3 swell facets, full, svak og null wind. 
 from wavescripts.plotter import plot_swell_p2_vs_p3_by_wind
@@ -431,8 +431,56 @@ sns.lineplot(
 # )
 
 # %%
+#igjen 
+nudampingplotvariables = {
+    "overordnet": {
+        "chooseAll": True, 
+        "chooseFirst": False,
+    }, 
+    "filters": {
+        "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
+        "WaveFrequencyInput [Hz]": [1.3],# 0.65], #bruk et tall  
+        "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
+        "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
+        "TunnelCondition": None,
+        #"Mooring": None,
+        "PanelCondition": ["no", "full", "reverse"], # no, full, reverse, 
+        
+    },
+    "processing": {
+        "chosenprobe": 1, #[1,2,3,4]
+        "rangestart": None,
+        "rangeend": None,
+        "data_cols": ["Probe 2"],
+        "win": 11 #Ingen av disse er egt i bruk
+    },
+    "plotting": {
+        "figsize": None,
+        "separate":False,
+        "facet_by": None, #wind, panel, probe 
+        "overlay": False,
+        "annotate": True, 
+        "legend": "outside_right", # inside, below, above #med mer!
+        "logaritmic": False, 
+        "peaks": 7, 
+        "probes": [1,2,3,4],
+    }   
+}
 
-df =damping_groupedruns_df
+
+m2_filtrert = filter_for_amplitude_plot(combined_meta_sel, nudampingplotvariables)
+
+df = damping_all_amplitude_grouper(m2_filtrert)
+
+# %% gemini
+from wavescripts.plotter import plot_damping_pro
+
+plot_damping_pro(df, dampingplotvariables)
+
+
+# %%
+
+
 # Palette mapping to reuse the same color for lines and error bars
 winds = df['WindCondition'].dropna().unique().tolist()
 palette = sns.color_palette('tab10', n_colors=len(winds))
@@ -490,6 +538,7 @@ plot_damping_combined(
     m_damping_filtrert,
     amplitudeplotvariables=amplitudeplotvariables
 )
+
 
 # %% todo: lage funksjon for å kjøre range_plot utenom prosessering
 
