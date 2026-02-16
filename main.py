@@ -132,10 +132,9 @@ if all_meta_sel:
 # Nå, hvordan beveger bølgen seg gjennom tanken. Vi kikker på den gjennomsnittlige bølgeamplituden sett ved hver av de fire måleprobene. I plottet under er avstandene mellom probene ikke korrekt representert, bare rekkefølgen. 
 # . - . 
 # %% fysisk plott
-chooseAll = False
 amplitudeplotvariables = {
     "overordnet": {
-        "chooseAll": True,
+        "chooseAll": False,
         "chooseFirst": False,
     },
     "filters": {
@@ -175,13 +174,15 @@ print("======== Amplituder P1234 PLOTTA ===========")
 
 #%% grouper - slår i hop
 from wavescripts.filters import damping_grouper
-damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
+damping_groupedruns_df, damping_pivot_wide = damping_grouper(m_filtrert)
 
 # %% damping variables initiert
-
-chooseAll = False
 dampingplotvariables = {
-    "overordnet": {"chooseAll": False}, 
+    "overordnet": 
+        {"chooseAll": False,
+                   "chooseFirst": False,
+                   "chooseFirstUnique": False,
+    }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3], #0.1, 0.2, 0.3 
         "WaveFrequencyInput [Hz]": [1.3, 0.65], #bruk et tall  
@@ -397,62 +398,12 @@ old_plot_p2_vs_p3_scatter(band_amplitudes)
 from wavescripts.plotter import plot_p2_p3_bars
 plot_p2_p3_bars(band_amplitudes)
 
-
-
-# %% Disse tre - laget av GPT er retardert
-from wavescripts.plotter import plot_swell_comparison_bars, plot_swell_comparison_scatter, plot_swell_delta
-
-plot_swell_comparison_scatter(band_amplitudes, freqplotvariables)
-
-plot_swell_comparison_bars(band_amplitudes, freqplotvariables)
-
-plot_swell_delta(band_amplitudes, freqplotvariables)
-
-# %%
-
+# %% seaborn plot med 3 swell facets, full, svak og null wind. 
 from wavescripts.plotter import plot_swell_p2_vs_p3_by_wind
 plot_swell_p2_vs_p3_by_wind(band_amplitudes, meta_sel)
 
-# %% damping
-
-
+# %% Kult plot med errorbands
 import seaborn as sns
-import matplotlib as plt
-xvar = "WaveFrequencyInput [Hz]"
-
-df = damping_groupedruns_df.copy()
-sns.set_theme(style='whitegrid')
-ax = sns.scatterplot(
-    data=df.sort_values(xvar),
-    x=xvar,
-    y='mean_P3P2',
-    hue='WindCondition',
-    style='PanelConditionGrouped',
-    markers=True
-)
-
-
-
-# %% damping wide
-
-
-wide = damping_pivot_wide
-print(wide.columns.tolist())
-
-mean_cols = [c for c in wide.columns if c.startswith("mean_P3P2_")]
-wide_means = wide[["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"] + mean_cols]
-
-mask = (
-    (wide["WaveAmplitudeInput [Volt]"] == 0.5)
-    & (wide["PanelConditionGrouped"] == "all")
-)
-row = wide.loc[mask]
-
-wide["delta_mean_P3P2_Windyyyy"] = (
-    wide["mean_P3P2_lowest"] - wide["mean_P3P2_full"]
-)
-# %% Kult plot med errorbar
-
 # stats has columns: WaveAmplitudeInput [Volt], PanelConditionGrouped, WindCondition, mean_P3P2, std_P3P2, ...
 sns.lineplot(
     data=damping_groupedruns_df,
@@ -461,17 +412,26 @@ sns.lineplot(
     hue='WindCondition',
     style='PanelConditionGrouped',
     marker='o',
-    # errorbar=None  # we already have std; seaborn would otherwise estimate from raw data
 )
+# %% damping wide - ikke i bruk
+# wide = damping_pivot_wide
+# print(wide.columns.tolist())
 
-# Add error bars manually using matplotlib if desired
-for (pc, w), g in damping_groupedruns_df.groupby(['PanelConditionGrouped', 'WindCondition']):
-    plt.errorbar(g['WaveAmplitudeInput [Volt]'], g['mean_P3P2'], yerr=g['std_P3P2'], fmt='none', alpha=0.3)
-plt.show()
+# mean_cols = [c for c in wide.columns if c.startswith("mean_P3P2_")]
+# wide_means = wide[["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"] + mean_cols]
+
+# mask = (
+#     (wide["WaveAmplitudeInput [Volt]"] == 0.5)
+#     & (wide["PanelConditionGrouped"] == "all")
+# )
+# row = wide.loc[mask]
+
+# wide["delta_mean_P3P2_Windyyyy"] = (
+#     wide["mean_P3P2_lowest"] - wide["mean_P3P2_full"]
+# )
 
 # %%
 
-import numpy as np
 df =damping_groupedruns_df
 # Palette mapping to reuse the same color for lines and error bars
 winds = df['WindCondition'].dropna().unique().tolist()
@@ -493,7 +453,7 @@ g = sns.FacetGrid(
 # Draw mean lines with markers
 g.map_dataframe(
     sns.lineplot,
-    x='WaveAmplitudeInput [Volt]',
+    x=GC.WAVE_AMPLITUDE_INPUT,
     y='mean_P3P2',
     marker='o',
     err_style=None  # disable seaborn’s internal error depiction
@@ -503,7 +463,7 @@ g.map_dataframe(
 for ax, (panel_cond, sub_panel) in zip(g.axes.flat, df.groupby('PanelConditionGrouped', sort=False)):
     for wind, sub in sub_panel.groupby('WindCondition', sort=False):
         ax.errorbar(
-            sub['WaveFrequencyInput [Hz]'],
+            sub[GC.WAVE_AMPLITUDE_INPUT],
             sub['mean_P3P2'],
             yerr=sub['std_P3P2'],
             fmt='none',
