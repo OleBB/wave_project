@@ -51,6 +51,7 @@ dataset_paths = [
 # Initialize containers for all results
 all_meta_sel = []
 all_processed_dfs = []
+all_fft_dicts = []  
 
 processvariables = {
     "overordnet": {
@@ -77,50 +78,64 @@ processvariables = {
 }
 #todo: bli enig om hva som er forskjellen på force recompute og full resett (tror dei e like no)? 
 # Loop through each dataset
+# Initialize collectors
+
 for i, data_path in enumerate(dataset_paths):
     print(f"\n{'='*50}")
     print(f"Processing dataset {i+1}/{len(dataset_paths)}: {data_path.name}")
     print(f"{'='*50}")
     try:
         prosessering = processvariables.get("prosessering", {})
-        total_reset =prosessering.get("total_reset", False)
+        total_reset = prosessering.get("total_reset", False)
         if total_reset:
             input("TOTAL RESET! press enter if you want to continue")
-        force =prosessering.get("force_recompute", False)
+        force = prosessering.get("force_recompute", False)
         dfs, meta = load_or_update(data_path, force_recompute=force, total_reset=total_reset)
         
-        print('# === Filter === #') #dette filteret er egentlig litt unøding, når jeg ønsker å prossesere hele sulamitten
+        print('# === Filter === #')
         meta_sel = filter_chosen_files(meta, processvariables)
         
         print('# === Single probe process === #')
         processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, meta_sel, meta, processvariables)
         
-        # print('# === FTT on each separate signal, saved to a dict of dfs')
-
-        
         print('# === Probe comparison processing === #')
         meta_sel = process_processed_data(psd_dictionary, fft_dictionary, meta_sel, meta, processvariables)
+        
+        # Collect results
         all_meta_sel.append(meta_sel)
         all_processed_dfs.append(processed_dfs)
+        all_fft_dicts.append(fft_dictionary)  # ← ADD THIS
+        
         print(f"Successfully processed {len(meta_sel)} selections from {data_path.name}")
         
     except Exception as e:
         print(f"Error processing {data_path.name}: {str(e)}")
         continue
+
 print(f"\n{'='*50}")
 print(f"PROCESSING COMPLETE - Total datasets processed: {len(all_meta_sel)}")
 print(f"Total selections across all datasets: {sum(len(sel) for sel in all_meta_sel)}")
 print(f"{'='*50}")
 
 if all_meta_sel:
+    # Combine metadata
     combined_meta_sel = pd.concat(all_meta_sel, ignore_index=True)
-    print("\nCombined meta_selections ready for analysis:")
-#     print(combined_meta_sel.head())
+    print("\nCombined meta_selections ready for analysis")
     
-    # You can now analyze the combined data
-    # For example:
-    # - Count selections by dataset
-    # - Analyze properties across all selections
+    # Combine FFT dictionaries
+    combined_fft_dict = {}
+    for fft_dict in all_fft_dicts:
+        combined_fft_dict.update(fft_dict)
+    
+    print(f"Combined FFT dictionary contains {len(combined_fft_dict)} experiments")
+    print(f"Combined metadata contains {len(combined_meta_sel)} rows")
+    
+    # Verify they match
+    fft_paths = set(combined_fft_dict.keys())
+    meta_paths = set(combined_meta_sel['path'].unique())
+    print(f"\nPaths in FFT dict: {len(fft_paths)}")
+    print(f"Unique paths in metadata: {len(meta_paths)}")
+    print(f"Matching paths: {len(fft_paths & meta_paths)}")
     # - Compare results between different datasets
 # """PRINT RESULTS"""
 # from wavescripts.wavestudyer import wind_damping_analysis
@@ -318,7 +333,7 @@ filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
 # %% plotter fft facet
 from wavescripts.plotter import plot_frequency_spectrum
 fig, axes = plot_frequency_spectrum(
-    fft_dictionary,
+    combined_fft_dict,
     filtrert_frequencies,
     freqplotvariables,
     data_type="fft"
@@ -475,58 +490,12 @@ df = damping_all_amplitude_grouper(m2_filtrert)
 # %% gemini
 from wavescripts.plotter import plot_damping_pro
 
-plot_damping_pro(df, dampingplotvariables)
-
-
-# %%
-
-
-# Palette mapping to reuse the same color for lines and error bars
-winds = df['WindCondition'].dropna().unique().tolist()
-palette = sns.color_palette('tab10', n_colors=len(winds))
-color_map = dict(zip(winds, palette))
-
-g = sns.FacetGrid(
-    data=df,
-    col='PanelConditionGrouped',
-    hue='WindCondition',
-    palette=color_map,
-    sharex=True,
-    sharey=True,
-    height=3.0,
-    aspect=1.2,
-    col_wrap=None  # set an int to wrap columns if you have many panels
-)
-
-# Draw mean lines with markers
-g.map_dataframe(
-    sns.lineplot,
-    x=GC.WAVE_AMPLITUDE_INPUT,
-    y='mean_P3P2',
-    marker='o',
-    err_style=None  # disable seaborn’s internal error depiction
-)
-
-# Add std error bars manually for each hue in each facet
-for ax, (panel_cond, sub_panel) in zip(g.axes.flat, df.groupby('PanelConditionGrouped', sort=False)):
-    for wind, sub in sub_panel.groupby('WindCondition', sort=False):
-        ax.errorbar(
-            sub[GC.WAVE_AMPLITUDE_INPUT],
-            sub['mean_P3P2'],
-            yerr=sub['std_P3P2'],
-            fmt='none',
-            capsize=3,
-            color=color_map[wind],
-            alpha=0.8
-        )
-
-g.add_legend(title='Wind')
-g.set_axis_labels('WaveAmplitudeInput [Volt]', 'mean P3/P2')
-g.set_titles(col_template='{col_name}')
+plot_damping_pro(df, nudampingplotvariables)
 
 
 
 # %% damping - facet damping plot 3 over hverandre basert på vind.
+# grei facet - men ellers meningsløs.. 
 from wavescripts.filters import filter_dataframe
 m_damping_filtrert = filter_dataframe(
     damping_groupedruns_df,
@@ -538,7 +507,6 @@ plot_damping_combined(
     m_damping_filtrert,
     amplitudeplotvariables=amplitudeplotvariables
 )
-
 
 # %% todo: lage funksjon for å kjøre range_plot utenom prosessering
 
@@ -557,9 +525,9 @@ hey = [CG.FFT_WAVENUMBER_COLS].copy()
 # %% FFT-SPEKTRUM  initiert
 freqplotvariables = {
     "overordnet": {
-        "chooseAll": True, 
+        "chooseAll": False, 
         "chooseFirst": False,
-        "chooseFirstUnique": True,
+        "chooseFirstUnique": False,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
@@ -594,7 +562,7 @@ freqplotvariables = {
         "legend": None, #"outside_right", # inside, below, above #med mer!
         "logaritmic": False, 
         "peaks": 3, 
-        "probes": [2,3]
+        "probes": [2,4]
     }   
 }
 #lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.
@@ -603,29 +571,52 @@ from wavescripts.filters import filter_for_frequencyspectrum
 filtrert_frequencies = filter_for_frequencyspectrum(combined_meta_sel, freqplotvariables)
 
 # %% kopiert fra oven plotter fft facet
-# from wavescripts.plotter import plot_frequency_spectrum
-# fig, axes = plot_frequency_spectrum()
-#     fft_dictionary,
-#     filtrert_frequencies,
-#     freqplotvariables,
-#     data_type="fft"
-# )
+from wavescripts.plotter import plot_frequency_spectrum
+fig, axes = plot_frequency_spectrum(
+    combined_fft_dict,
+    filtrert_frequencies,
+    freqplotvariables,
+    data_type="fft"
+)
 # TODO: lage plot av en typisk vindbølge,  rekonstruert med 1.3 hz og resten av bølgen. 
 # da er det vel lettest å ta en fft'dict - hente ut peak amp og freq. [mask], og ta resten anti-mask.
 
 # les av fft_dict -> les av tabell. loope probe 2 og 3. 
 # plotte probe 2 dekomponert. 
+# %%
 from wavescripts.plotter import plot_reconstructed
+# filtrer1 = filtrert_frequencies.iloc[0]
 
-fig, axes = plot_reconstructed(fft_dictionary, 
+fig, axes = plot_reconstructed(combined_fft_dict, 
                                filtrert_frequencies,
                                freqplotvariables,
                                data_type="fft")
+# %%
+fft_paths = set(combined_fft_dict.keys())
+meta_paths = set(combined_meta_sel['path'].unique())
+matching_paths = fft_paths & meta_paths
+
+# Create filtered versions
+filtered_fft_dict = {p: combined_fft_dict[p] for p in matching_paths}
+filtered_meta = combined_meta_sel[combined_meta_sel['path'].isin(matching_paths)]
+
+print(f"\nReady to plot {len(filtered_fft_dict)} experiments")
+
+# Plot a single experiment
+single_path = list(filtered_fft_dict.keys())[1]
+single_meta = filtered_meta[filtered_meta['path'] == single_path]
+
+fig, ax = plot_reconstructed(
+    {single_path: filtered_fft_dict[single_path]},
+    single_meta,
+    freqplotvariables
+)
 # %% med RMS for å sammenlikne amplitude med sann amplitude
+
 from wavescripts.plotter import plot_reconstructed_rms
 
 
-fig, axes = plot_reconstructed_rms(fft_dictionary, 
+fig, axes = plot_reconstructed_rms(combined_fft_dict, 
                                filtrert_frequencies,
                                freqplotvariables,
                                data_type="fft")
@@ -633,8 +624,8 @@ fig, axes = plot_reconstructed_rms(fft_dictionary,
 # %%
 
 # Debug: Check what your FFT data actually looks like
-paf = list(fft_dictionary.keys())[0]  # Get first path
-df_fft = fft_dictionary[paf]
+paf = list(combined_fft_dict.keys())[0]  # Get first path
+df_fft = combined_fft_dict[paf]
 
 print("FFT DataFrame info:")
 print(f"Shape: {df_fft.shape}")
