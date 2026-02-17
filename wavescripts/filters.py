@@ -271,7 +271,74 @@ def filter_for_frequencyspectrum(
             if cols_to_compare:
                 out = out.drop_duplicates(subset=cols_to_compare, keep="first")            
     return out
+# %%gemins forsøk på forbedring
 
+from typing import Any, Mapping
+import pandas as pd
+import numpy as np
+
+def apply_experimental_filters(
+    df: pd.DataFrame, 
+    criteria_dict: Mapping[str, Any]
+) -> pd.DataFrame:
+    
+    overordnet = criteria_dict.get("overordnet", {})
+    filters = criteria_dict.get("filters", criteria_dict)
+    
+    # 1. Handle Global Overrides
+    if overordnet.get("chooseAll", False):
+        print(">> Manual Override: [chooseAll] is True. Returning full dataset.")
+        return df.copy()
+    
+    if overordnet.get("chooseFirst", False):
+        print(">> Manual Override: [chooseFirst] is True. Returning index 0.")
+        return df.iloc[[0]].copy()
+
+    out = df.copy()
+    n_original = len(out)
+    print(f"\n--- Starting Filter Process ({n_original} rows) ---")
+
+    # 2. Sequential Filtering
+    for col, val in filters.items():
+        if val is None:
+            continue
+            
+        if col not in out.columns:
+            print(f"  [!] Skip: Column '{col}' not found in DataFrame.")
+            continue
+        
+        before = len(out)
+        
+        # Logic for 'all' bypass
+        if val == "all" or (isinstance(val, list) and "all" in [v.lower() if isinstance(v, str) else v for v in val]):
+            print(f"  [~] {col}: Set to 'all' -> No filter applied.")
+            continue
+
+        # Apply specific filters
+        if isinstance(val, tuple) and len(val) == 2:
+            low, high = val
+            out = out[(out[col] >= low) & (out[col] <= high)]
+            op = f"range({low} to {high})"
+        elif isinstance(val, (list, set, np.ndarray)):
+            out = out[out[col].isin(val)]
+            op = f"isin({val})"
+        else:
+            out = out[out[col] == val]
+            op = f"== {val}"
+
+        after = len(out)
+        print(f"  [✓] {col:.<25} {op:.<30} kept {after} rows (removed {before - after})")
+
+    # 3. Unique Check
+    if overordnet.get("chooseFirstUnique", False):
+        before_u = len(out)
+        cols_to_compare = [c for c in filters.keys() if c in out.columns and filters[c] is not None]
+        if cols_to_compare:
+            out = out.drop_duplicates(subset=cols_to_compare, keep="first")
+            print(f"  [✓] Unique: Dropped duplicates on {cols_to_compare} (removed {before_u - len(out)})")
+
+    print(f"--- Filter Final: {len(out)} rows remaining (Total removed: {n_original - len(out)}) ---\n")
+    return out
 # %% gpts forsøk på å forbedre filterne
 
 import re

@@ -184,6 +184,27 @@ WAVENUMBER = WavenumberParams()
 
 
 # =============================================================================
+# VISUALIZATION CONSTANTS
+# =============================================================================
+
+@dataclass(frozen=True)
+class PlottPent:
+    """Standardized color palette for different experimental conditions."""
+    WIND_FULL: str = "#D62728"   # Red
+    WIND_LOW: str = "#2ca02c"    # grøn
+    WIND_NO: str = "#3F51B5"     # Blue indigo
+    DEFAULT: str = "#7F7F7F"    # Grey
+
+# TIPS: Kjør bunnen av plotter.py for å se på fargene
+#  for plotter (Plotly/Matplotlib)
+WIND_COLOR_MAP: Dict[str, str] = {
+    "full": PlottPent.WIND_FULL,
+    "low": PlottPent.WIND_LOW,
+    "lowest": PlottPent.WIND_LOW,
+    "no": PlottPent.WIND_NO,
+}
+
+# =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
@@ -512,10 +533,6 @@ def validate_column_constants():
     assert len(ProcessedDataColumns.ALL_ETA) == MEASUREMENT.NUM_PROBES
     
     print("✓ All column constants validated")
-
-
-
-
 
 
 # =============================================================================
