@@ -24,20 +24,29 @@ from wavescripts.signal_processing import get_positive_spectrum
 
 from wavescripts.filters import filter_for_amplitude_plot
 
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QListWidget, 
+                              QVBoxLayout, QHBoxLayout, QWidget, QLabel)
+import sys
+import copy
+import plotly.express as px
+
+
 from wavescripts.constants import MEASUREMENT
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
     ProbeColumns as PC, 
     GlobalColumns as GC, 
     ColumnGroups as CG,
-    CalculationResultColumns as RC
+    CalculationResultColumns as RC,
+    PlottPent as PP
 )
+from wavescripts.constants import WIND_COLOR_MAP
 
-WIND_COLORS = {
-    "full": "red",
-    "no": "blue",
-    "lowest": "green"
-}
+# WIND_COLORS = {
+#     "full": "red",
+#     "no": "blue",
+#     "lowest": "green"
+# }
 
 def draw_anchored_text(ax, txt="Figuren", loc="upper left", fontsize=9,
                        facecolor="white", edgecolor="gray", alpha=0.85):
@@ -60,11 +69,11 @@ def draw_anchored_text(ax, txt="Figuren", loc="upper left", fontsize=9,
     ax.add_artist(at)
 
 
-WIND_COLORS = {
-    "full":"red",
-    "no": "blue",
-    "lowest":"green"
-}
+# WIND_COLORS = {
+#     "full":"red",
+#     "no": "blue",
+#     "lowest":"green"
+# }
 
 MARKERS = ['o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h', 
            '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4']
@@ -328,7 +337,7 @@ def plot_filtered(processed_dfs,
 
         # Color based on wind
         windcond = row["WindCondition"]
-        color = WIND_COLORS.get(windcond, "black")
+        color = WIND_COLOR_MAP.get(windcond, "black")
 
         # Linestyle based on panel condition
         panelcond = row["PanelCondition"]
@@ -386,7 +395,7 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
         
         # Color based on wind
         windcond = row["WindCondition"]
-        color = WIND_COLORS.get(windcond, "black")
+        color = WIND_COLOR_MAP.get(windcond, "black")
         
         # skip if this path isn't in processed_dfs/auto_ranges
         if path not in processed_dfs or path not in plot_ranges:
@@ -474,13 +483,13 @@ def plot_ramp_detection(df, meta_sel, data_col,
     # Optional: reference sine over the selected range
     # NOTE: time_ms is in milliseconds; the angular frequency below must be in rad/ms.
     # If you prefer Hz, convert to seconds and use 2*pi*f*t_sec instead.
-    amp_in = float(meta_sel["WaveAmplitudeInput [Volt]"])
-    amp = amp_in if amp_in is not None else 20
+    amp_in = float(meta_sel[GC.WAVE_AMPLITUDE_INPUT])
+    amp = amp_in if amp_in is not None else 0
 
     t_cut = time_ms[good_start_i:good_end_i]
 
     # Example sine using your form: sin(omega * t_ms), where omega is in rad/ms.
-    omega_rad_per_ms = 0.004 * 1.3  # adjust to your wave
+    omega_rad_per_ms = 0.004 * GC.WAVE_FREQUENCY_INPUT  # adjust to your wave
     sinewave = baseline_mean + (100.0 * amp) * np.sin(omega_rad_per_ms * t_cut)
 
     # Uncomment to draw the sine reference
@@ -612,6 +621,341 @@ def old_plot_ramp_detection(df, meta_sel, data_col,
     plt.grid(True, alpha=0.1)
     plt.tight_layout()"""
 
+# denne kjøres av klassen under.
+def gather_ramp_data(
+    dfs: dict,
+    combined_meta_sel: pd.DataFrame,
+    sigma_factor: float = SIGNAL.BASELINE_SIGMA_FACTOR
+) -> pd.DataFrame:
+    """
+    Gather all ramp detection data for all experiments and probes.
+    Returns a flat DataFrame with one row per (experiment × probe).
+    """
+    records = []
+    
+    for path, df in dfs.items():
+        # Get metadata for this experiment
+        meta_row = combined_meta_sel[combined_meta_sel[GC.PATH] == path]
+        if len(meta_row) == 0:
+            print(f"Skipping {Path(path).stem}: no metadata")
+            continue
+        meta_row = meta_row.iloc[0]
+        
+        for i in range(1, MEASUREMENT.NUM_PROBES + 1):
+            
+            # ── Column names from your constants ──────────────────
+            col_raw       = f"Probe {i}"                          # RawDataColumns
+            col_eta       = f"eta_{i}"                            # ProcessedDataColumns
+            col_ma        = f"Probe {i}_ma"                       # as seen in your df columns
+            col_stillwater = PC.STILLWATER.format(i=i)            # "Stillwater Probe {i}"
+            col_start     = PC.START.format(i=i)                  # "Computed Probe {i} start"
+            col_end       = PC.END.format(i=i)                    # "Computed Probe {i} end"
+            
+            # ── Check required columns exist ──────────────────────
+            if col_raw not in df.columns:
+                continue
+            if col_eta not in df.columns:
+                print(f"  Probe {i}: no eta column, skipping")
+                continue
+            
+            # ── Signals ───────────────────────────────────────────
+            raw    = df[col_raw].to_numpy()
+            signal = df[col_eta].to_numpy()         # eta: flipped + baseline subtracted
+            ma     = df[col_ma].to_numpy() if col_ma in df.columns else signal
+            
+            # ── Baseline from metadata ────────────────────────────
+            baseline_mean = meta_row.get(col_stillwater, 0.0)
+            # eta is already zeroed around stillwater, so baseline should be ~0
+            # but we keep it for the plot reference
+            
+            # ── Range indices from metadata ───────────────────────
+            good_start_idx = meta_row.get(col_start, None)
+            good_end_idx   = meta_row.get(col_end,   None)
+            
+            if good_start_idx is None or pd.isna(good_start_idx):
+                print(f"  {Path(path).stem} Probe {i}: no start index, skipping")
+                continue
+            if good_end_idx is None or pd.isna(good_end_idx):
+                print(f"  {Path(path).stem} Probe {i}: no end index, skipping")
+                continue
+            
+            good_start_idx = int(good_start_idx)
+            good_end_idx   = int(good_end_idx)
+            good_range     = good_end_idx - good_start_idx
+            
+            # ── Threshold from baseline region ────────────────────
+            # Use signal BEFORE good_start as the quiet/baseline region
+            n_baseline = min(good_start_idx, int(SIGNAL.BASELINE_DURATION_SEC * MEASUREMENT.SAMPLING_RATE))
+            baseline_region = signal[:n_baseline] if n_baseline > 10 else signal[:50]
+            baseline_std = np.std(baseline_region) if len(baseline_region) > 0 else 1.0
+            threshold    = sigma_factor * baseline_std
+            
+            # ── First motion index ────────────────────────────────
+            # First sample where eta exceeds threshold
+            exceeded = np.where(np.abs(signal) > threshold)[0]
+            first_motion_idx = int(exceeded[0]) if len(exceeded) > 0 else good_start_idx
+            
+            # ── Time axis ─────────────────────────────────────────
+            t0      = df['Date'].iat[0]
+            time_ms = (df['Date'] - t0).dt.total_seconds().to_numpy() * MEASUREMENT.M_TO_MM
+            
+            # ── Store record ──────────────────────────────────────
+            records.append({
+                # Identity
+                GC.PATH:        path,
+                'experiment':   Path(path).stem,
+                'probe':        i,
+                'data_col':     col_raw,
+                
+                # Conditions from metadata
+                GC.WIND_CONDITION:      meta_row.get(GC.WIND_CONDITION, 'unknown'),
+                GC.PANEL_CONDITION:     meta_row.get(GC.PANEL_CONDITION, 'unknown'),
+                GC.WAVE_FREQUENCY_INPUT: meta_row.get(GC.WAVE_FREQUENCY_INPUT, np.nan),
+                GC.WAVE_AMPLITUDE_INPUT: meta_row.get(GC.WAVE_AMPLITUDE_INPUT, np.nan),
+                
+                # Arrays
+                'time_ms':      time_ms,
+                'raw':          raw,
+                'signal':       signal,   # eta
+                'ma':           ma,
+                
+                # Scalars
+                'baseline_mean':    baseline_mean,
+                'baseline_std':     baseline_std,
+                'threshold':        threshold,
+                'first_motion_idx': first_motion_idx,
+                'good_start_idx':   good_start_idx,
+                'good_end_idx':     good_end_idx,
+                'good_range':       good_range,
+            })
+    
+    df_out = pd.DataFrame(records)
+    
+    print(f"\n{'='*50}")
+    print(f"Ramp data gathered:")
+    print(f"  Experiments: {df_out['experiment'].nunique()}")
+    print(f"  Probes:      {sorted(df_out['probe'].unique().tolist())}")
+    print(f"  Total rows:  {len(df_out)}")
+    print(f"  Missing start/end: skipped silently above")
+    print(f"{'='*50}")
+    
+    return df_out
+
+class RampDetectionBrowser(QMainWindow):
+    def __init__(self, ramp_df: pd.DataFrame):
+        super().__init__()
+        self.ramp_df = ramp_df
+        self.setWindowTitle("Ramp Detection Browser")
+        self.setGeometry(100, 100, 600, 900)
+        
+        central = QWidget()
+        self.setCentralWidget(central)
+        layout = QVBoxLayout(central)
+        
+        from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QCheckBox,
+                                      QGroupBox, QGridLayout, QDoubleSpinBox)
+        from PyQt5.QtCore import Qt
+        
+        # ── Data Filters ──────────────────────────────────────────
+        filter_box = QGroupBox("Data Filters")
+        filter_layout = QGridLayout()
+        
+        self.wind_filter = QComboBox()
+        self.wind_filter.addItems(["All wind"] +
+            sorted(ramp_df[GC.WIND_CONDITION].dropna().unique().tolist()))
+        
+        self.panel_filter = QComboBox()
+        self.panel_filter.addItems(["All panel"] +
+            sorted(ramp_df[GC.PANEL_CONDITION].dropna().unique().tolist()))
+        
+        self.freq_filter = QComboBox()
+        self.freq_filter.addItems(["All freq"] +
+            [str(f) for f in sorted(ramp_df[GC.WAVE_FREQUENCY_INPUT].dropna().unique())])
+        
+        self.amp_filter = QComboBox()
+        self.amp_filter.addItems(["All amp"] +
+            [str(a) for a in sorted(ramp_df[GC.WAVE_AMPLITUDE_INPUT].dropna().unique())])
+        
+        # Probe filter
+        self.probe_filter = QComboBox()
+        self.probe_filter.addItems(["All probes"] +
+            [f"Probe {p}" for p in sorted(ramp_df['probe'].unique())])
+        self.probe_filter.setCurrentText("Probe 2")  # default
+        
+        filter_layout.addWidget(QLabel("Wind:"),   0, 0)
+        filter_layout.addWidget(self.wind_filter,  0, 1)
+        filter_layout.addWidget(QLabel("Panel:"),  0, 2)
+        filter_layout.addWidget(self.panel_filter, 0, 3)
+        filter_layout.addWidget(QLabel("Freq:"),   1, 0)
+        filter_layout.addWidget(self.freq_filter,  1, 1)
+        filter_layout.addWidget(QLabel("Amp:"),    1, 2)
+        filter_layout.addWidget(self.amp_filter,   1, 3)
+        filter_layout.addWidget(QLabel("Probe:"),  2, 0)
+        filter_layout.addWidget(self.probe_filter, 2, 1)
+        filter_box.setLayout(filter_layout)
+        layout.addWidget(filter_box)
+        
+        # ── Plot Options ──────────────────────────────────────────
+        plot_box = QGroupBox("Plot Options")
+        plot_layout = QGridLayout()
+        
+        self.show_raw_check = QCheckBox("Show Raw Signal")
+        self.show_raw_check.setChecked(True)
+        plot_layout.addWidget(self.show_raw_check, 0, 0)
+        
+        self.show_ma_check = QCheckBox("Show Moving Average")
+        self.show_ma_check.setChecked(False)
+        plot_layout.addWidget(self.show_ma_check, 0, 1)
+        
+        self.show_sine_check = QCheckBox("Show Reference Sine")
+        self.show_sine_check.setChecked(True)
+        plot_layout.addWidget(self.show_sine_check, 0, 2)
+        
+        plot_layout.addWidget(QLabel("Zoom margin (mm):"), 1, 0)
+        self.zoom_spin = QDoubleSpinBox()
+        self.zoom_spin.setRange(1.0, 500.0)
+        self.zoom_spin.setValue(30.0)
+        self.zoom_spin.setSingleStep(5.0)
+        plot_layout.addWidget(self.zoom_spin, 1, 1)
+        
+        plot_box.setLayout(plot_layout)
+        layout.addWidget(plot_box)
+        
+        # ── Experiment list ───────────────────────────────────────
+        self.count_label = QLabel()
+        layout.addWidget(self.count_label)
+        
+        self.list_widget = QListWidget()
+        self.list_widget.currentRowChanged.connect(self.on_select)
+        layout.addWidget(self.list_widget)
+        
+        # ── Status ────────────────────────────────────────────────
+        self.status_label = QLabel("Ready - click an experiment to plot")
+        self.status_label.setStyleSheet("color: gray; font-style: italic;")
+        layout.addWidget(self.status_label)
+        
+        # Connect filters
+        for widget in [self.wind_filter, self.panel_filter,
+                       self.freq_filter, self.amp_filter, self.probe_filter]:
+            widget.currentTextChanged.connect(self.update_list)
+        
+        self.update_list()
+    
+    def update_list(self):
+        df = self.ramp_df.copy()
+        
+        wind  = self.wind_filter.currentText()
+        panel = self.panel_filter.currentText()
+        freq  = self.freq_filter.currentText()
+        amp   = self.amp_filter.currentText()
+        probe = self.probe_filter.currentText()
+        
+        if wind  != "All wind":   df = df[df[GC.WIND_CONDITION] == wind]
+        if panel != "All panel":  df = df[df[GC.PANEL_CONDITION] == panel]
+        if freq  != "All freq":   df = df[df[GC.WAVE_FREQUENCY_INPUT] == float(freq)]
+        if amp   != "All amp":    df = df[df[GC.WAVE_AMPLITUDE_INPUT] == float(amp)]
+        if probe != "All probes": df = df[df['probe'] == int(probe.split()[-1])]
+        
+        self.list_widget.clear()
+        self.current_rows = []
+        
+        for _, row in df.iterrows():
+            label = (
+                f"P{row['probe']} | "
+                f"{str(row[GC.WIND_CONDITION]):8s} | "
+                f"{str(row[GC.PANEL_CONDITION]):8s} | "
+                f"{row[GC.WAVE_FREQUENCY_INPUT]:.2f} Hz | "
+                f"{row[GC.WAVE_AMPLITUDE_INPUT]:.1f} V | "
+                f"{row['experiment'][-35:]}"
+            )
+            self.list_widget.addItem(label)
+            self.current_rows.append(row)
+        
+        self.count_label.setText(f"Showing {len(self.current_rows)} rows")
+    
+    def on_select(self, row_idx):
+        if row_idx < 0 or row_idx >= len(self.current_rows):
+            return
+        
+        # All data already pre-computed - just fetch the row!
+        row = self.current_rows[row_idx]
+        
+        self.status_label.setText(f"Plotting: {row['experiment']} | Probe {row['probe']}")
+        self.status_label.setStyleSheet("color: orange;")
+        
+        plt.close('all')
+        
+        try:
+            # Build a minimal df for plot_ramp_detection (needs Date column)
+            # We reconstruct it from time_ms
+            import pandas as pd
+            dummy_dates = pd.to_datetime(row['time_ms'], unit='ms')
+            df_plot = pd.DataFrame({
+                'Date': dummy_dates,
+                row['data_col']: row['raw'],
+            })
+            
+            fig, ax = plot_ramp_detection(
+                df            = df_plot,
+                meta_sel      = pd.Series({
+                    'path':                       row[GC.PATH],
+                    GC.WAVE_AMPLITUDE_INPUT:      row[GC.WAVE_AMPLITUDE_INPUT],
+                    GC.WAVE_FREQUENCY_INPUT:      row[GC.WAVE_FREQUENCY_INPUT],
+                }),
+                data_col      = row['data_col'],
+                signal        = row['signal'],        # eta
+                baseline_mean = row['baseline_mean'],
+                threshold     = row['threshold'],
+                first_motion_idx = row['first_motion_idx'],
+                good_start_idx   = row['good_start_idx'],
+                good_range       = row['good_range'],
+                good_end_idx     = row['good_end_idx'],
+                title         = f"Ramp – {row['experiment']} | Probe {row['probe']}"
+            )
+            
+            # Apply browser overrides
+            zoom = self.zoom_spin.value()
+            ax.set_ylim(row['baseline_mean'] - zoom, row['baseline_mean'] + zoom)
+            
+            # Toggle raw signal visibility
+            for line in ax.lines:
+                if line.get_label() == "Raw signal":
+                    line.set_visible(self.show_raw_check.isChecked())
+                if "Ref sine" in line.get_label():
+                    line.set_visible(self.show_sine_check.isChecked())
+            
+            # Optionally add MA signal
+            if self.show_ma_check.isChecked():
+                ax.plot(row['time_ms'], row['ma'],
+                        color='purple', linewidth=1.5,
+                        alpha=0.7, label='Moving average')
+                ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1))
+            
+            ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1))
+            fig.canvas.draw()
+            plt.show()
+            
+            self.status_label.setText(f"✓ {row['experiment']} | Probe {row['probe']}")
+            self.status_label.setStyleSheet("color: green;")
+            
+        except Exception as e:
+            import traceback
+            self.status_label.setText(f"✗ Plot failed: {e}")
+            self.status_label.setStyleSheet("color: red;")
+            traceback.print_exc()
+
+
+# # ── Usage ─────────────────────────────────────────────────────
+# import copy, sys
+# from PyQt5.QtWidgets import QApplication
+
+# # Compute once
+# ramp_df = gather_ramp_data(all_dfs, combined_meta_sel)
+
+# # Launch browser
+# app = QApplication.instance() or QApplication(sys.argv)
+# browser = RampDetectionBrowser(ramp_df)
+# browser.show()
 
 #%% physical probe plot
 def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
@@ -637,7 +981,7 @@ def plot_all_probes(meta_df :pd.DataFrame, ampvar:dict) -> None:
         #path = row["path"]
 
         windcond = row["WindCondition"]
-        colla = WIND_COLORS.get(windcond, "black")
+        colla = WIND_COLOR_MAP.get(windcond, "black")
         
         panelcond = row["PanelCondition"]
         linjestil = panel_styles.get(panelcond)
@@ -689,7 +1033,7 @@ def facet_plot_freq_vs_mean(df, ampvar):
         x=x,
         y='mean_P3P2',
         hue='WindCondition',          # color by condition
-        palette=WIND_COLORS,
+        palette=WIND_COLOR_MAP,
         style='PanelConditionGrouped',# differentiate panel
         style_order=["no", "all"],  
         col='WaveAmplitudeInput [Volt]',  # one column per amplitude
@@ -721,7 +1065,7 @@ def facet_plot_amp_vs_mean(df, ampvar):
         x=x,
         y='mean_P3P2',
         hue='WindCondition',          # color by condition
-        palette=WIND_COLORS,
+        palette=WIND_COLOR_MAP,
         style='PanelConditionGrouped',# differentiate panel
         style_order=["no", "all"],
         col='WaveFrequencyInput [Hz]',  # one column per amplitude
@@ -761,11 +1105,11 @@ def plot_damping_scatter(stats_df: pd.DataFrame,
         figsize: Figure size (width, height)
     """
     
-    WIND_COLORS = {
-        "full": "red",
-        "no": "blue",
-        "lowest": "green"
-    }
+    # WIND_COLORS = {
+    #     "full": "red",
+    #     "no": "blue",
+    #     "lowest": "green"
+    # }
     
     fig, ax = plt.subplots(figsize=figsize)
     sns.set_style("ticks", {'axes.grid': True})
@@ -779,7 +1123,7 @@ def plot_damping_scatter(stats_df: pd.DataFrame,
         'x': GC.WAVE_FREQUENCY_INPUT,
         'y': 'mean_P3P2',
         'hue': GC.WIND_CONDITION,
-        'palette': WIND_COLORS,
+        'palette': WIND_COLOR_MAP,
         'style': GC.PANEL_CONDITION_GROUPED,
         'style_order': ["no", "all"],
         'alpha': 0.7,
@@ -802,7 +1146,7 @@ def plot_damping_scatter(stats_df: pd.DataFrame,
         # Vectorized approach - much faster than loop
         for wind in plot_data[GC.WIND_CONDITION].unique():
             wind_data = plot_data[plot_data[GC.WIND_CONDITION] == wind]
-            color = WIND_COLORS.get(wind, 'gray')
+            color = WIND_COLOR_MAP.get(wind, 'gray')
             
             ax.errorbar(
                 wind_data[GC.WAVE_FREQUENCY_INPUT],
@@ -1022,11 +1366,11 @@ def plot_damping_combined(
         if err_col is not None:
             yerr = data[err_col].values
             ax.errorbar(x, y, yerr=yerr, fmt='o-', lw=1.5, ms=5, capsize=3,
-                        color=WIND_COLORS.get(label, None) if label is not None else None,
+                        color=WIND_COLOR_MAP.get(label, None) if label is not None else None,
                         label=label)
         else:
             ax.plot(x, y, 'o-', lw=1.5, ms=5,
-                    color=WIND_COLORS.get(label, None) if label is not None else None,
+                    color=WIND_COLOR_MAP.get(label, None) if label is not None else None,
                     label=label)
 
         if annotate:
@@ -1478,7 +1822,7 @@ def plot_frequency_spectrum(
             
             # Extract styling information
             windcond = row.get("WindCondition", "unknown")
-            colla = WIND_COLORS.get(windcond, "black")
+            colla = WIND_COLOR_MAP.get(windcond, "black")
             panelcond = row.get("PanelCondition", "unknown")
             linjestil = PANEL_STYLES.get(panelcond, "solid")
             peak_marker = MARKER_STYLES.get(windcond, ".")
@@ -1676,7 +2020,7 @@ def i_plot_reconstructed(fft_dict: dict,
             
             # Extract styling information
             windcond = row.get("WindCondition", "unknown")
-            colla = WIND_COLORS.get(windcond, "black")
+            colla = WIND_COLOR_MAP.get(windcond, "black")
             panelcond = row.get("PanelCondition", "unknown")
             linjestil = PANEL_STYLES.get(panelcond, "solid")
             peak_marker = MARKER_STYLES.get(windcond, ".")
@@ -1888,7 +2232,7 @@ def old_claude_plot_reconstructed(
             
             # Styling
             windcond = row.get("WindCondition", "unknown")
-            color = WIND_COLORS.get(windcond, "black")
+            color = WIND_COLOR_MAP.get(windcond, "black")
             panelcond = row.get("PanelCondition", "unknown")
             linestyle = PANEL_STYLES.get(panelcond, "-")
             
@@ -2095,11 +2439,11 @@ def plot_reconstructed(
     plotting = freqplotvariables.get("plotting", {})
     
     # Color/style mappings
-    WIND_COLORS = {
-        "full": "red",
-        "no": "blue",
-        "lowest": "green"
-    }
+    # WIND_COLORS = {
+    #     "full": "red",
+    #     "no": "blue",
+    #     "lowest": "green"
+    # }
     
     PANEL_STYLES = {
         "no": "-",
@@ -2145,7 +2489,7 @@ def plot_reconstructed(
     
     # Styling
     windcond = row.get("WindCondition", "unknown")
-    color_swell = WIND_COLORS.get(windcond, "black")
+    color_swell = WIND_COLOR_MAP.get(windcond, "black")
     color_wind = "darkred" if dual_yaxis else "orange"
     color_full = "gray"
     panelcond = row.get("PanelCondition", "unknown")
@@ -2419,11 +2763,11 @@ def non_facet_plot_reconstructed(
     plotting = freqplotvariables.get("plotting", {})
     
     # Color/style mappings
-    WIND_COLORS = {
-        "full": "red",
-        "no": "blue",
-        "lowest": "green"
-    }
+    # WIND_COLORS = {
+    #     "full": "red",
+    #     "no": "blue",
+    #     "lowest": "green"
+    # }
     
     PANEL_STYLES = {
         "no": "-",
@@ -2468,7 +2812,7 @@ def non_facet_plot_reconstructed(
     
     # Styling
     windcond = row.get("WindCondition", "unknown")
-    color_swell = WIND_COLORS.get(windcond, "black")
+    color_swell = WIND_COLOR_MAP.get(windcond, "black")
     color_wind = "darkred" if dual_yaxis else "orange"
     color_full = "gray"
     panelcond = row.get("PanelCondition", "unknown")
@@ -2779,7 +3123,7 @@ def old_plot_reconstructed(
             
             # Styling
             windcond = row.get("WindCondition", "unknown")
-            color_swell = GC.WIND_COLORS.get(windcond, "black")
+            color_swell = GC.WIND_COLOR_MAP.get(windcond, "black")
             color_wind = "darkred" if dual_yaxis else "orange"  # Different color for single axis
             color_full = "gray"
             panelcond = row.get("PanelCondition", "unknown")
@@ -3037,7 +3381,7 @@ def plot_reconstructed_rms(
             
             # Styling
             windcond = row.get("WindCondition", "unknown")
-            color_swell = WIND_COLORS.get(windcond, "black")
+            color_swell = WIND_COLOR_MAP.get(windcond, "black")
             color_wind = "darkred" if dual_yaxis else "orange"
             color_full = "gray"
             panelcond = row.get("PanelCondition", "unknown")
@@ -3278,6 +3622,205 @@ def plot_reconstructed_rms(
         print(f"{'='*80}\n")
     
     return fig, axes
+
+class SignalBrowserFiltered(QMainWindow):
+    def __init__(self, fft_dict, meta_df, plotvars):
+        super().__init__()
+        self.fft_dict = fft_dict
+        self.meta_df = meta_df
+        self.plotvars = copy.deepcopy(plotvars)  # Don't modify original!
+        self.setWindowTitle("Signal Browser")
+        self.setGeometry(100, 100, 550, 900)
+        
+        central = QWidget()
+        self.setCentralWidget(central)
+        layout = QVBoxLayout(central)
+        
+        from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QCheckBox, 
+                                      QGroupBox, QGridLayout)
+        
+        # ── Data Filters ────────────────────────────────────────
+        filter_box = QGroupBox("Data Filters")
+        filter_layout = QGridLayout()
+        
+        self.wind_filter = QComboBox()
+        self.wind_filter.addItems(["All wind"] + 
+            sorted(meta_df['WindCondition'].dropna().unique().tolist()))
+        
+        self.panel_filter = QComboBox()
+        self.panel_filter.addItems(["All panel"] + 
+            sorted(meta_df['PanelCondition'].dropna().unique().tolist()))
+        
+        self.freq_filter = QComboBox()
+        self.freq_filter.addItems(["All freq"] + 
+            [str(f) for f in sorted(meta_df['WaveFrequencyInput [Hz]'].dropna().unique())])
+        
+        self.amp_filter = QComboBox()
+        self.amp_filter.addItems(["All amp"] + 
+            [str(a) for a in sorted(meta_df['WaveAmplitudeInput [Volt]'].dropna().unique())])
+        
+        filter_layout.addWidget(QLabel("Wind:"),   0, 0)
+        filter_layout.addWidget(self.wind_filter,  0, 1)
+        filter_layout.addWidget(QLabel("Panel:"),  0, 2)
+        filter_layout.addWidget(self.panel_filter, 0, 3)
+        filter_layout.addWidget(QLabel("Freq:"),   1, 0)
+        filter_layout.addWidget(self.freq_filter,  1, 1)
+        filter_layout.addWidget(QLabel("Amp:"),    1, 2)
+        filter_layout.addWidget(self.amp_filter,   1, 3)
+        filter_box.setLayout(filter_layout)
+        layout.addWidget(filter_box)
+        
+        # ── Plot Options ─────────────────────────────────────────
+        plot_box = QGroupBox("Plot Options")
+        plot_layout = QGridLayout()
+        
+        # Probe checkboxes
+        plot_layout.addWidget(QLabel("Probes:"), 0, 0)
+        probe_layout = QHBoxLayout()
+        self.probe_checks = {}
+        current_probes = self.plotvars.get("plotting", {}).get("probes", [2, 3])
+        for p in [1, 2, 3, 4]:
+            cb = QCheckBox(f"P{p}")
+            cb.setChecked(p in current_probes)
+            self.probe_checks[p] = cb
+            probe_layout.addWidget(cb)
+        probe_widget = QWidget()
+        probe_widget.setLayout(probe_layout)
+        plot_layout.addWidget(probe_widget, 0, 1, 1, 3)
+        
+        # Dual y-axis toggle
+        self.dual_yaxis_check = QCheckBox("Dual Y-axis")
+        self.dual_yaxis_check.setChecked(
+            self.plotvars.get("plotting", {}).get("dual_yaxis", True))
+        plot_layout.addWidget(self.dual_yaxis_check, 1, 0, 1, 2)
+        
+        # Show full signal toggle
+        self.full_signal_check = QCheckBox("Show Full Signal")
+        self.full_signal_check.setChecked(
+            self.plotvars.get("plotting", {}).get("show_full_signal", False))
+        plot_layout.addWidget(self.full_signal_check, 1, 2, 1, 2)
+        
+        # Facet by probe toggle
+        self.facet_probe_check = QCheckBox("Facet by Probe")
+        self.facet_probe_check.setChecked(
+            self.plotvars.get("plotting", {}).get("facet_by") == "probe")
+        plot_layout.addWidget(self.facet_probe_check, 2, 0, 1, 2)
+        
+        # Amplitude stats toggle
+        self.amp_stats_check = QCheckBox("Show Amplitude Stats")
+        self.amp_stats_check.setChecked(
+            self.plotvars.get("plotting", {}).get("show_amplitude_stats", True))
+        plot_layout.addWidget(self.amp_stats_check, 2, 2, 1, 2)
+        
+        # Linewidth slider
+        from PyQt5.QtWidgets import QSlider
+        from PyQt5.QtCore import Qt
+        plot_layout.addWidget(QLabel("Linewidth:"), 3, 0)
+        self.lw_slider = QSlider(Qt.Horizontal)
+        self.lw_slider.setMinimum(1)
+        self.lw_slider.setMaximum(30)
+        self.lw_slider.setValue(int(
+            self.plotvars.get("plotting", {}).get("linewidth", 1.0) * 10))
+        self.lw_label = QLabel(f"{self.lw_slider.value() / 10:.1f}")
+        self.lw_slider.valueChanged.connect(
+            lambda v: self.lw_label.setText(f"{v/10:.1f}"))
+        plot_layout.addWidget(self.lw_slider, 3, 1, 1, 2)
+        plot_layout.addWidget(self.lw_label, 3, 3)
+        
+        plot_box.setLayout(plot_layout)
+        layout.addWidget(plot_box)
+        
+        # ── Experiment List ───────────────────────────────────────
+        self.count_label = QLabel()
+        layout.addWidget(self.count_label)
+        
+        self.list_widget = QListWidget()
+        self.list_widget.currentRowChanged.connect(self.on_select)
+        layout.addWidget(self.list_widget)
+        
+        # ── Connect filters ───────────────────────────────────────
+        self.wind_filter.currentTextChanged.connect(self.update_list)
+        self.panel_filter.currentTextChanged.connect(self.update_list)
+        self.freq_filter.currentTextChanged.connect(self.update_list)
+        self.amp_filter.currentTextChanged.connect(self.update_list)
+        
+        self.update_list()
+    
+    def get_selected_probes(self):
+        return [p for p, cb in self.probe_checks.items() if cb.isChecked()]
+    
+    def update_list(self):
+        """Filter and repopulate the list based on dropdowns."""
+        df = self.meta_df.copy()
+        
+        wind  = self.wind_filter.currentText()
+        panel = self.panel_filter.currentText()
+        freq  = self.freq_filter.currentText()
+        amp   = self.amp_filter.currentText()
+        
+        if wind  != "All wind":  df = df[df['WindCondition'] == wind]
+        if panel != "All panel": df = df[df['PanelCondition'] == panel]
+        if freq  != "All freq":  df = df[df['WaveFrequencyInput [Hz]'] == float(freq)]
+        if amp   != "All amp":   df = df[df['WaveAmplitudeInput [Volt]'] == float(amp)]
+        
+        df = df[df['path'].isin(self.fft_dict.keys())]
+        
+        self.list_widget.clear()
+        self.current_paths = []
+        
+        for _, row in df.iterrows():
+            path = row['path']
+            label = (
+                f"{str(row.get('WindCondition','?')):8s} | "
+                f"{str(row.get('PanelCondition','?')):8s} | "
+                f"{row.get('WaveFrequencyInput [Hz]', '?')} Hz | "
+                f"{row.get('WaveAmplitudeInput [Volt]', '?')} V | "
+                f"{Path(path).stem[-30:]}"  # Last 30 chars to show run info
+            )
+            self.list_widget.addItem(label)
+            self.current_paths.append(path)
+        
+        self.count_label.setText(f"Showing {len(self.current_paths)} experiments")
+    
+    def on_select(self, row_idx):
+        if row_idx < 0 or row_idx >= len(self.current_paths):
+            return
+        
+        path = self.current_paths[row_idx]
+        single_meta = self.meta_df[self.meta_df['path'] == path]
+        
+        if len(single_meta) == 0:
+            print(f"No metadata for {Path(path).name}")
+            return
+        
+        # ── Build plotvars from current toggle states ─────────────
+        plotvars = copy.deepcopy(self.plotvars)
+        plotting = plotvars.setdefault("plotting", {})
+        
+        plotting["probes"]             = self.get_selected_probes()
+        plotting["dual_yaxis"]         = self.dual_yaxis_check.isChecked()
+        plotting["show_full_signal"]   = self.full_signal_check.isChecked()
+        plotting["facet_by"]           = "probe" if self.facet_probe_check.isChecked() else None
+        plotting["show_amplitude_stats"] = self.amp_stats_check.isChecked()
+        plotting["linewidth"]          = self.lw_slider.value() / 10
+        plotting["grid"]               = True  # Always on
+        plotting["show_plot"]          = True
+        
+        print(f"\nPlotting: {Path(path).stem}")
+        print(f"  Probes: {plotting['probes']}")
+        print(f"  Dual Y: {plotting['dual_yaxis']}")
+        print(f"  Facet:  {plotting['facet_by']}")
+        
+        plt.close('all')
+        
+        plot_reconstructed(
+            {path: self.fft_dict[path]},
+            single_meta,
+            plotvars
+        )
+
+
+
 # %%
 from pathlib import Path
 from typing import Optional, Tuple
@@ -3398,7 +3941,7 @@ def plot_swell_p2_vs_p3_by_wind(
         y = sub[p3_col].values
 
         # Point color (use WIND_COLORS if defined)
-        color = WIND_COLORS.get(wind, "#1f77b4") if "WIND_COLORS" in globals() else "#1f77b4"
+        color = WIND_COLOR_MAP.get(wind, "#1f77b4") if "WIND_COLOR_MAP" in globals() else "#1f77b4"
 
         ax.scatter(
             x, y,
@@ -3483,11 +4026,11 @@ def plot_p2_vs_p3_scatter(meta_df: pd.DataFrame, filter_vars: dict):
     """
     
     # Color/style mappings
-    WIND_COLORS = {
-        "full": "red",
-        "no": "blue",
-        "lowest": "green"
-    }
+    # WIND_COLORS = {
+    #     "full": "red",
+    #     "no": "blue",
+    #     "lowest": "green"
+    # }
     
     PANEL_MARKERS = {
         "no": "o",
@@ -3618,7 +4161,7 @@ def plot_p2_vs_p3_scatter(meta_df: pd.DataFrame, filter_vars: dict):
                             p2[mask], 
                             p3[mask], 
                             alpha=0.7,
-                            color=WIND_COLORS.get(wind, 'gray'),
+                            color=WIND_COLOR_MAP.get(wind, 'gray'),
                             marker=PANEL_MARKERS.get(panel, 'o'),
                             s=80,
                             label=f'{wind}/{panel}',
@@ -3714,7 +4257,25 @@ def plot_p2_p3_bars(band_amplitudes):
         plt.tight_layout()
         plt.show()
 
+# %%
 
+def save_interactive_plot(df, filename="damping_analysis.html"):
+    # Create an interactive scatter/line plot
+    fig = px.line(
+        df, 
+        x="WaveFrequencyInput [Hz]", 
+        y="mean_P3P2", 
+        color=GC.WIND_CONDITION, # Use your constant here!
+        color_discrete_map=WIND_COLOR_MAP,   # Apply your palette!
+        error_y="std_P3P2",
+        hover_data=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
+        title="Interactive Damping Analysis",
+        markers=True
+    )
+    fig.write_html(filename)
+    print(f"Interactive story saved to {filename}")
+
+# Usage
 
 
 # %% hjelpemiddel
@@ -3749,9 +4310,43 @@ def plot_all_markers():
     
     plt.tight_layout()
     plt.show()
+    
+def plot_rgb():
+    # 1. DEFINE THE PALETTES
+    palettes = {
+        "Acid-Overkill (Today's Pick)": ["#D62728", "#A6D608", "#6200EA"], # Red, Acid Lime, Electric Violet
+        "Standard Science (D3)":       ["#d62728", "#2ca02c", "#1f77b4"], # Red, Forest Green, Steel Blue
+        "High-Visibility (Indigo)":    ["#E31A1C", "#33A02C", "#3F51B5"], # Red, Emerald, Indigo
+    }
+    
+    # 2. GENERATE DATA
+    x = np.linspace(0, 10, 200)
+    
+    plt.figure(figsize=(12, 8))
+    
+    # Loop through and plot each palette with an offset so they don't sit on top of each other
+    for i, (name, colors) in enumerate(palettes.items()):
+        offset = i * 2.5
+        # Full Wind
+        plt.plot(x, np.sin(x) + offset, color=colors[0], lw=3, label=f"{name} - Full")
+        # Lowest Wind
+        plt.plot(x, np.sin(x + 0.5) + offset - 0.5, color=colors[1], lw=3, label=f"{name} - Lowest")
+        # No Wind
+        plt.plot(x, np.sin(x + 1.0) + offset - 1.0, color=colors[2], lw=3, label=f"{name} - No")
+    
+    # 3. STYLING
+    plt.title("Comparison of Suggested Wind Condition Palettes", fontsize=15)
+    plt.yticks([]) # Hide Y values to focus on color contrast
+    plt.xlabel("X-Axis (Wavenumber / Frequency)")
+    plt.grid(True, axis='x', alpha=0.3)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
+    plt.tight_layout()
+    
+    plt.show()
 
 
 if __name__ == "__main__":
     print('main called')
     plot_all_markers()
+    plot_rgb
     #legg ved fleire hjelpefunksjoner

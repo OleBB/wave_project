@@ -21,7 +21,9 @@ from wavescripts.constants import (
     ProbeColumns as PC, 
     GlobalColumns as GC, 
     ColumnGroups as CG,
-    CalculationResultColumns as RC
+    CalculationResultColumns as RC,
+    PlottPent as PP,
+    WIND_COLOR_MAP
 )
 
 file_dir = Path(__file__).resolve().parent
@@ -56,7 +58,7 @@ all_fft_dicts = []
 processvariables = {
     "overordnet": {
         "chooseAll": True,
-        "chooseFirst": True, #velger første i hver mappe
+        "chooseFirst": False, #velger første i hver mappe
     },
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],  # 0.1, 0.2, 0.3 
@@ -76,19 +78,17 @@ processvariables = {
         "range_plot": False,    
     },
 }
-#todo: bli enig om hva som er forskjellen på force recompute og full resett (tror dei e like no)? 
-# Loop through each dataset
-# Initialize collectors
+
+prosessering = processvariables.get("prosessering", {})
+total_reset = prosessering.get("total_reset", False)
+if total_reset:
+    input("TOTAL RESET! press enter if you want to continue")
 
 for i, data_path in enumerate(dataset_paths):
     print(f"\n{'='*50}")
     print(f"Processing dataset {i+1}/{len(dataset_paths)}: {data_path.name}")
     print(f"{'='*50}")
     try:
-        prosessering = processvariables.get("prosessering", {})
-        total_reset = prosessering.get("total_reset", False)
-        if total_reset:
-            input("TOTAL RESET! press enter if you want to continue")
         force = prosessering.get("force_recompute", False)
         dfs, meta = load_or_update(data_path, force_recompute=force, total_reset=total_reset)
         
@@ -127,20 +127,36 @@ if all_meta_sel:
     for fft_dict in all_fft_dicts:
         combined_fft_dict.update(fft_dict)
     
+    #combine processed dicts
+    combined_processed_dfs = {}
+    for processed_dict in all_processed_dfs:
+        combined_processed_dfs.update(processed_dict)
+    
+    print(f"Combined processed dictionary contains {len(combined_processed_dfs)} experiments")
     print(f"Combined FFT dictionary contains {len(combined_fft_dict)} experiments")
     print(f"Combined metadata contains {len(combined_meta_sel)} rows")
-    
     # Verify they match
+    dfs_paths = set(combined_processed_dfs.keys())
     fft_paths = set(combined_fft_dict.keys())
     meta_paths = set(combined_meta_sel['path'].unique())
-    print(f"\nPaths in FFT dict: {len(fft_paths)}")
+    print(f"\nPaths in processed_dfs dict: {len(dfs_paths)}")
+    print(f"Paths in FFT dict: {len(fft_paths)}")
     print(f"Unique paths in metadata: {len(meta_paths)}")
     print(f"Matching paths: {len(fft_paths & meta_paths)}")
+    
+    del all_meta_sel, all_processed_dfs, all_fft_dicts, dfs, meta, meta_sel, processed_dfs, dfs_paths, fft_paths,meta_paths, i , 
+    import gc
+    gc.collect()
+    print("bosset e tatt ut")
+    
     # - Compare results between different datasets
 # """PRINT RESULTS"""
 # from wavescripts.wavestudyer import wind_damping_analysis
 # damping_analysis_results = wind_damping_analysis(combined_meta_sel)
 
+# %%
+# TOdo - sjekke ekte sample rate
+# todo - fjerne outliers
 
 
 # %% [markdown] 
@@ -151,15 +167,17 @@ amplitudeplotvariables = {
     "overordnet": {
         "chooseAll": False,
         "chooseFirst": False,
+        "chooseFirstUnique": False,
+        
     },
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1,0.2,0.3], #0.1, 0.2, 0.3 
-        "WaveFrequencyInput [Hz]": 1.3, #bruk et tall  
+        "WaveFrequencyInput [Hz]": [1.3, 0.65], #bruk et tall  
         "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
         "TunnelCondition": None,
         "Mooring": "low",
-        "PanelCondition": ["full", "reverse"], # no, full, reverse, 
+        "PanelCondition": ["full", "reverse", "no"], # no, full, reverse, 
         
     },
     "processing": {
@@ -178,10 +196,9 @@ amplitudeplotvariables = {
 }
 
 """unikt filter for å se på amplitudene sjæl"""
-from wavescripts.filters import filter_for_amplitude_plot
-m_filtrert = filter_for_amplitude_plot(combined_meta_sel, amplitudeplotvariables)
-
-# %% Plot_all_probes plotter alt den tar inn
+from wavescripts.filters import apply_experimental_filters
+m_filtrert = apply_experimental_filters(combined_meta_sel, amplitudeplotvariables)
+# Plot_all_probes plotter alt den tar inn
 from wavescripts.plotter import plot_all_probes
 plot_all_probes(m_filtrert, amplitudeplotvariables)
 print("======== Amplituder P1234 PLOTTA ===========")
@@ -189,6 +206,9 @@ print("======== Amplituder P1234 PLOTTA ===========")
 #%% grouper - slår i hop
 from wavescripts.filters import damping_grouper
 damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
+# %% lagrer en interaktiv fil som man kan leke med
+from wavescripts.plotter import save_interactive_plot
+save_interactive_plot(damping_groupedruns_df)
 
 # %% damping variables initiert
 dampingplotvariables = {
@@ -326,7 +346,7 @@ freqplotvariables = {
 #lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.
 
 from wavescripts.filters import filter_for_frequencyspectrum
-filtrert_frequencies = filter_for_frequencyspectrum(meta_sel, freqplotvariables)
+filtrert_frequencies = filter_for_frequencyspectrum(combined_meta_sel, freqplotvariables)
 
 
 # %% plotter fft facet
@@ -354,7 +374,7 @@ fig, axes = plot_frequency_spectrum(
 from wavescripts.filters import filter_for_amplitude_plot
 swellplotvariables = {
     "overordnet": {
-        "chooseAll": False, 
+        "chooseAll": True, 
         "chooseFirst": False,
         "chooseFirstUnique": True,
     }, 
@@ -617,335 +637,170 @@ fig, axes = plot_reconstructed_rms(combined_fft_dict,
                                freqplotvariables,
                                data_type="fft")
 # %%
+# from PyQt5.QtWidgets import (QApplication, QMainWindow, QListWidget, 
+#                               QVBoxLayout, QHBoxLayout, QWidget, QLabel)
+# import sys
+# class SignalBrowserFiltered(QMainWindow):
+#     def __init__(self, fft_dict, meta_df, plotvars):
+#         super().__init__()
+#         self.fft_dict = fft_dict
+#         self.meta_df = meta_df
+#         self.plotvars = plotvars
+#         self.setWindowTitle("Signal Browser")
+#         self.setGeometry(100, 100, 500, 900)
+        
+#         central = QWidget()
+#         self.setCentralWidget(central)
+#         layout = QVBoxLayout(central)
+        
+#         # ── Filter row ──────────────────────────
+#         from PyQt5.QtWidgets import QComboBox, QHBoxLayout
+#         filter_layout = QHBoxLayout()
+        
+#         self.wind_filter = QComboBox()
+#         self.wind_filter.addItems(["All wind"] + 
+#             sorted(meta_df['WindCondition'].dropna().unique().tolist()))
+        
+#         self.panel_filter = QComboBox()
+#         self.panel_filter.addItems(["All panel"] + 
+#             sorted(meta_df['PanelCondition'].dropna().unique().tolist()))
+        
+#         self.freq_filter = QComboBox()
+#         self.freq_filter.addItems(["All freq"] + 
+#             [str(f) for f in sorted(meta_df['WaveFrequencyInput [Hz]'].dropna().unique())])
+        
+#         self.amp_filter = QComboBox()
+#         self.amp_filter.addItems(["All amp"] + 
+#             [str(a) for a in sorted(meta_df['WaveAmplitudeInput [Volt]'].dropna().unique())])
+        
+#         filter_layout.addWidget(QLabel("Wind:"))
+#         filter_layout.addWidget(self.wind_filter)
+#         filter_layout.addWidget(QLabel("Panel:"))
+#         filter_layout.addWidget(self.panel_filter)
+#         filter_layout.addWidget(QLabel("Freq:"))
+#         filter_layout.addWidget(self.freq_filter)
+#         filter_layout.addWidget(QLabel("Amp:"))
+#         filter_layout.addWidget(self.amp_filter)
+#         layout.addLayout(filter_layout)
+        
+#         # Connect filters to update list
+#         self.wind_filter.currentTextChanged.connect(self.update_list)
+#         self.panel_filter.currentTextChanged.connect(self.update_list)
+#         self.freq_filter.currentTextChanged.connect(self.update_list)
+#         self.amp_filter.currentTextChanged.connect(self.update_list)
+        
+#         # Count label
+#         self.count_label = QLabel()
+#         layout.addWidget(self.count_label)
+        
+#         # Experiment list
+#         self.list_widget = QListWidget()
+#         self.list_widget.currentRowChanged.connect(self.on_select)
+#         layout.addWidget(self.list_widget)
+        
+#         # Initial population
+#         self.update_list()
+    
+#     def update_list(self):
+#         """Filter and repopulate the list based on dropdowns."""
+#         df = self.meta_df.copy()
+        
+#         # Apply filters
+#         wind = self.wind_filter.currentText()
+#         panel = self.panel_filter.currentText()
+#         freq = self.freq_filter.currentText()
+#         amp = self.amp_filter.currentText()
+        
+#         if wind != "All wind":
+#             df = df[df['WindCondition'] == wind]
+#         if panel != "All panel":
+#             df = df[df['PanelCondition'] == panel]
+#         if freq != "All freq":
+#             df = df[df['WaveFrequencyInput [Hz]'] == float(freq)]
+#         if amp != "All amp":
+#             df = df[df['WaveAmplitudeInput [Volt]'] == float(amp)]
+        
+#         # Only keep paths that exist in FFT dict
+#         df = df[df['path'].isin(self.fft_dict.keys())]
+        
+#         # Update list
+#         self.list_widget.clear()
+#         self.current_paths = []
+        
+#         for _, row in df.iterrows():
+#             path = row['path']
+#             label = (
+#                 f"{row.get('WindCondition','?'):8s} | "
+#                 f"{row.get('PanelCondition','?'):8s} | "
+#                 f"{row.get('WaveFrequencyInput [Hz]', '?')} Hz | "
+#                 f"{row.get('WaveAmplitudeInput [Volt]', '?')} V | "
+#                 f"run{Path(path).stem[-1]}"
+#             )
+#             self.list_widget.addItem(label)
+#             self.current_paths.append(path)
+        
+#         self.count_label.setText(f"Showing {len(self.current_paths)} experiments")
+    
+#     def on_select(self, row_idx):
+#         if row_idx < 0 or row_idx >= len(self.current_paths):
+#             return
+        
+#         path = self.current_paths[row_idx]
+#         single_meta = self.meta_df[self.meta_df['path'] == path]
+        
+#         print(f"\nPlotting: {Path(path).stem}")
+        
+#         plt.close('all')
+        
+#         plot_reconstructed(
+#             {path: self.fft_dict[path]},
+#             single_meta,
+#             self.plotvars
+#         )
+
+# # Launch
+# app = QApplication.instance() or QApplication(sys.argv)
+# browser = SignalBrowserFiltered(filtered_fft_dict, filtered_meta, freqplotvariables)
+# browser.show()
+# %% Kjør interaktiv plotter av dekomponert signal.
+# ── Launch ─────────────────────────────────────────────────────
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QListWidget, 
                               QVBoxLayout, QHBoxLayout, QWidget, QLabel)
 import sys
-class SignalBrowserFiltered(QMainWindow):
-    def __init__(self, fft_dict, meta_df, plotvars):
-        super().__init__()
-        self.fft_dict = fft_dict
-        self.meta_df = meta_df
-        self.plotvars = plotvars
-        self.setWindowTitle("Signal Browser")
-        self.setGeometry(100, 100, 500, 900)
-        
-        central = QWidget()
-        self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
-        
-        # ── Filter row ──────────────────────────
-        from PyQt5.QtWidgets import QComboBox, QHBoxLayout
-        filter_layout = QHBoxLayout()
-        
-        self.wind_filter = QComboBox()
-        self.wind_filter.addItems(["All wind"] + 
-            sorted(meta_df['WindCondition'].dropna().unique().tolist()))
-        
-        self.panel_filter = QComboBox()
-        self.panel_filter.addItems(["All panel"] + 
-            sorted(meta_df['PanelCondition'].dropna().unique().tolist()))
-        
-        self.freq_filter = QComboBox()
-        self.freq_filter.addItems(["All freq"] + 
-            [str(f) for f in sorted(meta_df['WaveFrequencyInput [Hz]'].dropna().unique())])
-        
-        self.amp_filter = QComboBox()
-        self.amp_filter.addItems(["All amp"] + 
-            [str(a) for a in sorted(meta_df['WaveAmplitudeInput [Volt]'].dropna().unique())])
-        
-        filter_layout.addWidget(QLabel("Wind:"))
-        filter_layout.addWidget(self.wind_filter)
-        filter_layout.addWidget(QLabel("Panel:"))
-        filter_layout.addWidget(self.panel_filter)
-        filter_layout.addWidget(QLabel("Freq:"))
-        filter_layout.addWidget(self.freq_filter)
-        filter_layout.addWidget(QLabel("Amp:"))
-        filter_layout.addWidget(self.amp_filter)
-        layout.addLayout(filter_layout)
-        
-        # Connect filters to update list
-        self.wind_filter.currentTextChanged.connect(self.update_list)
-        self.panel_filter.currentTextChanged.connect(self.update_list)
-        self.freq_filter.currentTextChanged.connect(self.update_list)
-        self.amp_filter.currentTextChanged.connect(self.update_list)
-        
-        # Count label
-        self.count_label = QLabel()
-        layout.addWidget(self.count_label)
-        
-        # Experiment list
-        self.list_widget = QListWidget()
-        self.list_widget.currentRowChanged.connect(self.on_select)
-        layout.addWidget(self.list_widget)
-        
-        # Initial population
-        self.update_list()
-    
-    def update_list(self):
-        """Filter and repopulate the list based on dropdowns."""
-        df = self.meta_df.copy()
-        
-        # Apply filters
-        wind = self.wind_filter.currentText()
-        panel = self.panel_filter.currentText()
-        freq = self.freq_filter.currentText()
-        amp = self.amp_filter.currentText()
-        
-        if wind != "All wind":
-            df = df[df['WindCondition'] == wind]
-        if panel != "All panel":
-            df = df[df['PanelCondition'] == panel]
-        if freq != "All freq":
-            df = df[df['WaveFrequencyInput [Hz]'] == float(freq)]
-        if amp != "All amp":
-            df = df[df['WaveAmplitudeInput [Volt]'] == float(amp)]
-        
-        # Only keep paths that exist in FFT dict
-        df = df[df['path'].isin(self.fft_dict.keys())]
-        
-        # Update list
-        self.list_widget.clear()
-        self.current_paths = []
-        
-        for _, row in df.iterrows():
-            path = row['path']
-            label = (
-                f"{row.get('WindCondition','?'):8s} | "
-                f"{row.get('PanelCondition','?'):8s} | "
-                f"{row.get('WaveFrequencyInput [Hz]', '?')} Hz | "
-                f"{row.get('WaveAmplitudeInput [Volt]', '?')} V | "
-                f"run{Path(path).stem[-1]}"
-            )
-            self.list_widget.addItem(label)
-            self.current_paths.append(path)
-        
-        self.count_label.setText(f"Showing {len(self.current_paths)} experiments")
-    
-    def on_select(self, row_idx):
-        if row_idx < 0 or row_idx >= len(self.current_paths):
-            return
-        
-        path = self.current_paths[row_idx]
-        single_meta = self.meta_df[self.meta_df['path'] == path]
-        
-        print(f"\nPlotting: {Path(path).stem}")
-        
-        plt.close('all')
-        
-        plot_reconstructed(
-            {path: self.fft_dict[path]},
-            single_meta,
-            self.plotvars
-        )
-
-# Launch
+from wavescripts.plotter import SignalBrowserFiltered
 app = QApplication.instance() or QApplication(sys.argv)
 browser = SignalBrowserFiltered(filtered_fft_dict, filtered_meta, freqplotvariables)
+browser.show()
+
+# %%
+
+
+
+# %%
+
+from wavescripts.plotter import gather_ramp_data
+from wavescripts.plotter import plot_ramp_detection
+from wavescripts.plotter import RampDetectionBrowser
+
+# ── Launch ────────────────────────────────────────────────────
+import copy
+import sys
+from PyQt5.QtWidgets import QApplication
+
+# Compute once
+combined_processed_dfs = {}
+for processed_dict in all_processed_dfs:
+    combined_processed_dfs.update(processed_dict)
+
+ramp_df = gather_ramp_data(combined_processed_dfs, combined_meta_sel)
+
+# Launch browser
+app = QApplication.instance() or QApplication(sys.argv)
+browser = RampDetectionBrowser(ramp_df)
 browser.show()
 # %%
 
-class SignalBrowserFiltered(QMainWindow):
-    def __init__(self, fft_dict, meta_df, plotvars):
-        super().__init__()
-        self.fft_dict = fft_dict
-        self.meta_df = meta_df
-        self.plotvars = copy.deepcopy(plotvars)  # Don't modify original!
-        self.setWindowTitle("Signal Browser")
-        self.setGeometry(100, 100, 550, 900)
-        
-        central = QWidget()
-        self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
-        
-        from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QCheckBox, 
-                                      QGroupBox, QGridLayout)
-        
-        # ── Data Filters ────────────────────────────────────────
-        filter_box = QGroupBox("Data Filters")
-        filter_layout = QGridLayout()
-        
-        self.wind_filter = QComboBox()
-        self.wind_filter.addItems(["All wind"] + 
-            sorted(meta_df['WindCondition'].dropna().unique().tolist()))
-        
-        self.panel_filter = QComboBox()
-        self.panel_filter.addItems(["All panel"] + 
-            sorted(meta_df['PanelCondition'].dropna().unique().tolist()))
-        
-        self.freq_filter = QComboBox()
-        self.freq_filter.addItems(["All freq"] + 
-            [str(f) for f in sorted(meta_df['WaveFrequencyInput [Hz]'].dropna().unique())])
-        
-        self.amp_filter = QComboBox()
-        self.amp_filter.addItems(["All amp"] + 
-            [str(a) for a in sorted(meta_df['WaveAmplitudeInput [Volt]'].dropna().unique())])
-        
-        filter_layout.addWidget(QLabel("Wind:"),   0, 0)
-        filter_layout.addWidget(self.wind_filter,  0, 1)
-        filter_layout.addWidget(QLabel("Panel:"),  0, 2)
-        filter_layout.addWidget(self.panel_filter, 0, 3)
-        filter_layout.addWidget(QLabel("Freq:"),   1, 0)
-        filter_layout.addWidget(self.freq_filter,  1, 1)
-        filter_layout.addWidget(QLabel("Amp:"),    1, 2)
-        filter_layout.addWidget(self.amp_filter,   1, 3)
-        filter_box.setLayout(filter_layout)
-        layout.addWidget(filter_box)
-        
-        # ── Plot Options ─────────────────────────────────────────
-        plot_box = QGroupBox("Plot Options")
-        plot_layout = QGridLayout()
-        
-        # Probe checkboxes
-        plot_layout.addWidget(QLabel("Probes:"), 0, 0)
-        probe_layout = QHBoxLayout()
-        self.probe_checks = {}
-        current_probes = self.plotvars.get("plotting", {}).get("probes", [2, 3])
-        for p in [1, 2, 3, 4]:
-            cb = QCheckBox(f"P{p}")
-            cb.setChecked(p in current_probes)
-            self.probe_checks[p] = cb
-            probe_layout.addWidget(cb)
-        probe_widget = QWidget()
-        probe_widget.setLayout(probe_layout)
-        plot_layout.addWidget(probe_widget, 0, 1, 1, 3)
-        
-        # Dual y-axis toggle
-        self.dual_yaxis_check = QCheckBox("Dual Y-axis")
-        self.dual_yaxis_check.setChecked(
-            self.plotvars.get("plotting", {}).get("dual_yaxis", True))
-        plot_layout.addWidget(self.dual_yaxis_check, 1, 0, 1, 2)
-        
-        # Show full signal toggle
-        self.full_signal_check = QCheckBox("Show Full Signal")
-        self.full_signal_check.setChecked(
-            self.plotvars.get("plotting", {}).get("show_full_signal", False))
-        plot_layout.addWidget(self.full_signal_check, 1, 2, 1, 2)
-        
-        # Facet by probe toggle
-        self.facet_probe_check = QCheckBox("Facet by Probe")
-        self.facet_probe_check.setChecked(
-            self.plotvars.get("plotting", {}).get("facet_by") == "probe")
-        plot_layout.addWidget(self.facet_probe_check, 2, 0, 1, 2)
-        
-        # Amplitude stats toggle
-        self.amp_stats_check = QCheckBox("Show Amplitude Stats")
-        self.amp_stats_check.setChecked(
-            self.plotvars.get("plotting", {}).get("show_amplitude_stats", True))
-        plot_layout.addWidget(self.amp_stats_check, 2, 2, 1, 2)
-        
-        # Linewidth slider
-        from PyQt5.QtWidgets import QSlider
-        from PyQt5.QtCore import Qt
-        plot_layout.addWidget(QLabel("Linewidth:"), 3, 0)
-        self.lw_slider = QSlider(Qt.Horizontal)
-        self.lw_slider.setMinimum(1)
-        self.lw_slider.setMaximum(30)
-        self.lw_slider.setValue(int(
-            self.plotvars.get("plotting", {}).get("linewidth", 1.0) * 10))
-        self.lw_label = QLabel(f"{self.lw_slider.value() / 10:.1f}")
-        self.lw_slider.valueChanged.connect(
-            lambda v: self.lw_label.setText(f"{v/10:.1f}"))
-        plot_layout.addWidget(self.lw_slider, 3, 1, 1, 2)
-        plot_layout.addWidget(self.lw_label, 3, 3)
-        
-        plot_box.setLayout(plot_layout)
-        layout.addWidget(plot_box)
-        
-        # ── Experiment List ───────────────────────────────────────
-        self.count_label = QLabel()
-        layout.addWidget(self.count_label)
-        
-        self.list_widget = QListWidget()
-        self.list_widget.currentRowChanged.connect(self.on_select)
-        layout.addWidget(self.list_widget)
-        
-        # ── Connect filters ───────────────────────────────────────
-        self.wind_filter.currentTextChanged.connect(self.update_list)
-        self.panel_filter.currentTextChanged.connect(self.update_list)
-        self.freq_filter.currentTextChanged.connect(self.update_list)
-        self.amp_filter.currentTextChanged.connect(self.update_list)
-        
-        self.update_list()
-    
-    def get_selected_probes(self):
-        return [p for p, cb in self.probe_checks.items() if cb.isChecked()]
-    
-    def update_list(self):
-        """Filter and repopulate the list based on dropdowns."""
-        df = self.meta_df.copy()
-        
-        wind  = self.wind_filter.currentText()
-        panel = self.panel_filter.currentText()
-        freq  = self.freq_filter.currentText()
-        amp   = self.amp_filter.currentText()
-        
-        if wind  != "All wind":  df = df[df['WindCondition'] == wind]
-        if panel != "All panel": df = df[df['PanelCondition'] == panel]
-        if freq  != "All freq":  df = df[df['WaveFrequencyInput [Hz]'] == float(freq)]
-        if amp   != "All amp":   df = df[df['WaveAmplitudeInput [Volt]'] == float(amp)]
-        
-        df = df[df['path'].isin(self.fft_dict.keys())]
-        
-        self.list_widget.clear()
-        self.current_paths = []
-        
-        for _, row in df.iterrows():
-            path = row['path']
-            label = (
-                f"{str(row.get('WindCondition','?')):8s} | "
-                f"{str(row.get('PanelCondition','?')):8s} | "
-                f"{row.get('WaveFrequencyInput [Hz]', '?')} Hz | "
-                f"{row.get('WaveAmplitudeInput [Volt]', '?')} V | "
-                f"{Path(path).stem[-30:]}"  # Last 30 chars to show run info
-            )
-            self.list_widget.addItem(label)
-            self.current_paths.append(path)
-        
-        self.count_label.setText(f"Showing {len(self.current_paths)} experiments")
-    
-    def on_select(self, row_idx):
-        if row_idx < 0 or row_idx >= len(self.current_paths):
-            return
-        
-        path = self.current_paths[row_idx]
-        single_meta = self.meta_df[self.meta_df['path'] == path]
-        
-        if len(single_meta) == 0:
-            print(f"No metadata for {Path(path).name}")
-            return
-        
-        # ── Build plotvars from current toggle states ─────────────
-        plotvars = copy.deepcopy(self.plotvars)
-        plotting = plotvars.setdefault("plotting", {})
-        
-        plotting["probes"]             = self.get_selected_probes()
-        plotting["dual_yaxis"]         = self.dual_yaxis_check.isChecked()
-        plotting["show_full_signal"]   = self.full_signal_check.isChecked()
-        plotting["facet_by"]           = "probe" if self.facet_probe_check.isChecked() else None
-        plotting["show_amplitude_stats"] = self.amp_stats_check.isChecked()
-        plotting["linewidth"]          = self.lw_slider.value() / 10
-        plotting["grid"]               = True  # Always on
-        plotting["show_plot"]          = True
-        
-        print(f"\nPlotting: {Path(path).stem}")
-        print(f"  Probes: {plotting['probes']}")
-        print(f"  Dual Y: {plotting['dual_yaxis']}")
-        print(f"  Facet:  {plotting['facet_by']}")
-        
-        plt.close('all')
-        
-        plot_reconstructed(
-            {path: self.fft_dict[path]},
-            single_meta,
-            plotvars
-        )
 
-
-# ── Launch ─────────────────────────────────────────────────────
-import copy
-app = QApplication.instance() or QApplication(sys.argv)
-browser = SignalBrowserFiltered(filtered_fft_dict, filtered_meta, freqplotvariables)
-browser.show()
 # %% debug som fant ut at noen runs ikke har Wave, så de filtreres ut 
 # # Debug: Check what your FFT data actually looks like
 # paf = list(combined_fft_dict.keys())[0]  # Get first path
