@@ -24,6 +24,7 @@ from wavescripts.constants import (
     CalculationResultColumns as RC,
     PlottPent as PP,
     WIND_COLOR_MAP
+
 )
 
 file_dir = Path(__file__).resolve().parent
@@ -209,6 +210,8 @@ damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
 # %% lagrer en interaktiv fil som man kan leke med
 from wavescripts.plotter import save_interactive_plot
 save_interactive_plot(damping_groupedruns_df)
+# %%
+
 
 # %% damping variables initiert
 dampingplotvariables = {

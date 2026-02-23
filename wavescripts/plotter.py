@@ -2662,7 +2662,7 @@ def plot_reconstructed(
             ax_swell.plot(
                 time_axis, signal_swell,
                 linewidth=linewidth * 1.5,
-                label=f"{label_prefix}swell ({actual_freq:.2f}Hz)",
+                label=f"{label_prefix}swell ({actual_freq:.6f}Hz)",
                 linestyle=linestyle,
                 color=color_swell,
                 alpha=0.9,
@@ -2726,7 +2726,7 @@ def plot_reconstructed(
             ax_wind.axhline(0, color='darkred', linewidth=0.5, alpha=0.2, zorder=0)
     
     # Overall title
-    overall_title = f"{Path(path).stem}\n{windcond} wind / {panelcond} panel / {target_freq:.3f} Hz"
+    overall_title = f"{Path(path).stem}\n{windcond} wind / {panelcond} panel / {target_freq:.5f} Hz"
     plt.suptitle(overall_title, fontsize=fontsize + 3, fontweight='bold', y=0.995)
     
     plt.tight_layout()
@@ -2953,7 +2953,7 @@ def non_facet_plot_reconstructed(
         ax_swell.plot(
             time_axis, signal_swell,
             linewidth=linewidth * 1.5,
-            label=f"{probe_label} swell ({actual_freq:.2f}Hz)",
+            label=f"{probe_label} swell ({actual_freq:.5f}Hz)",
             linestyle=linestyle,
             color=color_swell,
             alpha=0.9,
@@ -2972,7 +2972,7 @@ def non_facet_plot_reconstructed(
         )
     
     # Formatting
-    title = f"{Path(path).stem}\n{windcond} wind / {panelcond} panel / {target_freq:.3f} Hz"
+    title = f"{Path(path).stem}\n{windcond} wind / {panelcond} panel / {target_freq:.2f} Hz"
     ax_swell.set_title(title, fontsize=fontsize + 2, fontweight='bold', pad=20)
     ax_swell.set_xlabel('Time (s)', fontsize=fontsize)
     
@@ -4275,8 +4275,6 @@ def save_interactive_plot(df, filename="damping_analysis.html"):
     fig.write_html(filename)
     print(f"Interactive story saved to {filename}")
 
-# Usage
-
 
 # %% hjelpemiddel
 """Plott alle markører"""
@@ -4348,5 +4346,5 @@ def plot_rgb():
 if __name__ == "__main__":
     print('main called')
     plot_all_markers()
-    plot_rgb
+    plot_rgb()
     #legg ved fleire hjelpefunksjoner
