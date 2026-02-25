@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 
 # --- USER SETTINGS ---
-ein_folder = r"/Users/ole/Kodevik/wave_project/pressuredata/20251107-lowestwindUP2-allpanel-angleTest"
+ein_folder = r"/Users/ole/Kodevik/wave_project/pressuredata/20251107-fullwindUP2-allpanel-angleTest"
 
 angle_pattern = re.compile(r"ang(\d+)", re.IGNORECASE)
 
@@ -52,7 +52,8 @@ fig, ax = plt.subplots(figsize=(8, 6))
 
 angles, means, labels = process_files(ein_folder)
 
-ax.scatter(means, angles)
+colors = ["tab:orange" if "run2" in lab.lower() else "tab:blue" for lab in labels]
+ax.scatter(means, angles, c=colors)
 
 
 
@@ -66,6 +67,10 @@ for a, m, lab in zip(means, angles, labels):
 ax.set_xlabel("Angle")
 ax.set_ylabel("Mean pressure")
 
+import matplotlib.patches as mpatches
+patch1 = mpatches.Patch(color="tab:blue", label="Run 1")
+patch2 = mpatches.Patch(color="tab:orange", label="Run 2")
+ax.legend(handles=[patch1, patch2])
 
 
 ax.set_ylabel("Angle in degrees")
@@ -79,3 +84,5 @@ ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=10))     # Set number of bins/t
 #ax.legend(title="Folder")
 #plt.tight_layout()
 plt.show()
+# %%
+
