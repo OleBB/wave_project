@@ -9,8 +9,8 @@ Created on Fri Dec 19 10:21:49 2025
 import os
 from pathlib import Path
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+import copy
+import sys
 
 from wavescripts.improved_data_loader import load_or_update
 from wavescripts.filters import filter_chosen_files
@@ -27,6 +27,43 @@ from wavescripts.constants import (
 
 )
 
+
+from PyQt5.QtWidgets import QApplication
+
+# ── Filters ───────────────────────────────────────────────────────────────────
+from wavescripts.filters import (
+    apply_experimental_filters,
+    damping_grouper,
+    damping_all_amplitude_grouper,
+    filter_dataframe,
+    filter_for_amplitude_plot,
+    filter_for_damping,
+    filter_for_frequencyspectrum,
+)
+
+# ── Thesis plots ──────────────────────────────────────────────────────────────
+from wavescripts.plotter import (
+    gather_ramp_data,
+    plot_all_probes,
+    plot_damping_freq,
+    plot_damping_scatter,
+    plot_frequency_spectrum,
+    plot_ramp_detection,
+    plot_reconstructed,
+    plot_reconstructed_rms,
+    plot_swell_scatter,
+)
+
+# ── Quicklook / exploration ───────────────────────────────────────────────────
+from wavescripts.plot_quicklook import (
+    explore_damping_vs_amp,
+    explore_damping_vs_freq,
+    RampDetectionBrowser,
+    save_interactive_plot,
+    SignalBrowserFiltered,
+)
+
+# %%
 file_dir = Path(__file__).resolve().parent
 os.chdir(file_dir) # Make the script always run from the folder where THIS file lives
 
@@ -46,15 +83,17 @@ dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
-    
+
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
     
 ]
+
 #%% kjør
 # Initialize containers for all results
 all_meta_sel = []
 all_processed_dfs = []
 all_fft_dicts = []  
+all_psd_dicts = []  
 
 processvariables = {
     "overordnet": {
@@ -105,7 +144,8 @@ for i, data_path in enumerate(dataset_paths):
         # Collect results
         all_meta_sel.append(meta_sel)
         all_processed_dfs.append(processed_dfs)
-        all_fft_dicts.append(fft_dictionary)  # ← ADD THIS
+        all_fft_dicts.append(fft_dictionary)
+        all_psd_dicts.append(psd_dictionary)
         
         print(f"Successfully processed {len(meta_sel)} selections from {data_path.name}")
         
@@ -127,11 +167,19 @@ if all_meta_sel:
     combined_fft_dict = {}
     for fft_dict in all_fft_dicts:
         combined_fft_dict.update(fft_dict)
+        
+    # Combine psd dictionaries
+    combined_psd_dict = {}
+    for psd_dict in all_psd_dicts:
+        combined_psd_dict.update(psd_dict)
     
     #combine processed dicts
     combined_processed_dfs = {}
     for processed_dict in all_processed_dfs:
         combined_processed_dfs.update(processed_dict)
+        
+  
+        
     
     print(f"Combined processed dictionary contains {len(combined_processed_dfs)} experiments")
     print(f"Combined FFT dictionary contains {len(combined_fft_dict)} experiments")
@@ -145,7 +193,7 @@ if all_meta_sel:
     print(f"Unique paths in metadata: {len(meta_paths)}")
     print(f"Matching paths: {len(fft_paths & meta_paths)}")
     
-    del all_meta_sel, all_processed_dfs, all_fft_dicts, dfs, meta, meta_sel, processed_dfs, dfs_paths, fft_paths,meta_paths, i , 
+    del all_meta_sel, all_processed_dfs, all_fft_dicts, all_psd_dicts, dfs, meta, meta_sel, processed_dfs, dfs_paths, fft_paths,meta_paths 
     import gc
     gc.collect()
     print("bosset e tatt ut")
@@ -159,7 +207,7 @@ if all_meta_sel:
 # TOdo - sjekke ekte sample rate
 # todo - fjerne outliers
 
-# %%
+
 
 # %% [markdown] 
 # Nå, hvordan beveger bølgen seg gjennom tanken. Vi kikker på den gjennomsnittlige bølgeamplituden sett ved hver av de fire måleprobene. I plottet under er avstandene mellom probene ikke korrekt representert, bare rekkefølgen. 
@@ -198,19 +246,16 @@ amplitudeplotvariables = {
 }
 
 """unikt filter for å se på amplitudene sjæl"""
-from wavescripts.filters import apply_experimental_filters
 m_filtrert = apply_experimental_filters(combined_meta_sel, amplitudeplotvariables)
 # Plot_all_probes plotter alt den tar inn
-from wavescripts.plotter import plot_all_probes
 plot_all_probes(m_filtrert, amplitudeplotvariables)
 print("======== Amplituder P1234 PLOTTA ===========")
 
 #%% grouper - slår i hop
-from wavescripts.filters import damping_grouper
 damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta_sel)
 # %% lagrer en interaktiv fil som man kan leke med
-from wavescripts.plotter import save_interactive_plot
 save_interactive_plot(damping_groupedruns_df)
+print("tøff interaktiv greie i nettleser")
 # %%
 
 
@@ -246,16 +291,18 @@ dampingplotvariables = {
     }   
 }
 
-from wavescripts.filters import filter_for_damping
 damping_filtrert = filter_for_damping(damping_groupedruns_df, dampingplotvariables["filters"])
 
 # %% plotting damping frequencies seaborn
-from wavescripts.plotter import explore_facet_plot_freq_vs_mean
-explore_facet_plot_freq_vs_mean(damping_filtrert, dampingplotvariables)
+
+# explore_facet_plot_freq_vs_mean(damping_filtrert, dampingplotvariables)
+explore_damping_vs_freq(damping_filtrert, dampingplotvariables)
 
 # %% plotting damping amplitudes seaborn 
-from wavescripts.plotter import explore_facet_plot_amp_vs_mean
-explore_facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
+explore_damping_vs_amp(damping_filtrert, dampingplotvariables)
+
+
+
 
 # %% slår alle i hop
 dampingplotvariables = {
@@ -294,18 +341,18 @@ dampingplotvariables = {
 }
 
 
-from wavescripts.filters import damping_all_amplitude_grouper
 damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
 # %% plotter seaborn facet med dempning 
-from wavescripts.plotter import plot_damping_freq
-plot_damping_freq(damping_groupedallruns_df)
+plot_damping_freq(damping_groupedallruns_df,dampingplotvariables)
+# %%
 
+# uviss...
 # damping_all_amplitudes_filtrert = filter_for_damping(damping_groupedallruns_df, dampingplotvariables["filters"])
 
 # %% plotter damping scatter 
-from wavescripts.plotter import plot_damping_scatter
-plot_damping_scatter(damping_groupedallruns_df,save_path=None,show_errorbars=True, size_by_amplitude=False)
+plot_damping_scatter(damping_groupedallruns_df, dampingplotvariables)
 #kunne lagt til plotvariabler her og.. 
+
 
 # %% FFT-SPEKTRUM filter initiert
 freqplotvariables = {
@@ -349,21 +396,19 @@ freqplotvariables = {
 }
 #lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.
 
-from wavescripts.filters import filter_for_frequencyspectrum
 filtrert_frequencies = filter_for_frequencyspectrum(combined_meta_sel, freqplotvariables)
+print("filter applied")
 
-
-# %% plotter fft facet
-from wavescripts.plotter import plot_frequency_spectrum
+# %% plotter alt den tar inn...
 fig, axes = plot_frequency_spectrum(
     combined_fft_dict,
     filtrert_frequencies,
     freqplotvariables,
     data_type="fft"
 )
-# %% plotter PSD facet
+# %% plotter PSD facet, men bare noe
 fig, axes = plot_frequency_spectrum(
-    psd_dictionary,  # Your PSD data dictionary
+    combined_psd_dict,  # Your PSD data dictionary
     filtrert_frequencies, 
     freqplotvariables,
     data_type="psd"
@@ -375,7 +420,6 @@ fig, axes = plot_frequency_spectrum(
 #hopp over foreløig from wavescripts.filters import swell_grouper
 #hopp over swell_groupedruns_df, swell_pivot_wide = swell_grouper(combined_meta_sel)
 # %% damping variables initiert
-from wavescripts.filters import filter_for_amplitude_plot
 swellplotvariables = {
     "overordnet": {
         "chooseAll": True, 
@@ -420,37 +464,22 @@ swellplotvariables = {
 swell_filtrert = filter_for_amplitude_plot(combined_meta_sel, swellplotvariables)
 band_amplitudes = swell_filtrert
 # %% plotting damping frequencies seaborn
-# from wavescripts.plotter import facet_swell
 # funkekje! # facet_swell(damping_filtrert, swellplotvariables)
 
 # %% claude, som caller filter internt
-from wavescripts.plotter import plot_p2_vs_p3_scatter
 plot_p2_vs_p3_scatter(combined_meta_sel, filter_vars=swellplotvariables)
 
 # %% enfarget facet plott x:p2, y:p3. visuell sammenlikning
 
-from wavescripts.plotter import old_plot_p2_vs_p3_scatter
 old_plot_p2_vs_p3_scatter(band_amplitudes)
 
 # %% band bars looop
-from wavescripts.plotter import plot_p2_p3_bars
 # plot_p2_p3_bars(band_amplitudes)
 
 # %% seaborn plot med 3 swell facets, full, svak og null wind. 
-from wavescripts.plotter import plot_swell_p2_vs_p3_by_wind
 plot_swell_p2_vs_p3_by_wind(band_amplitudes, combined_meta_sel)
 
-# %% Kult plot med errorbands
-import seaborn as sns
-# stats has columns: WaveAmplitudeInput [Volt], PanelConditionGrouped, WindCondition, mean_P3P2, std_P3P2, ...
-sns.lineplot(
-    data=damping_groupedruns_df,
-    x='WaveFrequencyInput [Hz]',
-    y='mean_P3P2',
-    hue='WindCondition',
-    style='PanelConditionGrouped',
-    marker='o',
-)
+
 # %% damping wide - ikke i bruk
 # wide = damping_pivot_wide
 # print(wide.columns.tolist())
@@ -511,7 +540,6 @@ m2_filtrert = filter_for_amplitude_plot(combined_meta_sel, nudampingplotvariable
 df = damping_all_amplitude_grouper(m2_filtrert)
 
 # %% gemini dempning P3/P2 under arbeid
-from wavescripts.plotter import plot_damping_pro
 
 plot_damping_pro(df, nudampingplotvariables)
 
@@ -519,13 +547,11 @@ plot_damping_pro(df, nudampingplotvariables)
 
 # %% damping - facet damping plot 3 over hverandre basert på vind.
 # grei facet - men ellers meningsløs.. 
-from wavescripts.filters import filter_dataframe
 m_damping_filtrert = filter_dataframe(
     damping_groupedruns_df,
     amplitudeplotvariables, 
     ignore_missing_columns=True
 )
-from wavescripts.plotter import plot_damping_combined
 plot_damping_combined(
     m_damping_filtrert,
     amplitudeplotvariables=amplitudeplotvariables
@@ -590,7 +616,6 @@ freqplotvariables = {
 }
 #lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.
 
-from wavescripts.filters import filter_for_frequencyspectrum
 filtrert_frequencies = filter_for_frequencyspectrum(combined_meta_sel, freqplotvariables)
 
 # %% kopiert fra oven plotter fft facet
@@ -606,7 +631,6 @@ filtrert_frequencies = filter_for_frequencyspectrum(combined_meta_sel, freqplotv
 # les av fft_dict -> les av tabell. loope probe 2 og 3. 
 # plotte probe 2 dekomponert. 
 # %%
-from wavescripts.plotter import plot_reconstructed
 
 # fig, axes = plot_reconstructed(combined_fft_dict, 
 #                                filtrert_frequencies,
@@ -640,10 +664,7 @@ fig, axes = plot_reconstructed(combined_fft_dict,
 
 # %% Kjør interaktiv plotter av dekomponert signal.
 # ── Launch ─────────────────────────────────────────────────────
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QListWidget, 
-                              QVBoxLayout, QHBoxLayout, QWidget, QLabel)
-import sys
-from wavescripts.plotter import SignalBrowserFiltered
+
 app = QApplication.instance() or QApplication(sys.argv)
 browser = SignalBrowserFiltered(filtered_fft_dict, filtered_meta, freqplotvariables)
 browser.show()
@@ -653,15 +674,6 @@ browser.show()
 
 
 # %%
-
-from wavescripts.plotter import gather_ramp_data
-from wavescripts.plotter import plot_ramp_detection
-from wavescripts.plotter import RampDetectionBrowser
-
-# ── Launch ────────────────────────────────────────────────────
-import copy
-import sys
-from PyQt5.QtWidgets import QApplication
 
 ramp_df = gather_ramp_data(combined_processed_dfs, combined_meta_sel)
 

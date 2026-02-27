@@ -33,6 +33,8 @@ import re
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
+
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 
@@ -170,6 +172,31 @@ def apply_thesis_style(usetex: bool = False) -> None:
         "grid.alpha":        0.3,
         "axes.grid":         True,
     })
+    
+def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
+    """
+    Fast selection of top k indices using partial sorting.
+    
+    Parameters
+    ----------
+    values : np.ndarray
+        Array of numeric values
+    k : int
+        Number of top values to select
+    
+    Returns
+    -------
+    np.ndarray
+        Indices of top k values, sorted in descending order
+    """
+    if k is None or k <= 0 or k >= values.size:
+        return np.arange(values.size)
+    
+    # Use argpartition for O(n) selection
+    part = np.argpartition(values, -k)[-k:]
+    
+    # Sort the selected indices by their values (descending)
+    return part[np.argsort(values[part])[::-1]]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
