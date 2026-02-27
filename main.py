@@ -159,6 +159,7 @@ if all_meta_sel:
 # TOdo - sjekke ekte sample rate
 # todo - fjerne outliers
 
+# %%
 
 # %% [markdown] 
 # Nå, hvordan beveger bølgen seg gjennom tanken. Vi kikker på den gjennomsnittlige bølgeamplituden sett ved hver av de fire måleprobene. I plottet under er avstandene mellom probene ikke korrekt representert, bare rekkefølgen. 
@@ -249,12 +250,12 @@ from wavescripts.filters import filter_for_damping
 damping_filtrert = filter_for_damping(damping_groupedruns_df, dampingplotvariables["filters"])
 
 # %% plotting damping frequencies seaborn
-from wavescripts.plotter import facet_plot_freq_vs_mean
-facet_plot_freq_vs_mean(damping_filtrert, dampingplotvariables)
+from wavescripts.plotter import explore_facet_plot_freq_vs_mean
+explore_facet_plot_freq_vs_mean(damping_filtrert, dampingplotvariables)
 
 # %% plotting damping amplitudes seaborn 
-from wavescripts.plotter import facet_plot_amp_vs_mean
-facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
+from wavescripts.plotter import explore_facet_plot_amp_vs_mean
+explore_facet_plot_amp_vs_mean(damping_filtrert, dampingplotvariables)
 
 # %% slår alle i hop
 dampingplotvariables = {
@@ -296,8 +297,8 @@ dampingplotvariables = {
 from wavescripts.filters import damping_all_amplitude_grouper
 damping_groupedallruns_df  = damping_all_amplitude_grouper(combined_meta_sel)
 # %% plotter seaborn facet med dempning 
-from wavescripts.plotter import plot_damping_results
-plot_damping_results(damping_groupedallruns_df)
+from wavescripts.plotter import plot_damping_freq
+plot_damping_freq(damping_groupedallruns_df)
 
 # damping_all_amplitudes_filtrert = filter_for_damping(damping_groupedallruns_df, dampingplotvariables["filters"])
 
@@ -631,11 +632,8 @@ fig, ax = plot_reconstructed(
     single_meta,
     freqplotvariables
 )
-# %% SIGNALplot - med RMS for å sammenlikne amplitude med sann amplitude
-from wavescripts.plotter import plot_reconstructed_rms
-
-
-fig, axes = plot_reconstructed_rms(combined_fft_dict, 
+# %% SIGNALplot - for å sammenlikne amplitude med sann amplitude
+fig, axes = plot_reconstructed(combined_fft_dict, 
                                filtrert_frequencies,
                                freqplotvariables,
                                data_type="fft")
@@ -664,11 +662,6 @@ from wavescripts.plotter import RampDetectionBrowser
 import copy
 import sys
 from PyQt5.QtWidgets import QApplication
-
-# Compute once
-combined_processed_dfs = {}
-for processed_dict in all_processed_dfs:
-    combined_processed_dfs.update(processed_dict)
 
 ramp_df = gather_ramp_data(combined_processed_dfs, combined_meta_sel)
 

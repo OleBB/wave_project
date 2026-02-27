@@ -3,45 +3,209 @@
 """
 plot_utils.py
 =============
-Infrastructure for saving figures and generating LaTeX stubs.
+All plotting infrastructure for the wavescripts project.
 
-Every plotter function should end with:
+Contents
+--------
+STYLE & CONSTANTS
+    WIND_COLOR_MAP, PANEL_STYLES, PANEL_MARKERS, MARKER_STYLES, MARKERS
+    LEGEND_CONFIGS, apply_legend, draw_anchored_text, apply_thesis_style
 
-    panels = _save_figure(fig, meta, plot_type="timeseries")
-    write_figure_stub(meta, panels)
+LABEL BUILDER
+    make_label
 
-The meta dict is built from plotvariables + combined_meta_sel via
-build_fig_meta().
+SAVE INFRASTRUCTURE
+    build_fig_meta       — extract meta from plotvariables dict
+    build_filename       — canonical filename from meta
+    _save_figure         — save .pdf and/or .pgf
+    write_figure_stub    — write .tex stub (once, then hands-off)
+    save_and_stub        — combined entry point for plotter functions
 
-Filename convention
--------------------
-    {chapter}_{plot_type}_{panel}panel-{wind}wind-amp{amp}-freq{freq}-probe{probes}
-
-    e.g.  05_timeseries_reversepanel-fullwind-amp0100-freq0650-probe2og3
-
-Output directories (relative to project root, mirroring the TeX project)
----------
-    output/FIGURES/   ← .pdf and .pgf  (copy → /Users/ole/main/FIGURES/)
-    output/TEXFIGU/   ← .tex stubs     (copy → /Users/ole/main/TEXFIGU/)
+Output directories (mirror your TeX project, copy manually)
+------------------------------------------------------------
+    output/FIGURES/   →  /Users/ole/main/FIGURES/
+    output/TEXFIGU/   →  /Users/ole/main/TEXFIGU/
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
+
 import matplotlib.pyplot as plt
+from matplotlib.offsetbox import AnchoredText
 
 
-# ── Output roots (edit if your project layout changes) ────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# STYLE & CONSTANTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+WIND_COLOR_MAP = {
+    "full":    "#D62728",   # red
+    "lowest":  "#2CA02C",   # green
+    "no":      "#1F77B4",   # blue
+}
+
+PANEL_STYLES = {
+    "no":      "solid",
+    "full":    "dashed",
+    "reverse": "dashdot",
+}
+
+PANEL_MARKERS = {
+    "no":      "o",
+    "full":    "s",
+    "reverse": "^",
+}
+
+MARKER_STYLES = {
+    "full":    "*",
+    "no":      "<",
+    "lowest":  ">",
+}
+
+MARKERS = [
+    'o', 's', '^', 'v', 'D', '*', 'P', 'X', 'p', 'h',
+    '+', 'x', '.', ',', '|', '_', 'd', '<', '>', '1', '2', '3', '4',
+]
+
+LEGEND_CONFIGS = {
+    "outside_right":      {"loc": "center left",  "bbox_to_anchor": (1.02, 0.5)},
+    "outside_left":       {"loc": "center right", "bbox_to_anchor": (-0.02, 0.5)},
+    "inside":             {"loc": "best"},
+    "inside_upper_right": {"loc": "upper right"},
+    "inside_upper_left":  {"loc": "upper left"},
+    "below": {
+        "loc": "upper center",
+        "bbox_to_anchor": (0.5, -0.15),
+        "ncol": 3,
+    },
+    "above": {
+        "loc": "lower center",
+        "bbox_to_anchor": (0.5, 1.02),
+        "ncol": 3,
+    },
+    "none": None,
+}
+
+_LEGEND_PROPS = {
+    "framealpha":    0.9,
+    "fontsize":      8,
+    "labelspacing":  0.3,
+    "handlelength":  1.5,
+    "handletextpad": 0.5,
+}
+
+
+def apply_legend(ax: plt.Axes, plotvariables: dict) -> None:
+    """
+    Apply legend to *ax* based on plotvariables["plotting"]["legend"].
+    Silently does nothing if no handles exist or legend is 'none'/None.
+    """
+    legend_pos = plotvariables.get("plotting", {}).get("legend", None)
+    if not legend_pos or legend_pos == "none":
+        return
+    handles, labels = ax.get_legend_handles_labels()
+    if not handles:
+        return
+    config = LEGEND_CONFIGS.get(legend_pos)
+    if config is None:
+        return
+    ncol = min(len(labels), 5) if legend_pos in ("below", "above") else 1
+    ax.legend(**config, ncol=ncol, **_LEGEND_PROPS)
+
+
+def draw_anchored_text(ax: plt.Axes, txt: str = "Figuren",
+                        loc: str = "upper left", fontsize: int = 9,
+                        facecolor: str = "white", edgecolor: str = "gray",
+                        alpha: float = 0.85) -> None:
+    """Add a small framed text box anchored to a corner of *ax*."""
+    at = AnchoredText(
+        txt, loc=loc,
+        prop=dict(size=fontsize, color="black"),
+        frameon=True, pad=0.3,
+    )
+    at.patch.set_facecolor(facecolor)
+    at.patch.set_edgecolor(edgecolor)
+    at.patch.set_alpha(alpha)
+    at.patch.set_boxstyle("round,pad=0.4,rounding_size=0.2")
+    ax.add_artist(at)
+
+
+def apply_thesis_style(usetex: bool = False) -> None:
+    """
+    Apply thesis-quality matplotlib rcParams.
+
+    Parameters
+    ----------
+    usetex : bool
+        False → fast draft (matplotlib mathtext)
+        True  → final quality (requires LaTeX install, slow compile)
+
+    Usage
+    -----
+    Call once at the top of your notebook/script before any plotting:
+        from wavescripts.plot_utils import apply_thesis_style
+        apply_thesis_style()             # draft
+        apply_thesis_style(usetex=True)  # final
+    """
+    plt.rcParams.update({
+        "text.usetex":       usetex,
+        "font.family":       "serif",
+        "font.serif":        ["Computer Modern"] if usetex else ["DejaVu Serif"],
+        "font.size":         10,
+        "axes.labelsize":    10,
+        "axes.titlesize":    11,
+        "legend.fontsize":   9,
+        "xtick.labelsize":   9,
+        "ytick.labelsize":   9,
+        "figure.figsize":    (5.5, 3.8),
+        "figure.dpi":        150,
+        "savefig.dpi":       300,
+        "savefig.bbox":      "tight",
+        "savefig.format":    "pdf",
+        "lines.linewidth":   1.2,
+        "axes.linewidth":    0.8,
+        "grid.alpha":        0.3,
+        "axes.grid":         True,
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LABEL BUILDER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def make_label(row) -> str:
+    """
+    Short legend label from a metadata row (pd.Series or dict).
+    Format: W:full_P:reverse_A:0.10V_f:1.3Hz
+    Only includes fields that are present and non-None.
+    """
+    parts = []
+    wind  = row.get("WindCondition")
+    panel = row.get("PanelCondition")
+    amp   = row.get("WaveAmplitudeInput [Volt]")
+    freq  = row.get("WaveFrequencyInput [Hz]")
+    if wind  is not None: parts.append(f"W:{wind}")
+    if panel is not None: parts.append(f"P:{panel}")
+    if amp   is not None: parts.append(f"A:{float(amp):.2f}V")
+    if freq  is not None: parts.append(f"f:{freq}Hz")
+    return "_".join(parts) if parts else "unknown"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SAVE INFRASTRUCTURE
+# ═══════════════════════════════════════════════════════════════════════════════
 
 FIGURES_DIR = Path("output/FIGURES")
 TEXFIGU_DIR = Path("output/TEXFIGU")
 
 
-# ── Filename helpers ───────────────────────────────────────────────────────────
+# ── Filename format helpers ────────────────────────────────────────────────────
 
 def _fmt_condition(val) -> str:
-    """['no', 'full'] → 'no-full'   |   'reverse' → 'reverse'   |   None → 'all'"""
+    """['no','full'] → 'no-full'  |  'reverse' → 'reverse'  |  None → 'all'"""
     if val is None:
         return "all"
     if isinstance(val, (list, tuple)):
@@ -50,23 +214,23 @@ def _fmt_condition(val) -> str:
 
 
 def _fmt_amp(val) -> str:
-    """0.1 → '0100'  |  [0.1, 0.2] → '0100-0200'  |  None → 'allamp'"""
+    """0.1 → '0100'  |  [0.1,0.2] → '0100-0200'  |  None → 'allamp'"""
     if val is None:
         return "allamp"
     vals = val if isinstance(val, (list, tuple)) else [val]
-    return "-".join(f"{float(v)*1000:04.0f}" for v in vals)
+    return "-".join(f"{float(v) * 1000:04.0f}" for v in vals)
 
 
 def _fmt_freq(val) -> str:
-    """0.65 → '0650'  |  [0.65, 1.3] → '0650-1300'  |  None → 'allfreq'"""
+    """0.65 → '0650'  |  [0.65,1.3] → '0650-1300'  |  None → 'allfreq'"""
     if val is None:
         return "allfreq"
     vals = val if isinstance(val, (list, tuple)) else [val]
-    return "-".join(f"{float(v)*1000:04.0f}" for v in vals)
+    return "-".join(f"{float(v) * 1000:04.0f}" for v in vals)
 
 
 def _fmt_probes(val) -> str:
-    """[2, 3] → '2og3'  |  2 → '2'  |  None → 'allprobes'"""
+    """[2,3] → '2og3'  |  2 → '2'  |  None → 'allprobes'"""
     if val is None:
         return "allprobes"
     if isinstance(val, (list, tuple)):
@@ -76,19 +240,13 @@ def _fmt_probes(val) -> str:
 
 def build_filename(plot_type: str, meta: dict) -> str:
     """
-    Build the canonical figure filename (without extension) from meta.
+    Build canonical figure filename (no extension) from meta dict.
 
-    Parameters
-    ----------
-    plot_type : str
-        Short descriptor, e.g. 'timeseries', 'psd', 'scatter_p2p3'
-    meta : dict
-        As returned by build_fig_meta().
+    Pattern:
+        {chapter}_{plot_type}_{panel}panel-{wind}wind-amp{amp}-freq{freq}-probe{probes}
 
-    Returns
-    -------
-    str
-        e.g. '05_timeseries_reversepanel-fullwind-amp0100-freq0650-probe2og3'
+    Example:
+        '05_timeseries_reversepanel-fullwind-amp0100-freq0650-probe2og3'
     """
     chapter = str(meta.get("chapter", "00"))
     panel   = _fmt_condition(meta.get("panel"))
@@ -96,7 +254,6 @@ def build_filename(plot_type: str, meta: dict) -> str:
     amp     = _fmt_amp(meta.get("amplitude"))
     freq    = _fmt_freq(meta.get("frequency"))
     probes  = _fmt_probes(meta.get("probes"))
-
     return (
         f"{chapter}_{plot_type}_"
         f"{panel}panel-{wind}wind-"
@@ -105,9 +262,8 @@ def build_filename(plot_type: str, meta: dict) -> str:
     )
 
 
-# ── Meta builder ──────────────────────────────────────────────────────────────
-
-def build_fig_meta(plotvariables: dict, chapter: str = "05",
+def build_fig_meta(plotvariables: dict,
+                   chapter: str = "05",
                    extra: Optional[dict] = None) -> dict:
     """
     Extract figure metadata from a plotvariables dict.
@@ -115,21 +271,15 @@ def build_fig_meta(plotvariables: dict, chapter: str = "05",
     Parameters
     ----------
     plotvariables : dict
-        Your standard plot-config dict with 'filters' and 'plotting' keys.
+        Standard plot-config dict with 'filters' and 'plotting' keys.
     chapter : str
         Two-digit chapter prefix, e.g. '05'.
     extra : dict, optional
-        Any additional immutable fields to include in the stub comments,
-        e.g. {"run_id": "2024-11-03_run2", "script": "analysis_swell.py"}.
-
-    Returns
-    -------
-    dict
-        Flat meta dict ready for build_filename() and write_figure_stub().
+        Additional immutable fields for the stub comments,
+        e.g. {"run_id": "2024-11-03_run2", "script": "main.py"}.
     """
     f = plotvariables.get("filters", {})
     p = plotvariables.get("plotting", {})
-
     meta = {
         "chapter":   chapter,
         "panel":     f.get("PanelCondition"),
@@ -139,53 +289,42 @@ def build_fig_meta(plotvariables: dict, chapter: str = "05",
         "probes":    p.get("probes"),
         "figsize":   p.get("figsize"),
     }
-
     if extra:
         meta.update(extra)
-
     return meta
 
 
-# ── Save figure ───────────────────────────────────────────────────────────────
+# ── File writers ───────────────────────────────────────────────────────────────
 
 def _save_figure(fig: plt.Figure, filename: str,
                  save_pdf: bool = True,
                  save_pgf: bool = True) -> list[Path]:
     """
-    Save fig as .pdf and/or .pgf to FIGURES_DIR.
-
-    Returns list of saved paths (used by write_figure_stub to populate
-    the PANELS AVAILABLE block).
+    Save fig to FIGURES_DIR as .pdf and/or .pgf.
+    Returns list of saved paths (used to populate stub comments).
     """
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     saved = []
-
     if save_pdf:
         p = FIGURES_DIR / f"{filename}.pdf"
         fig.savefig(p)
         saved.append(p)
         print(f"  Saved: {p}")
-
     if save_pgf:
         p = FIGURES_DIR / f"{filename}.pgf"
         fig.savefig(p)
         saved.append(p)
         print(f"  Saved: {p}")
-
     return saved
 
 
-# ── Stub writer ───────────────────────────────────────────────────────────────
-
-def _build_includegraphics(filename: str, width: str = r"\linewidth") -> str:
-    return (
-        f"    \\includegraphics[width={width}]"
-        f"{{FIGURES/{filename}.pdf}}"
-    )
+def _label_probe(filename: str, fallback_idx: int) -> str:
+    m = re.search(r"probe(\w+)", filename)
+    return m.group(1) if m else str(fallback_idx + 1)
 
 
 def _build_subfigure_block(filename: str, label_suffix: str,
-                           width: str = "0.48") -> str:
+                            width: str = "0.48") -> str:
     return (
         f"  \\begin{{subfigure}}[b]{{{width}\\linewidth}}\n"
         f"    \\centering\n"
@@ -202,113 +341,97 @@ def write_figure_stub(meta: dict, plot_type: str,
     """
     Write a LaTeX figure stub to TEXFIGU_DIR.
 
-    The stub is created ONCE. Re-running the plot script will NOT overwrite
-    your edited caption — unless force=True.
+    Created ONCE — re-running the plot script will NOT overwrite your
+    edited caption unless force=True.
 
     Parameters
     ----------
     meta : dict
-        As returned by build_fig_meta().
+        From build_fig_meta(). Used for filename and immutable comment block.
     plot_type : str
-        e.g. 'timeseries', 'psd', 'scatter_p2p3'
+        e.g. 'timeseries', 'psd', 'damping_freq', 'swell_scatter'
     panel_filenames : list[str], optional
-        Filenames (without extension) of the individual panel PDFs.
-        - 1 file  → single \includegraphics layout
-        - 2+ files → subfigure layout
-        If None, a single-panel stub is generated from build_filename().
+        Filenames (no extension) of individual panel PDFs.
+        1 file  → single \\includegraphics
+        2+ files → \\subfigure layout (arrange freely in Texifier)
+        None → single panel using build_filename(plot_type, meta)
     force : bool
-        Overwrite an existing stub (wipes your caption edits — use carefully).
+        Overwrite existing stub — WIPES caption edits.
+        Tip: commit to git first.
     """
     TEXFIGU_DIR.mkdir(parents=True, exist_ok=True)
-
     stub_filename = build_filename(plot_type, meta)
-    tex_path = TEXFIGU_DIR / f"{stub_filename}.tex"
+    tex_path      = TEXFIGU_DIR / f"{stub_filename}.tex"
 
     if tex_path.exists() and not force:
         print(f"  Stub exists (not overwriting): {tex_path.name}")
         return
 
     # ── Immutable comment block ───────────────────────────────────────────────
-    def _fmt_meta_line(key, val):
+    known_keys = {"chapter", "panel", "wind", "amplitude", "frequency",
+                  "probes", "figsize", "script"}
+
+    def _line(key, val):
         if isinstance(val, list):
             val = ", ".join(str(v) for v in val)
         return f"%   {key:<16}: {val}"
 
-    immutable_lines = [
+    comment_lines = [
         "%! TEX root = ../main.tex",
         "% " + "=" * 60,
-        "% IMMUTABLE — do not edit below this block",
-        f"%   generated_by    : {meta.get('script', 'plotter.py')}",
+        "% IMMUTABLE — generated automatically, do not edit this block",
+        f"%   script          : {meta.get('script', 'plotter.py')}",
         f"%   plot_type       : {plot_type}",
-        _fmt_meta_line("chapter",   meta.get("chapter", "?")),
-        _fmt_meta_line("panel",     meta.get("panel", "?")),
-        _fmt_meta_line("wind",      meta.get("wind", "?")),
-        _fmt_meta_line("amplitude", meta.get("amplitude", "?")),
-        _fmt_meta_line("frequency", meta.get("frequency", "?")),
-        _fmt_meta_line("probes",    meta.get("probes", "?")),
+        _line("chapter",   meta.get("chapter",   "?")),
+        _line("panel",     meta.get("panel",     "?")),
+        _line("wind",      meta.get("wind",      "?")),
+        _line("amplitude", meta.get("amplitude", "?")),
+        _line("frequency", meta.get("frequency", "?")),
+        _line("probes",    meta.get("probes",    "?")),
+    ]
+    for k, v in meta.items():
+        if k not in known_keys and v is not None:
+            comment_lines.append(_line(k, v))
+
+    panels = panel_filenames or [stub_filename]
+    comment_lines += [
+        "%",
+        "% PANELS AVAILABLE:",
+        *[f"%   FIGURES/{pf}.pdf" for pf in panels],
+        "% " + "=" * 60,
+        "",
     ]
 
-    # Optional extra keys (run_id, raw_data, etc.)
-    known = {"chapter","panel","wind","amplitude","frequency","probes",
-             "figsize","script"}
-    for k, v in meta.items():
-        if k not in known:
-            immutable_lines.append(_fmt_meta_line(k, v))
-
-    # Panel file list
-    if panel_filenames:
-        immutable_lines.append("%")
-        immutable_lines.append("% PANELS AVAILABLE:")
-        for pf in panel_filenames:
-            immutable_lines.append(f"%   FIGURES/{pf}.pdf")
-
-    immutable_lines.append("% " + "=" * 60)
-    immutable_lines.append("")
-
     # ── Figure body ───────────────────────────────────────────────────────────
-    panels = panel_filenames or [stub_filename]
-
     if len(panels) == 1:
-        figure_body = (
+        body = (
             "\\begin{figure}[htbp]\n"
             "  \\centering\n"
-            f"  {_build_includegraphics(panels[0])}\n"
+            f"  \\includegraphics[width=0.9\\linewidth]{{FIGURES/{panels[0]}.pdf}}\n"
             "  \\caption[Short caption for LOF]{\n"
             "    % TODO: write caption\n"
             "  }\n"
-            f"  \\label{{fig:TODO_{panels[0][-20:]}}}\n"
-            "\\end{figure}"
+            f"  \\label{{fig:TODO_{panels[0][-25:]}}}\n"
+            "\\end{figure}\n"
         )
     else:
         subfigs = []
         for i, pf in enumerate(panels):
-            suffix = f"probe{_label_probe(pf, i)}"
-            subfigs.append(_build_subfigure_block(pf, suffix))
-        joiner = "\n  \\hfill\n"
-        figure_body = (
+            subfigs.append(_build_subfigure_block(pf, _label_probe(pf, i)))
+        body = (
             "\\begin{figure}[htbp]\n"
             "  \\centering\n"
-            + joiner.join(subfigs) + "\n"
+            + "\n  \\hfill\n".join(subfigs) + "\n"
             "  \\caption[Short caption for LOF]{\n"
             "    % TODO: write caption\n"
             "  }\n"
             f"  \\label{{fig:TODO_{stub_filename[-30:]}}}\n"
-            "\\end{figure}"
+            "\\end{figure}\n"
         )
 
-    stub = "\n".join(immutable_lines) + figure_body + "\n"
-    tex_path.write_text(stub, encoding="utf-8")
+    tex_path.write_text("\n".join(comment_lines) + body, encoding="utf-8")
     print(f"  Stub created: {tex_path.name}")
 
-
-def _label_probe(filename: str, fallback_idx: int) -> str:
-    """Extract probe number from filename for label suffix."""
-    import re
-    m = re.search(r"probe(\d+)", filename)
-    return m.group(1) if m else str(fallback_idx + 1)
-
-
-# ── Combined entry point (call this from every plotter function) ───────────────
 
 def save_and_stub(fig: plt.Figure,
                   meta: dict,
@@ -320,8 +443,8 @@ def save_and_stub(fig: plt.Figure,
     """
     Save figure files and write the LaTeX stub in one call.
 
-    This is the single function every plotter function should call
-    at the end, when save_plot=True.
+    This is the single function every plotter function calls at the end
+    when save_plot=True.
 
     Parameters
     ----------
@@ -329,22 +452,19 @@ def save_and_stub(fig: plt.Figure,
     meta : dict
         From build_fig_meta().
     plot_type : str
-        e.g. 'timeseries', 'psd', 'scatter_p2p3'
+        e.g. 'timeseries', 'psd', 'damping_freq', 'swell_scatter'
     panel_filenames : list[str], optional
-        If the figure stub should reference multiple separate panel PDFs
-        (e.g. probe2 and probe3 saved separately), pass their filenames here.
-        If None, the stub references the single figure being saved now.
+        When the stub should reference multiple separate panel PDFs.
+        None → stub references only the single figure being saved now.
     save_pdf, save_pgf : bool
-        Toggle which formats to save.
     force_stub : bool
-        Overwrite existing stub (wipes caption edits).
+        Overwrite existing stub (wipes caption edits — commit to git first).
 
     Example
     -------
-    # At the end of plot_timeseries():
     if plotvariables["plotting"].get("save_plot"):
         meta = build_fig_meta(plotvariables, chapter="05",
-                              extra={"script": "analysis_swell.py"})
+                              extra={"script": "plotter.py::plot_timeseries"})
         save_and_stub(fig, meta, plot_type="timeseries")
     """
     filename = build_filename(plot_type, meta)
@@ -352,24 +472,3 @@ def save_and_stub(fig: plt.Figure,
     write_figure_stub(meta, plot_type,
                       panel_filenames=panel_filenames,
                       force=force_stub)
-
-
-# ── Label builder (kept here, used by plotter.py) ─────────────────────────────
-
-def make_label(row) -> str:
-    """
-    Create a short legend label from a metadata row (Series or dict).
-    Format: W:full_P:reverse
-    """
-    parts = []
-    wind  = row.get("WindCondition")
-    panel = row.get("PanelCondition")
-    amp   = row.get("WaveAmplitudeInput [Volt]")
-    freq  = row.get("WaveFrequencyInput [Hz]")
-
-    if wind  is not None: parts.append(f"W:{wind}")
-    if panel is not None: parts.append(f"P:{panel}")
-    if amp   is not None: parts.append(f"A:{amp:.2f}V")
-    if freq  is not None: parts.append(f"f:{freq}Hz")
-
-    return "_".join(parts) if parts else "unknown"
