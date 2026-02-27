@@ -40,7 +40,15 @@ from wavescripts.constants import (
     CalculationResultColumns as RC,
     PlottPent as PP
 )
-from wavescripts.constants import WIND_COLOR_MAP
+
+from wavescripts.plot_style import (
+    WIND_COLOR_MAP, PANEL_STYLES, PANEL_MARKERS,
+    apply_legend, draw_anchored_text,
+)
+from wavescripts.plot_utils import (
+    build_fig_meta, save_and_stub, make_label,
+)
+# from wavescripts.constants import WIND_COLOR_MAP fjernes
 
 # WIND_COLORS = {
 #     "full": "red",
@@ -317,17 +325,24 @@ def plotter_selection(processed_dfs, df_sel, plotvariables):
 # ------------------------------------------------------------
 def plot_filtered(processed_dfs,
                   df_sel,
-                  **runtime_vars):
+                  **plotvariables):
     #unpack plotvariables/kwargs:
-    chosenprobe = runtime_vars["chosenprobe"]
-    rangestart  = runtime_vars["rangestart"]
-    rangeend    = runtime_vars["rangeend"]
-    win         = runtime_vars["win"]
-    figsize     = runtime_vars.get("figsize")
+    chosenprobe = plotvariables["chosenprobe"]
+    rangestart  = plotvariables["rangestart"]
+    rangeend    = plotvariables["rangeend"]
+    win         = plotvariables["win"]
+    figsize     = plotvariables.get("figsize")
 
+    plotting = plotvariables.get("plotting", {})
+    show_plot = plotting.get("show_plot", True)
+    save_plot = plotting.get("save_plot", False)
     
-    figsize = (10,6)
+    chosenprobe = plotvariables["processing"]["chosenprobe"]
+    figsize     = plotting.get("figsize", (10, 6))
+    
     fig, ax = plt.subplots(figsize=figsize)
+    
+    chapter = 4
 
     for idx, row in df_sel.iterrows():
         
@@ -340,8 +355,10 @@ def plot_filtered(processed_dfs,
         color = WIND_COLOR_MAP.get(windcond, "black")
 
         # Linestyle based on panel condition
-        panelcond = row["PanelCondition"]
-        linestyle = "--" if "full" in panelcond else "-"
+        # panelcond = row["PanelCondition"] -delete?
+        # linestyle = "--" if "full" in panelcond else "-" -delete?
+        lstyle   = PANEL_STYLES.get(row.get("PanelCondition", ""), "solid")
+
 
         # Short label for legend
         label = _make_label(row)
@@ -368,7 +385,7 @@ def plot_filtered(processed_dfs,
             y_data = df_cut[chosenprobe]
             ylabel = chosenprobe
 
-        ax.plot(time_ms, y_data, label=label, color=color, linestyle=linestyle)
+        ax.plot(time_ms, y_data, label=label, color=color, linestyle=lstyle)
         ax.set_ylabel(ylabel)
 
     ax.set_xlabel("Milliseconds")
@@ -376,7 +393,17 @@ def plot_filtered(processed_dfs,
     ax.set_title(f"{chosenprobe} — smoothed (window={win})")
     ax.legend()
 
-    plt.show()
+    # ── Save ─────────────────────────────────────────────────────────────────
+    if save_plot:
+        meta = build_fig_meta(plotvariables, chapter=chapter,
+                              extra={"script": "plotter.py::plot_timeseries"})
+        save_and_stub(fig, meta, plot_type="timeseries",
+                      save_pgf=plotting.get("save_pgf", True))
+
+    if show_plot:
+        plt.show()
+    else:
+        plt.close(fig)
 
 def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
     """
@@ -385,8 +412,12 @@ def plot_overlayed(processed_dfs, df_sel, plot_ranges, plotvariables):
     the same legend style as plot_filtered (_make_label).
     """
 
+    plotting = plotvariables.get("plotting", {})
+    show_plot = plotting.get("show_plot", True)
+    save_plot = plotting.get("save_plot", False)
+
     chosenprobe = plotvariables["processing"]["chosenprobe"]
-    figsize     = plotvariables["plotting"]["figsize"] or (12, 6)
+    figsize     = plotting.get("figsize", (10, 6))
 
     fig, ax = plt.subplots(figsize=figsize)
 
