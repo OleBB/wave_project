@@ -369,7 +369,8 @@ def plot_swell_scatter(meta_df: pd.DataFrame,
                        plotvariables: dict,
                        chapter: str = "05",
                        share_axes: bool = True,
-                       annotate_delta: bool = True) -> None:
+                       annotate_delta: bool = True, 
+                       figsize: Tuple = (14,5)) -> None:
     """
     P2 vs P3 amplitude scatter for Swell, Wind, and Total bands.
 
@@ -397,7 +398,7 @@ def plot_swell_scatter(meta_df: pd.DataFrame,
     shared_lim = _swell_shared_lim(band_amplitudes) if share_axes else None
 
     if show_plot:
-        figsize = plotting.get("figsize") or (14, 5)
+        # figsize = plotting.get("figsize") or (14, 5)
         fig = plt.figure(figsize=figsize)
         n_bands = len(_BAND_COLS)
         gs   = fig.add_gridspec(1, n_bands + 1, width_ratios=[1] * n_bands + [0.38])
@@ -600,12 +601,84 @@ def plot_frequency_spectrum(fft_dict: dict,
     plt.tight_layout()
 
     if save_plot:
-        meta = build_fig_meta(plotvariables, chapter=chapter,
-                              extra={"script": "plotter.py::plot_frequency_spectrum",
-                                     "data_type": data_type})
-        save_and_stub(fig, meta,
-                      plot_type=f"spectrum_{data_type}",
-                      save_pgf=plotting.get("save_pgf", True))
+        meta_base = build_fig_meta(plotvariables, chapter=chapter,
+                                   extra={"script": "plotter.py::plot_frequency_spectrum",
+                                          "data_type": data_type})
+        save_separate = plotting.get("save_separate", False)
+    
+        if not save_separate:
+            # Current behaviour — save the whole faceted figure as one file
+            save_and_stub(fig, meta_base,
+                          plot_type=f"spectrum_{data_type}",
+                          save_pgf=plotting.get("save_pgf", True))
+        else:
+            # Save one figure per facet panel
+            panel_filenames = []
+    
+            for group, facet_label in zip(facet_groups, facet_labels):
+                fig_s, ax_s = plt.subplots(figsize=plotting.get("figsize_single", (9, 5)))
+    
+                # Determine subset same way as main loop
+                subset = (meta_df[meta_df["WindCondition"] == group] if facet_by == "wind"
+                          else meta_df[meta_df["PanelCondition"] == group] if facet_by == "panel"
+                          else meta_df)
+    
+                probes_to_plot = [group] if facet_by == "probe" else probes
+    
+                for _, row in subset.iterrows():
+                    path = row["path"]
+                    if path not in fft_dict:
+                        continue
+                    df_fft   = fft_dict[path]
+                    color    = WIND_COLOR_MAP.get(row.get("WindCondition"), "black")
+                    lstyle   = PANEL_STYLES.get(row.get("PanelCondition", ""), "solid")
+                    pk_marker = MARKER_STYLES.get(row.get("WindCondition"), ".")
+                    label_base = make_label(row)
+    
+                    for probe_num in probes_to_plot:
+                        col = f"{col_prefix} {probe_num}"
+                        if col not in df_fft:
+                            continue
+                        df_pos = get_positive_spectrum(df_fft)
+                        y = df_pos[col].dropna().iloc[:max_points]
+                        if y.empty:
+                            continue
+                        x = y.index.values
+                        ax_s.plot(x, y.values, linewidth=linewidth,
+                                  label=label_base, linestyle=lstyle,
+                                  color=color, antialiased=False)
+                        if n_peaks and n_peaks > 0:
+                            top_idx = _top_k_indices(y.values, n_peaks)
+                            ax_s.scatter(x[top_idx], y.values[top_idx],
+                                         color=color, s=80, zorder=5,
+                                         marker=pk_marker, linewidths=0.7)
+    
+                ax_s.set_title(facet_label, fontsize=9)
+                ax_s.set_xlabel(col_prefix, fontsize=9)
+                ax_s.set_ylabel(ylabel, fontsize=9)
+                if xlim: ax_s.set_xlim(xlim)
+                if log_scale: ax_s.set_yscale("log")
+                if use_locators:
+                    ax_s.xaxis.set_minor_locator(ticker.MultipleLocator(base_freq))
+                    ax_s.xaxis.set_major_locator(ticker.MultipleLocator(2 * base_freq))
+                if show_grid:
+                    ax_s.grid(which="major", linestyle="--", alpha=0.6)
+                    ax_s.grid(which="minor", linestyle="-.", alpha=0.3)
+                apply_legend(ax_s, plotvariables)
+                fig_s.tight_layout()
+    
+                # Per-panel meta — override probe for filename
+                panel_meta = {**meta_base}
+                if facet_by == "probe":
+                    panel_meta["probes"] = group
+                fname = build_filename(f"spectrum_{data_type}", panel_meta)
+                _save_figure(fig_s, fname, save_pgf=plotting.get("save_pgf", True))
+                panel_filenames.append(fname)
+                plt.close(fig_s)
+    
+            # One stub with all panels as subfigures
+            write_figure_stub(meta_base, f"spectrum_{data_type}",
+                              panel_filenames=panel_filenames)
 
     if show_plot:
         plt.show()
