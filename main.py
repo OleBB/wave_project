@@ -328,6 +328,8 @@ dampingplotvariables = {
         "win": 11 #Ingen av disse er egt i bruk
     },
     "plotting": {
+        "show_plot": True,
+        "save_plot": True,
         "figsize": None,
         "separate":False,
         "facet_by": None, #wind, panel, probe 
@@ -380,6 +382,7 @@ freqplotvariables = {
     },
     "plotting": {
         "show_plot": True,
+        "save_plot": True,
         "figsize": (10,12), #(10,10),
         "linewidth": 0.7,
         "separate":False,
@@ -445,6 +448,7 @@ swellplotvariables = {
     },
     "plotting": {
         "show_plot": True,
+        "save_plot": True,
         "figsize": (10,12), #(10,10),
         "linewidth": 0.7,
         "separate":False,
@@ -467,17 +471,10 @@ band_amplitudes = swell_filtrert
 # funkekje! # facet_swell(damping_filtrert, swellplotvariables)
 
 # %% claude, som caller filter internt
-plot_p2_vs_p3_scatter(combined_meta_sel, filter_vars=swellplotvariables)
-
-# %% enfarget facet plott x:p2, y:p3. visuell sammenlikning
-
-old_plot_p2_vs_p3_scatter(band_amplitudes)
-
-# %% band bars looop
-# plot_p2_p3_bars(band_amplitudes)
+plot_swell_scatter(combined_meta_sel, swellplotvariables)
 
 # %% seaborn plot med 3 swell facets, full, svak og null wind. 
-plot_swell_p2_vs_p3_by_wind(band_amplitudes, combined_meta_sel)
+plot_swell_scatter(band_amplitudes, combined_meta_sel)
 
 
 # %% damping wide - ikke i bruk
@@ -497,65 +494,6 @@ plot_swell_p2_vs_p3_by_wind(band_amplitudes, combined_meta_sel)
 #     wide["mean_P3P2_lowest"] - wide["mean_P3P2_full"]
 # )
 
-# %%
-#igjen 
-nudampingplotvariables = {
-    "overordnet": {
-        "chooseAll": True, 
-        "chooseFirst": False,
-    }, 
-    "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
-        "WaveFrequencyInput [Hz]": [1.3],# 0.65], #bruk et tall  
-        "WavePeriodInput": None, #bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "WindCondition": ["no", "lowest", "full"], #full, no, lowest, all
-        "TunnelCondition": None,
-        #"Mooring": None,
-        "PanelCondition": ["no", "full", "reverse"], # no, full, reverse, 
-        
-    },
-    "processing": {
-        "chosenprobe": 1, #[1,2,3,4]
-        "rangestart": None,
-        "rangeend": None,
-        "data_cols": ["Probe 2"],
-        "win": 11 #Ingen av disse er egt i bruk
-    },
-    "plotting": {
-        "figsize": None,
-        "separate":False,
-        "facet_by": None, #wind, panel, probe 
-        "overlay": False,
-        "annotate": True, 
-        "legend": "outside_right", # inside, below, above #med mer!
-        "logaritmic": False, 
-        "peaks": 7, 
-        "probes": [1,2,3,4],
-    }   
-}
-
-
-m2_filtrert = filter_for_amplitude_plot(combined_meta_sel, nudampingplotvariables)
-
-df = damping_all_amplitude_grouper(m2_filtrert)
-
-# %% gemini dempning P3/P2 under arbeid
-
-plot_damping_pro(df, nudampingplotvariables)
-
-
-
-# %% damping - facet damping plot 3 over hverandre basert på vind.
-# grei facet - men ellers meningsløs.. 
-m_damping_filtrert = filter_dataframe(
-    damping_groupedruns_df,
-    amplitudeplotvariables, 
-    ignore_missing_columns=True
-)
-plot_damping_combined(
-    m_damping_filtrert,
-    amplitudeplotvariables=amplitudeplotvariables
-)
 
 # %% todo: lage funksjon for å kjøre range_plot utenom prosessering
 
@@ -572,6 +510,7 @@ meta_sel_wavenumberstudy = combined_meta_sel.copy()
 hey = [CG.FFT_WAVENUMBER_COLS].copy()
 
 # %% FFT-SPEKTRUM  initiert
+from wavescripts.plotter import plot_frequency_spectrum
 freqplotvariables = {
     "overordnet": {
         "chooseAll": False, 
@@ -597,12 +536,14 @@ freqplotvariables = {
     },
     "plotting": {
         "show_plot": True,
+        "save_plot": True,
+        "save_separate": True,
         "figsize": (18,18), #(10,10),
         "linewidth": 1,
         "grid": True,
         "show_full_signal": True,
         "dual_yaxis": False, #for å skalere opp vindstøyen og se den tydeligere.
-        "separate":False,
+        "separate":True,
         "facet_by": "probe", #wind", #wind, panel, probe 
         "overlay": False, #
         "annotate": False, #
@@ -619,13 +560,12 @@ freqplotvariables = {
 filtrert_frequencies = filter_for_frequencyspectrum(combined_meta_sel, freqplotvariables)
 
 # %% kopiert fra oven plotter fft facet
-# from wavescripts.plotter import plot_frequency_spectrum
-# fig, axes = plot_frequency_spectrum(
-#     combined_fft_dict,
-#     filtrert_frequencies,
-#     freqplotvariables,
-#     data_type="fft"
-# )
+fig, axes = plot_frequency_spectrum(
+    combined_fft_dict,
+    filtrert_frequencies,
+    freqplotvariables,
+    data_type="fft"
+)
 
 
 # les av fft_dict -> les av tabell. loope probe 2 og 3. 

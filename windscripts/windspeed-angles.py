@@ -84,5 +84,5 @@ ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=10))     # Set number of bins/t
 #ax.legend(title="Folder")
 #plt.tight_layout()
 plt.show()
-# %%
+# %%f f in in i in 
 
