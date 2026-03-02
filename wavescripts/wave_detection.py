@@ -117,6 +117,10 @@ def find_wave_range(
     # ==========================================================
     #  1.b Start og slutt på signalet tilpasset innkommende bølge og vindforhold
     # ==========================================================
+    good_start_idx   = None   # snarvei overrides; None triggers fallback in upcrossing section
+    good_end_idx     = None
+    wave_upcrossings = None
+
     """ELIF RETURN SNARVEI"""
     if input_freq == 1.3:
         if data_col == "Probe 1":
@@ -151,8 +155,80 @@ def find_wave_range(
             good_end_idx = good_start_idx + keep_idx
                 # return good_start_idx, good_end_idx, debug_info
     #import sys; print('exit'); sys.exit()
-     
-    
+
+    # ==========================================================
+    # 1.c  Refine snarvei guess to exact zero-upcrossing
+    # ==========================================================
+    # Reference: per-experiment, per-probe still-water level from metadata
+    probe_num        = data_col.split()[-1]                        # "1" from "Probe 1"
+    stillwater_col   = f"Stillwater Probe {probe_num}"
+    stillwater_level = float(
+        meta_row[stillwater_col] if isinstance(meta_row, pd.Series)
+        else meta_row[stillwater_col].iloc[0]
+    )
+
+    # Period tolerance ±10 % – rejects short wind-wave crossings
+    tol             = 0.10
+    min_period_samp = int((1 - tol) * samples_per_period)
+    max_period_samp = int((1 + tol) * samples_per_period)
+
+    # All zero-upcrossings in the full smoothed signal
+    above_still     = signal_smooth > stillwater_level
+    all_upcrossings = np.where((~above_still[:-1]) & above_still[1:])[0] + 1
+
+    # Search window: ±2 expected periods around the snarvei guess
+    if good_start_idx is not None:
+        search_margin = 2 * samples_per_period
+        search_start  = max(0, good_start_idx - search_margin)
+        search_end    = min(len(signal_smooth) - 1, good_start_idx + search_margin)
+    else:
+        search_start  = int(2 * samples_per_period)   # skip startup transient
+        search_end    = len(signal_smooth) - 1
+
+    in_window = all_upcrossings[
+        (all_upcrossings >= search_start) & (all_upcrossings <= search_end)
+    ]
+
+    n_periods_target = max(5, int(keep_periods))
+
+    if len(in_window) == 0:
+        if debug:
+            print(f"[find_wave_range] {data_col}: no upcrossing in window "
+                  f"[{search_start}, {search_end}] – keeping snarvei values.")
+    else:
+        first_uc   = int(in_window[0])
+        subsequent = all_upcrossings[all_upcrossings > first_uc]
+
+        # Walk forward, accepting only crossings within ±10 % of expected period
+        valid = [first_uc]
+        prev  = first_uc
+        for uc in subsequent:
+            gap = int(uc) - prev
+            if min_period_samp <= gap <= max_period_samp:
+                valid.append(int(uc))
+                prev = int(uc)
+                if len(valid) - 1 >= n_periods_target:   # -1: first entry is start
+                    break
+
+        n_found = len(valid) - 1   # number of complete periods captured
+        if debug:
+            print(f"[find_wave_range] {data_col}: snarvei={good_start_idx}, "
+                  f"first upcross={first_uc}, periods={n_found}/{n_periods_target}, "
+                  f"period window=[{min_period_samp}, {max_period_samp}] samp")
+        if n_found < n_periods_target and debug:
+            print(f"  → only {n_found} valid periods found (wanted {n_periods_target})")
+
+        good_start_idx   = valid[0]
+        good_end_idx     = valid[-1]
+        good_range       = good_end_idx - good_start_idx
+        wave_upcrossings = np.array(valid)
+
+    # Safety fallback if nothing was set (snarvei miss + no upcrossing found)
+    if good_start_idx is None:
+        good_start_idx = int(2 * samples_per_period)
+        good_end_idx   = good_start_idx + int(keep_idx)
+        good_range     = good_end_idx - good_start_idx
+
     #fullpanel-fullwind-amp02-freq13- correct @5780
     # no panel, amp03, freq0650: 2300? probe=??
     #fullpanel-fullwind-amp01-freq0650-per15-probe3: 4000 korrekt
@@ -436,6 +512,7 @@ def find_wave_range(
         #"ramp_found": ramp_result is not None,
         #"ramp_length_peaks": len(ramp_result[2]) if ramp_result else None,
         "keep_periods_used": keep_periods,
+        "wave_upcrossings": wave_upcrossings,   # array of period-start indices; last = end of final period
     }
 
     return good_start_idx, good_end_idx, debug_info
