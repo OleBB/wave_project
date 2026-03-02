@@ -623,6 +623,10 @@ browser = RampDetectionBrowser(ramp_df)
 browser.show()
 # %%
 
+import dtale
+import pandas as pd
+df = pd.DataFrame({'col1': range(1000), 'col2': pd.util.testing.rands_array(5, 1000)})
+dtale.show(df)          # opens browser tab → success!
 
 # %% debug som fant ut at noen runs ikke har Wave, så de filtreres ut 
 # # Debug: Check what your FFT data actually looks like

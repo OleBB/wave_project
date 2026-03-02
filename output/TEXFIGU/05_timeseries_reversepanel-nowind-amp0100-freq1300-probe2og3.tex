@@ -1,0 +1,28 @@
+%! TeX root = ../main.tex
+
+% IMMUTABLE: sample={meta["sample_id"]},
+% run={meta["run_id"]},
+% method={meta["method"]}
+% file: TEMPLATE.jpg
+% TODO: write caption here
+\begin{figure}[hp]
+  \centering
+  \begin{subfigure}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{FIGURES/05_reversepanel-nowind-amp0100-freq1300-probe2.jpg}
+    \caption{Før geometri}
+    \label{fig_sub:full_timeseries_before_geom_freq1300}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{FIGURES/05_reversepanel-nowind-amp0100-freq1300-probe3.jpg}
+    \caption{Etter geometri}
+    \label{fig_sub:full_timeseries_after_geom_freq1300}
+  \end{subfigure}
+  \caption[Probemålingenes tidsserie før og etter geometri]{
+    Probemålingenes tidsserie før (a) og etter (b)
+     geometri. Signalet her er uendret (ikke snudd). Panelrekke i revers, uten vind,  \SI{0,1}{Volt}, \SI{1,3}{Hz}
+     }
+  \label{fig:full_timeseries_wave_before_and_after_freq1300}
+\end{figure}
