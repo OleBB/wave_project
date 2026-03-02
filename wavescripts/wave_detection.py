@@ -46,7 +46,7 @@ def find_wave_range(
     Args:
         utvalgt signal, tilhørende metadatarad, Probe {i}, detect-vindu
     
-    Toggle:
+    Toggle:x
         Smoothing Window, Range-plot, Debug
     
     Returns:
