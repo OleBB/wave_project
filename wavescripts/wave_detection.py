@@ -95,7 +95,8 @@ def find_wave_range(
         return good_start_idx, good_end_idx, debug_info
         
     samples_per_period = int(round(Fs / importertfrekvens))
-    
+    probe_num_int = int(data_col.split()[-1])   # 1–4, extracted once for reuse below
+
     # ─────── velge antall perioder ─────── 
     input_periods = (meta_row["WavePeriodInput"])
     keep_periods= round((input_periods-13)*0.9) #trekke fra perioder, -per15- er det bare 4 gode, mens på -per40- per er ish 30 gode. TK todo velge en bedre skalering
@@ -103,125 +104,155 @@ def find_wave_range(
     keep_idx = keep_seconds*250 # 1 sek = 250 målinger
     good_range = keep_idx
 
-    # MANUELL CALCULERING for 1.3 Hz
-    P1amp01frwq13eyeball = 4700
-    P2handcalc = P1amp01frwq13eyeball+100 #tidligere: 62.5 fra 250målinger på ett sekund, ganget et kvart sekund, estimert reisetid for bølgen på 1.3hz  
-    P3handcalc = P2handcalc+1700 #tidligere: en 1.3hz gir periode på 700idx? 250 målinger per sek
-    
-    P1amp01f065eyeball = 3950
-    P2_f065_handcalc = P1amp01f065eyeball+50 #
-    P3_f065_handcalc = P2_f065_handcalc+500 #
-
-
-
     # ==========================================================
-    #  1.b Start og slutt på signalet tilpasset innkommende bølge og vindforhold
+    #  1.b  Snarvei: calibrated per-probe anchors, linearly interpolated in frequency
     # ==========================================================
-    good_start_idx   = None   # snarvei overrides; None triggers fallback in upcrossing section
+    # Two verified calibration points per probe (eyeballed, well-verified).
+    # Calibrated at: P1=8800mm, P2=9500mm, P3/P4=12450mm from paddle.
+    # For other frequencies (0.7–1.6 Hz), values are linearly interpolated/extrapolated.
+    # If probes are moved significantly from these positions, update _SNARVEI.
+    _SNARVEI = {                              # (f1,  s1,   f2,   s2)
+        "Probe 1": (0.65, 5104, 1.3, 4700),  # 0.65 Hz: +3 periods (3×385=1154) from 3950
+        "Probe 2": (0.65, 5154, 1.3, 4800),  # 0.65 Hz: +3 periods from 4000
+        "Probe 3": (0.65, 5654, 1.3, 6500),  # 0.65 Hz: +3 periods from 4500
+        "Probe 4": (0.65, 5654, 1.3, 6500),  # 0.65 Hz: +3 periods from 4500
+    }
+
+    good_start_idx   = None
     good_end_idx     = None
     wave_upcrossings = None
 
-    """ELIF RETURN SNARVEI"""
-    if input_freq == 1.3:
-        if data_col == "Probe 1":
-            good_start_idx = P1amp01frwq13eyeball 
-            good_end_idx = good_start_idx+keep_idx
-                #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 2" : 
-            good_start_idx = P2handcalc
-            good_end_idx = P2handcalc + keep_idx
-                #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 3" : 
-            good_start_idx = P3handcalc
-            good_end_idx = good_start_idx + keep_idx
-        elif data_col == "Probe 4" : 
-            good_start_idx = P3handcalc
-            good_end_idx = good_start_idx + keep_idx
-                # return good_start_idx, good_end_idx, debug_info
-    if input_freq == 0.65:
-        if data_col == "Probe 1": 
-            good_start_idx = P1amp01f065eyeball 
-            good_end_idx = good_start_idx+keep_idx
-                #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 2" : 
-             good_start_idx = P2_f065_handcalc
-             good_end_idx = good_start_idx + keep_idx
-                #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 3" : 
-            good_start_idx = P3_f065_handcalc
-            good_end_idx = good_start_idx + keep_idx
-        elif data_col == "Probe 4" : 
-            good_start_idx = P3_f065_handcalc
-            good_end_idx = good_start_idx + keep_idx
-                # return good_start_idx, good_end_idx, debug_info
+    if data_col in _SNARVEI:
+        f1, s1, f2, s2 = _SNARVEI[data_col]
+        slope          = (s2 - s1) / (f2 - f1)
+        intercept      = s1 - slope * f1
+        good_start_idx = int(round(intercept + slope * importertfrekvens))
+        good_end_idx   = good_start_idx + int(keep_idx)
+        if debug:
+            print(f"[snarvei] {data_col}: f={importertfrekvens:.3f} Hz → "
+                  f"good_start={good_start_idx}")
+
+    """
+    # PHYSICS-BASED SNARVEI (too early in practice – kept for reference / future use)
+    # Deep-water dispersion: ω² = g·k  →  c = g/ω
+    # omega   = 2 * np.pi * importertfrekvens
+    # c_phase = PHYSICS.GRAVITY / omega           # phase velocity [m/s]  (import PHYSICS to use)
+    # P1_ANCHORS = {1.3: 4700, 0.65: 3950}
+    # anchor = P1_ANCHORS.get(round(importertfrekvens, 2))
+    # if anchor is not None:
+    #     pos_current = float(
+    #         meta_row[PC.MM_FROM_PADDLE.format(i=probe_num_int)] if isinstance(meta_row, pd.Series)
+    #         else meta_row[PC.MM_FROM_PADDLE.format(i=probe_num_int)].iloc[0]
+    #     )
+    #     pos_p1 = float(
+    #         meta_row[PC.MM_FROM_PADDLE.format(i=1)] if isinstance(meta_row, pd.Series)
+    #         else meta_row[PC.MM_FROM_PADDLE.format(i=1)].iloc[0]
+    #     )
+    #     delta_d   = (pos_current - pos_p1) / 1000       # mm → m
+    #     delta_idx = int(round(delta_d / c_phase * Fs))  # travel time in samples
+    #     good_start_idx = anchor + delta_idx
+    #     good_end_idx   = good_start_idx + int(keep_idx)
+    """
     #import sys; print('exit'); sys.exit()
 
+    # TODO stability_skip: some 1.3 Hz runs not fully stable at snarvei start.
+    # Add _STABILITY_SKIP = {1.3: 2, 0.65: 0} (periods) applied before section 1.c.
+    # Future: replace with autocorrelation-based stability detection.
+    # good_start_idx += _STABILITY_SKIP.get(round(importertfrekvens,2), 0) * samples_per_period
+    # good_end_idx    = good_start_idx + int(keep_idx)
+
     # ==========================================================
-    # 1.c  Refine snarvei guess to exact zero-upcrossing
+    # 1.c  Snap start and end independently to nearest zero-upcrossing
     # ==========================================================
-    # Reference: per-experiment, per-probe still-water level from metadata
-    probe_num        = data_col.split()[-1]                        # "1" from "Probe 1"
-    stillwater_col   = f"Stillwater Probe {probe_num}"
+    # Foundation: snarvei gives the approximate start; WavePeriodInput gives the duration.
+    # Both endpoints are snapped to the nearest stillwater upcrossing independently.
+    # This is robust for windy signals – no chain-walking required.
+
+    stillwater_col   = PC.STILLWATER.format(i=probe_num_int)
     stillwater_level = float(
         meta_row[stillwater_col] if isinstance(meta_row, pd.Series)
         else meta_row[stillwater_col].iloc[0]
     )
 
-    # Period tolerance ±10 % – rejects short wind-wave crossings
-    tol             = 0.10
-    min_period_samp = int((1 - tol) * samples_per_period)
-    max_period_samp = int((1 + tol) * samples_per_period)
-
     # All zero-upcrossings in the full smoothed signal
     above_still     = signal_smooth > stillwater_level
     all_upcrossings = np.where((~above_still[:-1]) & above_still[1:])[0] + 1
 
-    # Search window: ±2 expected periods around the snarvei guess
-    if good_start_idx is not None:
-        search_margin = 2 * samples_per_period
-        search_start  = max(0, good_start_idx - search_margin)
-        search_end    = min(len(signal_smooth) - 1, good_start_idx + search_margin)
-    else:
-        search_start  = int(2 * samples_per_period)   # skip startup transient
-        search_end    = len(signal_smooth) - 1
-
-    in_window = all_upcrossings[
-        (all_upcrossings >= search_start) & (all_upcrossings <= search_end)
-    ]
-
     n_periods_target = max(5, int(keep_periods))
+    n_found          = 0
 
-    if len(in_window) == 0:
+    if len(all_upcrossings) == 0:
         if debug:
-            print(f"[find_wave_range] {data_col}: no upcrossing in window "
-                  f"[{search_start}, {search_end}] – keeping snarvei values.")
+            print(f"[find_wave_range] {data_col}: no upcrossings found in signal")
     else:
-        first_uc   = int(in_window[0])
-        subsequent = all_upcrossings[all_upcrossings > first_uc]
+        ref_start = good_start_idx if good_start_idx is not None else int(2 * samples_per_period)
 
-        # Walk forward, accepting only crossings within ±10 % of expected period
-        valid = [first_uc]
-        prev  = first_uc
-        for uc in subsequent:
-            gap = int(uc) - prev
-            if min_period_samp <= gap <= max_period_samp:
-                valid.append(int(uc))
-                prev = int(uc)
-                if len(valid) - 1 >= n_periods_target:   # -1: first entry is start
-                    break
+        # 1. Snap start: nearest upcrossing to snarvei guess
+        refined_start = int(all_upcrossings[np.argmin(np.abs(all_upcrossings - ref_start))])
 
-        n_found = len(valid) - 1   # number of complete periods captured
-        if debug:
-            print(f"[find_wave_range] {data_col}: snarvei={good_start_idx}, "
-                  f"first upcross={first_uc}, periods={n_found}/{n_periods_target}, "
-                  f"period window=[{min_period_samp}, {max_period_samp}] samp")
-        if n_found < n_periods_target and debug:
-            print(f"  → only {n_found} valid periods found (wanted {n_periods_target})")
+        # 2. Expected end from WavePeriodInput: start + n_periods_target full periods
+        expected_end  = min(refined_start + int(n_periods_target * samples_per_period),
+                            len(signal_smooth) - 1)
 
-        good_start_idx   = valid[0]
-        good_end_idx     = valid[-1]
+        # 3. Snap end: nearest upcrossing to expected end
+        refined_end   = int(all_upcrossings[np.argmin(np.abs(all_upcrossings - expected_end))])
+
+        n_found = int(round((refined_end - refined_start) / samples_per_period))
+
+        good_start_idx   = refined_start
+        good_end_idx     = refined_end
         good_range       = good_end_idx - good_start_idx
-        wave_upcrossings = np.array(valid)
+        wave_upcrossings = all_upcrossings[
+            (all_upcrossings >= refined_start) & (all_upcrossings <= refined_end)
+        ]
+
+        if debug:
+            print(f"[find_wave_range] {data_col}: snarvei→{ref_start}, "
+                  f"start={refined_start}, end={refined_end}, "
+                  f"periods≈{n_found}/{n_periods_target}")
+
+    """
+    # WALK-FORWARD APPROACH (failed on windy signals – chain breaks after 1 period)
+    # Kept for reference; may be useful for individual period boundary detection later.
+    # tol = 0.10
+    # min_period_samp = int((1 - tol) * samples_per_period)
+    # max_period_samp = int((1 + tol) * samples_per_period)
+    # valid = [first_uc]
+    # prev  = first_uc
+    # for uc in subsequent:
+    #     gap = int(uc) - prev
+    #     if min_period_samp <= gap <= max_period_samp:
+    #         valid.append(int(uc))
+    #         prev = int(uc)
+    #         if len(valid) - 1 >= n_periods_target:
+    #             break
+    # good_start_idx = valid[0]; good_end_idx = valid[-1]
+    """
+
+    # ==========================================================
+    # 1.d  Mstop warning: check if good_end_idx falls inside the post-stop window
+    # ==========================================================
+    # "Extra seconds" (mstop) = recording time after wavemaker stops.
+    # A far probe may not receive the full wave train within this window.
+    _mstop_raw = (
+        meta_row.get("Extra seconds", None) if isinstance(meta_row, pd.Series)
+        else (meta_row["Extra seconds"].iloc[0] if "Extra seconds" in meta_row.columns else None)
+    )
+    mstop_sec     = float(_mstop_raw) if _mstop_raw is not None else 0.0
+    mstop_samples = int(mstop_sec * Fs)
+    signal_length = len(signal_smooth)
+
+    if mstop_samples > 0 and good_end_idx is not None:
+        cutoff_idx = signal_length - mstop_samples   # sample where wavemaker stopped
+        if good_end_idx > cutoff_idx:
+            overlap = good_end_idx - cutoff_idx
+            print(f"  WARNING [{data_col}]: good_end_idx ({good_end_idx}) is {overlap} samples "
+                  f"({overlap/Fs:.1f} s) into the mstop window. "
+                  f"Probe may be missing the tail of the wave group.")
+        if n_found < n_periods_target:
+            print(f"  WARNING [{data_col}]: only {n_found}/{n_periods_target} periods found – "
+                  f"signal may be cut short (mstop={mstop_sec:.0f} s, "
+                  f"probe at {meta_row[PC.MM_FROM_PADDLE.format(i=probe_num_int)]:.0f} mm from paddle).")
 
     # Safety fallback if nothing was set (snarvei miss + no upcrossing found)
     if good_start_idx is None:
@@ -275,7 +306,7 @@ def find_wave_range(
     #     baseline_std = np.std(baseline)
     #     threshold = baseline_mean + SIGNAL.BASELINE_SIGMA_FACTOR * baseline_std
     #     return threshold
-    baseline_seconds = 2
+    baseline_seconds = 2# testkommentar
     sigma_factor=1.0
     skip_periods=None
 
@@ -512,6 +543,8 @@ def find_wave_range(
         #"ramp_found": ramp_result is not None,
         #"ramp_length_peaks": len(ramp_result[2]) if ramp_result else None,
         "keep_periods_used": keep_periods,
+        "n_periods_target": n_periods_target,
+        "n_periods_found": n_found,
         "wave_upcrossings": wave_upcrossings,   # array of period-start indices; last = end of final period
     }
 

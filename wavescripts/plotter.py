@@ -605,6 +605,7 @@ def plot_frequency_spectrum(fft_dict: dict,
                                    extra={"script": "plotter.py::plot_frequency_spectrum",
                                           "data_type": data_type})
         save_separate = plotting.get("save_separate", False)
+        print(f"save_separate is {save_separate}")
     
         if not save_separate:
             # Current behaviour — save the whole faceted figure as one file

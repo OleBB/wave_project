@@ -514,8 +514,8 @@ from wavescripts.plotter import plot_frequency_spectrum
 freqplotvariables = {
     "overordnet": {
         "chooseAll": False, 
-        "chooseFirst": True,
-        "chooseFirstUnique": False,
+        "chooseFirst": False,
+        "chooseFirstUnique": True,
     }, 
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],# 0.2, 0.3], #0.1, 0.2, 0.3 
