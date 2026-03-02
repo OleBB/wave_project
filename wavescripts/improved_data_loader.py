@@ -69,7 +69,7 @@ PROBE_CONFIGS = [
     ProbeConfiguration(
         name="initial_setup",
         valid_from=datetime(2025, 1, 1),  # start of experiment
-        valid_until=datetime(2025, 11, 14),
+        valid_until=datetime(2025, 11, 13), #trokkje d e rette datao
         distances_mm={
             1: 18000, #langt bak en plass
             2: 9455.0,
