@@ -12,7 +12,7 @@ import pandas as pd
 import copy
 import sys
 
-from wavescripts.improved_data_loader import load_or_update
+from wavescripts.improved_data_loader import load_or_update, save_processed_dfs, load_processed_dfs
 from wavescripts.filters import filter_chosen_files
 from wavescripts.processor import process_selected_data
 from wavescripts.processor2nd import process_processed_data 
@@ -26,7 +26,6 @@ from wavescripts.constants import (
     WIND_COLOR_MAP
 
 )
-
 
 from PyQt5.QtWidgets import QApplication
 
@@ -91,9 +90,9 @@ dataset_paths = [
 #%% kjør
 # Initialize containers for all results
 all_meta_sel = []
-all_processed_dfs = []
-all_fft_dicts = []  
-all_psd_dicts = []  
+processed_dirs = []   # tracks PROCESSED-* folders where processed_dfs.parquet is saved
+all_fft_dicts = []
+all_psd_dicts = []
 
 processvariables = {
     "overordnet": {
@@ -137,13 +136,20 @@ for i, data_path in enumerate(dataset_paths):
         
         print('# === Single probe process === #')
         processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(dfs, meta_sel, meta, processvariables)
-        
+        del dfs  # raw time series no longer needed
+
+        # Save processed time-series to disk and free memory
+        _cache_dir = file_dir / "waveprocessed" / f"PROCESSED-{data_path.name}"
+        save_processed_dfs(processed_dfs, _cache_dir)
+        processed_dirs.append(_cache_dir)
+        del processed_dfs
+
         print('# === Probe comparison processing === #')
         meta_sel = process_processed_data(psd_dictionary, fft_dictionary, meta_sel, meta, processvariables)
-        
+        del meta  # full metadata no longer needed (meta_sel is the filtered version)
+
         # Collect results
         all_meta_sel.append(meta_sel)
-        all_processed_dfs.append(processed_dfs)
         all_fft_dicts.append(fft_dictionary)
         all_psd_dicts.append(psd_dictionary)
         
@@ -173,27 +179,19 @@ if all_meta_sel:
     for psd_dict in all_psd_dicts:
         combined_psd_dict.update(psd_dict)
     
-    #combine processed dicts
-    combined_processed_dfs = {}
-    for processed_dict in all_processed_dfs:
-        combined_processed_dfs.update(processed_dict)
-        
-  
-        
-    
-    print(f"Combined processed dictionary contains {len(combined_processed_dfs)} experiments")
+    # processed_dfs saved to disk per experiment — load on demand with:
+    #   combined_processed_dfs = load_processed_dfs(*processed_dirs)
+
     print(f"Combined FFT dictionary contains {len(combined_fft_dict)} experiments")
     print(f"Combined metadata contains {len(combined_meta_sel)} rows")
-    # Verify they match
-    dfs_paths = set(combined_processed_dfs.keys())
+    # Verify FFT vs metadata
     fft_paths = set(combined_fft_dict.keys())
     meta_paths = set(combined_meta_sel['path'].unique())
-    print(f"\nPaths in processed_dfs dict: {len(dfs_paths)}")
     print(f"Paths in FFT dict: {len(fft_paths)}")
     print(f"Unique paths in metadata: {len(meta_paths)}")
     print(f"Matching paths: {len(fft_paths & meta_paths)}")
-    
-    del all_meta_sel, all_processed_dfs, all_fft_dicts, all_psd_dicts, dfs, meta, meta_sel, processed_dfs, dfs_paths, fft_paths,meta_paths 
+
+    del all_meta_sel, all_fft_dicts, all_psd_dicts, meta_sel, fft_paths, meta_paths
     import gc
     gc.collect()
     print("bosset e tatt ut")
@@ -536,7 +534,7 @@ freqplotvariables = {
     },
     "plotting": {
         "show_plot": True,
-        "save_plot": True,
+        "save_plot": False,
         "save_separate": True,
         "figsize": (18,18), #(10,10),
         "linewidth": 1,
@@ -615,6 +613,7 @@ browser.show()
 
 # %%
 
+combined_processed_dfs = load_processed_dfs(*processed_dirs)
 ramp_df = gather_ramp_data(combined_processed_dfs, combined_meta_sel)
 
 # Launch browser
