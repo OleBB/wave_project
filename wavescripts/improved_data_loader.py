@@ -69,7 +69,8 @@ PROBE_CONFIGS = [
     ProbeConfiguration(
         name="initial_setup",
         valid_from=datetime(2025, 1, 1),  # start of experiment
-        valid_until=datetime(2025, 11, 13), #trokkje d e rette datao
+        valid_until=datetime(2025, 11, 14), #trokkje d e rette datao
+        #TODO sjekke datoen her og recompute..
         distances_mm={
             1: 18000, #langt bak en plass
             2: 9455.0,
@@ -427,6 +428,58 @@ def get_configuration_for_date(target_date: datetime) -> ProbeConfiguration:
                 return config
     
     raise ValueError(f"No configuration found for {target_date}")
+
+
+# =============================================================================
+# PROCESSED DATAFRAME CACHE  (zeroed + smoothed time series)
+# =============================================================================
+
+def save_processed_dfs(processed_dfs: Dict[str, pd.DataFrame], cache_dir: Path) -> Path:
+    """
+    Save a dict of processed DataFrames to a single parquet file.
+    Same pattern as dfs.parquet: all DataFrames combined with a _path column.
+
+    Returns the path to the saved parquet file.
+    """
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    out_path = cache_dir / "processed_dfs.parquet"
+
+    if not processed_dfs:
+        print(f"   save_processed_dfs: nothing to save")
+        return out_path
+
+    combined_list = []
+    for path, df in processed_dfs.items():
+        df_copy = df.copy()
+        df_copy["_path"] = path
+        combined_list.append(df_copy)
+
+    combined_df = pd.concat(combined_list, ignore_index=True)
+    combined_df.to_parquet(out_path, index=False, engine="pyarrow")
+    print(f"   Saved {len(processed_dfs)} processed DataFrames → {out_path.name}")
+    return out_path
+
+
+def load_processed_dfs(*cache_dirs) -> Dict[str, pd.DataFrame]:
+    """
+    Load processed DataFrames from one or more PROCESSED-* cache directories.
+
+    Usage:
+        combined = load_processed_dfs(*processed_dirs)
+        ramp_df = gather_ramp_data(combined, combined_meta_sel)
+    """
+    result: Dict[str, pd.DataFrame] = {}
+    for cache_dir in cache_dirs:
+        parquet_path = Path(cache_dir) / "processed_dfs.parquet"
+        if not parquet_path.exists():
+            print(f"   Warning: no processed cache at {parquet_path}")
+            continue
+        df = pd.read_parquet(parquet_path)
+        for path in df["_path"].unique():
+            result[path] = df[df["_path"] == path].drop(columns=["_path"]).reset_index(drop=True)
+        print(f"   Loaded {len(result)} processed DataFrames from {Path(cache_dir).name}")
+    return result
 
 
 # -------------------------------------------------
