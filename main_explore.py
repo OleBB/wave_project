@@ -71,16 +71,85 @@ from wavescripts.plotter import (
 from wavescripts.processor import process_selected_data
 from wavescripts.processor2nd import process_processed_data
 
-file_dir = Path("/Users/ole/Kodevik/wave_project")
-processed_dirs = [
-    file_dir / "waveprocessed" / f"PROCESSED-{p.name}" for p in dataset_paths
+file_dir = Path(__file__).resolve().parent
+
+dataset_paths = [
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
 ]
+
+processvariables = {
+    "overordnet": {"chooseAll": True, "chooseFirst": False},
+    "filters": {
+        "WaveAmplitudeInput [Volt]": [0.1],
+        "WaveFrequencyInput [Hz]": 1.3,
+        "WavePeriodInput": None,
+        "WindCondition": None,
+        "TunnelCondition": None,
+        "Mooring": "low",
+        "PanelCondition": None,
+    },
+    "prosessering": {
+        "total_reset": False,
+        "force_recompute": False,
+        "debug": False,
+        "smoothing_window": 10,
+        "find_range": False,
+        "range_plot": False,
+    },
+}
+
+# %% load / process
+all_meta_sel = []
+processed_dirs = []
+all_fft_dicts = []
+all_psd_dicts = []
+
+prosessering = processvariables.get("prosessering", {})
+
+for i, data_path in enumerate(dataset_paths):
+    print(f"Processing {i + 1}/{len(dataset_paths)}: {data_path.name}")
+    try:
+        dfs, meta = load_or_update(
+            data_path,
+            force_recompute=prosessering.get("force_recompute", False),
+            total_reset=False,
+        )
+        meta_sel = filter_chosen_files(meta, processvariables)
+        processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(
+            dfs, meta_sel, meta, processvariables
+        )
+        del dfs
+
+        _cache_dir = file_dir / "waveprocessed" / f"PROCESSED-{data_path.name}"
+        save_processed_dfs(processed_dfs, _cache_dir)
+        processed_dirs.append(_cache_dir)
+        del processed_dfs
+
+        meta_sel = process_processed_data(
+            psd_dictionary, fft_dictionary, meta_sel, meta, processvariables
+        )
+        del meta
+
+        all_meta_sel.append(meta_sel)
+        all_fft_dicts.append(fft_dictionary)
+        all_psd_dicts.append(psd_dictionary)
+    except Exception as e:
+        print(f"Error: {e}")
+        continue
+
+combined_meta_sel = pd.concat(all_meta_sel, ignore_index=True)
+combined_fft_dict = {k: v for d in all_fft_dicts for k, v in d.items()}
+combined_psd_dict = {k: v for d in all_psd_dicts for k, v in d.items()}
 combined_processed_dfs = load_processed_dfs(*processed_dirs)
-# ... now explore freely
+print(f"Loaded {len(combined_meta_sel)} rows")
 
+# %% dtale — explore combined_meta_sel
+import dtale
 
-print("hello")
-
-# %%
-
-print("world")
+d = dtale.show(combined_meta_sel, host="localhost")
+d.open_browser()
+input("dtale running — press Enter to stop")
