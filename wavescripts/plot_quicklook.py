@@ -48,14 +48,14 @@ from wavescripts.plotter import plot_reconstructed
 def explore_damping_vs_freq(df: pd.DataFrame,
                              plotvariables: dict) -> None:
     """
-    Seaborn facet: P3/P2 vs frequency, one column per amplitude.
+    Seaborn facet: OUT/IN vs frequency, one column per amplitude.
     Exploration only — not saveable as individual thesis panels.
     Use plot_damping_freq() for thesis output.
     """
     x = GC.WAVE_FREQUENCY_INPUT
     g = sns.relplot(
         data=df.sort_values(x),
-        x=x, y="mean_P3P2",
+        x=x, y="mean_out_in",
         hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
         style=GC.PANEL_CONDITION_GROUPED, style_order=["no", "all"],
         col=GC.WAVE_AMPLITUDE_INPUT,
@@ -67,12 +67,12 @@ def explore_damping_vs_freq(df: pd.DataFrame,
                                df.groupby(GC.WAVE_AMPLITUDE_INPUT)):
         for (wind, panel), gsub in sub.groupby(
                 [GC.WIND_CONDITION, GC.PANEL_CONDITION_GROUPED]):
-            ax.errorbar(gsub[x], gsub["mean_P3P2"], yerr=gsub["std_P3P2"],
+            ax.errorbar(gsub[x], gsub["mean_out_in"], yerr=gsub["std_out_in"],
                         fmt="none", capsize=3, alpha=0.5)
     sns.move_legend(g, "lower center",
                     bbox_to_anchor=(0.5, 1), ncol=3,
                     title=None, frameon=False)
-    g.figure.suptitle("Damping P3/P2 vs Frequency  [quicklook]",
+    g.figure.suptitle("Damping OUT/IN vs Frequency  [quicklook]",
                        y=1.04, fontsize=11)
     plt.tight_layout()
     plt.show()
@@ -81,14 +81,14 @@ def explore_damping_vs_freq(df: pd.DataFrame,
 def explore_damping_vs_amp(df: pd.DataFrame,
                             plotvariables: dict) -> None:
     """
-    Seaborn facet: P3/P2 vs amplitude, one column per frequency.
+    Seaborn facet: OUT/IN vs amplitude, one column per frequency.
     Exploration only — use plot_damping_freq() for thesis output.
     """
     x = GC.WAVE_AMPLITUDE_INPUT
     sns.set_style("ticks", {"axes.grid": True})
     g = sns.relplot(
         data=df.sort_values(x),
-        x=x, y="mean_P3P2",
+        x=x, y="mean_out_in",
         hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
         style=GC.PANEL_CONDITION_GROUPED, style_order=["no", "all"],
         col=GC.WAVE_FREQUENCY_INPUT,
@@ -100,12 +100,12 @@ def explore_damping_vs_amp(df: pd.DataFrame,
                                 df.groupby(GC.WAVE_FREQUENCY_INPUT)):
         for (wind, panel), gsub in sub.groupby(
                 [GC.WIND_CONDITION, GC.PANEL_CONDITION_GROUPED]):
-            ax.errorbar(gsub[x], gsub["mean_P3P2"], yerr=gsub["std_P3P2"],
+            ax.errorbar(gsub[x], gsub["mean_out_in"], yerr=gsub["std_out_in"],
                         fmt="none", capsize=3, alpha=0.5)
     sns.move_legend(g, "lower center",
                     bbox_to_anchor=(0.5, 1), ncol=3,
                     title=None, frameon=False)
-    g.figure.suptitle("Damping P3/P2 vs Amplitude  [quicklook]",
+    g.figure.suptitle("Damping OUT/IN vs Amplitude  [quicklook]",
                        y=1.04, fontsize=11)
     plt.tight_layout()
     plt.show()
@@ -440,10 +440,10 @@ def save_interactive_plot(df: pd.DataFrame,
     fig = px.line(
         df,
         x="WaveFrequencyInput [Hz]",
-        y="mean_P3P2",
+        y="mean_out_in",
         color=GC.WIND_CONDITION,
         color_discrete_map=WIND_COLOR_MAP,
-        error_y="std_P3P2",
+        error_y="std_out_in",
         hover_data=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
         title="Interactive Damping Analysis",
         markers=True,

@@ -321,10 +321,12 @@ class GlobalColumns:
     HS_GIVEN = "Significant Wave Height Hs (given)"
     HM0_GIVEN = "Significant Wave Height Hm0 (given)"
     
-    # Probe ratios
+    # Probe ratios (adjacent pairs — always computed)
     P2_P1_FFT = "P2/P1 (FFT)"
     P3_P2_FFT = "P3/P2 (FFT)"
     P4_P3_FFT = "P4/P3 (FFT)"
+    # Semantic ratio — outgoing / incoming wave (config-dependent probe numbers)
+    OUT_IN_FFT = "OUT/IN (FFT)"
 
 
 class CalculationResultColumns:
@@ -388,7 +390,7 @@ class ColumnGroups:
     GLOBAL_WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]
     
     # Probe ratio columns
-    PROBE_RATIO_COLS = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]
+    PROBE_RATIO_COLS = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)", "OUT/IN (FFT)"]
     
     @staticmethod
     def fft_wave_dimension_cols(probe_num: int) -> list[str]:

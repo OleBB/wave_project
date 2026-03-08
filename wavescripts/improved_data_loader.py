@@ -10,24 +10,22 @@ KEY IMPROVEMENTS:
 4. Automatic validation of probe positions
 """
 
-from pathlib import Path
-from typing import Iterator, Dict, Tuple, List, Optional
 import json
-import re
-import pandas as pd
 import os
-from datetime import datetime
+import re
 from dataclasses import dataclass
-# import pyarrow
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Iterator, List, Optional, Tuple
 
-from wavescripts.constants import MEASUREMENT
-from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
-from wavescripts.constants import (
-    ProbeColumns as PC, 
-    GlobalColumns as GC, 
-    ColumnGroups as CG,
-    CalculationResultColumns as RC
-)
+import pandas as pd
+
+# import pyarrow
+from wavescripts.constants import MEASUREMENT, RAMP, SIGNAL, get_smoothing_window
+from wavescripts.constants import CalculationResultColumns as RC
+from wavescripts.constants import ColumnGroups as CG
+from wavescripts.constants import GlobalColumns as GC
+from wavescripts.constants import ProbeColumns as PC
 
 # Only list the exceptions (non-floats)
 NON_FLOAT_COLUMNS = {
@@ -41,6 +39,7 @@ NON_FLOAT_COLUMNS = {
     "file_date": str,
 }
 
+
 def apply_dtypes(meta_df: pd.DataFrame) -> pd.DataFrame:
     """Everything is float64 except NON_FLOAT_COLUMNS."""
     meta_df = meta_df.copy()
@@ -48,76 +47,102 @@ def apply_dtypes(meta_df: pd.DataFrame) -> pd.DataFrame:
         if col in NON_FLOAT_COLUMNS:
             meta_df[col] = meta_df[col].astype(NON_FLOAT_COLUMNS[col])
         else:
-            meta_df[col] = pd.to_numeric(meta_df[col], errors='coerce')
+            meta_df[col] = pd.to_numeric(meta_df[col], errors="coerce")
     return meta_df
+
 
 # =============================================================================
 # PROBE POSITION CONFIGURATION
 # =============================================================================
 
+
 @dataclass
 class ProbeConfiguration:
     """A set of probe positions valid for a date range."""
+
     name: str
     valid_from: datetime  # inclusive
     valid_until: Optional[datetime]  # exclusive, None = forever
     distances_mm: Dict[int, float]  # probe_num -> mm from paddle
+    in_probe: int = 2  # probe number measuring incoming wave (before panel)
+    out_probe: int = 3  # probe number measuring outgoing wave (after panel)
     notes: str = ""
+
 
 # Define all probe configurations chronologically
 PROBE_CONFIGS = [
     ProbeConfiguration(
         name="initial_setup",
         valid_from=datetime(2025, 1, 1),  # start of experiment
-        valid_until=datetime(2025, 11, 14), #trokkje d e rette datao
-        #TODO sjekke datoen her og recompute..
+        valid_until=datetime(2025, 11, 14),  # trokkje d e rette datao
+        # TODO sjekke datoen her og recompute..
         distances_mm={
-            1: 18000, #langt bak en plass
+            1: 18000,  # langt bak en plass
             2: 9455.0,
             3: 12544.0,
             4: 12545.0,
         },
-        notes="Utprøvet configuration used until Nov 13, 2025"
+        in_probe=2,
+        out_probe=3,
+        notes="Utprøvet configuration used until Nov 13, 2025",
     ),
     ProbeConfiguration(
         name="nov14_normalt_oppsett",
         valid_from=datetime(2025, 11, 14),
-        valid_until=None,  # current configuration
+        valid_until=datetime(2026, 1, 1),
         distances_mm={
-            1: 8855.0,  # TODO: Update with actual new positions
-            2: 9455.0,
-            3: 12544.0,
-            4: 12545.0,
+            1: 8804.0,  # en liten plate forean 2
+            2: 9373.0,  # mellom vindu
+            3: 12544.0,  # mellom neste vindu
+            4: 12545.0,  # parallell med 3
         },
-        notes="Configuration after Nov 14 adjustment"
+        in_probe=2,
+        out_probe=3,
+        notes="Configuration after Nov 14 adjustment",
     ),
-    
-    # ADD NEW CONFIGURATIONS HERE:
-    # ProbeConfiguration(
-    #     name="feb2026_recalibration",
-    #     valid_from=datetime(2026, 2, 1),
-    #     valid_until=None,
-    #     distances_mm={
-    #         1: 8900.0,  # example new values
-    #         2: 9500.0,
-    #         3: 12600.0,
-    #         4: 12601.0,
-    #     },
-    #     notes="Recalibrated efter TK TODO fYLL UT"
-    # ),
+    ProbeConfiguration(
+        name="march2026_rearranging",
+        valid_from=datetime(2026, 3, 4),
+        valid_until=datetime(2026, 3, 7),
+        distances_mm={
+            1: 9372.0,  # sjekk hvem som er foran av 1 og 3, om noen av de er det
+            2: 12300.0,  # TODO måle denna rett.
+            3: 9373.0,
+            4: 8804.0,
+        },
+        in_probe=1,
+        out_probe=2,
+        notes="Rearanged for 2 days, men før jeg sjekket utstrekning på panel",
+    ),
+    ProbeConfiguration(
+        name="march2026_better_rearranging",
+        valid_from=datetime(2026, 3, 7),
+        valid_until=None,
+        distances_mm={
+            1: 9372.0,  #
+            2: 12545.0,  # TODO: sjekke om denna var rett go
+            3: 9373.0,
+            4: 8804.0,
+        },
+        in_probe=1,
+        out_probe=2,
+        notes="Flytta probe 2 bak til mellom vinduene, fordi gårsdagens ville vært over panelene",
+    ),
 ]
+
+# TK TODO: måle alle målene på tanken. få det inn i en tikz-tegning. spesielt måle probeavstandene ordentlig.
 
 
 def get_probe_positions(file_date: datetime) -> Dict[int, float]:
     """
     Get probe positions for a given date.
-    
+
     Args:
         file_date: Date of the measurement file
-    
+
     Returns:
         Dictionary mapping probe number (1-4) to distance from paddle in mm
-    
+
     Raises:
         ValueError: If no valid configuration found for date
     """
@@ -125,7 +150,7 @@ def get_probe_positions(file_date: datetime) -> Dict[int, float]:
         if config.valid_from <= file_date:
             if config.valid_until is None or file_date < config.valid_until:
                 return config.distances_mm.copy()
-    
+
     raise ValueError(
         f"No probe configuration found for date {file_date}. "
         f"Check PROBE_CONFIGS in data_loader.py"
@@ -139,33 +164,38 @@ def validate_probe_configs():
     """
     if not PROBE_CONFIGS:
         raise ValueError("PROBE_CONFIGS is empty!")
-    
+
     # Sort by valid_from
     sorted_configs = sorted(PROBE_CONFIGS, key=lambda c: c.valid_from)
-    
+
     # Check for gaps
     for i in range(len(sorted_configs) - 1):
         current = sorted_configs[i]
         next_config = sorted_configs[i + 1]
-        
+
         if current.valid_until is None:
             raise ValueError(
                 f"Config '{current.name}' has no end date but is not the last config"
             )
-        
-        if current.valid_until != next_config.valid_from:
+
+        if current.valid_until > next_config.valid_from:
             raise ValueError(
-                f"Gap or overlap between '{current.name}' and '{next_config.name}': "
-                f"{current.valid_until} != {next_config.valid_from}"
+                f"Overlap between '{current.name}' and '{next_config.name}': "
+                f"{current.valid_until} > {next_config.valid_from}"
             )
-    
+        if current.valid_until < next_config.valid_from:
+            print(
+                f"Note: gap between '{current.name}' and '{next_config.name}' "
+                f"({current.valid_until} – {next_config.valid_from}), no config needed if no data exists"
+            )
+
     # Check last config
     if sorted_configs[-1].valid_until is not None:
         print(
             f"Warning: Last probe config '{sorted_configs[-1].name}' has an end date. "
             f"Consider setting valid_until=None for the current configuration."
         )
-    
+
     print(f"✓ Validated {len(PROBE_CONFIGS)} probe configurations")
 
 
@@ -177,14 +207,17 @@ validate_probe_configs()
 # MOORING CONFIGURATION (similar pattern)
 # =============================================================================
 
+
 @dataclass
 class MooringConfiguration:
     """Mooring settings for a date range."""
+
     name: str
     valid_from: datetime
     valid_until: Optional[datetime]
     mooring_type: str  # "high" or "low"
     notes: str = ""
+
 
 MOORING_CONFIGS = [
     MooringConfiguration(
@@ -192,14 +225,14 @@ MOORING_CONFIGS = [
         valid_from=datetime(2025, 1, 1),
         valid_until=datetime(2025, 11, 6),
         mooring_type="high",
-        notes="tidlig forsøk high mooring setup"
+        notes="tidlig forsøk high mooring setup",
     ),
     MooringConfiguration(
         name="low_mooring",
         valid_from=datetime(2025, 11, 6),
         valid_until=None,
         mooring_type="low",
-        notes="Switched to low mooring on Nov 6 - høyde omtrent = x millimeter over vannet mmov "
+        notes="Switched to low mooring on Nov 6 - høyde omtrent = x millimeter over vannet mmov ",
     ),
 ]
 
@@ -210,7 +243,7 @@ def get_mooring_type(file_date: datetime) -> str:
         if config.valid_from <= file_date:
             if config.valid_until is None or file_date < config.valid_until:
                 return config.mooring_type
-    
+
     return "unknown"
 
 
@@ -218,15 +251,13 @@ def get_mooring_type(file_date: datetime) -> str:
 # IMPROVED METADATA EXTRACTION
 # =============================================================================
 
+
 def extract_metadata_from_filename(
-    filename: str,
-    file_path: Path,
-    df: pd.DataFrame,
-    experiment_name: str
+    filename: str, file_path: Path, df: pd.DataFrame, experiment_name: str
 ) -> dict:
     """
     Extract metadata from filename with improved date handling.
-    
+
     This version:
     - Uses configuration system for probe positions
     - Cleaner logic for date-dependent values
@@ -235,30 +266,31 @@ def extract_metadata_from_filename(
     """
     # Initialize metadata structure
     metadata = _initialize_metadata_dict(str(file_path), experiment_name)
-    
+
     # Get file date (prefer filename date over modification time)
     file_date = _extract_file_date(filename, file_path)
     metadata["file_date"] = file_date.isoformat() if file_date else None
-    
+
     # ─────── Extract basic info from filename ───────
     _extract_wind_condition(metadata, filename, df)
     _extract_tunnel_condition(metadata, filename)
     _extract_panel_condition(metadata, filename)
     _extract_wave_parameters(metadata, filename)
-    
+
     # ─────── Date-dependent configurations ───────
     if file_date:
         try:
-            # Probe positions (uses configuration system)
-            probe_positions = get_probe_positions(file_date)
-            for probe_num, distance in probe_positions.items():
+            # Probe positions and IN/OUT assignment (uses configuration system)
+            cfg = get_configuration_for_date(file_date)
+            for probe_num, distance in cfg.distances_mm.items():
                 metadata[f"Probe {probe_num} mm from paddle"] = distance
+            metadata["in_probe"] = cfg.in_probe
+            metadata["out_probe"] = cfg.out_probe
         except ValueError as e:
             print(f"   Warning: {e}")
-            # Set to None if no config found
             for probe_num in range(1, 5):
                 metadata[f"Probe {probe_num} mm from paddle"] = None
-        
+
         # Mooring type (uses configuration system)
         metadata["Mooring"] = get_mooring_type(file_date)
     else:
@@ -266,7 +298,7 @@ def extract_metadata_from_filename(
         for probe_num in range(1, 5):
             metadata[f"Probe {probe_num} mm from paddle"] = None
         metadata["Mooring"] = "unknown"
-    
+
     return metadata
 
 
@@ -287,58 +319,76 @@ def _initialize_metadata_dict(file_path: str, experiment_name: str) -> dict:
         "Extra seconds": None,
         "Run number": "",
     }
-    
+
+    # IN/OUT probe assignment (set from ProbeConfiguration when date is known)
+    metadata["in_probe"] = None
+    metadata["out_probe"] = None
+
     # Add probe-related fields
     for i in range(1, 5):
         metadata[f"Probe {i} mm from paddle"] = None
         metadata[f"Stillwater Probe {i}"] = None
         metadata[f"Computed Probe {i} start"] = None
         metadata[f"Computed Probe {i} end"] = None
-        metadata[f"Probe {i} Amplitude"] = None #fysisk - TK vurdere nytt navn.
+        metadata[f"Probe {i} Amplitude"] = None  # fysisk - TK vurdere nytt navn.
         metadata[f"Probe {i} Amplitude (FFT)"] = None
         metadata[f"Probe {i} Amplitude (PSD)"] = None
         metadata[f"Probe {i} Swell Amplitude (PSD)"] = None
         metadata[f"Probe {i} Wind Amplitude (PSD)"] = None
         metadata[f"Probe {i} Total Amplitude (PSD)"] = None
-        
-        metadata[f"Probe {i} WavePeriod (FFT)"] = None 
-        metadata[f"Probe {i} Wavenumber (FFT)"] = None 
-        metadata[f"Probe {i} Wavelength (FFT)"] = None 
-        metadata[f"Probe {i} kL (FFT)"] = None 
-        metadata[f"Probe {i} ak (FFT)"] = None 
-        metadata[f"Probe {i} tanh(kH) (FFT)"] = None 
-        metadata[f"Probe {i} Celerity (FFT)"] = None 
-        metadata[f"Probe {i} Significant Wave Height Hs (FFT)"] = None 
-        metadata[f"Probe {i} Significant Wave Height Hm0 (FFT)"] = None 
-        
-    
+
+        metadata[f"Probe {i} WavePeriod (FFT)"] = None
+        metadata[f"Probe {i} Wavenumber (FFT)"] = None
+        metadata[f"Probe {i} Wavelength (FFT)"] = None
+        metadata[f"Probe {i} kL (FFT)"] = None
+        metadata[f"Probe {i} ak (FFT)"] = None
+        metadata[f"Probe {i} tanh(kH) (FFT)"] = None
+        metadata[f"Probe {i} Celerity (FFT)"] = None
+        metadata[f"Probe {i} Significant Wave Height Hs (FFT)"] = None
+        metadata[f"Probe {i} Significant Wave Height Hm0 (FFT)"] = None
+
     # Add computed fields
-    for field in ["Waveperiod", "Wavenumber", "Wavelength",
-                  "kL", "ak", "kH", "tanh(kH)", "Celerity",
-                  "Significant Wave Height Hs", "Significant Wave Height Hm0", "Reynoldsnumber (Water)",
-                  "Windspeed", "Reynoldsnumber (Wind)", "P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]:
+    for field in [
+        "Waveperiod",
+        "Wavenumber",
+        "Wavelength",
+        "kL",
+        "ak",
+        "kH",
+        "tanh(kH)",
+        "Celerity",
+        "Significant Wave Height Hs",
+        "Significant Wave Height Hm0",
+        "Reynoldsnumber (Water)",
+        "Windspeed",
+        "Reynoldsnumber (Wind)",
+        "P2/P1 (FFT)",
+        "P3/P2 (FFT)",
+        "P4/P3 (FFT)",
+        "OUT/IN (FFT)",
+    ]:
         metadata[field] = None
-    
+
     return metadata
 
 
 def _extract_file_date(filename: str, file_path: Path) -> Optional[datetime]:
     """
     Extract date from filename, fall back to file modification time.
-    
+
     Priority:
     1. Date in filename (YYYYMMDD format)
     2. File modification time
     """
     # Try to extract from filename first
-    date_match = re.search(r'(\d{8})', filename)
+    date_match = re.search(r"(\d{8})", filename)
     if date_match:
         date_str = date_match.group(1)
         try:
             return datetime.strptime(date_str, "%Y%m%d")
         except ValueError:
             pass
-    
+
     # Fall back to file modification time
     try:
         modtime = os.path.getmtime(file_path)
@@ -349,51 +399,53 @@ def _extract_file_date(filename: str, file_path: Path) -> Optional[datetime]:
 
 def _extract_wind_condition(metadata: dict, filename: str, df: pd.DataFrame):
     """Extract wind condition and compute stillwater if no wind."""
-    wind_match = re.search(r'-([A-Za-z]+)wind-', filename)
+    wind_match = re.search(r"-([A-Za-z]+)wind-", filename)
     if wind_match:
         metadata["WindCondition"] = wind_match.group(1)
-        
+
         # Compute stillwater for no-wind runs
         if wind_match.group(1).lower() == "no":
             stillwater_samples = MEASUREMENT.STILLWATER_SAMPLES
             for p in range(1, 5):
                 probe_col = f"Probe {p}"
                 if probe_col in df.columns:
-                    metadata[f"Stillwater Probe {p}"] = df[probe_col].iloc[:stillwater_samples].mean(skipna=True)
+                    metadata[f"Stillwater Probe {p}"] = (
+                        df[probe_col].iloc[:stillwater_samples].mean(skipna=True)
+                    )
 
 
 def _extract_tunnel_condition(metadata: dict, filename: str):
     """Extract tunnel condition from filename."""
-    tunnel_match = re.search(r'([0-9])roof', filename)
+    tunnel_match = re.search(r"([0-9])roof", filename)
     if tunnel_match:
         metadata["TunnelCondition"] = tunnel_match.group(1) + " roof plates"
 
 
 def _extract_panel_condition(metadata: dict, filename: str):
     """Extract panel condition from filename."""
-    panel_match = re.search(r'([A-Za-z]+)panel', filename)
+    panel_match = re.search(r"([A-Za-z]+)panel", filename)
     if panel_match:
         metadata["PanelCondition"] = panel_match.group(1)
 
 
 def _extract_wave_parameters(metadata: dict, filename: str):
     """Extract wave parameters from filename."""
-    if m := re.search(r'-amp([A-Za-z0-9]+)-', filename):
+    if m := re.search(r"-amp([A-Za-z0-9]+)-", filename):
         metadata["WaveAmplitudeInput [Volt]"] = int(m.group(1)) * MEASUREMENT.MM_TO_M
-    
-    if m := re.search(r'-freq(\d+)-', filename):
+
+    if m := re.search(r"-freq(\d+)-", filename):
         metadata["WaveFrequencyInput [Hz]"] = int(m.group(1)) * MEASUREMENT.MM_TO_M
-    
-    if m := re.search(r'-per(\d+)-', filename):
+
+    if m := re.search(r"-per(\d+)-", filename):
         metadata["WavePeriodInput"] = int(m.group(1))
-    
-    if m := re.search(r'-depth([A-Za-z0-9]+)', filename):
+
+    if m := re.search(r"-depth([A-Za-z0-9]+)", filename):
         metadata["WaterDepth [mm]"] = int(m.group(1))
-    
-    if m := re.search(r'-mstop([A-Za-z0-9]+)', filename):
+
+    if m := re.search(r"-mstop([A-Za-z0-9]+)", filename):
         metadata["Extra seconds"] = int(m.group(1))
-    
-    if m := re.search(r'-run([0-9])', filename, re.IGNORECASE):
+
+    if m := re.search(r"-run([0-9])", filename, re.IGNORECASE):
         metadata["Run number"] = m.group(1)
 
 
@@ -401,12 +453,13 @@ def _extract_wave_parameters(metadata: dict, filename: str):
 # CONFIGURATION MANAGEMENT UTILITIES
 # =============================================================================
 
+
 def print_probe_configuration_history():
     """Print a timeline of all probe configurations."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("PROBE CONFIGURATION HISTORY")
-    print("="*70)
-    
+    print("=" * 70)
+
     for i, config in enumerate(sorted(PROBE_CONFIGS, key=lambda c: c.valid_from), 1):
         print(f"\n{i}. {config.name.upper()}")
         print(f"   Valid: {config.valid_from.date()} → ", end="")
@@ -416,8 +469,8 @@ def print_probe_configuration_history():
             print(f"      Probe {probe_num}: {config.distances_mm[probe_num]:,.1f} mm")
         if config.notes:
             print(f"   Notes: {config.notes}")
-    
-    print("\n" + "="*70)
+
+    print("\n" + "=" * 70)
 
 
 def get_configuration_for_date(target_date: datetime) -> ProbeConfiguration:
@@ -426,13 +479,14 @@ def get_configuration_for_date(target_date: datetime) -> ProbeConfiguration:
         if config.valid_from <= target_date:
             if config.valid_until is None or target_date < config.valid_until:
                 return config
-    
+
     raise ValueError(f"No configuration found for {target_date}")
 
 
 # =============================================================================
 # PROCESSED DATAFRAME CACHE  (zeroed + smoothed time series)
 # =============================================================================
+
 
 def save_processed_dfs(processed_dfs: Dict[str, pd.DataFrame], cache_dir: Path) -> Path:
     """
@@ -477,8 +531,12 @@ def load_processed_dfs(*cache_dirs) -> Dict[str, pd.DataFrame]:
             continue
         df = pd.read_parquet(parquet_path)
         for path in df["_path"].unique():
-            result[path] = df[df["_path"] == path].drop(columns=["_path"]).reset_index(drop=True)
-        print(f"   Loaded {len(result)} processed DataFrames from {Path(cache_dir).name}")
+            result[path] = (
+                df[df["_path"] == path].drop(columns=["_path"]).reset_index(drop=True)
+            )
+        print(
+            f"   Loaded {len(result)} processed DataFrames from {Path(cache_dir).name}"
+        )
     return result
 
 
@@ -517,17 +575,16 @@ def get_data_files(folder: Path) -> Iterator[Path]:
     if total == 0:
         print(f"  No data files found in {folder}")
 
+
 def load_or_update(
-    *folders: Path | str,
-    force_recompute: bool = False,
-    total_reset: bool = False
+    *folders: Path | str, force_recompute: bool = False, total_reset: bool = False
 ) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
     """
     For each input folder (e.g. wavedata/20251110-tett6roof-lowM-ekte580),
     automatically uses or creates:
         waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580/
     containing dfs.parquet (cached DataFrames) and meta.json (metadata)
-    
+
     Args:
         folders: One or more paths to raw data folders
         force_recompute: If True, recompute metadata from cached DataFrames (skip loading CSVs)
@@ -536,8 +593,12 @@ def load_or_update(
     # Find project root
     current_file = Path(__file__).resolve()
     project_root = next(
-        (p for p in current_file.parents if (p / "main.py").exists() or (p / ".git").exists()),
-        current_file.parent.parent
+        (
+            p
+            for p in current_file.parents
+            if (p / "main.py").exists() or (p / ".git").exists()
+        ),
+        current_file.parent.parent,
     )
 
     # Define base folder for all processed experiments
@@ -577,29 +638,32 @@ def load_or_update(
             # Load all CSVs fresh
             csv_files = list(get_data_files(folder_path))
             dfs = _load_csv_files(csv_files, experiment_name)
-            
+
         elif dfs_cache_path.exists():
             print(f"   Loading cached DataFrames from {dfs_cache_path.name}")
             try:
                 # Load from parquet - reconstruct the dict
                 cached_df = pd.read_parquet(dfs_cache_path)
                 # Parquet stores as single DF with 'path' column, need to split back
-                for path in cached_df['_path'].unique():
-                    dfs[path] = cached_df[cached_df['_path'] == path].drop(columns=['_path'])
+                for path in cached_df["_path"].unique():
+                    dfs[path] = cached_df[cached_df["_path"] == path].drop(
+                        columns=["_path"]
+                    )
                 print(f"   Loaded {len(dfs)} cached DataFrames")
-                
+
                 # Check for new CSV files not in cache
                 seen_keys = set(dfs.keys())
                 new_csv_files = [
-                    p for p in get_data_files(folder_path)
+                    p
+                    for p in get_data_files(folder_path)
                     if str(p.resolve()) not in seen_keys
                 ]
-                
+
                 if new_csv_files:
                     print(f"   Found {len(new_csv_files)} new CSV file(s), loading...")
                     new_dfs = _load_csv_files(new_csv_files, experiment_name)
                     dfs.update(new_dfs)
-                    
+
             except Exception as e:
                 print(f"   Cache corrupted ({e}) → rebuilding from CSVs")
                 csv_files = list(get_data_files(folder_path))
@@ -614,23 +678,27 @@ def load_or_update(
         # ============================================================
         if force_recompute or total_reset:
             mode = "total reset" if total_reset else "force recompute"
-            print(f"   {mode.capitalize()}: Extracting metadata from {len(dfs)} DataFrames")
+            print(
+                f"   {mode.capitalize()}: Extracting metadata from {len(dfs)} DataFrames"
+            )
             # Extract metadata from all loaded DataFrames
             for path, df in dfs.items():
                 filename = Path(path).name
-                metadata = extract_metadata_from_filename(filename, Path(path), df, experiment_name)
+                metadata = extract_metadata_from_filename(
+                    filename, Path(path), df, experiment_name
+                )
                 meta_list.append(metadata)
-                
+
         elif meta_path.exists():
             print(f"   Loading existing metadata from {meta_path.name}")
             try:
                 meta_list = json.loads(meta_path.read_text(encoding="utf-8"))
                 print(f"   Loaded metadata for {len(meta_list)} files")
-                
+
                 # Check if we have new DataFrames that need metadata
-                existing_paths = {m['path'] for m in meta_list}
+                existing_paths = {m["path"] for m in meta_list}
                 new_paths = set(dfs.keys()) - existing_paths
-                
+
                 if new_paths:
                     print(f"   Extracting metadata for {len(new_paths)} new file(s)")
                     for path in new_paths:
@@ -639,38 +707,46 @@ def load_or_update(
                             filename, Path(path), dfs[path], experiment_name
                         )
                         meta_list.append(metadata)
-                        
+
             except Exception as e:
                 print(f"   Metadata corrupted ({e}) → rebuilding")
                 for path, df in dfs.items():
                     filename = Path(path).name
-                    metadata = extract_metadata_from_filename(filename, Path(path), df, experiment_name)
+                    metadata = extract_metadata_from_filename(
+                        filename, Path(path), df, experiment_name
+                    )
                     meta_list.append(metadata)
         else:
             print(f"   No metadata found, extracting from {len(dfs)} DataFrames")
             for path, df in dfs.items():
                 filename = Path(path).name
-                metadata = extract_metadata_from_filename(filename, Path(path), df, experiment_name)
+                metadata = extract_metadata_from_filename(
+                    filename, Path(path), df, experiment_name
+                )
                 meta_list.append(metadata)
 
         # ============================================================
         # Step 3: Save cache
         # ============================================================
         # Save DataFrame cache to parquet (if new/updated)
-        if dfs and (total_reset or not dfs_cache_path.exists() or len(dfs) != len(meta_list)):
+        if dfs and (
+            total_reset or not dfs_cache_path.exists() or len(dfs) != len(meta_list)
+        ):
             print(f"   Saving DataFrame cache to {dfs_cache_path.name}")
             # Combine all dfs into single DataFrame for parquet
             combined_list = []
             for path, df in dfs.items():
                 df_copy = df.copy()
-                df_copy['_path'] = path  # Add path identifier
+                df_copy["_path"] = path  # Add path identifier
                 combined_list.append(df_copy)
             combined_df = pd.concat(combined_list, ignore_index=True)
-            combined_df.to_parquet(dfs_cache_path, index=False, engine='pyarrow')
-        
+            combined_df.to_parquet(dfs_cache_path, index=False, engine="pyarrow")
+
         # Save metadata to JSON
         if meta_list:
-            meta_path.write_text(json.dumps(meta_list, indent=2, default=str), encoding="utf-8")
+            meta_path.write_text(
+                json.dumps(meta_list, indent=2, default=str), encoding="utf-8"
+            )
             print(f"   Saved metadata for {len(meta_list)} files")
 
         # Merge into global result
@@ -680,51 +756,59 @@ def load_or_update(
     # Final metadata DataFrame
     meta_df = pd.DataFrame(all_meta_list)
     meta_df = apply_dtypes(meta_df)
-    
-    mode = "reset" if total_reset else ("recomputed metadata" if force_recompute else "loaded")
-    print(f"\nFinished! Total {len(all_dfs)} files ({mode}) from {len(folders)} experiment(s)")
+
+    mode = (
+        "reset"
+        if total_reset
+        else ("recomputed metadata" if force_recompute else "loaded")
+    )
+    print(
+        f"\nFinished! Total {len(all_dfs)} files ({mode}) from {len(folders)} experiment(s)"
+    )
     return all_dfs, meta_df
 
 
 def _load_csv_files(
-    csv_files: List[Path], 
-    experiment_name: str
+    csv_files: List[Path], experiment_name: str
 ) -> Dict[str, pd.DataFrame]:
     """Helper function to load CSV files and return dict of DataFrames."""
     dfs = {}
-    
+
     for i, path in enumerate(csv_files, 1):
         key = str(path.resolve())
         try:
             suffix = path.suffix.lower()
             if suffix == ".csv":
                 df = pd.read_csv(
-                    path, 
-                    engine='pyarrow',
-                    names=["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"]
+                    path,
+                    engine="pyarrow",
+                    names=["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"],
                 )
-                
+
                 # Formatting
                 for probe in range(1, 5):
                     df[f"Probe {probe}"] *= MEASUREMENT.M_TO_MM
                 df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y %H:%M:%S.%f")
-                
+
                 dfs[key] = df
-                print(f"   [{i}/{len(csv_files)}] Loaded {path.name} → {len(df):,} rows")
+                print(
+                    f"   [{i}/{len(csv_files)}] Loaded {path.name} → {len(df):,} rows"
+                )
             else:
                 print(f"   Skipping unsupported: {path.name}")
-                
+
         except Exception as e:
             print(f"   Failed {path.name}: {e}")
-    
+
     return dfs
+
 
 # --------------------------------------------------
 # Takes in a modified meta-dataframe, and updates the meta.JSON and meta excel
 # --------------------------------------------------
 def update_processed_metadata(
     meta_df: pd.DataFrame,
-    force_recompute: bool = False, 
+    force_recompute: bool = False,
 ) -> None:
     """
     Safely updates meta.json files:
@@ -736,12 +820,16 @@ def update_processed_metadata(
     """
     current_file = Path(__file__).resolve()
     project_root = next(
-        (p for p in current_file.parents if (p / "main.py").exists() or (p / ".git").exists()),
-        current_file.parent.parent
+        (
+            p
+            for p in current_file.parents
+            if (p / "main.py").exists() or (p / ".git").exists()
+        ),
+        current_file.parent.parent,
     )
     # def ...     processed_root: Path | str | None = None, fjernet
-    processed_root = Path( project_root / "waveprocessed") #processed_root or
-    
+    processed_root = Path(project_root / "waveprocessed")  # processed_root or
+
     # Ensure we have a way to group by experiment
     meta_df = meta_df.copy()
     if "PROCESSED_folder" in meta_df.columns:
@@ -767,7 +855,7 @@ def update_processed_metadata(
                     old_records = json.load(f)
                 old_df = pd.DataFrame(old_records)
                 old_df = apply_dtypes(old_df)
-                
+
                 print(f"Loaded {len(old_df)} existing entries from {meta_path.name}")
             except Exception as e:
                 print(f"Could not read existing {meta_path} → starting fresh: {e}")
@@ -779,11 +867,11 @@ def update_processed_metadata(
         # Clean incoming data
         new_df = group_df.drop(columns=["__group_key"], errors="ignore").copy()
         new_df["path"] = new_df["path"].astype(str)
-        
+
         # Ensure old_df path is also string
         if not old_df.empty:
             old_df["path"] = old_df["path"].astype(str)
-        
+
         # Merge logic
         if old_df.empty:
             final_df = new_df
@@ -797,18 +885,20 @@ def update_processed_metadata(
         records = final_df.to_dict("records")
         temp_path = meta_path.with_suffix(".json.tmp")
         temp_path.write_text(
-            json.dumps(records, indent=2, default=str),
-            encoding="utf-8")
-        temp_path.replace(meta_path) #atomic
-        
+            json.dumps(records, indent=2, default=str), encoding="utf-8"
+        )
+        temp_path.replace(meta_path)  # atomic
+
         final_df.to_excel(excel_path, index=False)
-        
+
         added = len(final_df) - len(old_df) if not old_df.empty else len(final_df)
-        print(f"Updated {meta_path.relative_to(project_root)} → {len(final_df)} entries (+{added} new)")
-    
-    print(f"\nMetadata safely updated and preserved across {meta_df['__group_key'].nunique()} experiment(s)!")
+        print(
+            f"Updated {meta_path.relative_to(project_root)} → {len(final_df)} entries (+{added} new)"
+        )
 
-
+    print(
+        f"\nMetadata safely updated and preserved across {meta_df['__group_key'].nunique()} experiment(s)!"
+    )
 
 
 # =============================================================================
@@ -828,36 +918,36 @@ if __name__ == "__main__":
             "experiment_folder": "20251110-test",
         }
     ]
-    
+
     df = pd.DataFrame(sample_data)
-    
+
     print("BEFORE apply_dtypes:")
     print(df.dtypes)
     print()
-    
+
     df = apply_dtypes(df)
-    
+
     print("AFTER apply_dtypes:")
     print(df.dtypes)
     print()
     print("Values:")
     print(df)
-    
+
     # Verify types
     assert df["WindCondition"].dtype == object  # string
     assert df["WaveFrequencyInput [Hz]"].dtype == "float64"
     assert df["Probe 1 Amplitude"].dtype == "float64"
     assert pd.isna(df["Probe 2 Amplitude"].iloc[0])  # None → NaN
-    
+
     print("\n✓ All type conversions working correctly!")
 
 
 # if __name__ == "__main__":
 #     print("Testing probe position system...")
-    
+
 #     # Print configuration history
 #     print_probe_configuration_history()
-    
+
 #     # Test getting positions for different dates
 #     test_dates = [
 #         datetime(2025, 11, 1),   # Before Nov 14
@@ -865,11 +955,11 @@ if __name__ == "__main__":
 #         datetime(2025, 11, 20),  # After Nov 14
 #         datetime(2026, 1, 15),   # Future date
 #     ]
-    
+
 #     print("\n" + "="*70)
 #     print("TESTING DATE LOOKUPS")
 #     print("="*70)
-    
+
 #     for test_date in test_dates:
 #         print(f"\nDate: {test_date.date()}")
 #         try:
@@ -880,5 +970,3 @@ if __name__ == "__main__":
 #             print(f"  Probe 1: {positions[1]:,.1f} mm")
 #         except ValueError as e:
 #             print(f"  ERROR: {e}")
-            
-            
