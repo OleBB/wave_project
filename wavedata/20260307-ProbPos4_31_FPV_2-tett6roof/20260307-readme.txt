@@ -1,0 +1,69 @@
+ok, la i panel, og flytta prober bakover. må gjøre ting på nytt. 
+
+uansett.  nå er probeposisjoner
+P4_8804, P1ogP3_9373 (mellom vinduer), FPV, og p2_12300ish. (mellom vinduer).
+
+
+første måling, kun med ULS, fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.
+første run. amp0100-freq1300 mangler Paddle-data.
+første run med padle data er amp0100-freq1300, derretter startet jeg på amp0100-freq1000, og jobber meg oppover (inkl enda en på 1.3). 
+
+Ang bevegelse av bakre panel. 0.1volt, 1.00hzog/eller1.1hz ser ut som opptil 3 cm total bevegelse.
+eller, faktisk (på amp0.1-freq1.3) så svinger den 2 cm, men fra ende til ende er det 6 cm. altså underveis i bølgen så rykker den frem og tilbake på venstre side, og så strekker den seg helt ut, totalt 6 cm fra fremste til bakerste. 
+
+på 01volt-1.4hz, ser det ut som 7 cm total strekk!
+
+på amp0100-freq1500-nøyaktig målt til 6 cm totalstrekk.
+freq1600 nesten 6 cm.
+freq1700.. mulig bare 5, ikke nøye målt.
+freq18000... mulig bare 3. se video. 
+
+2 min etter amp0100-freq1800. kjørte jeg en amp0100-freq1801-40per-mstop30 - MEN NO PADLE. Den noterer ned begge disse detaljene i parameter-filen. "Bølgeform Ingen Bølge" trumfer input amp og freq. 
+
+ny bølgeamplitude -02. 
+amp0200-freq100 bevegde seg 10.5 cm. men endte ikke opp like langt bak i tanken, mulig fordi det ene panelet ligger litt under det andre? 
+
+amp0200-freq1100, den svinger liksom mellom 1 og 5, med noen svingninger helt ned til 0, og så ender den fort på 8-9, og så saakte til 10-11. se video.
+
+hører dunking i glasset av og til, noen rosa, eller overgangen rosa gul som slår i vinduet. 
+
+fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv - total-bevegelse inkl sluttstrekk, 1 hel gul panellengde, 12 cm.
+
+fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv - wow, total bevegelse inkl sluttstrekk 14 cm. men det ene panelet lå litt oppå den andre
+
+fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv - i hele 17 total strekk, men noe av dette skyldes at den ene platen lå oppå den andre. så 14 er vel mere riktig.
+
+nå så det ut som det var mere dønninger. lurte på om det var pga aktivitet i bygget. smelle døra tror jeg også var dumt. 
+hei! kanskje det fortsatt lekker vann... 
+
+kjører en no-padle:fullpanel-nowind-nowave-depth580-mstop30-run2.csv 
+
+så, referansebølge amp0100-freq1300. 
+
+så, ser fortsatt ut som noe risting i bygget. .. nei virker som det er bølgemakern som rister litt...men det var ikke tilfelle istad... 
+
+ok, fikk opp vindmålern.
+
+nå en laang måling med bare fullvind, ULS only. 
+
+så en amp0100-freq1300 for good measure.
+
+så begynner vi på frek fra 1 til 1.8 tenker jeg. med minimalt med venting mellom hver. 
+
+observasjon: hele panelet ligger under vann, og defor ser vi vindbølger bak også. 
+trykkmålern står på 20% som skal være 20 pascal. flytta den litt ned, og da ble den 21. som er korrekt på 5.8m/s. 
+
+markerte fullwind amp0100-freq1400 run 2 feilaktig. kjører en til som får blir run 1. 
+
+må finne en måte å kvantifisere den stående bølgen foran.
+
+nå kjører jeg en amp0100-freq1300-mstop90, for å se mer på halen, selv om det er vind, er det noe refleksjon å ta hensyn til?
+
+nu, med amp0200-freq1000, ser det ene panelet glir godt over det andre gule, typ 2-3cm.
+
+amp0200-freq1300 (med mstop90), totalutstrekning 17 cm. 
+
+prøver meg helt opp på 1.9 hz og da er det forskjell på lilla og gule plater.. de lilla følger bølgen bedre. 
+
+gjør noen på 06 07 08 og 09 hz også, koffør ikkje. ser ut som det er dønninger igjen på freq0600... noe litt seig og treig bevegelse. eller ser jeg syner? 
+

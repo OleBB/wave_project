@@ -6,6 +6,7 @@ Created on Fri Dec 19 10:21:49 2025
 @author: ole
 """
 
+# %%
 import copy
 import os
 import sys
@@ -68,26 +69,40 @@ from wavescripts.plotter import (
 from wavescripts.processor import process_selected_data
 from wavescripts.processor2nd import process_processed_data
 
+print("first print")
+
 # %%
-file_dir = Path(__file__).resolve().parent
-os.chdir(file_dir)  # Make the script always run from the folder where THIS file lives
+try:
+    file_dir = Path(__file__).resolve().parent
+except NameError:
+    file_dir = Path.cwd()
+
+os.chdir(file_dir)
+
 
 """
 Overordnet: Enhver mappe er en egen kjøring, som deler samme vanndyp og probestilltilstand.
 En rekke prossesseringer skjer på likt for hele mappen.
 Og så er det kode som sammenlikner data når hele mappen er prosessert en gang
 """
-
+print("second print")
 # List of dataset paths you want to process
+# dataset_paths = [
+#     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
+#     # Path("/Users/ole/Kodevik/wave_project/w-avedata/20251110-tett6roof-lowMooring"), #mstop 10
+#     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"), #per15 (few runs)
+#     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
+#     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
+#     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+#     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+#     # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
+#     Path("/Users/ole/Kodevik/wave_project/wavedata/20250305-newProbePos-tett6roof"),
+# ]
+
 dataset_paths = [
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),  # per15
-    # Path("/Users/ole/Kodevik/wave_project/w-avedata/20251110-tett6roof-lowMooring"), #mstop 10
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"), #per15 (few runs)
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
+    Path(
+        "/Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof"
+    )
 ]
 
 # %% kjør
@@ -112,11 +127,11 @@ processvariables = {
         "PanelCondition": None,  # ["reverse"]#, "reverse"],  # no, full, reverse,
     },
     "prosessering": {
-        "total_reset": False,  # laster også csv'ene på nytt
-        "force_recompute": False,  # kjører alt på nytt, ignorerer gammal json
+        "total_reset": True,  # laster også csv'ene på nytt
+        "force_recompute": True,  # kjører alt på nytt, ignorerer gammal json
         "debug": False,
         "smoothing_window": 10,  # kontrollere denne senere
-        "find_range": False,
+        "find_range": True,
         "range_plot": False,
     },
 }
@@ -212,6 +227,7 @@ if all_meta_sel:
 # """PRINT RESULTS"""
 # from wavescripts.wavestudyer import wind_damping_analysis
 # damping_analysis_results = wind_damping_analysis(combined_meta_sel)
+
 
 # %%
 # TOdo - sjekke ekte sample rate
@@ -329,7 +345,7 @@ dampingplotvariables = {
     },
     "plotting": {
         "show_plot": True,
-        "save_plot": True,
+        "save_plot": False,
         "figsize": None,
         "separate": False,
         "facet_by": None,  # wind, panel, probe
@@ -359,9 +375,9 @@ plot_damping_scatter(damping_groupedallruns_df, dampingplotvariables)
 # %% FFT-SPEKTRUM filter initiert
 freqplotvariables = {
     "overordnet": {
-        "chooseAll": True,
+        "chooseAll": False,
         "chooseFirst": False,
-        "chooseFirstUnique": False,
+        "chooseFirstUnique": True,
     },
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],  # 0.2, 0.3], #0.1, 0.2, 0.3
@@ -381,10 +397,10 @@ freqplotvariables = {
     },
     "plotting": {
         "show_plot": True,
-        "save_plot": True,
+        "save_plot": False,
         "figsize": (10, 12),  # (10,10),
         "linewidth": 0.7,
-        "separate": False,
+        "separate": True,
         "facet_by": "probe",  # wind", #wind, panel, probe
         "overlay": False,  #
         "annotate": False,  #
@@ -445,7 +461,7 @@ swellplotvariables = {
     },
     "plotting": {
         "show_plot": True,
-        "save_plot": True,
+        "save_plot": False,
         "figsize": (10, 12),  # (10,10),
         "linewidth": 0.7,
         "separate": False,
