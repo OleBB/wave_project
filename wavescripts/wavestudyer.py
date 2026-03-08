@@ -315,7 +315,7 @@ def wind_damping_analysis(meta_df):
         date_str = row.get("file_date")
         if date_str:
             try:
-                cfg = get_configuration_for_date(datetime.strptime(str(date_str), "%Y%m%d"))
+                cfg = get_configuration_for_date(datetime.fromisoformat(str(date_str)))
                 in_probe, out_probe = cfg.in_probe, cfg.out_probe
             except (ValueError, KeyError):
                 pass
