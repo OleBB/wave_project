@@ -1,0 +1,7 @@
+amp0100-freq0600 skraper tydelig på bunnen. typ 8mm total bevegelse på grums/bobler
+
+freq0500 må dobbeltsjekkes pga sein lagring.
+
+fylte på vann etter amp0200-freq1300. Nu må jeg enten rekalibrere, eller lage en lineær fit fra start til slutt...
+ser ut som jeg lager en ny mappe og gir meg for dagen
+

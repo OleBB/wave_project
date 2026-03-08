@@ -1,0 +1,14 @@
+femte mars tjuetjueseks. 
+
+nå er det nye probeposisjoner. 
+p4 foran, ved. 8804mm fra paddle, 
+p3 og p1 parallelle foran. @9383. p1 nærmest datamaskinen.
+p2 bak ved 12783ish.
+
+forsøker nå å bruke padle-data som backup, må bare finne om den automatisk matcher tid og dato. 
+
+eksempelnavn
+nopanel-fullwind-amp0100-freq0650-per40-depth580-mstop30-run1
+
+..
+nopanel-nowind-amp0400-freq1600-per40-depth580-mstop30-run1.csv - breaking wave ! :D

@@ -487,6 +487,8 @@ def plot_swell_scatter(
 ) -> None:
     """
     P2 vs P3 amplitude scatter for Swell, Wind, and Total bands.
+    as calculated for in "Probe {i} Swell Amplitude (PSD)"
+    PC.SWELL_AMPLITUDE_PSD and PC.WIND_AMPLITUDE_PSD,
 
     show_plot → all three bands side-by-side + data summary panel
     save_plot → one PDF/PGF per band + one .tex stub with three subfigures

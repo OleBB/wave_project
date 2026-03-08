@@ -6,11 +6,11 @@ Created on Fri Dec 19 10:21:49 2025
 @author: ole
 """
 
+# %%
 import copy
 import os
 import sys
 
-# %%
 # %% load results from disk — no reprocessing needed
 from pathlib import Path
 
@@ -73,12 +73,15 @@ from wavescripts.processor2nd import process_processed_data
 
 file_dir = Path(__file__).resolve().parent
 
+# dataset_paths = [
+#     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
+#     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
+#     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+#     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+#     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
+# ]
 dataset_paths = [
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof-lowM-579komma8"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
+    "/Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof"
 ]
 
 processvariables = {
