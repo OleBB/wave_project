@@ -64,6 +64,7 @@ class ProbeConfiguration:
     valid_from: datetime  # inclusive
     valid_until: Optional[datetime]  # exclusive, None = forever
     distances_mm: Dict[int, float]  # probe_num -> mm from paddle
+    lateral_mm: Dict[int, float]    # probe_num -> mm from reference tank wall
     in_probe: int = 2  # probe number measuring incoming wave (before panel)
     out_probe: int = 3  # probe number measuring outgoing wave (after panel)
     notes: str = ""
@@ -77,10 +78,16 @@ PROBE_CONFIGS = [
         valid_until=datetime(2025, 11, 14),  # trokkje d e rette datao
         # TODO sjekke datoen her og recompute..
         distances_mm={
-            1: 18000,  # langt bak en plass
-            2: 9455.0,
-            3: 12544.0,
-            4: 12545.0,
+            1: 18000.0,  # langt bak ein stad
+            2: 9373.0,
+            3: 12545.0,  # parallell pair
+            4: 12545.0,  # parallell pair
+        },
+        lateral_mm={
+            1: 250.0,  # ukjent, antar senter
+            2: 250.0,  # senter av tanken
+            3:  17.0,  # parallell, nær referansevegg
+            4:  34.0,  # parallell, 34mm frå referansevegg
         },
         in_probe=2,
         out_probe=3,
@@ -91,10 +98,16 @@ PROBE_CONFIGS = [
         valid_from=datetime(2025, 11, 14),
         valid_until=datetime(2026, 1, 1),
         distances_mm={
-            1: 8804.0,  # en liten plate forean 2
-            2: 9373.0,  # mellom vindu
-            3: 12544.0,  # mellom neste vindu
-            4: 12545.0,  # parallell med 3
+            1: 8804.0,   # ein liten plate framfor 2
+            2: 9373.0,   # mellom vindauge
+            3: 12545.0,  # parallell pair, mellom neste vindauge
+            4: 12545.0,  # parallell pair
+        },
+        lateral_mm={
+            1:  17.0,  # same wall side as parallel pair
+            2: 250.0,  # senter av tanken
+            3:  17.0,  # parallell, nær referansevegg
+            4:  34.0,  # parallell, 34mm frå referansevegg
         },
         in_probe=2,
         out_probe=3,
@@ -105,10 +118,16 @@ PROBE_CONFIGS = [
         valid_from=datetime(2026, 3, 4),
         valid_until=datetime(2026, 3, 7),
         distances_mm={
-            1: 9372.0,  # sjekk hvem som er foran av 1 og 3, om noen av de er det
-            2: 12300.0,  # TODO måle denna rett.
-            3: 9373.0,
+            1: 9373.0,   # parallell pair, IN-sida
+            2: 12300.0,  # TODO: måle denna rett
+            3: 9373.0,   # parallell pair, IN-sida
             4: 8804.0,
+        },
+        lateral_mm={
+            1:  17.0,  # parallell, nær referansevegg
+            2: 250.0,  # senter av tanken
+            3:  34.0,  # parallell, 34mm frå referansevegg
+            4: 250.0,  # senter av tanken
         },
         in_probe=1,
         out_probe=2,
@@ -119,10 +138,16 @@ PROBE_CONFIGS = [
         valid_from=datetime(2026, 3, 7),
         valid_until=None,
         distances_mm={
-            1: 9372.0,  #
-            2: 12545.0,  # TODO: sjekke om denna var rett go
-            3: 9373.0,
+            1: 9373.0,   # parallell pair, IN-sida
+            2: 12545.0,  # TODO: sjekke om denna var rett
+            3: 9373.0,   # parallell pair, IN-sida
             4: 8804.0,
+        },
+        lateral_mm={
+            1:  17.0,  # parallell, nær referansevegg
+            2: 250.0,  # senter av tanken
+            3:  34.0,  # parallell, 34mm frå referansevegg
+            4: 250.0,  # senter av tanken
         },
         in_probe=1,
         out_probe=2,
@@ -284,6 +309,8 @@ def extract_metadata_from_filename(
             cfg = get_configuration_for_date(file_date)
             for probe_num, distance in cfg.distances_mm.items():
                 metadata[f"Probe {probe_num} mm from paddle"] = distance
+            for probe_num, lateral in cfg.lateral_mm.items():
+                metadata[f"Probe {probe_num} mm from wall"] = lateral
             metadata["in_probe"] = cfg.in_probe
             metadata["out_probe"] = cfg.out_probe
         except ValueError as e:
@@ -327,6 +354,7 @@ def _initialize_metadata_dict(file_path: str, experiment_name: str) -> dict:
     # Add probe-related fields
     for i in range(1, 5):
         metadata[f"Probe {i} mm from paddle"] = None
+        metadata[f"Probe {i} mm from wall"] = None
         metadata[f"Stillwater Probe {i}"] = None
         metadata[f"Computed Probe {i} start"] = None
         metadata[f"Computed Probe {i} end"] = None

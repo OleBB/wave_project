@@ -301,7 +301,7 @@ def _update_more_metrics(
         out_in = pd.Series(index=meta_indexed.index, dtype=float)
         for date_str, idx in meta_indexed.groupby("file_date").groups.items():
             try:
-                dt = datetime.strptime(str(date_str), "%Y%m%d")
+                dt = datetime.fromisoformat(str(date_str))
                 cfg = get_configuration_for_date(dt)
                 in_col = f"Probe {cfg.in_probe} Amplitude (FFT)"
                 out_col = f"Probe {cfg.out_probe} Amplitude (FFT)"
