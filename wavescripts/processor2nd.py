@@ -8,7 +8,8 @@ Created on Fri Dec 19 10:37:28 2025
 import numpy as np
 import pandas as pd
 
-from wavescripts.improved_data_loader import update_processed_metadata
+from datetime import datetime
+from wavescripts.improved_data_loader import update_processed_metadata, get_configuration_for_date
 from typing import Mapping, Any, Optional, Sequence, Dict, Tuple, Iterable
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
@@ -291,9 +292,27 @@ def _update_more_metrics(
     # Replace inf/-inf with NaN (e.g. division by zero)
     ratios = ratios.replace([np.inf, -np.inf], np.nan)
 
-    # Assign / overwrite the ratio columns
+    # Assign / overwrite the adjacent-probe ratio columns
     ratio_cols = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]
     meta_indexed[ratio_cols] = ratios[ratio_cols]
+
+    # Compute OUT/IN (FFT): outgoing / incoming, using config-specific probe numbers
+    if "file_date" in meta_indexed.columns:
+        out_in = pd.Series(index=meta_indexed.index, dtype=float)
+        for date_str, idx in meta_indexed.groupby("file_date").groups.items():
+            try:
+                dt = datetime.strptime(str(date_str), "%Y%m%d")
+                cfg = get_configuration_for_date(dt)
+                in_col = f"Probe {cfg.in_probe} Amplitude (FFT)"
+                out_col = f"Probe {cfg.out_probe} Amplitude (FFT)"
+                if in_col in meta_indexed.columns and out_col in meta_indexed.columns:
+                    out_in.loc[idx] = (
+                        meta_indexed.loc[idx, out_col] / meta_indexed.loc[idx, in_col]
+                    )
+            except (ValueError, KeyError):
+                pass
+        out_in = out_in.replace([np.inf, -np.inf], np.nan)
+        meta_indexed[GC.OUT_IN_FFT] = out_in
 
     # ── Band amplitudes ──────────────────────────────────────────────
     # Assuming compute_amplitude_by_band returns a DataFrame with "path" column

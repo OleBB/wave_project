@@ -32,10 +32,13 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from datetime import datetime
+
 from wavescripts.constants import (
     MEASUREMENT,
     SIGNAL,
 )
+from wavescripts.improved_data_loader import get_configuration_for_date
 from wavescripts.constants import (
     CalculationResultColumns as RC,
 )
@@ -145,7 +148,7 @@ def _draw_damping_freq_ax(
     ax: plt.Axes, stats_df: pd.DataFrame, panel: str, wind: str
 ) -> None:
     """
-    Draw damping ratio P3/P2 vs frequency onto a single axes.
+    Draw damping ratio OUT/IN vs frequency onto a single axes.
     Shared primitive used by both show_plot grid and save_plot loop.
     """
     mask = (stats_df[GC.PANEL_CONDITION_GROUPED] == panel) & (
@@ -181,8 +184,8 @@ def _draw_damping_freq_ax(
         )
         ax.errorbar(
             amp_data[GC.WAVE_FREQUENCY_INPUT],
-            amp_data["mean_P3P2"],
-            yerr=amp_data["std_P3P2"],
+            amp_data["mean_out_in"],
+            yerr=amp_data["std_out_in"],
             marker="o",
             label=f"{amp:.2f} V",
             capsize=3,
@@ -191,7 +194,7 @@ def _draw_damping_freq_ax(
         )
 
     ax.set_xlabel("Frequency [Hz]", fontsize=9)
-    ax.set_ylabel("P3/P2", fontsize=9)
+    ax.set_ylabel("OUT/IN", fontsize=9)
     ax.set_title(f"{panel}panel / {wind}wind", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(title="Amplitude", fontsize=7, title_fontsize=7)
@@ -201,7 +204,7 @@ def plot_damping_freq(
     stats_df: pd.DataFrame, plotvariables: dict, chapter: str = "05"
 ) -> None:
     """
-    Damping ratio P3/P2 vs frequency.
+    Damping ratio OUT/IN vs frequency.
 
     show_plot → full panel×wind grid in one figure
     save_plot → one PDF/PGF per (panel, wind) cell + one .tex stub
@@ -227,7 +230,7 @@ def plot_damping_freq(
         for i, panel in enumerate(panel_conditions):
             for j, wind in enumerate(wind_conditions):
                 _draw_damping_freq_ax(axes[i, j], stats_df, panel, wind)
-        fig.suptitle("Damping Ratio P3/P2 vs Frequency", fontsize=13, y=1.0)
+        fig.suptitle("Damping Ratio OUT/IN vs Frequency", fontsize=13, y=1.0)
         plt.tight_layout()
         plt.show()
 
@@ -263,7 +266,7 @@ def plot_damping_scatter(
     chapter: str = "05",
 ) -> None:
     """
-    Single scatter: P3/P2 ratio for all conditions, coloured by wind.
+    Single scatter: OUT/IN ratio for all conditions, coloured by wind.
     Input: output from damping_all_amplitude_grouper()
     """
     if plotvariables is None:
@@ -280,7 +283,7 @@ def plot_damping_scatter(
     scatter_kwargs = dict(
         data=plot_data,
         x=GC.WAVE_FREQUENCY_INPUT,
-        y="mean_P3P2",
+        y="mean_out_in",
         hue=GC.WIND_CONDITION,
         palette=WIND_COLOR_MAP,
         style=GC.PANEL_CONDITION_GROUPED,
@@ -295,13 +298,13 @@ def plot_damping_scatter(
 
     sns.scatterplot(**scatter_kwargs)
 
-    if show_errorbars and "std_P3P2" in plot_data.columns:
+    if show_errorbars and "std_out_in" in plot_data.columns:
         for wind in plot_data[GC.WIND_CONDITION].unique():
             wd = plot_data[plot_data[GC.WIND_CONDITION] == wind]
             ax.errorbar(
                 wd[GC.WAVE_FREQUENCY_INPUT],
-                wd["mean_P3P2"],
-                yerr=wd["std_P3P2"],
+                wd["mean_out_in"],
+                yerr=wd["std_out_in"],
                 fmt="none",
                 ecolor=WIND_COLOR_MAP.get(wind, "gray"),
                 elinewidth=1,
@@ -312,7 +315,7 @@ def plot_damping_scatter(
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax.set_xlabel("Frequency [Hz]", fontsize=11)
-    ax.set_ylabel("P3/P2  (mean ± std)", fontsize=11)
+    ax.set_ylabel("OUT/IN  (mean ± std)", fontsize=11)
     ax.set_title("Damping Ratio: All Conditions", fontsize=12, fontweight="bold")
     ax.legend(loc="best", framealpha=0.9, fontsize=9)
     plt.tight_layout()
@@ -337,7 +340,7 @@ def plot_damping_scatter(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SWELL / P2 vs P3
+# SWELL / IN vs OUT
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _BAND_COLS = {
@@ -350,8 +353,8 @@ _BAND_COLS = {
 def _draw_swell_scatter_ax(
     ax,
     band_amplitudes,
-    p2_col,
-    p3_col,
+    in_col,
+    out_col,
     band_name,
     shared_lim=None,
     annotate_delta=True,
@@ -360,7 +363,7 @@ def _draw_swell_scatter_ax(
     has_wind = GC.WIND_CONDITION in band_amplitudes.columns
     has_panel = GC.PANEL_CONDITION in band_amplitudes.columns
 
-    if p2_col not in band_amplitudes.columns or p3_col not in band_amplitudes.columns:
+    if in_col not in band_amplitudes.columns or out_col not in band_amplitudes.columns:
         ax.text(
             0.5,
             0.5,
@@ -374,8 +377,8 @@ def _draw_swell_scatter_ax(
         ax.set_title(f"{band_name} band", fontweight="bold")
         return
 
-    p2 = band_amplitudes[p2_col].to_numpy()
-    p3 = band_amplitudes[p3_col].to_numpy()
+    p2 = band_amplitudes[in_col].to_numpy()
+    p3 = band_amplitudes[out_col].to_numpy()
     valid = np.isfinite(p2) & np.isfinite(p3)
 
     if valid.sum() == 0:
@@ -461,10 +464,23 @@ def _draw_swell_scatter_ax(
             )
 
 
-def _swell_shared_lim(band_amplitudes):
+def _in_out_probes_from_df(df: pd.DataFrame) -> tuple[int, int]:
+    """Read in_probe/out_probe directly from metadata columns."""
+    if "in_probe" in df.columns and "out_probe" in df.columns:
+        in_vals = df["in_probe"].dropna().unique()
+        out_vals = df["out_probe"].dropna().unique()
+        if len(in_vals) > 1 or len(out_vals) > 1:
+            print(f"WARNING: multiple probe configs in dataset — using most common")
+        in_p = int(df["in_probe"].dropna().mode()[0]) if len(in_vals) > 0 else 2
+        out_p = int(df["out_probe"].dropna().mode()[0]) if len(out_vals) > 0 else 3
+        return in_p, out_p
+    return 2, 3
+
+
+def _swell_shared_lim(band_amplitudes, in_probe: int = 2, out_probe: int = 3):
     all_vals = []
     for template in _BAND_COLS.values():
-        for probe in (2, 3):
+        for probe in (in_probe, out_probe):
             col = template.format(i=probe)
             if col in band_amplitudes.columns:
                 v = band_amplitudes[col].to_numpy()
@@ -486,16 +502,14 @@ def plot_swell_scatter(
     figsize: Tuple = (14, 5),
 ) -> None:
     """
-    P2 vs P3 amplitude scatter for Swell, Wind, and Total bands.
+    IN vs OUT amplitude scatter for Swell, Wind, and Total bands.
     as calculated for in "Probe {i} Swell Amplitude (PSD)"
     PC.SWELL_AMPLITUDE_PSD and PC.WIND_AMPLITUDE_PSD,
 
+    in_probe/out_probe are derived automatically from file_date via ProbeConfiguration.
+
     show_plot → all three bands side-by-side + data summary panel
     save_plot → one PDF/PGF per band + one .tex stub with three subfigures
-
-    Replaces:
-        plot_p2_vs_p3_scatter         (all bands, wind+panel encoding)
-        plot_swell_p2_vs_p3_by_wind   (Δ mean, shared limits — merged in)
 
     Input: combined_meta_sel (filtering applied internally)
     """
@@ -511,7 +525,10 @@ def plot_swell_scatter(
         return
     print(f"  {len(band_amplitudes)} rows remaining")
 
-    shared_lim = _swell_shared_lim(band_amplitudes) if share_axes else None
+    in_probe, out_probe = _in_out_probes_from_df(band_amplitudes)
+    print(f"  probe config: IN=Probe {in_probe}, OUT=Probe {out_probe}")
+
+    shared_lim = _swell_shared_lim(band_amplitudes, in_probe, out_probe) if share_axes else None
 
     if show_plot:
         # figsize = plotting.get("figsize") or (14, 5)
@@ -550,17 +567,17 @@ def plot_swell_scatter(
             _draw_swell_scatter_ax(
                 ax,
                 band_amplitudes,
-                p2_col=template.format(i=2),
-                p3_col=template.format(i=3),
+                in_col=template.format(i=in_probe),
+                out_col=template.format(i=out_probe),
                 band_name=band_name,
                 shared_lim=shared_lim,
                 annotate_delta=annotate_delta,
             )
-            ax.set_xlabel("P2 amplitude [mm]", fontsize=9)
-            ax.set_ylabel("P3 amplitude [mm]", fontsize=9)
+            ax.set_xlabel(f"Probe {in_probe} IN amplitude [mm]", fontsize=9)
+            ax.set_ylabel(f"Probe {out_probe} OUT amplitude [mm]", fontsize=9)
 
         fig.suptitle(
-            "P2 vs P3 — Swell / Wind / Total", fontsize=12, fontweight="bold", y=1.01
+            "IN vs OUT — Swell / Wind / Total", fontsize=12, fontweight="bold", y=1.01
         )
         plt.tight_layout()
         plt.show()
@@ -578,14 +595,14 @@ def plot_swell_scatter(
             _draw_swell_scatter_ax(
                 ax_s,
                 band_amplitudes,
-                p2_col=template.format(i=2),
-                p3_col=template.format(i=3),
+                in_col=template.format(i=in_probe),
+                out_col=template.format(i=out_probe),
                 band_name=band_name,
                 shared_lim=shared_lim,
                 annotate_delta=annotate_delta,
             )
-            ax_s.set_xlabel("P2 amplitude [mm]", fontsize=9)
-            ax_s.set_ylabel("P3 amplitude [mm]", fontsize=9)
+            ax_s.set_xlabel(f"Probe {in_probe} IN amplitude [mm]", fontsize=9)
+            ax_s.set_ylabel(f"Probe {out_probe} OUT amplitude [mm]", fontsize=9)
             fig_s.tight_layout()
 
             band_meta = {**meta_base, "band": band_name.lower()}
