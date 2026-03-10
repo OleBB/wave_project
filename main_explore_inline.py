@@ -33,12 +33,15 @@ from wavescripts.filters import (
     filter_for_damping,
     filter_for_frequencyspectrum,
 )
-from wavescripts.improved_data_loader import load_analysis_data
+end0 = time.perf_counter()
+print(f"imports  {end0 - start0:.4f} s")
+from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
 from wavescripts.plot_quicklook import (
     explore_damping_vs_amp,
     explore_damping_vs_freq,
     save_interactive_plot,
 )
+
 from wavescripts.plotter import (
     plot_all_probes,
     plot_damping_freq,
@@ -47,8 +50,7 @@ from wavescripts.plotter import (
     plot_reconstructed,
     plot_swell_scatter,
 )
-end0 = time.perf_counter()
-print(f"imports and validation {end0 - start0:.4f} s")
+
 
 # %%
 try:
@@ -68,8 +70,9 @@ PROCESSED_DIRS = [
 ]
 
 combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
-    *PROCESSED_DIRS, load_processed=True
+    *PROCESSED_DIRS, load_processed=False
 )
+processed_dfs: dict = {}  # loaded lazily below (wind-only section)
 
 # Paths present in both metadata and FFT dict
 matching_paths = set(combined_fft_dict.keys()) & set(combined_meta["path"].unique())
@@ -86,18 +89,18 @@ print(f"read_parquet and other stuff took {end - start:.4f} s")
 # %% ── amplitude — all probes physical layout ─────────────────────────────────
 amplitudeplotvariables = {
     "overordnet": {
-        "chooseAll": True,
+        "chooseAll": False,
         "chooseFirst": False,
         "chooseFirstUnique": False,
     },
     "filters": {
-        "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   None,
+        "WaveAmplitudeInput [Volt]": 0.1,
+        "WaveFrequencyInput [Hz]":   1.3,
         "WavePeriodInput":           None,
-        "WindCondition":             ["no", "lowest", "full"],
+        "WindCondition":             ["full"],
         "TunnelCondition":           None,
         "Mooring":                   "low",
-        "PanelCondition":            None,
+        "PanelCondition":            "no", #"["reverse", "full"],
     },
     "plotting": {
         "figsize":   [7, 4],
@@ -156,7 +159,7 @@ dampingplotvariables_all = {
         "legend":     "outside_right",
         "logaritmic": False,
         "peaks":      7,
-        "probes":     ["9373/170", "12545", "9373/340", "8804"],
+        "probes":     ["9373/170", "12545/250", "9373/340", "8804/250"],
     },
 }
 
@@ -195,7 +198,7 @@ freqplotvariables = {
         "legend":      "inside",
         "logaritmic":  False,
         "peaks":       3,
-        "probes":      ["12545", "9373/340"],
+        "probes":      ["12545/250", "9373/340"],
     },
 }
 
@@ -239,14 +242,14 @@ swellplotvariables = {
         "legend":     "inside",
         "logaritmic": False,
         "peaks":      3,
-        "probes":     ["12545", "9373/340"],
+        "probes":     ["12545/250", "9373/340"],
     },
 }
 
 plot_swell_scatter(combined_meta, swellplotvariables)
 
 # %% ── wavenumber study ───────────────────────────────────────────────────────
-_probe_positions = ["9373/170", "12545", "9373/340", "8804"]
+_probe_positions = ["9373/170", "12545/250", "9373/340", "8804/250"]
 wavenumber_cols = [f"Probe {pos} Wavenumber (FFT)" for pos in _probe_positions]
 fft_dimension_cols = [CG.fft_wave_dimension_cols(pos) for pos in _probe_positions]
 meta_wavenumber = combined_meta[["path"] + [c for c in wavenumber_cols if c in combined_meta.columns]].copy()
@@ -292,6 +295,13 @@ for _, r in _meta_wind_only.iterrows():
 print(f"\nStillwater baseline ({len(_meta_stillwater)}):")
 for _, r in _meta_stillwater.iterrows():
     print(f"  {_Path(r['path']).name}")
+
+# %% ── wind-only — lazy-load processed_dfs (skipped during normal load) ─────
+if not processed_dfs:
+    print("Loading processed_dfs (~75 MB, ~20 s)...")
+    _t0 = time.perf_counter()
+    processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+    print(f"Loaded {len(processed_dfs)} runs in {time.perf_counter() - _t0:.1f} s")
 
 # %% ── wind-only — build PSD dict (same format as psd_dict) ──────────────────
 # Compute Welch PSD for all nowave runs so we can reuse plot_frequency_spectrum.
@@ -339,7 +349,7 @@ _wind_psd_plotvars = {
         "legend":     "inside",
         "logaritmic": True,
         "peaks":      0,
-        "probes":     ["9373/170", "12545", "9373/340", "8804"],
+        "probes":     ["9373/170", "12545/250", "9373/340", "8804/250"],
     },
 }
 
@@ -348,7 +358,7 @@ fig, axes = plot_frequency_spectrum(
 )
 
 # %% ── wind-only — statistics (mean setup + RMS per probe) ───────────────────
-_PROBE_POSITIONS = ["9373/170", "12545", "9373/340", "8804"]
+_PROBE_POSITIONS = ["9373/170", "12545/250", "9373/340", "8804/250"]
 _stats_rows = []
 
 for _, row_meta in _meta_nowave_all.iterrows():

@@ -55,7 +55,7 @@ freqplotvariables = {
         "PanelCondition": None,
     },
     "plotting": {
-        "probes": ["12545", "9373/340"],
+        "probes": ["12545/250", "9373/340"],
         "facet_by": "probe",
         "dual_yaxis": False,
         "show_full_signal": False,
