@@ -702,13 +702,6 @@ def plot_frequency_spectrum(
     )
     axes = axes.flatten()
 
-    print(f"[plot_frequency_spectrum] meta_df rows={len(meta_df)}, fft_dict size={len(fft_dict)}, facet_by={facet_by!r}, probes={probes}")
-    if len(meta_df) > 0:
-        sample_path = meta_df["path"].iloc[0]
-        in_dict = sample_path in fft_dict
-        print(f"  sample path in fft_dict: {in_dict} — {sample_path}")
-        if in_dict:
-            print(f"  fft_df columns: {list(fft_dict[sample_path].columns)}")
     for facet_idx, (group, facet_label) in enumerate(zip(facet_groups, facet_labels)):
         ax = axes[facet_idx]
 
@@ -719,7 +712,6 @@ def plot_frequency_spectrum(
             if facet_by == "panel"
             else meta_df
         )
-        print(f"  facet [{facet_label}]: subset rows={len(subset)}, paths_in_fft={sum(p in fft_dict for p in subset['path'])}")
 
         for _, row in subset.iterrows():
             path = row["path"]

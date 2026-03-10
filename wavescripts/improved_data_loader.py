@@ -477,10 +477,10 @@ def _extract_panel_condition(metadata: dict, filename: str):
 def _extract_wave_parameters(metadata: dict, filename: str):
     """Extract wave parameters from filename."""
     if m := re.search(r"-amp([A-Za-z0-9]+)-", filename):
-        metadata["WaveAmplitudeInput [Volt]"] = int(m.group(1)) * MEASUREMENT.MM_TO_M
+        metadata["WaveAmplitudeInput [Volt]"] = int(m.group(1)) / 1000
 
     if m := re.search(r"-freq(\d+)-", filename):
-        metadata["WaveFrequencyInput [Hz]"] = int(m.group(1)) * MEASUREMENT.MM_TO_M
+        metadata["WaveFrequencyInput [Hz]"] = int(m.group(1)) / 1000
 
     if m := re.search(r"-per(\d+)-", filename):
         metadata["WavePeriodInput"] = int(m.group(1))
@@ -955,6 +955,77 @@ def update_processed_metadata(
     print(
         f"\nMetadata safely updated and preserved across {meta_df['__group_key'].nunique()} experiment(s)!"
     )
+
+
+# =============================================================================
+# ANALYSIS LOADING — fast cache load + FFT recompute for exploration scripts
+# =============================================================================
+
+def load_meta_json(processed_dir: Path) -> pd.DataFrame:
+    """Load metadata from a PROCESSED-* folder's meta.json into a DataFrame."""
+    import json
+    processed_dir = Path(processed_dir)
+    meta_path = processed_dir / "meta.json"
+    if not meta_path.exists():
+        raise FileNotFoundError(f"No meta.json found in {processed_dir}")
+    with open(meta_path) as f:
+        data = json.load(f)
+    records = data if isinstance(data, list) else list(data.values())
+    df = apply_dtypes(pd.DataFrame(records))
+    if "file_date" in df.columns:
+        df["file_date"] = pd.to_datetime(df["file_date"], errors="coerce")
+    return df
+
+
+def load_analysis_data(*processed_dirs: Path):
+    """Load cached data and recompute FFT/PSD dicts for analysis scripts.
+
+    Fast path: loads processed_dfs from parquet, then runs FFT/PSD math.
+    No CSV loading, no smoothing, no wave-range detection.
+
+    Args:
+        *processed_dirs: One or more PROCESSED-* cache directories.
+
+    Returns:
+        (combined_meta, processed_dfs, fft_dict, psd_dict)
+        combined_meta  — full metadata DataFrame (all runs including nowave)
+        processed_dfs  — {path: DataFrame} zeroed+smoothed time series
+        fft_dict       — {path: DataFrame} FFT spectra (wave runs only)
+        psd_dict       — {path: DataFrame} PSD spectra (wave runs only)
+    """
+    from wavescripts.signal_processing import (
+        compute_fft_with_amplitudes,
+        compute_psd_with_amplitudes,
+    )
+    from wavescripts.constants import MEASUREMENT
+
+    all_meta, all_processed, all_fft, all_psd = [], {}, {}, {}
+
+    for processed_dir in processed_dirs:
+        processed_dir = Path(processed_dir)
+        meta = load_meta_json(processed_dir)
+        all_meta.append(meta)
+
+        proc_dfs = load_processed_dfs(processed_dir)
+        all_processed.update(proc_dfs)
+
+        if meta.empty:
+            continue
+
+        cfg = get_configuration_for_date(meta["file_date"].dropna().iloc[0])
+        meta_wave = meta[
+            meta["WaveFrequencyInput [Hz]"].notna()
+            & (meta["WaveFrequencyInput [Hz]"] > 0)
+        ]
+        fs = MEASUREMENT.SAMPLING_RATE
+        fft_dict, _ = compute_fft_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
+        psd_dict, _ = compute_psd_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
+        all_fft.update(fft_dict)
+        all_psd.update(psd_dict)
+
+    combined_meta = pd.concat(all_meta, ignore_index=True) if all_meta else pd.DataFrame()
+    print(f"load_analysis_data: {len(combined_meta)} rows, {len(all_fft)} FFT experiments")
+    return combined_meta, all_processed, all_fft, all_psd
 
 
 # =============================================================================
