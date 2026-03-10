@@ -127,11 +127,11 @@ processvariables = {
         "PanelCondition": None,  # ["reverse"]#, "reverse"],  # no, full, reverse,
     },
     "prosessering": {
-        "total_reset": True,  # laster også csv'ene på nytt
-        "force_recompute": True,  # kjører alt på nytt, ignorerer gammal json
-        "debug": True,
+        "total_reset": False,  # laster også csv'ene på nytt
+        "force_recompute": False,  # kjører alt på nytt, ignorerer gammal json
+        "debug": False,
         "smoothing_window": 10,  # kontrollere denne senere
-        "find_range": True,
+        "find_range": False,
         "range_plot": False,
     },
 }
@@ -257,7 +257,7 @@ amplitudeplotvariables = {
         "chosenprobe": "Probe 2",
         "rangestart": None,
         "rangeend": None,
-        "data_cols": ["Probe 2"],  # her kan jeg velge fler, må huske [listeformat]
+        "data_cols": ["Probe 12545"],  # her kan jeg velge fler, må huske [listeformat]
         "win": 11,
     },
     "plotting": {
@@ -302,7 +302,7 @@ dampingplotvariables = {
         "chosenprobe": "Probe 2",
         "rangestart": None,
         "rangeend": None,
-        "data_cols": ["Probe 2"],
+        "data_cols": ["Probe 12545"],
         "win": 11,
     },
     "plotting": {"figsize": None, "separate": True, "overlay": False, "annotate": True},
@@ -340,7 +340,7 @@ dampingplotvariables = {
         "chosenprobe": 1,  # [1,2,3,4]
         "rangestart": None,
         "rangeend": None,
-        "data_cols": ["Probe 2"],
+        "data_cols": ["Probe 12545"],
         "win": 11,  # Ingen av disse er egt i bruk
     },
     "plotting": {
@@ -354,7 +354,7 @@ dampingplotvariables = {
         "legend": "outside_right",  # inside, below, above #med mer!
         "logaritmic": False,
         "peaks": 7,
-        "probes": [1, 2, 3, 4],
+        "probes": ["9373/170", "12545", "9373/340", "8804"],
     },
 }
 
@@ -386,19 +386,19 @@ freqplotvariables = {
         "WindCondition": ["no", "lowest", "full"],  # full, no, lowest, all
         "TunnelCondition": None,
         "Mooring": None,
-        "PanelCondition": "reverse",  # ["no", "full", "reverse"], # no, full, reverse,  #kan grupperes i filters.
+        "PanelCondition": None,  # ["no", "full", "reverse"], # no, full, reverse,  #kan grupperes i filters.
     },
     "processing": {
         "chosenprobe": 1,  # [1,2,3,4]
         "rangestart": None,
         "rangeend": None,
-        "data_cols": ["Probe 2"],
+        "data_cols": ["Probe 12545"],
         "win": 11,  # Ingen av disse er egt i bruk
     },
     "plotting": {
         "show_plot": True,
         "save_plot": False,
-        "figsize": (7, 5),  # (10,10),
+        "figsize": (5, 5),  # (10,10),
         "linewidth": 0.7,
         "separate": True,
         "facet_by": "probe",  # wind", #wind, panel, probe
@@ -409,7 +409,7 @@ freqplotvariables = {
         "legend": "inside",  # "outside_right", # inside, below, above #med mer!
         "logaritmic": False,
         "peaks": 3,
-        "probes": [2, 3],
+        "probes": ["12545", "9373/340"],
     },
 }
 # lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.
@@ -456,13 +456,13 @@ swellplotvariables = {
         "chosenprobe": 1,  # [1,2,3,4]
         "rangestart": None,
         "rangeend": None,
-        "data_cols": ["Probe 2"],
+        "data_cols": ["Probe 12545"],
         "win": 11,  # Ingen av disse er egt i bruk
     },
     "plotting": {
         "show_plot": True,
         "save_plot": False,
-        "figsize": (10, 12),  # (10,10),
+        "figsize": (5, 5),  # (10,10),
         "linewidth": 0.7,
         "separate": False,
         "facet_by": "probe",  # wind", #wind, panel, probe
@@ -473,7 +473,7 @@ swellplotvariables = {
         "legend": "inside",  # "outside_right", # inside, below, above #med mer!
         "logaritmic": False,
         "peaks": 3,
-        "probes": [2, 3],
+        "probes": ["12545", "9373/340"],
     },
 }
 
@@ -518,9 +518,10 @@ plot_swell_scatter(band_amplitudes, combined_meta_sel)
 
 # %% åssen endrer bølgetallet seg?
 
-colls = [CG.fft_wave_dimension_cols(i) for i in range(1, 5)]
+_probe_positions = ["9373/170", "12545", "9373/340", "8804"]
+colls = [CG.fft_wave_dimension_cols(pos) for pos in _probe_positions]
 meta_sel_wavenumberstudy = combined_meta_sel.copy()
-hey = [CG.FFT_WAVENUMBER_COLS].copy()
+hey = [f"Probe {pos} Wavenumber (FFT)" for pos in _probe_positions]
 
 # %% FFT-SPEKTRUM  initiert
 from wavescripts.plotter import plot_frequency_spectrum
@@ -538,20 +539,20 @@ freqplotvariables = {
         "WindCondition": ["no", "lowest", "full"],  # full, no, lowest, all
         "TunnelCondition": None,
         "Mooring": None,
-        "PanelCondition": "reverse",  # ["no", "full", "reverse"], # no, full, reverse,  #kan grupperes i filters.
+        "PanelCondition": None,  # ["no", "full", "reverse"], # no, full, reverse,  #kan grupperes i filters.
     },
     "processing": {
         "chosenprobe": 1,  # [1,2,3,4]
         "rangestart": None,
         "rangeend": None,
-        "data_cols": ["Probe 2"],
+        "data_cols": ["Probe 12545"],
         "win": 11,  # Ingen av disse er egt i bruk
     },
     "plotting": {
         "show_plot": True,
         "save_plot": False,
         "save_separate": True,
-        "figsize": (18, 18),  # (10,10),
+        "figsize": (5, 5),  # (10,10),
         "linewidth": 1,
         "grid": True,
         "show_full_signal": True,
@@ -565,7 +566,7 @@ freqplotvariables = {
         "legend": None,  # "outside_right", # inside, below, above #med mer!
         "logaritmic": False,
         "peaks": 3,
-        "probes": [2, 3],
+        "probes": ["12545", "9373/340"],
     },
 }
 # lærte noe nytt - #dict.get(key, default) only falls back when the key is missing.

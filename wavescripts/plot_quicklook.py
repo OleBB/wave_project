@@ -177,11 +177,17 @@ class SignalBrowserFiltered(QMainWindow):
         plot_layout.addWidget(QLabel("Probes:"), 0, 0)
         probe_row = QHBoxLayout()
         self.probe_checks = {}
-        current_probes = self.plotvars.get("plotting", {}).get("probes", [2, 3])
-        for p in [1, 2, 3, 4]:
-            cb = QCheckBox(f"P{p}")
-            cb.setChecked(p in current_probes)
-            self.probe_checks[p] = cb
+        current_probes = self.plotvars.get("plotting", {}).get("probes", [])
+        # Derive position strings from fft_dict columns (e.g. "FFT 12545" → "12545")
+        _sample_df = next(iter(fft_dict.values())) if fft_dict else None
+        _all_positions = (
+            [c[4:] for c in _sample_df.columns if c.startswith("FFT ") and "complex" not in c]
+            if _sample_df is not None else []
+        )
+        for pos in _all_positions:
+            cb = QCheckBox(pos)
+            cb.setChecked(pos in current_probes)
+            self.probe_checks[pos] = cb
             probe_row.addWidget(cb)
         probe_widget = QWidget()
         probe_widget.setLayout(probe_row)
@@ -333,7 +339,7 @@ class RampDetectionBrowser(QMainWindow):
         self.probe_filter = QComboBox()
         self.probe_filter.addItems(
             ["All probes"] + [f"Probe {p}" for p in sorted(ramp_df["probe"].unique())])
-        self.probe_filter.setCurrentText("Probe 2")
+        self.probe_filter.setCurrentText("All probes")
 
         for row_i, (lbl, widget) in enumerate([
             ("Wind:", self.wind_filter), ("Panel:", self.panel_filter),
