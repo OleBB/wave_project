@@ -182,36 +182,40 @@ def compute_amplitudes_from_psd(f, pxx, target_freq, window=0.5):
     amplitude = np.sqrt(2) * sigma
     return amplitude
 
-def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.5):
+def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.1):
     """
-    Extract amplitude and corresponding frequency from FFT at a given target frequency.
-    
+    Extract amplitude at a given target frequency from FFT.
+
+    Uses the nearest bin to target_freq within ±window Hz.
+    The window exists only to guard against empty-mask edge cases; it is
+    intentionally narrow (default 0.1 Hz) so that wind-generated waves at
+    adjacent frequencies do not contaminate the amplitude reading.
+    With typical signal lengths (10–60 s) and fs=250 Hz the FFT bin spacing
+    is 0.017–0.1 Hz, so ±0.1 Hz always catches at least one bin.
+
     Args:
-        fft_freqs: Frequency array from FFT
-        fft_magnitude: Magnitude of FFT (already normalized to amplitude)
-        target_freq: Target frequency (Hz)
-        window: Frequency window around target (Hz). Default 0.5 Hz.
-    
+        fft_freqs: Frequency array from FFT (positive half)
+        fft_magnitude: Magnitude spectrum (already normalised to amplitude)
+        target_freq: Target frequency in Hz (WaveFrequencyInput)
+        window: Half-width of search window in Hz. Default 0.1 Hz.
+
     Returns:
-        tuple: (amplitude, frequency) - amplitude at peak and its corresponding frequency
+        (amplitude, frequency) at the bin nearest target_freq
     """
     mask = (fft_freqs >= target_freq - window) & (fft_freqs <= target_freq + window)
-    
+
     if not mask.any():
-        # No frequencies in range - fallback to closest
+        # Fallback: absolute nearest bin (should be rare with window=0.1)
         closest_idx = np.argmin(np.abs(fft_freqs - target_freq))
         return fft_magnitude[closest_idx], fft_freqs[closest_idx]
-    
-    # Find the index of maximum amplitude in the window
+
     masked_magnitudes = fft_magnitude[mask]
     masked_freqs = fft_freqs[mask]
-    
-    max_idx = np.argmax(masked_magnitudes)
-    
-    amplitude = masked_magnitudes[max_idx]
-    frequency = masked_freqs[max_idx]
-    
-    return amplitude, frequency
+
+    # Nearest bin to target — NOT argmax, to avoid grabbing wind-wave peaks
+    nearest_idx = np.argmin(np.abs(masked_freqs - target_freq))
+
+    return masked_magnitudes[nearest_idx], masked_freqs[nearest_idx]
 
 
 def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg, fs, debug: bool = False) -> Tuple[dict, pd.DataFrame]:
