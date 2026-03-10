@@ -253,3 +253,107 @@ fig, ax = plot_reconstructed(
 fig, axes = plot_reconstructed(
     filtered_fft_dict, filtered_meta, freqplotvariables, data_type="fft"
 )
+
+# =============================================================================
+# WIND-ONLY ANALYSIS
+# Runs with no wave input (WaveFrequencyInput NaN) to characterise wind-only
+# surface response. Compare wind conditions against stillwater baseline (no wind).
+# =============================================================================
+
+# %% ── wind-only — filter runs ────────────────────────────────────────────────
+from pathlib import Path as _Path
+from scipy.signal import welch as _welch
+from wavescripts.constants import MEASUREMENT
+
+_FS = MEASUREMENT.SAMPLING_RATE
+
+_meta_nowave     = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].isna()].copy()
+_meta_wind_only  = _meta_nowave[_meta_nowave["WindCondition"].isin(["full", "lowest"])].copy()
+_meta_stillwater = _meta_nowave[_meta_nowave["WindCondition"] == "no"].copy()
+
+# All nowave runs together (stillwater = baseline, wind-only = signal of interest)
+_meta_nowave_all = _meta_nowave.copy()
+
+print(f"Wind-only runs ({len(_meta_wind_only)}):")
+for _, r in _meta_wind_only.iterrows():
+    print(f"  [{r['WindCondition']:7s}]  {_Path(r['path']).name}")
+print(f"\nStillwater baseline ({len(_meta_stillwater)}):")
+for _, r in _meta_stillwater.iterrows():
+    print(f"  {_Path(r['path']).name}")
+
+# %% ── wind-only — build PSD dict (same format as psd_dict) ──────────────────
+# Compute Welch PSD for all nowave runs so we can reuse plot_frequency_spectrum.
+_NPERSEG = 4096
+
+_wind_psd_dict = {}
+for path, df in processed_dfs.items():
+    if path not in _meta_nowave_all["path"].values:
+        continue
+    eta_cols = [c for c in df.columns if c.startswith("eta_")]
+    if not eta_cols:
+        continue
+    records = {}
+    freqs_ref = None
+    for eta_col in eta_cols:
+        pos = eta_col[len("eta_"):]          # "eta_9373/170" → "9373/170"
+        sig = df[eta_col].dropna().values
+        if len(sig) < _NPERSEG:
+            continue
+        f, pxx = _welch(sig, fs=_FS, nperseg=_NPERSEG)
+        if freqs_ref is None:
+            freqs_ref = f
+        records[f"Pxx {pos}"] = pxx
+    if records and freqs_ref is not None:
+        _wind_psd_dict[path] = pd.DataFrame(records, index=pd.Index(freqs_ref, name="Frequencies"))
+
+print(f"Built wind_psd_dict for {len(_wind_psd_dict)} nowave runs")
+
+# %% ── wind-only — PSD spectrum plot ─────────────────────────────────────────
+_wind_psd_plotvars = {
+    "overordnet": {"chooseAll": True, "chooseFirst": False, "chooseFirstUnique": False},
+    "filters": {
+        "WaveFrequencyInput [Hz]": None,
+        "WindCondition":           None,
+        "PanelCondition":          None,
+    },
+    "plotting": {
+        "show_plot":  True,
+        "save_plot":  False,
+        "figsize":    (11, 4 * 4),
+        "linewidth":  1.0,
+        "facet_by":   "probe",
+        "max_points": 500,
+        "xlim":       (0, 5),
+        "legend":     "inside",
+        "logaritmic": True,
+        "peaks":      0,
+        "probes":     ["9373/170", "12545", "9373/340", "8804"],
+    },
+}
+
+fig, axes = plot_frequency_spectrum(
+    _wind_psd_dict, _meta_nowave_all, _wind_psd_plotvars, data_type="psd"
+)
+
+# %% ── wind-only — statistics (mean setup + RMS per probe) ───────────────────
+_PROBE_POSITIONS = ["9373/170", "12545", "9373/340", "8804"]
+_stats_rows = []
+
+for _, row_meta in _meta_nowave_all.iterrows():
+    df = processed_dfs.get(row_meta["path"])
+    if df is None:
+        continue
+    rec = {
+        "file":          _Path(row_meta["path"]).name,
+        "WindCondition": row_meta["WindCondition"],
+    }
+    for pos in _PROBE_POSITIONS:
+        eta_col = f"eta_{pos}"
+        if eta_col in df.columns:
+            sig = df[eta_col].dropna()
+            rec[f"mean_mm {pos}"] = round(sig.mean(), 3)
+            rec[f"rms_mm  {pos}"] = round(sig.std(),  3)
+    _stats_rows.append(rec)
+
+_stats_df = pd.DataFrame(_stats_rows).sort_values("WindCondition")
+print(_stats_df.to_string(index=False))
