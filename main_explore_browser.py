@@ -15,6 +15,11 @@ Browsers launched:
     RampDetectionBrowser   — inspect ramp detection results for all runs
 """
 
+# %%
+# Must be set before any matplotlib / wavescripts imports
+import matplotlib
+matplotlib.use("Qt5Agg")
+
 import sys
 from pathlib import Path
 
@@ -63,7 +68,9 @@ freqplotvariables = {
 # ── Launch ────────────────────────────────────────────────────────────────────
 app = QApplication.instance() or QApplication(sys.argv)
 
-browser_signal = SignalBrowserFiltered(filtered_fft_dict, filtered_meta, freqplotvariables)
+browser_signal = SignalBrowserFiltered(
+    filtered_fft_dict, filtered_meta, freqplotvariables
+)
 browser_signal.setWindowTitle("Signal Browser — FFT reconstruction")
 browser_signal.show()
 

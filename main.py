@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+from numpy._core.numeric import True_
 
 from wavescripts.filters import filter_chosen_files
 from wavescripts.improved_data_loader import (
@@ -63,11 +64,11 @@ processvariables = {
         "PanelCondition": None,
     },
     "prosessering": {
-        "total_reset": False,  # True → wipe CSV cache and reload everything
-        "force_recompute": False,  # True → ignore cached meta.json, recompute all
-        "debug": False,
+        "total_reset": True,  # True → wipe CSV cache and reload everything
+        "force_recompute": True,  # True → ignore cached meta.json, recompute all
+        "debug": True,
         "smoothing_window": 10,
-        "find_range": False,
+        "find_range": True,
         "range_plot": False,
     },
 }
@@ -132,6 +133,7 @@ print(f"{'=' * 50}")
 
 gc.collect()
 
+print("Main is complete - you can close this")
 
 """
 One note on mainTester:** it contained exploration of time-lag

@@ -41,6 +41,17 @@ from wavescripts.plot_utils import WIND_COLOR_MAP, MARKERS
 from wavescripts.plotter import plot_reconstructed
 
 
+def _resize_to_fraction(fig, fraction: float = 0.75) -> None:
+    """Resize a matplotlib Qt figure window to `fraction` of the primary screen."""
+    try:
+        screen = QApplication.primaryScreen().availableGeometry()
+        w = int(screen.width() * fraction)
+        h = int(screen.height() * fraction)
+        fig.canvas.manager.window.resize(w, h)
+    except Exception:
+        pass  # non-Qt backend or headless — silently skip
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SEABORN EXPLORATION
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -289,7 +300,9 @@ class SignalBrowserFiltered(QMainWindow):
         p["save_plot"]            = False   # browser never saves
 
         plt.close("all")
-        plot_reconstructed({path: self.fft_dict[path]}, single_meta, plotvars)
+        fig, _ = plot_reconstructed({path: self.fft_dict[path]}, single_meta, plotvars)
+        if fig is not None:
+            _resize_to_fraction(fig, 0.75)
 
 
 class RampDetectionBrowser(QMainWindow):
@@ -433,7 +446,9 @@ class RampDetectionBrowser(QMainWindow):
             good_end_idx=row["good_end_idx"],
         )
         ax.set_ylim(row["baseline_mean"] - zoom, row["baseline_mean"] + zoom)
-        plt.show()
+        if fig is not None:
+            _resize_to_fraction(fig, 0.75)
+        plt.show(block=False)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
