@@ -118,8 +118,8 @@ processvariables = {
         "chooseFirst": False,  # velger første i hver mappe
     },
     "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1],  # 0.1, 0.2, 0.3
-        "WaveFrequencyInput [Hz]": 1.3,  # bruk et tall
+        "WaveAmplitudeInput [Volt]": None,  # 0.1, 0.2, 0.3
+        "WaveFrequencyInput [Hz]": None,  # bruk et tall
         "WavePeriodInput": None,  # bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": None,  # ["full"],  # full, no, lowest
         "TunnelCondition": None,
@@ -290,19 +290,19 @@ dampingplotvariables = {
         "chooseFirstUnique": False,
     },
     "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],  # 0.1, 0.2, 0.3
-        "WaveFrequencyInput [Hz]": [1.3, 0.65],  # bruk et tall
-        "WavePeriodInput": None,  # bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
-        "WindCondition": ["no", "lowest", "full"],  # full, no, lowest, all
+        "WaveAmplitudeInput [Volt]": None,  # 0.1, 0.2, 0.3
+        "WaveFrequencyInput [Hz]": None,  # None = all; or e.g. [1.3, 0.6, 0.7]
+        "WavePeriodInput": None,
+        "WindCondition": None,  # None = all; or ["no", "full"]
         "TunnelCondition": None,
         # "Mooring": None,
-        "PanelCondition": None,  # ["full", "reverse"], # no, full, reverse,
+        "PanelCondition": None,
     },
     "processing": {
         "chosenprobe": "Probe 2",
         "rangestart": None,
         "rangeend": None,
-        "data_cols": ["Probe 2"],  # her kan jeg velge fler, må huske [listeformat]
+        "data_cols": ["Probe 2"],
         "win": 11,
     },
     "plotting": {"figsize": None, "separate": True, "overlay": False, "annotate": True},
