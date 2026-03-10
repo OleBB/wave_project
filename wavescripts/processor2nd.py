@@ -126,59 +126,37 @@ def compute_amplitude_by_band(
                 print(f"  Frequency resolution Δf: {freq_res:.6f} Hz")
 
         # ------------------------------------------------------------------
-        # Loop over the requested probes
+        # Loop over available Pxx columns (position-based: "Pxx 9373/170" etc.)
         # ------------------------------------------------------------------
-        for i in probes:
-            col = f"Pxx {i}"
-            if col not in df.columns:
-                if verbose:
-                    print(f"  Probe {i}: column '{col}' missing → skipped")
-                continue
+        pxx_cols = [c for c in df.columns if c.startswith("Pxx ")]
 
-            # ----------------------------------------------------------------
-            # Loop over the frequency bands
-            # ----------------------------------------------------------------
+        for col in pxx_cols:
+            pos = col[4:]  # strip "Pxx " → "9373/170", "12545", etc.
+
             for band_name, (f_low, f_high) in freq_bands.items():
-                # Build a mask for the current band
                 mask = (df.index >= f_low) & (df.index <= f_high)
                 n_points = int(mask.sum())
 
-                # ------------------------------------------------------------
-                #  Empty‑band handling (kept from version 2)
-                # ------------------------------------------------------------
                 if n_points == 0:
-                    amplitude = 0.0
-                    if verbose:
-                        print(
-                            f"  Probe {i} – {band_name}: "
-                            f"NO DATA POINTS in [{f_low}, {f_high}] Hz → amplitude=0"
-                        )
-                    row[f"Probe {i} {band_name} Amplitude (PSD)"] = amplitude
+                    row[f"Probe {pos} {band_name} Amplitude (PSD)"] = 0.0
                     continue
 
-                # ------------------------------------------------------------
-                #  Compute variance → amplitude
-                # ------------------------------------------------------------
                 if integration == "sum":
-                    # Simple rectangular integration: Δf * Σ PSD
                     variance = df.loc[mask, col].sum() * freq_res
-                else:  # "trapz"
-                    # Use the true frequency axis for trapezoidal integration.
+                else:
                     freqs = df.index.to_numpy(dtype=float)[mask]
                     psd_vals = df.loc[mask, col].to_numpy(dtype=float)
                     variance = np.trapezoid(psd_vals, x=freqs)
 
-                # Standard deviation and peak‑to‑trough amplitude
-                std_dev = np.sqrt(variance)
-                amplitude = 2.0 * std_dev
+                amplitude = 2.0 * np.sqrt(variance)
 
-                if verbose and i == probes[0]:  # print once per band, first probe
+                if verbose:
                     print(
-                        f"  Probe {i} – {band_name} [{f_low}-{f_high}] Hz: "
-                        f"{n_points} points, variance={variance:.6e}, amplitude={amplitude:.4f}"
+                        f"  Probe {pos} – {band_name} [{f_low}-{f_high}] Hz: "
+                        f"{n_points} pts, amplitude={amplitude:.4f}"
                     )
 
-                row[f"Probe {i} {band_name} Amplitude (PSD)"] = amplitude
+                row[f"Probe {pos} {band_name} Amplitude (PSD)"] = amplitude
 
         rows.append(row)
 

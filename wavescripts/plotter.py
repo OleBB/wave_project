@@ -83,12 +83,13 @@ def plot_all_probes(
     show_plot = plotting.get("show_plot", True)
     save_plot = plotting.get("save_plot", False)
 
-    # Detect position-based amplitude columns (skip all-null)
+    # Detect position-based amplitude columns (skip all-null), sort by leading number
     amp_cols = [
         c for c in meta_df.columns
         if c.startswith("Probe ") and c.endswith(" Amplitude") and meta_df[c].notna().any()
         and "FFT" not in c and "PSD" not in c
     ]
+    amp_cols.sort(key=lambda c: int(c.replace("Probe ", "").replace(" Amplitude", "").split("/")[0]))
     positions = [c.replace("Probe ", "").replace(" Amplitude", "") for c in amp_cols]
     probe_x = list(range(len(amp_cols)))
     probe_labels = [f"P {pos}" for pos in positions]
@@ -472,7 +473,7 @@ def _draw_swell_scatter_ax(
 
 
 def _in_out_probes_from_df(df: pd.DataFrame) -> tuple[int, int]:
-    """Read in_probe/out_probe directly from metadata columns."""
+    """Read in_probe/out_probe numbers directly from metadata columns."""
     if "in_probe" in df.columns and "out_probe" in df.columns:
         in_vals = df["in_probe"].dropna().unique()
         out_vals = df["out_probe"].dropna().unique()
@@ -484,11 +485,25 @@ def _in_out_probes_from_df(df: pd.DataFrame) -> tuple[int, int]:
     return 2, 3
 
 
-def _swell_shared_lim(band_amplitudes, in_probe: int = 2, out_probe: int = 3):
+def _in_out_positions_from_df(df: pd.DataFrame) -> tuple[str, str]:
+    """Return position strings (e.g. '9373/170', '12545') for in/out probes."""
+    from wavescripts.improved_data_loader import get_configuration_for_date
+    from datetime import datetime
+    in_p, out_p = _in_out_probes_from_df(df)
+    try:
+        file_date = datetime.fromisoformat(str(df["file_date"].dropna().iloc[0]))
+        cfg = get_configuration_for_date(file_date)
+        col_names = cfg.probe_col_names()
+        return col_names[in_p], col_names[out_p]
+    except Exception:
+        return str(in_p), str(out_p)
+
+
+def _swell_shared_lim(band_amplitudes, in_pos: str = "2", out_pos: str = "3"):
     all_vals = []
     for template in _BAND_COLS.values():
-        for probe in (in_probe, out_probe):
-            col = template.format(i=probe)
+        for pos in (in_pos, out_pos):
+            col = template.format(i=pos)
             if col in band_amplitudes.columns:
                 v = band_amplitudes[col].to_numpy()
                 all_vals.append(v[np.isfinite(v)])
@@ -532,10 +547,10 @@ def plot_swell_scatter(
         return
     print(f"  {len(band_amplitudes)} rows remaining")
 
-    in_probe, out_probe = _in_out_probes_from_df(band_amplitudes)
-    print(f"  probe config: IN=Probe {in_probe}, OUT=Probe {out_probe}")
+    in_pos, out_pos = _in_out_positions_from_df(band_amplitudes)
+    print(f"  probe config: IN=Probe {in_pos}, OUT=Probe {out_pos}")
 
-    shared_lim = _swell_shared_lim(band_amplitudes, in_probe, out_probe) if share_axes else None
+    shared_lim = _swell_shared_lim(band_amplitudes, in_pos, out_pos) if share_axes else None
 
     if show_plot:
         # figsize = plotting.get("figsize") or (14, 5)
@@ -574,14 +589,14 @@ def plot_swell_scatter(
             _draw_swell_scatter_ax(
                 ax,
                 band_amplitudes,
-                in_col=template.format(i=in_probe),
-                out_col=template.format(i=out_probe),
+                in_col=template.format(i=in_pos),
+                out_col=template.format(i=out_pos),
                 band_name=band_name,
                 shared_lim=shared_lim,
                 annotate_delta=annotate_delta,
             )
-            ax.set_xlabel(f"Probe {in_probe} IN amplitude [mm]", fontsize=9)
-            ax.set_ylabel(f"Probe {out_probe} OUT amplitude [mm]", fontsize=9)
+            ax.set_xlabel(f"Probe {in_pos} IN amplitude [mm]", fontsize=9)
+            ax.set_ylabel(f"Probe {out_pos} OUT amplitude [mm]", fontsize=9)
 
         fig.suptitle(
             "IN vs OUT — Swell / Wind / Total", fontsize=12, fontweight="bold", y=1.01
@@ -602,14 +617,14 @@ def plot_swell_scatter(
             _draw_swell_scatter_ax(
                 ax_s,
                 band_amplitudes,
-                in_col=template.format(i=in_probe),
-                out_col=template.format(i=out_probe),
+                in_col=template.format(i=in_pos),
+                out_col=template.format(i=out_pos),
                 band_name=band_name,
                 shared_lim=shared_lim,
                 annotate_delta=annotate_delta,
             )
-            ax_s.set_xlabel(f"Probe {in_probe} IN amplitude [mm]", fontsize=9)
-            ax_s.set_ylabel(f"Probe {out_probe} OUT amplitude [mm]", fontsize=9)
+            ax_s.set_xlabel(f"Probe {in_pos} IN amplitude [mm]", fontsize=9)
+            ax_s.set_ylabel(f"Probe {out_pos} OUT amplitude [mm]", fontsize=9)
             fig_s.tight_layout()
 
             band_meta = {**meta_base, "band": band_name.lower()}
