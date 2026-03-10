@@ -720,23 +720,6 @@ def load_or_update(
             dfs = _load_csv_files(csv_files, experiment_name)
 
         # ============================================================
-        # Step 1b: Rename Probe 1..4 columns to position-based names
-        # cfg is fixed for the whole folder — look it up once from any file
-        # ============================================================
-        if dfs:
-            sample_path = next(iter(dfs))
-            sample_date = _extract_file_date(Path(sample_path).name, Path(sample_path))
-            if sample_date:
-                try:
-                    folder_cfg = get_configuration_for_date(sample_date)
-                    col_map = folder_cfg.probe_col_names()  # {1: "9373/170", ...}
-                    rename = {f"Probe {i}": f"Probe {pos}" for i, pos in col_map.items()}
-                    dfs = {p: df.rename(columns=rename) for p, df in dfs.items()}
-                    print(f"   Probe columns → {list(rename.values())}")
-                except ValueError as e:
-                    print(f"   Warning: could not rename probe columns: {e}")
-
-        # ============================================================
         # Step 2: Compute or recompute metadata (meta.json)
         # ============================================================
         if force_recompute or total_reset:
@@ -834,35 +817,45 @@ def load_or_update(
 def _load_csv_files(
     csv_files: List[Path], experiment_name: str
 ) -> Dict[str, pd.DataFrame]:
-    """Helper function to load CSV files and return dict of DataFrames."""
-    dfs = {}
+    """Helper function to load CSV files and return dict of DataFrames.
 
+    Probe columns are named by their physical position (e.g. 'Probe 9373/170')
+    at read time — generic 'Probe 1..4' names never enter the pipeline.
+    """
+    if not csv_files:
+        return {}
+
+    # Determine probe column names from the folder date (all files share the same config)
+    sample_date = _extract_file_date(csv_files[0].name, csv_files[0])
+    try:
+        cfg = get_configuration_for_date(sample_date)
+        probe_col_names = [f"Probe {pos}" for pos in cfg.probe_col_names().values()]
+    except (ValueError, TypeError):
+        probe_col_names = ["Probe 1", "Probe 2", "Probe 3", "Probe 4"]
+
+    col_names = ["Date"] + probe_col_names + ["Mach"]
+
+    dfs = {}
     for i, path in enumerate(csv_files, 1):
         key = str(path.resolve())
         try:
             suffix = path.suffix.lower()
             if suffix == ".csv":
-                df = pd.read_csv(
-                    path,
-                    engine="pyarrow",
-                    names=["Date", "Probe 1", "Probe 2", "Probe 3", "Probe 4", "Mach"],
-                )
+                df = pd.read_csv(path, engine="pyarrow", names=col_names)
 
-                # Formatting
-                for probe in range(1, 5):
-                    df[f"Probe {probe}"] *= MEASUREMENT.M_TO_MM
+                for col in probe_col_names:
+                    df[col] *= MEASUREMENT.M_TO_MM
                 df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y %H:%M:%S.%f")
 
                 dfs[key] = df
-                print(
-                    f"   [{i}/{len(csv_files)}] Loaded {path.name} → {len(df):,} rows"
-                )
+                print(f"   [{i}/{len(csv_files)}] Loaded {path.name} → {len(df):,} rows")
             else:
                 print(f"   Skipping unsupported: {path.name}")
 
         except Exception as e:
             print(f"   Failed {path.name}: {e}")
 
+    print(f"   Probe columns → {probe_col_names}")
     return dfs
 
 
