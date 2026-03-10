@@ -240,13 +240,13 @@ if all_meta_sel:
 # %% fysisk plott
 amplitudeplotvariables = {
     "overordnet": {
-        "chooseAll": False,
+        "chooseAll": True,
         "chooseFirst": False,
         "chooseFirstUnique": False,
     },
     "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],  # 0.1, 0.2, 0.3
-        "WaveFrequencyInput [Hz]": [1.3, 0.65],  # bruk et tall
+        "WaveAmplitudeInput [Volt]": None,  # 0.1, 0.2, 0.3
+        "WaveFrequencyInput [Hz]": None,  # bruk et tall
         "WavePeriodInput": None,  # bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"],  # full, no, lowest, all
         "TunnelCondition": None,
@@ -261,7 +261,7 @@ amplitudeplotvariables = {
         "win": 11,
     },
     "plotting": {
-        "figsize": [20, 10],
+        "figsize": [7, 4],
         "separate": True,
         "overlay": False,
         "annotate": True,
@@ -324,12 +324,12 @@ explore_damping_vs_amp(damping_filtrert, dampingplotvariables)
 # %% slår alle i hop
 dampingplotvariables = {
     "overordnet": {
-        "chooseAll": False,
+        "chooseAll": True,
         "chooseFirst": False,
     },
     "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1],  # 0.2, 0.3], #0.1, 0.2, 0.3
-        "WaveFrequencyInput [Hz]": [1.3],  # 0.65], #bruk et tall
+        "WaveAmplitudeInput [Volt]": None,  # 0.2, 0.3], #0.1, 0.2, 0.3
+        "WaveFrequencyInput [Hz]": None,  # 0.65], #bruk et tall
         "WavePeriodInput": None,  # bruk et tall #brukes foreløpig kun til find_wave_range, ennå ikke knyttet til filtrering
         "WindCondition": ["no", "lowest", "full"],  # full, no, lowest, all
         "TunnelCondition": None,
@@ -398,7 +398,7 @@ freqplotvariables = {
     "plotting": {
         "show_plot": True,
         "save_plot": False,
-        "figsize": (10, 12),  # (10,10),
+        "figsize": (7, 5),  # (10,10),
         "linewidth": 0.7,
         "separate": True,
         "facet_by": "probe",  # wind", #wind, panel, probe
