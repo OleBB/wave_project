@@ -1096,7 +1096,7 @@ def plot_reconstructed(
         )
 
     if show_plot:
-        plt.show()
+        plt.show(block=False)
     else:
         plt.close(fig)
 
