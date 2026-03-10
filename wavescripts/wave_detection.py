@@ -32,9 +32,10 @@ from wavescripts.constants import (
 
 
 def find_wave_range(
-    df: pd.DataFrame, 
+    df: pd.DataFrame,
     meta_row: pd.DataFrame,  # metadata for selected files
     data_col: str,
+    probe_num: int,           # physical probe number (1-4) for stillwater lookup
     detect_win: int,
     range_plot: bool = False,
     debug: bool = False,
@@ -95,7 +96,7 @@ def find_wave_range(
         return good_start_idx, good_end_idx, debug_info
         
     samples_per_period = int(round(Fs / importertfrekvens))
-    probe_num_int = int(data_col.split()[-1])   # 1–4, extracted once for reuse below
+    probe_num_int = probe_num  # physical probe number for stillwater lookup
 
     # ─────── velge antall perioder ─────── 
     input_periods = (meta_row["WavePeriodInput"])

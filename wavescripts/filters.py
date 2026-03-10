@@ -644,30 +644,34 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
                and wide is the pivoted version
     """
     cmdf = combined_meta_df.copy()
-    
+
     print(f"Input dataframe shape: {cmdf.shape}")
     print(f"Unique PanelCondition values: {cmdf[GC.PANEL_CONDITION].unique().tolist()}")
     print(f"Unique WindCondition values: {cmdf[GC.WIND_CONDITION].unique().tolist()}")
-    
-    # Define required columns using constants
-    columns = [
+
+    # Detect position-based FFT amplitude columns dynamically (skip all-null columns)
+    fft_amp_cols = [
+        c for c in cmdf.columns
+        if c.startswith("Probe ") and c.endswith(" Amplitude (FFT)") and cmdf[c].notna().any()
+    ]
+
+    # Define required columns
+    base_columns = [
         GC.PATH,
         GC.WIND_CONDITION,
         GC.PANEL_CONDITION,
         GC.WAVE_AMPLITUDE_INPUT,
         GC.WAVE_FREQUENCY_INPUT,
-        *CG.FFT_AMPLITUDE_COLS,  # Probe 1-4 Amplitude (FFT)
         GC.KL,
-        GC.P2_P1_FFT,
-        GC.P3_P2_FFT,
-        GC.P4_P3_FFT,
         GC.OUT_IN_FFT,
     ]
+    columns = base_columns + fft_amp_cols
 
     # Quick safety check
     missing_cols = [c for c in columns if c not in cmdf.columns]
     if missing_cols:
         print(f"WARNING: Missing columns: {missing_cols}")
+        columns = [c for c in columns if c in cmdf.columns]
 
     rmdf = cmdf[columns].copy()
 
@@ -699,19 +703,21 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
     print(group_sizes.describe())
 
     # ─── The aggregation ───
+    agg_dict = {
+        "mean_out_in":  (GC.OUT_IN_FFT, "mean"),
+        "std_out_in":   (GC.OUT_IN_FFT, "std"),
+        "n_runs":       (GC.PATH, "nunique"),
+        "paths":        (GC.PATH, lambda s: pd.unique(s).tolist()),
+        "mean_kL":      (GC.KL, "mean"),
+    }
+    # Add mean amplitude per probe (position-based, discovered dynamically)
+    for col in fft_amp_cols:
+        pos = col.replace("Probe ", "").replace(" Amplitude (FFT)", "")
+        agg_dict[f"mean_A_{pos}"] = (col, "mean")
+
     stats = (
         rmdf.groupby(grouping_keys)
-            .agg(
-                mean_out_in=(GC.OUT_IN_FFT, "mean"),
-                std_out_in=(GC.OUT_IN_FFT, "std"),
-                n_runs=(GC.PATH, "nunique"),
-                paths=(GC.PATH, lambda s: pd.unique(s).tolist()),
-                mean_A_Probe1=(PC.AMPLITUDE_FFT.format(i=1), "mean"),
-                mean_A_Probe2=(PC.AMPLITUDE_FFT.format(i=2), "mean"),
-                mean_A_Probe3=(PC.AMPLITUDE_FFT.format(i=3), "mean"),
-                mean_A_Probe4=(PC.AMPLITUDE_FFT.format(i=4), "mean"),
-                mean_kL=(GC.KL, "mean"),
-            )
+            .agg(**agg_dict)
             .reset_index()
     )
 
@@ -824,24 +830,28 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
     print(f"Unique {GC.PANEL_CONDITION}: {cmdf[GC.PANEL_CONDITION].unique().tolist()}")
     print(f"Unique {GC.WIND_CONDITION}: {cmdf[GC.WIND_CONDITION].unique().tolist()}")
 
-    # ─── Select relevant columns using constants ───
-    columns = [
+    # Detect position-based FFT amplitude columns dynamically (skip all-null columns)
+    fft_amp_cols = [
+        c for c in cmdf.columns
+        if c.startswith("Probe ") and c.endswith(" Amplitude (FFT)") and cmdf[c].notna().any()
+    ]
+
+    # ─── Select relevant columns ───
+    base_columns = [
         GC.PATH,
         GC.WIND_CONDITION,
         GC.PANEL_CONDITION,
         GC.WAVE_AMPLITUDE_INPUT,
         GC.WAVE_FREQUENCY_INPUT,
-        *CG.FFT_AMPLITUDE_COLS,           # Probe 1–4 FFT amplitudes
         GC.KL,
-        GC.P2_P1_FFT,
-        GC.P3_P2_FFT,
-        GC.P4_P3_FFT,
         GC.OUT_IN_FFT,
     ]
+    columns = base_columns + fft_amp_cols
 
     missing_cols = [c for c in columns if c not in cmdf.columns]
     if missing_cols:
         print(f"WARNING: Missing columns: {missing_cols}")
+        columns = [c for c in columns if c in cmdf.columns]
 
     rmdf = cmdf[columns].copy()
 
@@ -878,19 +888,11 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
         "n_runs":       (GC.PATH, "nunique"),
         "paths":        (GC.PATH, lambda s: pd.unique(s).tolist()),
         "mean_kL":      (GC.KL, "mean"),
-        # Probe amplitudes
-        "mean_A_Probe1": (PC.AMPLITUDE_FFT.format(i=1), "mean"),
-        "mean_A_Probe2": (PC.AMPLITUDE_FFT.format(i=2), "mean"),
-        "mean_A_Probe3": (PC.AMPLITUDE_FFT.format(i=3), "mean"),
-        "mean_A_Probe4": (PC.AMPLITUDE_FFT.format(i=4), "mean"),
     }
-
-    # Optional additions (uncomment if needed):
-    # "mean_P2P1":    (GC.P2_P1_FFT, "mean"),
-    # "mean_P4P3":    (GC.P4_P3_FFT, "mean"),
-    # "median_out_in": (GC.OUT_IN_FFT, "median"),
-    # "min_out_in":    (GC.OUT_IN_FFT, "min"),
-    # "max_out_in":    (GC.OUT_IN_FFT, "max"),
+    # Add mean amplitude per probe (position-based, discovered dynamically)
+    for col in fft_amp_cols:
+        pos = col.replace("Probe ", "").replace(" Amplitude (FFT)", "")
+        agg_dict[f"mean_A_{pos}"] = (col, "mean")
 
     stats = (
         rmdf.groupby(grouping_keys)

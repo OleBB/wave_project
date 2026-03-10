@@ -437,13 +437,15 @@ class RampDetectionBrowser(QMainWindow):
 def save_interactive_plot(df: pd.DataFrame,
                            filename: str = "damping_analysis.html") -> None:
     """Save an interactive Plotly HTML for sharing / exploring in a browser."""
+    # Only pass error_y if there are actual non-NaN std values (plotly can't handle all-NaN)
+    has_std = "std_out_in" in df.columns and df["std_out_in"].notna().any()
     fig = px.line(
         df,
         x="WaveFrequencyInput [Hz]",
         y="mean_out_in",
         color=GC.WIND_CONDITION,
         color_discrete_map=WIND_COLOR_MAP,
-        error_y="std_out_in",
+        error_y="std_out_in" if has_std else None,
         hover_data=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
         title="Interactive Damping Analysis",
         markers=True,

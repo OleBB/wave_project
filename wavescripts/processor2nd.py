@@ -7,8 +7,8 @@ Created on Fri Dec 19 10:37:28 2025
 """
 import numpy as np
 import pandas as pd
-
 from datetime import datetime
+
 from wavescripts.improved_data_loader import update_processed_metadata, get_configuration_for_date
 from typing import Mapping, Any, Optional, Sequence, Dict, Tuple, Iterable
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
@@ -262,55 +262,23 @@ def _update_more_metrics(
     # Start from a clean indexed copy
     meta_indexed = meta_sel.set_index("path").copy()
 
-    # ── Probe amplitude ratios ───────────────────────────────────────
-    amp_cols = [
-        "Probe 1 Amplitude (FFT)",
-        "Probe 2 Amplitude (FFT)",
-        "Probe 3 Amplitude (FFT)",
-        "Probe 4 Amplitude (FFT)",
-    ]
+    # Derive cfg once from the folder date
+    file_date = datetime.fromisoformat(str(meta_indexed["file_date"].iloc[0]))
+    cfg = get_configuration_for_date(file_date)
+    col_names = cfg.probe_col_names()  # {1: "9373/170", 2: "12545", ...}
 
-    # Only proceed if we have the needed columns
-    missing = [col for col in amp_cols if col not in meta_indexed.columns]
-    if missing:
-        print(f"Warning: missing amplitude columns for ratios: {missing}")
-        # or raise ValueError(...) if you prefer to fail loudly
-
-    # Compute ratios directly (vectorized)
-    ratios = pd.DataFrame(index=meta_indexed.index)
-
-    ratios["P2/P1 (FFT)"] = (
-        meta_indexed["Probe 2 Amplitude (FFT)"] / meta_indexed["Probe 1 Amplitude (FFT)"]
-    )
-    ratios["P3/P2 (FFT)"] = (
-        meta_indexed["Probe 3 Amplitude (FFT)"] / meta_indexed["Probe 2 Amplitude (FFT)"]
-    )
-    ratios["P4/P3 (FFT)"] = (
-        meta_indexed["Probe 4 Amplitude (FFT)"] / meta_indexed["Probe 3 Amplitude (FFT)"]
-    )
-
-    # Replace inf/-inf with NaN (e.g. division by zero)
-    ratios = ratios.replace([np.inf, -np.inf], np.nan)
-
-    # Assign / overwrite the adjacent-probe ratio columns
-    ratio_cols = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]
-    meta_indexed[ratio_cols] = ratios[ratio_cols]
-
-    # Compute OUT/IN (FFT): outgoing / incoming, using config-specific probe numbers
-    if "file_date" in meta_indexed.columns:
+    # Compute OUT/IN (FFT): read in_probe/out_probe directly from table columns
+    if "in_probe" in meta_indexed.columns and "out_probe" in meta_indexed.columns:
         out_in = pd.Series(index=meta_indexed.index, dtype=float)
-        for date_str, idx in meta_indexed.groupby("file_date").groups.items():
-            try:
-                dt = datetime.fromisoformat(str(date_str))
-                cfg = get_configuration_for_date(dt)
-                in_col = f"Probe {cfg.in_probe} Amplitude (FFT)"
-                out_col = f"Probe {cfg.out_probe} Amplitude (FFT)"
-                if in_col in meta_indexed.columns and out_col in meta_indexed.columns:
-                    out_in.loc[idx] = (
-                        meta_indexed.loc[idx, out_col] / meta_indexed.loc[idx, in_col]
-                    )
-            except (ValueError, KeyError):
-                pass
+        for (in_p, out_p), idx in meta_indexed.groupby(["in_probe", "out_probe"]).groups.items():
+            in_pos = col_names[int(in_p)]
+            out_pos = col_names[int(out_p)]
+            in_col = f"Probe {in_pos} Amplitude (FFT)"
+            out_col = f"Probe {out_pos} Amplitude (FFT)"
+            if in_col in meta_indexed.columns and out_col in meta_indexed.columns:
+                out_in.loc[idx] = (
+                    meta_indexed.loc[idx, out_col] / meta_indexed.loc[idx, in_col]
+                )
         out_in = out_in.replace([np.inf, -np.inf], np.nan)
         meta_indexed[GC.OUT_IN_FFT] = out_in
 
