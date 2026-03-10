@@ -1,0 +1,1735 @@
+==================================================
+Processing dataset 1/1: 20260307-ProbPos4_31_FPV_2-tett6roof
+==================================================
+Processing experiment: 20260307-ProbPos4_31_FPV_2-tett6roof
+   Cache folder: waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof
+   Total reset: Reloading all CSVs from scratch
+  Found 54 files with pattern *.csv
+   [1/54] Loaded fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → 14,167 rows
+   [2/54] Loaded fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → 13,055 rows
+   [3/54] Loaded fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → 21,785 rows
+   [4/54] Loaded fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → 13,751 rows
+   [5/54] Loaded fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → 13,748 rows
+   [6/54] Loaded fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → 21,784 rows
+   [7/54] Loaded fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → 13,057 rows
+   [8/54] Loaded fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → 14,167 rows
+   [9/54] Loaded fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → 13,383 rows
+   [10/54] Loaded fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → 14,644 rows
+   [11/54] Loaded fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → 12,762 rows
+   [12/54] Loaded fullpanel-fullwind-nowave-ULSonly-endofday.csv → 39,395 rows
+   [13/54] Loaded fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → 20,001 rows
+   [14/54] Loaded fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → 14,494 rows
+   [15/54] Loaded fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → 14,643 rows
+   [16/54] Loaded fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → 13,381 rows
+   [17/54] Loaded fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → 14,642 rows
+   [18/54] Loaded fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → 13,384 rows
+   [19/54] Loaded fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → 24,167 rows
+   [20/54] Loaded fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → 14,642 rows
+   [21/54] Loaded fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → 14,641 rows
+   [22/54] Loaded fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → 13,750 rows
+   [23/54] Loaded fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → 18,611 rows
+   [24/54] Loaded fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → 13,054 rows
+   [25/54] Loaded fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → 14,166 rows
+   [26/54] Loaded fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → 14,169 rows
+   [27/54] Loaded fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → 13,750 rows
+   [28/54] Loaded fullpanel-nowind-nowave-depth580-mstop30-run1.csv → 17,497 rows
+   [29/54] Loaded fullpanel-fullwind-nowave-depth580-ULSonly.csv → 181,315 rows
+   [30/54] Loaded fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → 17,499 rows
+   [31/54] Loaded fullpanel-nowind-nowave-depth580-mstop30-run2.csv → 17,496 rows
+   [32/54] Loaded fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → 17,500 rows
+   [33/54] Loaded fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → 30,195 rows
+   [34/54] Loaded fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → 15,194 rows
+   [35/54] Loaded fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → 16,590 rows
+   [36/54] Loaded fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → 15,833 rows
+   [37/54] Loaded fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → 15,834 rows
+   [38/54] Loaded fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → 16,589 rows
+   [39/54] Loaded fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → 15,838 rows
+   [40/54] Loaded fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → 16,598 rows
+   [41/54] Loaded fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → 15,221 rows
+   [42/54] Loaded fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → 16,591 rows
+   [43/54] Loaded fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → 16,592 rows
+   [44/54] Loaded fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → 15,834 rows
+   [45/54] Loaded fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → 15,191 rows
+   [46/54] Loaded fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → 17,499 rows
+   [47/54] Loaded fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → 15,193 rows
+   [48/54] Loaded fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → 15,191 rows
+   [49/54] Loaded fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → 15,193 rows
+   [50/54] Loaded fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → 15,197 rows
+   [51/54] Loaded fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → 21,229 rows
+   [52/54] Loaded fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → 17,500 rows
+   [53/54] Loaded fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → 30,194 rows
+   [54/54] Loaded fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → 15,191 rows
+   Probe columns → ['Probe 9373/170', 'Probe 12545', 'Probe 9373/340', 'Probe 8804']
+   Total reset: Extracting metadata from 54 DataFrames
+   Saving DataFrame cache to dfs.parquet
+   Saved metadata for 54 files
+Finished! Total 54 files (reset) from 1 experiment(s)
+# === Filter === #
+Alle valgt, fordi chooseAll=True
+# === Single probe process === #
+Computing time-interpolated stillwater levels from no-wind/no-wave anchor runs...
+  Anchor 1 (t0): 2026-03-07 14:00:58  ←  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv
+  Anchor 2 (t1): 2026-03-07 18:18:47  ←  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv
+  Control check — no-wind/no-wave runs vs interpolated line:
+    fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv: mean Δ=+0.000 mm, max Δ=+0.000 mm ← ANCHOR
+    fullpanel-nowind-nowave-depth580-mstop30-run1.csv: mean Δ=-0.160 mm, max Δ=-0.542 mm
+    fullpanel-nowind-nowave-depth580-mstop30-run2.csv: mean Δ=-0.342 mm, max Δ=-0.644 mm
+    fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv: mean Δ=+0.000 mm, max Δ=+0.000 mm ← ANCHOR
+Loaded 54 existing entries from meta.json
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:154: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta["PROCESSED_folder"] = "PROCESSED-" + meta["experiment_folder"].iloc[0]
+Updated waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof/meta.json → 54 entries (+0 new)
+Metadata safely updated and preserved across 1 experiment(s)!
+Stillwater levels saved to meta.json
+  Stillwater Probe 1 @ first run = 272.528 mm
+  Stillwater Probe 2 @ first run = 272.954 mm
+  Stillwater Probe 3 @ first run = 272.619 mm
+  Stillwater Probe 4 @ first run = 272.808 mm
+  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6275 mm
+  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9680 mm
+  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7029 mm
+  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5706 mm
+  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1968 mm
+  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1066 mm
+  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.4305 mm
+  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2707 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.4877 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.7759 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6824 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4107 mm
+  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.4664 mm
+  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9619 mm
+  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6057 mm
+  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.3786 mm
+  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.4330 mm
+  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2723 mm
+  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3157 mm
+  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5589 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.6479 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.8228 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 1.8183 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_8804 mean = 1.5262 mm
+  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.7030 mm
+  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0129 mm
+  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6862 mm
+  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5287 mm
+  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.0217 mm
+  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0581 mm
+  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3567 mm
+  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.0593 mm
+  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1272 mm
+  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1296 mm
+  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.4637 mm
+  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1909 mm
+  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3203 mm
+  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2449 mm
+  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.5068 mm
+  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5055 mm
+  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6923 mm
+  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9558 mm
+  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7608 mm
+  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.2758 mm
+  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_9373/170 mean = 1.7472 mm
+  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_12545 mean = 0.8557 mm
+  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_9373/340 mean = 1.8219 mm
+  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_8804 mean = 1.6217 mm
+  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6812 mm
+  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.8121 mm
+  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6597 mm
+  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5165 mm
+  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_9373/170 mean = -0.0849 mm
+  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_12545 mean = -0.0083 mm
+  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_9373/340 mean = -0.0480 mm
+  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_8804 mean = 0.1176 mm
+  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5219 mm
+  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9790 mm
+  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6391 mm
+  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4679 mm
+  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.7982 mm
+  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0047 mm
+  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8866 mm
+  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4136 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6709 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9567 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8396 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5945 mm
+  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5869 mm
+  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9969 mm
+  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.5413 mm
+  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5325 mm
+  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5653 mm
+  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.7211 mm
+  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8088 mm
+  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4162 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.6427 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.9702 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 1.7853 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_8804 mean = 1.6508 mm
+  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.0158 mm
+  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0271 mm
+  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3078 mm
+  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.0191 mm
+  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.0651 mm
+  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0815 mm
+  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.4060 mm
+  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1163 mm
+  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5637 mm
+  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.8125 mm
+  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7180 mm
+  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4783 mm
+  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5695 mm
+  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9974 mm
+  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6918 mm
+  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.2730 mm
+  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3786 mm
+  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2732 mm
+  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.5354 mm
+  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5063 mm
+  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.4930 mm
+  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0125 mm
+  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.5654 mm
+  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.3868 mm
+  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6353 mm
+  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0018 mm
+  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8937 mm
+  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5170 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.1287 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_12545 mean = 0.2051 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.5478 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_8804 mean = 0.1156 mm
+  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_9373/170 mean = 1.8164 mm
+  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_12545 mean = 1.0991 mm
+  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_9373/340 mean = 2.0572 mm
+  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_8804 mean = 1.6403 mm
+  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.8099 mm
+  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9810 mm
+  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.9358 mm
+  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.6349 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_9373/170 mean = 0.0613 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_12545 mean = 0.4097 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_9373/340 mean = 0.6300 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_8804 mean = 0.3202 mm
+  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.1147 mm
+  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0810 mm
+  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.2411 mm
+  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = -0.1234 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_9373/170 mean = 1.7197 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_12545 mean = 0.9776 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_9373/340 mean = 1.9637 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_8804 mean = 1.6508 mm
+  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3148 mm
+  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2069 mm
+  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.5067 mm
+  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.4111 mm
+  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1557 mm
+  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1372 mm
+  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3937 mm
+  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2604 mm
+  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.0808 mm
+  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0212 mm
+  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.2736 mm
+  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = -0.0818 mm
+  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.8343 mm
+  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9663 mm
+  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7389 mm
+  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.3720 mm
+  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5676 mm
+  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9256 mm
+  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7300 mm
+  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.3982 mm
+  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5881 mm
+  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9659 mm
+  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6094 mm
+  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4312 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6629 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9845 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8479 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.6560 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_9373/170 mean = 0.3563 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_12545 mean = 0.4335 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_9373/340 mean = 0.5557 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_8804 mean = 0.4842 mm
+  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.1097 mm
+  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0095 mm
+  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.2869 mm
+  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = -0.1134 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.7493 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.9814 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 1.9586 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_8804 mean = 1.5251 mm
+  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.2919 mm
+  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2043 mm
+  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.4853 mm
+  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.3686 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_9373/170 mean = 0.2772 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_12545 mean = 0.3505 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_9373/340 mean = 0.4914 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_8804 mean = 0.4159 mm
+  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1051 mm
+  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0981 mm
+  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3452 mm
+  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1724 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.7606 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.9572 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 1.7899 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_8804 mean = 1.5895 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.1143 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.1096 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.2400 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_8804 mean = -0.1128 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_9373/170 mean = -0.0623 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_12545 mean = -0.0050 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_9373/340 mean = 0.2914 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_8804 mean = -0.0420 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6800 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0310 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8912 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5192 mm
+  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_9373/170 mean = -0.0596 mm
+  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_12545 mean = 0.0039 mm
+  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_9373/340 mean = 0.0108 mm
+  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_8804 mean = -0.0483 mm
+  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6120 mm
+  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9389 mm
+  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8114 mm
+  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.6251 mm
+  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_9373/170 mean = 1.6720 mm
+  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_12545 mean = 0.8948 mm
+  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_9373/340 mean = 1.7424 mm
+  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_8804 mean = 1.4223 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = -0.1070 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_12545 mean = -0.1203 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 0.2102 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_8804 mean = -0.1182 mm
+[find_wave_range] Probe 9373/170: snarvei→334, start=349, end=4374, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.8827582460317, _seconds 2, _std 3.6949413140055527
+[find_wave_range] Probe 12545: snarvei→334, start=316, end=4440, periods≈25/24
+baselines:
+_samples: 500, _mean: 271.85012707936505, _seconds 2, _std 0.38506169625842335
+[find_wave_range] Probe 9373/340: snarvei→334, start=332, end=4304, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.72239673809526, _seconds 2, _std 3.258485124247163
+[find_wave_range] Probe 8804: snarvei→334, start=369, end=4365, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.2992876428571, _seconds 2, _std 3.2467829448807324
+start: 369, end: 4365, debug: {'baseline_mean': np.float64(271.2992876428571), 'baseline_std': np.float64(3.2467829448807324), '
+first_motion_idx': np.int64(0), 'samples_per_period': 167, 'detected_peaks': 104, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 369,  441,  509,  576,  645,  710,  788,  848,  917,  976, 1039,
+       1109, 1166, 1222, 1294, 1351, 1414, 1472, 1536, 1600, 1670, 1737,
+       1789, 1834, 1892, 1946, 2002, 2006, 2036, 2042, 2054, 2090, 2126,
+       2183, 2248, 2312, 2375, 2417, 2475, 2541, 2598, 2657, 2701, 2738,
+       2795, 2856, 2915, 2980, 3040, 3106, 3158, 3213, 3285, 3351, 3398,
+       3464, 3543, 3605, 3679, 3722, 3770, 3859, 3933, 3998, 4068, 4123,
+       4301, 4365])}
+[find_wave_range] Probe 9373/170: snarvei→278, start=249, end=3558, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.7938648174603, _seconds 2, _std 0.12265514814583804
+[find_wave_range] Probe 12545: snarvei→278, start=284, end=3576, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.1033904285715, _seconds 2, _std 0.007727960381177504
+[find_wave_range] Probe 9373/340: snarvei→278, start=276, end=3656, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.6571646984127, _seconds 2, _std 0.02187116525578028
+[find_wave_range] Probe 8804: snarvei→278, start=283, end=3560, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.7822781666667, _seconds 2, _std 0.11685489992803985
+start: 283, end: 3560, debug: {'baseline_mean': np.float64(271.7822781666667), 'baseline_std': np.float64(0.11685489992803985),
+'first_motion_idx': np.int64(0), 'samples_per_period': 139, 'detected_peaks': 97, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 283,  291,  324,  385,  440,  447,  501,  509,  536,  584,  590,
+        626,  639,  667,  681,  698,  740,  746,  759,  831,  862,  899,
+        911,  951,  979, 1001, 1031, 1045, 1058, 1109, 1165, 1189, 1226,
+       1298, 1330, 1349, 1364, 1390, 1422, 1458, 1497, 1533, 1641, 1690,
+       1718, 1758, 1777, 1799, 1850, 1893, 1931, 2048, 2094, 2109, 2133,
+       2152, 2204, 2218, 2350, 2373, 2403, 2449, 2455, 2477, 2577, 2622,
+       2636, 2728, 2846, 2902, 2908, 2989, 3010, 3089, 3131, 3216, 3228,
+       3321, 3348, 3533, 3560])}
+[find_wave_range] Probe 9373/170: snarvei→714, start=707, end=9185, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.7410306904762, _seconds 2, _std 5.432263567761583
+[find_wave_range] Probe 12545: snarvei→714, start=694, end=9207, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.45707843650797, _seconds 2, _std 0.2827157378436294
+[find_wave_range] Probe 9373/340: snarvei→714, start=720, end=9183, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.1678754444444, _seconds 2, _std 4.306839189515199
+[find_wave_range] Probe 8804: snarvei→714, start=750, end=9424, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.3607006984127, _seconds 2, _std 4.583066894913824
+start: 750, end: 9424, debug: {'baseline_mean': np.float64(271.3607006984127), 'baseline_std': np.float64(4.583066894913824), 'f
+irst_motion_idx': np.int64(7), 'samples_per_period': 357, 'detected_peaks': 53, 'keep_periods_used': 24, 'n_periods_target': 24,
+ 'n_periods_found': 24, 'wave_upcrossings': array([ 750,  818,  896,  959, 1017, 1060, 1130, 1194, 1265, 1339, 1401,
+       1448, 1506, 1562, 1738, 1937, 1973, 2321, 2491, 2628, 2678, 2994,
+       3032, 3343, 3385, 3728, 4080, 4424, 4463, 4782, 4818, 5140, 5505,
+       5714, 5854, 5900, 6216, 6229, 6248, 6572, 6619, 6766, 6925, 6962,
+       7294, 7650, 7998, 8188, 8376, 8582, 8701, 8743, 9082, 9424])}
+[find_wave_range] Probe 9373/170: snarvei→312, start=328, end=4056, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.5359138809524, _seconds 2, _std 5.240865935476523
+[find_wave_range] Probe 12545: snarvei→312, start=321, end=3992, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.41936638888893, _seconds 2, _std 0.2576824958153249
+[find_wave_range] Probe 9373/340: snarvei→312, start=295, end=4016, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.0464627857143, _seconds 2, _std 3.606111910058597
+[find_wave_range] Probe 8804: snarvei→312, start=325, end=4050, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.55000227777776, _seconds 2, _std 4.330722909581794
+start: 325, end: 4050, debug: {'baseline_mean': np.float64(271.55000227777776), 'baseline_std': np.float64(4.330722909581794), '
+first_motion_idx': np.int64(37), 'samples_per_period': 156, 'detected_peaks': 67, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 325,  391,  454,  523,  590,  657,  719,  774,  850,  922,  983,
+       1046, 1109, 1174, 1232, 1294, 1360, 1426, 1462, 1523, 1602, 1665,
+       1726, 1762, 1799, 1850, 1903, 1974, 2050, 2141, 2211, 2280, 2346,
+       2408, 2464, 2510, 2564, 2621, 2681, 2709, 2724, 2793, 2856, 2913,
+       2982, 3043, 3104, 3166, 3238, 3292, 3332, 3394, 3466, 3519, 3685,
+       3738, 3820, 3879, 3925, 3978, 4050])}
+[find_wave_range] Probe 9373/170: snarvei→312, start=295, end=4083, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.9577777222222, _seconds 2, _std 0.1348306246179604
+[find_wave_range] Probe 12545: snarvei→312, start=312, end=4112, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.13510442857137, _seconds 2, _std 0.008728527167296352
+[find_wave_range] Probe 9373/340: snarvei→312, start=312, end=4077, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.6864526984127, _seconds 2, _std 0.016434216019801315
+[find_wave_range] Probe 8804: snarvei→312, start=325, end=4135, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.90045183333336, _seconds 2, _std 0.11504953220472446
+start: 325, end: 4135, debug: {'baseline_mean': np.float64(271.90045183333336), 'baseline_std': np.float64(0.11504953220472446),
+ 'first_motion_idx': np.int64(8), 'samples_per_period': 156, 'detected_peaks': 95, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 325,  348,  371,  386,  456,  482,  505,  527,  567,  604,  620,
+        644,  734,  766,  786,  853,  907,  982, 1033, 1058, 1067, 1072,
+       1097, 1248, 1310, 1363, 1394, 1448, 1479, 1507, 1701, 1877, 1908,
+       2065, 2083, 2108, 2233, 2361, 2392, 2512, 2638, 2657, 2894, 3142,
+       3364, 3570, 3767, 3957, 4135])}
+[find_wave_range] Probe 9373/170: snarvei→714, start=705, end=9327, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.291844952381, _seconds 2, _std 3.773619837394285
+[find_wave_range] Probe 12545: snarvei→714, start=706, end=9204, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.04782643650793, _seconds 2, _std 0.24356985212699164
+[find_wave_range] Probe 9373/340: snarvei→714, start=691, end=9195, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.84452834126984, _seconds 2, _std 3.9786809939956895
+[find_wave_range] Probe 8804: snarvei→714, start=744, end=9446, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.67447043650793, _seconds 2, _std 3.387086434260255
+start: 744, end: 9446, debug: {'baseline_mean': np.float64(271.67447043650793), 'baseline_std': np.float64(3.387086434260255), '
+first_motion_idx': np.int64(73), 'samples_per_period': 357, 'detected_peaks': 92, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 744,  779,  836,  869,  927,  988, 1057, 1123, 1183, 1238, 1304,
+       1375, 1441, 1498, 1552, 1605, 1901, 1951, 1986, 2112, 2126, 2310,
+       2355, 2642, 2680, 2831, 3027, 3381, 3715, 3783, 4099, 4445, 4660,
+       4779, 4826, 4969, 5149, 5166, 5372, 5510, 5550, 5714, 5878, 6257,
+       6585, 6779, 6925, 6972, 7302, 7488, 7666, 7982, 8032, 8364, 8736,
+       9069, 9446])}
+[find_wave_range] Probe 9373/170: snarvei→278, start=256, end=3601, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.72307174603174, _seconds 2, _std 3.9388885314598228
+[find_wave_range] Probe 12545: snarvei→278, start=285, end=3583, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.93160107142853, _seconds 2, _std 0.20314560928761
+[find_wave_range] Probe 9373/340: snarvei→278, start=301, end=3651, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.6907252936508, _seconds 2, _std 3.2903067895545943
+[find_wave_range] Probe 8804: snarvei→278, start=304, end=3652, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.7830711984127, _seconds 2, _std 4.768975121941457
+start: 304, end: 3652, debug: {'baseline_mean': np.float64(270.7830711984127), 'baseline_std': np.float64(4.768975121941457), 'f
+irst_motion_idx': np.int64(19), 'samples_per_period': 139, 'detected_peaks': 57, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 304,  367,  430,  492,  550,  629,  686,  745,  796,  852,  895,
+        937,  986, 1039, 1089, 1132, 1192, 1249, 1302, 1356, 1413, 1472,
+       1530, 1586, 1662, 1718, 1783, 1834, 1890, 1941, 1995, 2055, 2113,
+       2189, 2257, 2329, 2378, 2432, 2486, 2550, 2616, 2668, 2721, 2762,
+       2811, 2881, 2954, 3013, 3027, 3046, 3089, 3150, 3210, 3272, 3336,
+       3411, 3471, 3531, 3594, 3652])}
+[find_wave_range] Probe 9373/170: snarvei→334, start=330, end=4282, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.99681573015874, _seconds 2, _std 0.08327499651153099
+[find_wave_range] Probe 12545: snarvei→334, start=340, end=4366, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0771428571429, _seconds 2, _std 0.015217669047758887
+[find_wave_range] Probe 9373/340: snarvei→334, start=334, end=4278, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.62333022222225, _seconds 2, _std 0.010401734907524659
+[find_wave_range] Probe 8804: snarvei→334, start=336, end=4330, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.959118547619, _seconds 2, _std 0.07690764561178345
+start: 336, end: 4330, debug: {'baseline_mean': np.float64(271.959118547619), 'baseline_std': np.float64(0.07690764561178345), '
+first_motion_idx': np.int64(12), 'samples_per_period': 167, 'detected_peaks': 97, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 336,  355,  392,  412,  450,  484,  501,  551,  593,  634,  670,
+        687,  707,  728,  740,  804,  826,  851,  873,  890,  934,  946,
+        967,  986, 1015, 1032, 1093, 1124, 1147, 1172, 1204, 1223, 1256,
+       1278, 1297, 1344, 1382, 1441, 1470, 1486, 1515, 1552, 1589, 1595,
+       1768, 1784, 1800, 1814, 1876, 1895, 1915, 1934, 2058, 2078, 2126,
+       2225, 2246, 2259, 2370, 2421, 2521, 2646, 2673, 2678, 2795, 2917,
+       3142, 3365, 3377, 3586, 3781, 3974, 4154, 4330])}
+[find_wave_range] Probe 9373/170: snarvei→294, start=303, end=3890, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.01401320634915, _seconds 2, _std 0.08401592518985249
+[find_wave_range] Probe 12545: snarvei→294, start=304, end=3829, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0715793015873, _seconds 2, _std 0.007237857382327335
+[find_wave_range] Probe 9373/340: snarvei→294, start=293, end=3856, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.62232, _seconds 2, _std 0.007848159019793697
+[find_wave_range] Probe 8804: snarvei→294, start=304, end=3751, periods≈23/24
+  WARNING [Probe 8804]: only 23/24 periods found – signal may be cut short (mstop=30 s, probe at 8804 mm from paddle).
+baselines:
+_samples: 500, _mean: 271.90994673015877, _seconds 2, _std 0.10703453875777615
+start: 304, end: 3751, debug: {'baseline_mean': np.float64(271.90994673015877), 'baseline_std': np.float64(0.10703453875777615),
+ 'first_motion_idx': np.int64(15), 'samples_per_period': 147, 'detected_peaks': 98, 'keep_periods_used': 24, 'n_periods_target':
+ 24, 'n_periods_found': 23, 'wave_upcrossings': array([ 304,  314,  342,  360,  383,  422,  460,  488,  508,  534,  550,
+        573,  606,  647,  667,  698,  710,  760,  780,  845,  873,  909,
+        940,  980,  996, 1043, 1088, 1116, 1140, 1173, 1189, 1208, 1232,
+       1271, 1298, 1320, 1332, 1390, 1451, 1488, 1720, 1779, 1803, 1850,
+       1880, 2111, 2124, 2203, 2298, 2382, 2398, 2479, 2505, 2599, 2643,
+       2661, 2748, 2771, 2864, 2910, 3008, 3106, 3126, 3131, 3335, 3458,
+       3549, 3751])}
+[find_wave_range] Probe 9373/170: snarvei→358, start=350, end=4646, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0026046666667, _seconds 2, _std 0.12499849039264042
+[find_wave_range] Probe 12545: snarvei→358, start=355, end=4703, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.13140221428563, _seconds 2, _std 0.006091900083517044
+[find_wave_range] Probe 9373/340: snarvei→358, start=359, end=4646, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.6840462222222, _seconds 2, _std 0.006412998897876681
+[find_wave_range] Probe 8804: snarvei→358, start=359, end=4683, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.86478432539684, _seconds 2, _std 0.1379900808406912
+start: 359, end: 4683, debug: {'baseline_mean': np.float64(271.86478432539684), 'baseline_std': np.float64(0.1379900808406912),
+'first_motion_idx': np.int64(37), 'samples_per_period': 179, 'detected_peaks': 83, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 359,  414,  464,  514,  564,  624,  630,  653,  701,  720,  782,
+        810,  848,  884,  942,  976, 1016, 1032, 1097, 1136, 1412, 1423,
+       1597, 1754, 2098, 2400, 2412, 2671, 2931, 3159, 3386, 3593, 3791,
+       3980, 4163, 4340, 4511, 4683])}
+[find_wave_range] Probe 9373/170: snarvei→264, start=301, end=3450, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.17636854761906, _seconds 2, _std 3.690272224307743
+[find_wave_range] Probe 12545: snarvei→264, start=302, end=3426, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.2459818174603, _seconds 2, _std 0.3583002066759777
+[find_wave_range] Probe 9373/340: snarvei→264, start=248, end=3386, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.32332969047616, _seconds 2, _std 2.5902205869237322
+[find_wave_range] Probe 8804: snarvei→264, start=274, end=3454, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.8884306190476, _seconds 2, _std 3.374445745421105
+start: 274, end: 3454, debug: {'baseline_mean': np.float64(270.8884306190476), 'baseline_std': np.float64(3.374445745421105), 'f
+irst_motion_idx': np.int64(46), 'samples_per_period': 132, 'detected_peaks': 85, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 274,  329,  407,  456,  507,  571,  632,  701,  752,  817,  879,
+        940,  999, 1022, 1042, 1095, 1166, 1226, 1288, 1337, 1408, 1466,
+       1524, 1592, 1646, 1702, 1768, 1836, 1913, 1976, 2045, 2108, 2148,
+       2203, 2266, 2329, 2427, 2497, 2567, 2637, 2720, 2793, 2855, 2907,
+       2967, 3034, 3106, 3157, 3236, 3312, 3367, 3382, 3454])}
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+[find_wave_range] Probe 9373/170: snarvei→624, start=594, end=8107, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.47472516666664, _seconds 2, _std 5.058934425958415
+[find_wave_range] Probe 12545: snarvei→624, start=578, end=8056, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.3916749920635, _seconds 2, _std 0.2792175299687114
+[find_wave_range] Probe 9373/340: snarvei→624, start=652, end=8251, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.87831502380953, _seconds 2, _std 4.1614295313484915
+[find_wave_range] Probe 8804: snarvei→624, start=586, end=8040, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.32715526190475, _seconds 2, _std 4.66967799073111
+start: 586, end: 8040, debug: {'baseline_mean': np.float64(271.32715526190475), 'baseline_std': np.float64(4.66967799073111), 'f
+irst_motion_idx': np.int64(20), 'samples_per_period': 312, 'detected_peaks': 63, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 586,  663,  730,  798,  867,  902,  957, 1022, 1083, 1139, 1220,
+       1236, 1317, 1385, 1454, 1513, 1575, 1641, 1717, 1884, 1952, 2001,
+       2077, 2151, 2209, 2255, 2576, 2710, 2871, 3164, 3505, 3795, 4106,
+       4416, 4738, 5045, 5354, 5674, 6002, 6164, 6285, 6630, 6933, 7249,
+       7550, 7855, 7874, 8040])}
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:246: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:247: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:246: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:247: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:246: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:247: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:246: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:247: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
+no freq found, assuming no wave
+[find_wave_range] Probe 9373/170: snarvei→358, start=368, end=4596, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.17657702380956, _seconds 2, _std 3.779390255734257
+[find_wave_range] Probe 12545: snarvei→358, start=347, end=4687, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.98720811904764, _seconds 2, _std 0.2873892321245983
+[find_wave_range] Probe 9373/340: snarvei→358, start=380, end=4598, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.8696885873016, _seconds 2, _std 5.12257690271317
+[find_wave_range] Probe 8804: snarvei→358, start=364, end=4642, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.11481325396824, _seconds 2, _std 3.624720521382905
+start: 364, end: 4642, debug: {'baseline_mean': np.float64(271.11481325396824), 'baseline_std': np.float64(3.624720521382905), '
+first_motion_idx': np.int64(0), 'samples_per_period': 179, 'detected_peaks': 81, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 364,  426,  511,  579,  647,  718,  782,  848,  963, 1035, 1103,
+       1163, 1206, 1228, 1285, 1327, 1380, 1436, 1501, 1565, 1636, 1705,
+       1761, 1817, 1875, 1931, 2004, 2074, 2134, 2195, 2270, 2332, 2405,
+       2457, 2464, 2469, 2542, 2601, 2656, 2691, 2746, 2820, 2847, 2902,
+       2962, 3043, 3109, 3162, 3225, 3300, 3348, 3405, 3486, 3565, 3714,
+       3775, 3841, 3959, 4054, 4128, 4292, 4466, 4642])}
+[find_wave_range] Probe 9373/170: snarvei→294, start=290, end=3823, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.0257907936508, _seconds 2, _std 6.037277747934171
+[find_wave_range] Probe 12545: snarvei→294, start=297, end=3846, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.94925734126986, _seconds 2, _std 0.25993369690381735
+[find_wave_range] Probe 9373/340: snarvei→294, start=306, end=3825, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.74122753968254, _seconds 2, _std 3.369119161892327
+[find_wave_range] Probe 8804: snarvei→294, start=280, end=3792, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.40079726984123, _seconds 2, _std 4.557162823554141
+start: 280, end: 3792, debug: {'baseline_mean': np.float64(271.40079726984123), 'baseline_std': np.float64(4.557162823554141), '
+first_motion_idx': np.int64(2), 'samples_per_period': 147, 'detected_peaks': 59, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 280,  352,  441,  487,  533,  584,  643,  691,  756,  842,  905,
+        972, 1034, 1094, 1161, 1231, 1290, 1347, 1407, 1474, 1529, 1595,
+       1655, 1735, 1800, 1866, 1930, 1986, 2044, 2096, 2145, 2218, 2260,
+       2316, 2410, 2464, 2515, 2572, 2640, 2716, 2790, 2852, 2918, 2985,
+       3054, 3118, 3186, 3251, 3325, 3378, 3434, 3477, 3527, 3646, 3698,
+       3743, 3792])}
+[find_wave_range] Probe 9373/170: snarvei→358, start=341, end=4618, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.66609543650793, _seconds 2, _std 4.564301100250043
+[find_wave_range] Probe 12545: snarvei→358, start=337, end=4694, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0367019047619, _seconds 2, _std 0.20323456961506361
+[find_wave_range] Probe 9373/340: snarvei→358, start=328, end=4618, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.5908652460318, _seconds 2, _std 3.7480360967985793
+[find_wave_range] Probe 8804: snarvei→358, start=351, end=4680, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.39081264285716, _seconds 2, _std 3.54023491560145
+start: 351, end: 4680, debug: {'baseline_mean': np.float64(271.39081264285716), 'baseline_std': np.float64(3.54023491560145), 'f
+irst_motion_idx': np.int64(18), 'samples_per_period': 179, 'detected_peaks': 91, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 351,  422,  487,  534,  597,  676,  748,  808,  870,  936, 1002,
+       1060, 1127, 1197, 1253, 1298, 1343, 1402, 1455, 1520, 1597, 1650,
+       1699, 1769, 1825, 1884, 1946, 2009, 2076, 2135, 2193, 2252, 2316,
+       2361, 2432, 2495, 2548, 2612, 2686, 2755, 2811, 2872, 2931, 2965,
+       3031, 3095, 3159, 3230, 3308, 3376, 3450, 3520, 3574, 3633, 3697,
+       3754, 3801, 3907, 3963, 4025, 4106, 4155, 4231, 4310, 4495, 4680])}
+[find_wave_range] Probe 9373/170: snarvei→294, start=312, end=3820, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.0951121111111, _seconds 2, _std 3.725859475426101
+[find_wave_range] Probe 12545: snarvei→294, start=309, end=3850, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.34860415873015, _seconds 2, _std 0.3400956283811618
+[find_wave_range] Probe 9373/340: snarvei→294, start=327, end=3826, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.65353332539684, _seconds 2, _std 4.686642382643064
+[find_wave_range] Probe 8804: snarvei→294, start=304, end=3853, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.7802961507937, _seconds 2, _std 3.1873572006190063
+start: 304, end: 3853, debug: {'baseline_mean': np.float64(271.7802961507937), 'baseline_std': np.float64(3.1873572006190063), '
+first_motion_idx': np.int64(0), 'samples_per_period': 147, 'detected_peaks': 86, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 304,  363,  432,  537,  606,  661,  734,  799,  853,  908,  957,
+       1016, 1087, 1169, 1234, 1309, 1341, 1391, 1476, 1551, 1623, 1714,
+       1784, 1855, 1938, 2003, 2067, 2091, 2102, 2167, 2235, 2289, 2349,
+       2408, 2464, 2470, 2524, 2595, 2665, 2741, 2806, 2875, 2951, 3025,
+       3088, 3139, 3191, 3252, 3314, 3370, 3431, 3503, 3575, 3724, 3785,
+       3853])}
+[find_wave_range] Probe 9373/170: snarvei→834, start=816, end=10819, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.00223621428574, _seconds 2, _std 3.6529704577499684
+[find_wave_range] Probe 12545: snarvei→834, start=783, end=10793, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.3155063888889, _seconds 2, _std 0.2891506554926581
+[find_wave_range] Probe 9373/340: snarvei→834, start=809, end=10801, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.9408048095238, _seconds 2, _std 3.8827269047042265
+[find_wave_range] Probe 8804: snarvei→834, start=819, end=10811, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.40566519841275, _seconds 2, _std 3.197429484937005
+start: 819, end: 10811, debug: {'baseline_mean': np.float64(271.40566519841275), 'baseline_std': np.float64(3.197429484937005),
+'first_motion_idx': np.int64(115), 'samples_per_period': 417, 'detected_peaks': 123, 'keep_periods_used': 24, 'n_periods_target'
+: 24, 'n_periods_found': 24, 'wave_upcrossings': array([  819,   887,   945,  1008,  1076,  1140,  1196,  1257,  1322,
+        1388,  1472,  1539,  1595,  1641,  2012,  2036,  2253,  2418,
+        2659,  2836,  2882,  3273,  3663,  3709,  3937,  4104,  4499,
+        4741,  4829,  4881,  4945,  5118,  5330,  5395,  5596,  5766,
+        5802,  5958,  6163,  6418,  6589,  7006,  7214,  7322,  7382,
+        7430,  7845,  7903,  7966,  8062,  8141,  8274,  8497,  8697,
+        8914,  9081,  9114,  9517,  9671,  9753,  9819,  9892,  9960,
+       10036, 10135, 10217, 10275, 10331, 10389, 10504, 10577, 10687,
+       10745, 10811])}
+[find_wave_range] Probe 9373/170: snarvei→358, start=371, end=4612, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.3331022857143, _seconds 2, _std 2.504627103282859
+[find_wave_range] Probe 12545: snarvei→358, start=367, end=4685, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.8506015873016, _seconds 2, _std 0.2273198773378708
+[find_wave_range] Probe 9373/340: snarvei→358, start=328, end=4645, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.83881583333334, _seconds 2, _std 4.179627759757269
+[find_wave_range] Probe 8804: snarvei→358, start=357, end=4666, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.42227088095234, _seconds 2, _std 3.5278626716990864
+start: 357, end: 4666, debug: {'baseline_mean': np.float64(271.42227088095234), 'baseline_std': np.float64(3.5278626716990864),
+'first_motion_idx': np.int64(109), 'samples_per_period': 179, 'detected_peaks': 93, 'keep_periods_used': 24, 'n_periods_target':
+ 24, 'n_periods_found': 24, 'wave_upcrossings': array([ 357,  422,  486,  546,  609,  662,  710,  772,  826,  882,  938,
+        973, 1034, 1102, 1162, 1183, 1254, 1324, 1394, 1461, 1530, 1595,
+       1662, 1725, 1794, 1854, 1896, 1918, 1944, 2011, 2071, 2126, 2190,
+       2264, 2321, 2410, 2481, 2559, 2617, 2662, 2727, 2795, 2857, 2912,
+       2962, 3017, 3085, 3146, 3201, 3279, 3337, 3388, 3405, 3509, 3582,
+       3646, 3709, 3776, 3843, 3926, 3990, 4143, 4311, 4493, 4666])}
+[find_wave_range] Probe 9373/170: snarvei→358, start=365, end=4662, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.96558, _seconds 2, _std 0.09704056677492895
+[find_wave_range] Probe 12545: snarvei→358, start=314, end=4603, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.07951071428573, _seconds 2, _std 0.01686216288414406
+[find_wave_range] Probe 9373/340: snarvei→358, start=364, end=4662, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.62314609523804, _seconds 2, _std 0.007328112454455224
+[find_wave_range] Probe 8804: snarvei→358, start=342, end=4703, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.9411391269841, _seconds 2, _std 0.08438943305297979
+start: 342, end: 4703, debug: {'baseline_mean': np.float64(271.9411391269841), 'baseline_std': np.float64(0.08438943305297979),
+'first_motion_idx': np.int64(28), 'samples_per_period': 179, 'detected_peaks': 97, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 342,  383,  417,  435,  461,  480,  490,  498,  525,  538,  556,
+        585,  633,  670,  735,  749,  767,  787,  804,  823,  839,  857,
+        882,  896,  951, 1003, 1042, 1099, 1116, 1130, 1134, 1156, 1202,
+       1215, 1245, 1283, 1346, 1364, 1396, 1432, 1448, 1482, 1523, 1579,
+       1628, 1723, 1795, 1820, 1938, 2090, 2123, 2396, 2667, 2922, 2935,
+       3161, 3386, 3597, 3795, 3986, 4173, 4354, 4530, 4703])}
+[find_wave_range] Probe 9373/170: snarvei→312, start=322, end=4080, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.9718593571428, _seconds 2, _std 0.09894978884228539
+[find_wave_range] Probe 12545: snarvei→312, start=320, end=4105, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0745817777778, _seconds 2, _std 0.010238641586204788
+[find_wave_range] Probe 9373/340: snarvei→312, start=339, end=4077, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.65899, _seconds 2, _std 0.05686624569989229
+[find_wave_range] Probe 8804: snarvei→312, start=306, end=4138, periods≈25/24
+baselines:
+_samples: 500, _mean: 271.9234403968254, _seconds 2, _std 0.10967244763194822
+start: 306, end: 4138, debug: {'baseline_mean': np.float64(271.9234403968254), 'baseline_std': np.float64(0.10967244763194822),
+'first_motion_idx': np.int64(96), 'samples_per_period': 156, 'detected_peaks': 88, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 25, 'wave_upcrossings': array([ 306,  324,  391,  423,  448,  490,  504,  536,  553,  568,  592,
+        608,  630,  647,  693,  745,  796,  863,  934,  946,  990, 1020,
+       1064, 1094, 1133, 1168, 1213, 1227, 1287, 1354, 1446, 1464, 1758,
+       1782, 1813, 1870, 1887, 1909, 2069, 2102, 2122, 2217, 2335, 2379,
+       2404, 2511, 2534, 2621, 2785, 2880, 2914, 3012, 3029, 3123, 3142,
+       3350, 3361, 3566, 3574, 3772, 3956, 4138])}
+[find_wave_range] Probe 9373/170: snarvei→556, start=529, end=7307, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.63324067460314, _seconds 2, _std 2.7758810286232527
+[find_wave_range] Probe 12545: snarvei→556, start=554, end=7206, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.36823055555556, _seconds 2, _std 0.23459453918040452
+[find_wave_range] Probe 9373/340: snarvei→556, start=553, end=7310, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.53294091269845, _seconds 2, _std 6.357486262402734
+[find_wave_range] Probe 8804: snarvei→556, start=551, end=7225, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.47578470634926, _seconds 2, _std 3.0546992582664614
+start: 551, end: 7225, debug: {'baseline_mean': np.float64(271.47578470634926), 'baseline_std': np.float64(3.0546992582664614),
+'first_motion_idx': np.int64(12), 'samples_per_period': 278, 'detected_peaks': 110, 'keep_periods_used': 24, 'n_periods_target':
+ 24, 'n_periods_found': 24, 'wave_upcrossings': array([ 551,  612,  673,  727,  788,  845,  901,  952, 1020, 1066, 1132,
+       1187, 1261, 1335, 1403, 1475, 1530, 1598, 1688, 1748, 1800, 1858,
+       1924, 2095, 2168, 2227, 2347, 2479, 2536, 2784, 3056, 3318, 3613,
+       3876, 4176, 4432, 4706, 4993, 5262, 5538, 5568, 5812, 5840, 6115,
+       6379, 6653, 6934, 6958, 7225])}
+[find_wave_range] Probe 9373/170: snarvei→278, start=296, end=3617, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.6512289126984, _seconds 2, _std 4.470745595739597
+[find_wave_range] Probe 12545: snarvei→278, start=261, end=3584, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.2485235079365, _seconds 2, _std 0.2577310801788071
+[find_wave_range] Probe 9373/340: snarvei→278, start=243, end=3545, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.2237769206349, _seconds 2, _std 4.127551162844318
+[find_wave_range] Probe 8804: snarvei→278, start=265, end=3625, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.6893576349206, _seconds 2, _std 3.369395766053832
+start: 265, end: 3625, debug: {'baseline_mean': np.float64(271.6893576349206), 'baseline_std': np.float64(3.369395766053832), 'f
+irst_motion_idx': np.int64(0), 'samples_per_period': 139, 'detected_peaks': 81, 'keep_periods_used': 24, 'n_periods_target': 24,
+ 'n_periods_found': 24, 'wave_upcrossings': array([ 265,  334,  409,  471,  535,  600,  672,  731,  785,  844,  893,
+        943,  993, 1029, 1082, 1136, 1176, 1239, 1294, 1366, 1416, 1475,
+       1538, 1597, 1670, 1730, 1792, 1844, 1858, 1936, 2006, 2069, 2140,
+       2187, 2232, 2294, 2349, 2366, 2391, 2451, 2542, 2608, 2679, 2748,
+       2803, 2865, 2935, 3030, 3092, 3163, 3246, 3314, 3379, 3441, 3503,
+       3625])}
+[find_wave_range] Probe 9373/170: snarvei→334, start=354, end=4449, periods≈25/24
+baselines:
+_samples: 500, _mean: 272.00376130158736, _seconds 2, _std 0.11574777704688381
+[find_wave_range] Probe 12545: snarvei→334, start=324, end=4370, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.1626566349206, _seconds 2, _std 0.008300412138374437
+[find_wave_range] Probe 9373/340: snarvei→334, start=339, end=4273, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.7131420000001, _seconds 2, _std 0.007385244478010147
+[find_wave_range] Probe 8804: snarvei→334, start=326, end=4314, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.92149756349204, _seconds 2, _std 0.10576390129361234
+start: 326, end: 4314, debug: {'baseline_mean': np.float64(271.92149756349204), 'baseline_std': np.float64(0.10576390129361234),
+ 'first_motion_idx': np.int64(0), 'samples_per_period': 167, 'detected_peaks': 96, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 326,  357,  387,  434,  477,  500,  537,  599,  620,  650,  686,
+        720,  798,  824,  844,  893,  937,  956, 1011, 1058, 1090, 1124,
+       1199, 1350, 1392, 1419, 1530, 1559, 1586, 1729, 1777, 1944, 2081,
+       2108, 2112, 2252, 2381, 2407, 2672, 2921, 3149, 3368, 3580, 3778,
+       3964, 4142, 4314])}
+[find_wave_range] Probe 9373/170: snarvei→334, start=339, end=4337, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.47403187301586, _seconds 2, _std 3.6529092613343725
+[find_wave_range] Probe 12545: snarvei→334, start=266, end=4244, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.13318107142857, _seconds 2, _std 0.24693143321122143
+[find_wave_range] Probe 9373/340: snarvei→334, start=367, end=4415, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.1477702380952, _seconds 2, _std 3.737184562704124
+[find_wave_range] Probe 8804: snarvei→334, start=354, end=4435, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.81624385714287, _seconds 2, _std 2.41550043782139
+start: 354, end: 4435, debug: {'baseline_mean': np.float64(271.81624385714287), 'baseline_std': np.float64(2.41550043782139), 'f
+irst_motion_idx': np.int64(8), 'samples_per_period': 167, 'detected_peaks': 122, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 354,  399,  413,  472,  554,  617,  671,  723,  778,  842,  918,
+        981, 1040, 1094, 1101, 1151, 1213, 1279, 1343, 1399, 1454, 1517,
+       1575, 1629, 1660, 1725, 1795, 1859, 1927, 1985, 2049, 2111, 2173,
+       2230, 2299, 2358, 2414, 2485, 2560, 2627, 2686, 2743, 2800, 2863,
+       2924, 2943, 3032, 3108, 3171, 3239, 3276, 3301, 3362, 3462, 3518,
+       3581, 3651, 3739, 3874, 3938, 4016, 4077, 4120, 4275, 4435])}
+[find_wave_range] Probe 9373/170: snarvei→312, start=317, end=4042, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.2637464365079, _seconds 2, _std 3.8639281748266012
+[find_wave_range] Probe 12545: snarvei→312, start=317, end=3981, periods≈23/24
+  WARNING [Probe 12545]: only 23/24 periods found – signal may be cut short (mstop=30 s, probe at 12545 mm from paddle).
+baselines:
+_samples: 500, _mean: 271.9438820555556, _seconds 2, _std 0.3309446761669471
+[find_wave_range] Probe 9373/340: snarvei→312, start=324, end=4057, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.68792786507936, _seconds 2, _std 4.124260668837501
+[find_wave_range] Probe 8804: snarvei→312, start=318, end=4043, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.05598931746033, _seconds 2, _std 4.114876096911501
+start: 318, end: 4043, debug: {'baseline_mean': np.float64(271.05598931746033), 'baseline_std': np.float64(4.114876096911501), '
+first_motion_idx': np.int64(10), 'samples_per_period': 156, 'detected_peaks': 74, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 318,  391,  452,  509,  568,  620,  671,  732,  789,  844,  892,
+        944, 1008, 1104, 1183, 1240, 1298, 1370, 1436, 1498, 1564, 1625,
+       1692, 1757, 1764, 1838, 1910, 1970, 2027, 2085, 2139, 2193, 2264,
+       2324, 2393, 2449, 2491, 2566, 2623, 2681, 2744, 2812, 2879, 2974,
+       3042, 3084, 3140, 3175, 3228, 3300, 3368, 3432, 3504, 3577, 3647,
+       3695, 3752, 3810, 3863, 3920, 3977, 4043])}
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+[find_wave_range] Probe 9373/170: snarvei→500, start=498, end=6528, periods≈24/24
+baselines:
+_samples: 500, _mean: 269.9658731587302, _seconds 2, _std 5.6412339733346775
+[find_wave_range] Probe 12545: snarvei→500, start=477, end=6584, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.82177238888886, _seconds 2, _std 0.22835055938731927
+[find_wave_range] Probe 9373/340: snarvei→500, start=532, end=6540, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.9723201031746, _seconds 2, _std 3.4108174477704702
+[find_wave_range] Probe 8804: snarvei→500, start=500, end=6496, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.5529548730159, _seconds 2, _std 2.7097152343708855
+start: 500, end: 6496, debug: {'baseline_mean': np.float64(271.5529548730159), 'baseline_std': np.float64(2.7097152343708855), '
+first_motion_idx': np.int64(11), 'samples_per_period': 250, 'detected_peaks': 131, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 500,  576,  630,  698,  744,  787,  816,  875,  947, 1012, 1082,
+       1146, 1200, 1243, 1272, 1323, 1404, 1461, 1513, 1573, 1651, 1721,
+       1804, 1851, 1896, 1959, 2026, 2092, 2142, 2199, 2253, 2307, 2351,
+       2428, 2490, 2556, 2626, 2686, 2748, 2986, 3269, 3499, 3749, 3965,
+       4011, 4130, 4193, 4248, 4369, 4493, 4522, 4655, 4720, 4770, 5009,
+       5133, 5245, 5295, 5389, 5505, 5728, 5854, 5923, 5982, 6005, 6225,
+       6284, 6496])}
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+[find_wave_range] Probe 9373/170: snarvei→500, start=517, end=6603, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.9732897777778, _seconds 2, _std 0.09884126358390617
+[find_wave_range] Probe 12545: snarvei→500, start=495, end=6596, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.07544507936507, _seconds 2, _std 0.011721877077377535
+[find_wave_range] Probe 9373/340: snarvei→500, start=484, end=6601, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.62648, _seconds 2, _std 0.004251305681791661
+[find_wave_range] Probe 8804: snarvei→500, start=509, end=6509, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.91232476190476, _seconds 2, _std 0.12210345377231545
+start: 509, end: 6509, debug: {'baseline_mean': np.float64(271.91232476190476), 'baseline_std': np.float64(0.12210345377231545),
+ 'first_motion_idx': np.int64(0), 'samples_per_period': 250, 'detected_peaks': 81, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 509,  546,  568,  599,  625,  663,  703,  734,  788,  801,  851,
+        863,  915,  933,  942,  986, 1036, 1062, 1081, 1094, 1137, 1163,
+       1202, 1221, 1442, 1496, 1852, 2192, 2481, 2759, 3018, 3268, 3512,
+       3754, 4009, 4259, 4508, 4758, 5011, 5258, 5509, 5758, 6010, 6258,
+       6509])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=402, end=5060, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.15398865873016, _seconds 2, _std 3.12975498356192
+[find_wave_range] Probe 12545: snarvei→384, start=349, end=4916, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0141520555556, _seconds 2, _std 0.2900896916713656
+[find_wave_range] Probe 9373/340: snarvei→384, start=410, end=5057, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.84304241269837, _seconds 2, _std 3.704801933768612
+[find_wave_range] Probe 8804: snarvei→384, start=387, end=4926, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.37622269841273, _seconds 2, _std 2.779021693793562
+start: 387, end: 4926, debug: {'baseline_mean': np.float64(271.37622269841273), 'baseline_std': np.float64(2.779021693793562), '
+first_motion_idx': np.int64(24), 'samples_per_period': 192, 'detected_peaks': 249, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 387,  441,  505,  559,  626,  699,  762,  801,  859,  934, 1001,
+       1059, 1121, 1193, 1253, 1319, 1371, 1418, 1495, 1557, 1624, 1690,
+       1744, 1795, 1855, 1921, 2020, 2076, 2148, 2209, 2262, 2322, 2381,
+       2441, 2503, 2560, 2643, 2696, 2748, 2809, 2877, 2935, 3002, 3060,
+       3146, 3215, 3274, 3339, 3384, 3451, 3535, 3593, 3711, 3771, 3802,
+       3847, 3934, 3998, 4155, 4181, 4371, 4538, 4665, 4725, 4772, 4926])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=357, end=4882, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0490726587301, _seconds 2, _std 0.10065114056183475
+[find_wave_range] Probe 12545: snarvei→384, start=389, end=4930, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.1378422142856, _seconds 2, _std 0.018653823378276396
+[find_wave_range] Probe 9373/340: snarvei→384, start=379, end=5083, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.68627980952385, _seconds 2, _std 0.018427577961652515
+[find_wave_range] Probe 8804: snarvei→384, start=389, end=4960, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.976252, _seconds 2, _std 0.11622863888042574
+start: 389, end: 4960, debug: {'baseline_mean': np.float64(271.976252), 'baseline_std': np.float64(0.11622863888042574), 'first_
+motion_idx': np.int64(21), 'samples_per_period': 192, 'detected_peaks': 84, 'keep_periods_used': 24, 'n_periods_target': 24, 'n_
+periods_found': 24, 'wave_upcrossings': array([ 389,  410,  429,  455,  468,  505,  522,  575,  604,  639,  722,
+        731,  753,  817,  840,  881,  932, 1101, 1137, 1376, 1407, 1441,
+       1617, 1634, 1801, 1975, 2127, 2141, 2427, 2695, 2947, 3178, 3400,
+       3610, 3811, 4007, 4195, 4380, 4569, 4769, 4960])}
+[find_wave_range] Probe 9373/170: snarvei→454, start=443, end=5818, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.987157468254, _seconds 2, _std 0.1234728266322197
+[find_wave_range] Probe 12545: snarvei→454, start=448, end=5906, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.1342262142856, _seconds 2, _std 0.009526623973992678
+[find_wave_range] Probe 9373/340: snarvei→454, start=451, end=5818, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.684176, _seconds 2, _std 0.006489454830719775
+[find_wave_range] Probe 8804: snarvei→454, start=452, end=5944, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.9056964603175, _seconds 2, _std 0.12119945383464466
+start: 452, end: 5944, debug: {'baseline_mean': np.float64(271.9056964603175), 'baseline_std': np.float64(0.12119945383464466),
+'first_motion_idx': np.int64(3), 'samples_per_period': 227, 'detected_peaks': 87, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 452,  478,  482,  520,  564,  619,  634,  661,  687,  704,  749,
+        770,  809,  907,  923,  944,  967,  981, 1004, 1022, 1106, 1130,
+       1185, 1439, 1470, 1655, 1840, 2171, 2458, 2729, 2981, 3222, 3453,
+       3677, 3896, 4120, 4356, 4577, 4807, 5031, 5264, 5491, 5716, 5944])}
+[find_wave_range] Probe 9373/170: snarvei→416, start=411, end=5414, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0057743015873, _seconds 2, _std 0.07477708555228796
+[find_wave_range] Probe 12545: snarvei→416, start=415, end=5375, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0683922142857, _seconds 2, _std 0.014204995783130041
+[find_wave_range] Probe 9373/340: snarvei→416, start=480, end=5411, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.6146224444444, _seconds 2, _std 0.010175613304540334
+[find_wave_range] Probe 8804: snarvei→416, start=410, end=5298, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.96670972222216, _seconds 2, _std 0.0737696105727785
+start: 410, end: 5298, debug: {'baseline_mean': np.float64(271.96670972222216), 'baseline_std': np.float64(0.0737696105727785),
+'first_motion_idx': np.int64(82), 'samples_per_period': 208, 'detected_peaks': 95, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 410,  452,  469,  490,  523,  538,  549,  572,  604,  632,  668,
+        688,  712,  739,  763,  780,  820,  840,  864,  891,  915,  922,
+        939,  978,  995, 1020, 1050, 1087, 1102, 1133, 1164, 1188, 1235,
+       1266, 1354, 1397, 1414, 1488, 1615, 1622, 1806, 1991, 2139, 2302,
+       2435, 2705, 2963, 3198, 3423, 3640, 3849, 4053, 4255, 4461, 4676,
+       4880, 5090, 5298])}
+[find_wave_range] Probe 9373/170: snarvei→416, start=409, end=5394, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.91228133333334, _seconds 2, _std 2.9047124790141368
+[find_wave_range] Probe 12545: snarvei→416, start=398, end=5354, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0285791746032, _seconds 2, _std 0.2263827718594656
+[find_wave_range] Probe 9373/340: snarvei→416, start=397, end=5391, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.6997655952381, _seconds 2, _std 3.9788547240432237
+[find_wave_range] Probe 8804: snarvei→416, start=390, end=5458, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.5483421904762, _seconds 2, _std 3.3675269585473067
+start: 390, end: 5458, debug: {'baseline_mean': np.float64(271.5483421904762), 'baseline_std': np.float64(3.3675269585473067), '
+first_motion_idx': np.int64(10), 'samples_per_period': 208, 'detected_peaks': 86, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 390,  448,  522,  601,  663,  720,  786,  847,  906,  963, 1029,
+       1096, 1157, 1208, 1271, 1336, 1387, 1448, 1478, 1535, 1592, 1631,
+       1686, 1734, 1776, 1807, 1879, 1925, 1984, 2033, 2098, 2147, 2195,
+       2260, 2342, 2404, 2446, 2478, 2521, 2551, 2611, 2666, 2735, 2803,
+       2887, 2946, 3020, 3059, 3085, 3174, 3214, 3270, 3398, 3410, 3597,
+       3635, 3728, 3824, 4010, 4233, 4323, 4448, 4640, 4854, 5071, 5284,
+       5458])}
+[find_wave_range] Probe 9373/170: snarvei→454, start=431, end=5793, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.98371435714284, _seconds 2, _std 3.549990989031113
+[find_wave_range] Probe 12545: snarvei→454, start=461, end=5880, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.17147883333337, _seconds 2, _std 0.22096385465922389
+[find_wave_range] Probe 9373/340: snarvei→454, start=453, end=5795, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.51415290476194, _seconds 2, _std 7.501076413541917
+[find_wave_range] Probe 8804: snarvei→454, start=453, end=5932, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.325503515873, _seconds 2, _std 2.2796427636056253
+start: 453, end: 5932, debug: {'baseline_mean': np.float64(271.325503515873), 'baseline_std': np.float64(2.2796427636056253), 'f
+irst_motion_idx': np.int64(55), 'samples_per_period': 227, 'detected_peaks': 124, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 453,  502,  555,  616,  683,  750,  781,  834,  895,  920,  990,
+       1066, 1138, 1217, 1275, 1332, 1386, 1438, 1489, 1548, 1612, 1680,
+       1745, 1800, 1864, 1918, 1970, 2033, 2123, 2172, 2230, 2286, 2348,
+       2411, 2456, 2587, 2654, 2706, 2831, 2975, 3201, 3431, 3661, 3865,
+       4108, 4323, 4550, 4784, 5020, 5238, 5463, 5699, 5932])}
+[find_wave_range] Probe 9373/170: snarvei→416, start=408, end=5361, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.6080189523809, _seconds 2, _std 5.8489339510716905
+[find_wave_range] Probe 12545: snarvei→416, start=403, end=5344, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.30261515079366, _seconds 2, _std 0.2710254288774855
+[find_wave_range] Probe 9373/340: snarvei→416, start=440, end=5367, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.95576896031747, _seconds 2, _std 4.658235540895579
+[find_wave_range] Probe 8804: snarvei→416, start=391, end=5465, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.5849979206349, _seconds 2, _std 3.4602209769113075
+start: 391, end: 5465, debug: {'baseline_mean': np.float64(271.5849979206349), 'baseline_std': np.float64(3.4602209769113075), '
+first_motion_idx': np.int64(79), 'samples_per_period': 208, 'detected_peaks': 94, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 391,  449,  520,  591,  658,  715,  759,  814,  879,  955, 1019,
+       1080, 1151, 1225, 1289, 1354, 1414, 1463, 1521, 1582, 1635, 1681,
+       1751, 1816, 1877, 1935, 2001, 2061, 2144, 2201, 2280, 2349, 2413,
+       2484, 2610, 2647, 2699, 2783, 2856, 2909, 2967, 3030, 3174, 3382,
+       3506, 3617, 3826, 4019, 4215, 4428, 4639, 4849, 5058, 5273, 5465])}
+[find_wave_range] Probe 9373/170: snarvei→454, start=433, end=5802, periods≈24/24
+baselines:
+_samples: 500, _mean: 269.9875758253968, _seconds 2, _std 4.243101102276972
+[find_wave_range] Probe 12545: snarvei→454, start=476, end=5891, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.90243899206354, _seconds 2, _std 0.28496635279941324
+[find_wave_range] Probe 9373/340: snarvei→454, start=451, end=5832, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.7072597460317, _seconds 2, _std 4.157810284294282
+[find_wave_range] Probe 8804: snarvei→454, start=480, end=5930, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.9899208809524, _seconds 2, _std 3.4640417467014064
+start: 480, end: 5930, debug: {'baseline_mean': np.float64(270.9899208809524), 'baseline_std': np.float64(3.4640417467014064), '
+first_motion_idx': np.int64(0), 'samples_per_period': 227, 'detected_peaks': 95, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 480,  545,  612,  680,  746,  806,  877,  946, 1013, 1082, 1169,
+       1227, 1292, 1351, 1414, 1491, 1559, 1643, 1720, 1789, 1862, 1925,
+       1966, 2021, 2079, 2146, 2188, 2215, 2277, 2354, 2411, 2454, 2496,
+       2563, 2646, 2664, 2723, 2793, 2847, 2907, 2953, 3014, 3089, 3146,
+       3210, 3255, 3327, 3401, 3449, 3655, 3775, 3854, 3892, 4079, 4123,
+       4324, 4569, 4790, 4994, 5024, 5244, 5462, 5678, 5686, 5712, 5930])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=345, end=4890, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.114536, _seconds 2, _std 0.055305738436426104
+[find_wave_range] Probe 12545: snarvei→384, start=389, end=4928, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.1394391428571, _seconds 2, _std 0.019694294483016427
+[find_wave_range] Probe 9373/340: snarvei→384, start=479, end=5084, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.69353622222224, _seconds 2, _std 0.05488521801985173
+[find_wave_range] Probe 8804: snarvei→384, start=384, end=4970, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.02474226190475, _seconds 2, _std 0.09301449188489812
+start: 384, end: 4970, debug: {'baseline_mean': np.float64(272.02474226190475), 'baseline_std': np.float64(0.09301449188489812),
+ 'first_motion_idx': np.int64(12), 'samples_per_period': 192, 'detected_peaks': 92, 'keep_periods_used': 24, 'n_periods_target':
+ 24, 'n_periods_found': 24, 'wave_upcrossings': array([ 384,  388,  428,  477,  491,  518,  532,  593,  664,  761,  790,
+        811,  848,  887,  952,  969, 1004, 1036, 1053, 1081, 1122, 1139,
+       1154, 1198, 1348, 1386, 1405, 1428, 1483, 1517, 1608, 1628, 1755,
+       1835, 1955, 2113, 2154, 2419, 2445, 2685, 2936, 3174, 3398, 3611,
+       3813, 4011, 4202, 4391, 4578, 4772, 4970])}
+[find_wave_range] Probe 9373/170: snarvei→454, start=434, end=5824, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0569763174603, _seconds 2, _std 0.04389035831500999
+[find_wave_range] Probe 12545: snarvei→454, start=433, end=5907, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.07907085714294, _seconds 2, _std 0.01373181500885767
+[find_wave_range] Probe 9373/340: snarvei→454, start=458, end=5825, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.6229366984127, _seconds 2, _std 0.0070821307121168315
+[find_wave_range] Probe 8804: snarvei→454, start=460, end=5950, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0056544920635, _seconds 2, _std 0.06299684912198289
+start: 460, end: 5950, debug: {'baseline_mean': np.float64(272.0056544920635), 'baseline_std': np.float64(0.06299684912198289),
+'first_motion_idx': np.int64(93), 'samples_per_period': 227, 'detected_peaks': 78, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 460,  514,  558,  588,  626,  663,  800,  888,  955,  981, 1002,
+       1050, 1074, 1105, 1126, 1150, 1190, 1428, 1473, 1863, 2163, 2465,
+       2731, 2984, 3225, 3457, 3682, 3902, 4125, 4358, 4583, 4811, 5037,
+       5267, 5494, 5720, 5950])}
+[find_wave_range] Probe 9373/170: snarvei→454, start=433, end=5792, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.5648145793651, _seconds 2, _std 3.9649798234250784
+[find_wave_range] Probe 12545: snarvei→454, start=492, end=5890, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.75344986507935, _seconds 2, _std 0.23900757454255364
+[find_wave_range] Probe 9373/340: snarvei→454, start=448, end=5795, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.13471716666663, _seconds 2, _std 4.373627935459761
+[find_wave_range] Probe 8804: snarvei→454, start=426, end=5828, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.93708890476194, _seconds 2, _std 3.6159703323147885
+start: 426, end: 5828, debug: {'baseline_mean': np.float64(270.93708890476194), 'baseline_std': np.float64(3.6159703323147885),
+'first_motion_idx': np.int64(33), 'samples_per_period': 227, 'detected_peaks': 81, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 426,  499,  570,  629,  665,  736,  799,  892,  950,  984, 1011,
+       1068, 1124, 1192, 1252, 1311, 1362, 1417, 1482, 1537, 1588, 1642,
+       1699, 1764, 1811, 1875, 1961, 2030, 2070, 2117, 2206, 2267, 2330,
+       2415, 2479, 2540, 2606, 2671, 2736, 2827, 2935, 2965, 3085, 3139,
+       3193, 3335, 3408, 3450, 3519, 3664, 3875, 4091, 4213, 4336, 4562,
+       4772, 4991, 5043, 5123, 5240, 5464, 5685, 5828])}
+[find_wave_range] Probe 9373/170: snarvei→416, start=381, end=5406, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.9764696031746, _seconds 2, _std 0.1345701980665658
+[find_wave_range] Probe 12545: snarvei→416, start=413, end=5374, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.13383021428564, _seconds 2, _std 0.010548123532464765
+[find_wave_range] Probe 9373/340: snarvei→416, start=407, end=5404, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.6870293968254, _seconds 2, _std 0.015362380535775403
+[find_wave_range] Probe 8804: snarvei→416, start=397, end=5291, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.88707102380954, _seconds 2, _std 0.11473449601122603
+start: 397, end: 5291, debug: {'baseline_mean': np.float64(271.88707102380954), 'baseline_std': np.float64(0.11473449601122603),
+ 'first_motion_idx': np.int64(7), 'samples_per_period': 208, 'detected_peaks': 87, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 397,  448,  483,  551,  572,  649,  668,  717,  732,  751,  772,
+        837,  876,  919,  990, 1026, 1041, 1079, 1105, 1163, 1185, 1409,
+       1454, 1630, 1817, 1836, 2148, 2443, 2710, 2960, 3194, 3420, 3636,
+       3844, 4046, 4248, 4458, 4670, 4875, 5087, 5291])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=403, end=5086, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.07057071428574, _seconds 2, _std 0.0897539285110274
+[find_wave_range] Probe 12545: snarvei→384, start=360, end=4928, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.16625720634926, _seconds 2, _std 0.011016620970719952
+[find_wave_range] Probe 9373/340: snarvei→384, start=381, end=5085, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.7187357857143, _seconds 2, _std 0.009088741044300583
+[find_wave_range] Probe 8804: snarvei→384, start=386, end=4970, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0476502698413, _seconds 2, _std 0.09069224849380396
+start: 386, end: 4970, debug: {'baseline_mean': np.float64(272.0476502698413), 'baseline_std': np.float64(0.09069224849380396),
+'first_motion_idx': np.int64(34), 'samples_per_period': 192, 'detected_peaks': 92, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 386,  412,  443,  467,  484,  503,  512,  548,  564,  595,  611,
+        627,  683,  711,  752,  766,  793,  810,  848,  869,  894,  939,
+       1011, 1038, 1076, 1116, 1155, 1233, 1390, 1431, 1491, 1620, 1784,
+       1831, 1988, 2134, 2438, 2693, 2936, 2947, 3181, 3400, 3609, 3813,
+       4010, 4202, 4392, 4579, 4772, 4970])}
+[find_wave_range] Probe 9373/170: snarvei→500, start=488, end=6599, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.932186, _seconds 2, _std 0.135322989192515
+[find_wave_range] Probe 12545: snarvei→500, start=492, end=6597, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.13385821428557, _seconds 2, _std 0.010658875834535108
+[find_wave_range] Probe 9373/340: snarvei→500, start=497, end=6600, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.6825406984127, _seconds 2, _std 0.008202537690636849
+[find_wave_range] Probe 8804: snarvei→500, start=490, end=6505, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.88088972222226, _seconds 2, _std 0.14229213685486203
+start: 490, end: 6505, debug: {'baseline_mean': np.float64(271.88088972222226), 'baseline_std': np.float64(0.14229213685486203),
+ 'first_motion_idx': np.int64(15), 'samples_per_period': 250, 'detected_peaks': 79, 'keep_periods_used': 24, 'n_periods_target':
+ 24, 'n_periods_found': 24, 'wave_upcrossings': array([ 490,  555,  568,  604,  624,  700,  721,  744,  769,  834,  854,
+        894,  926,  951,  987, 1210, 1460, 1483, 1857, 1865, 2189, 2480,
+       2753, 3014, 3265, 3509, 3751, 4008, 4255, 4507, 4756, 5009, 5257,
+       5507, 5756, 6006, 6256, 6505])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=352, end=5066, periods≈25/24
+baselines:
+_samples: 500, _mean: 270.69369119047616, _seconds 2, _std 4.419490075079506
+[find_wave_range] Probe 12545: snarvei→384, start=372, end=4918, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.912009563492, _seconds 2, _std 0.18696973565641947
+[find_wave_range] Probe 9373/340: snarvei→384, start=396, end=5038, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.8488820952381, _seconds 2, _std 3.9015673728714946
+[find_wave_range] Probe 8804: snarvei→384, start=373, end=4946, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.88614406349205, _seconds 2, _std 3.8199985707841173
+start: 373, end: 4946, debug: {'baseline_mean': np.float64(270.88614406349205), 'baseline_std': np.float64(3.8199985707841173),
+'first_motion_idx': np.int64(63), 'samples_per_period': 192, 'detected_peaks': 97, 'keep_periods_used': 24, 'n_periods_target':
+24, 'n_periods_found': 24, 'wave_upcrossings': array([ 373,  440,  482,  540,  607,  674,  737,  800,  859,  947, 1009,
+       1080, 1153, 1229, 1310, 1396, 1486, 1566, 1628, 1698, 1763, 1838,
+       1915, 1987, 2059, 2119, 2187, 2264, 2331, 2392, 2455, 2520, 2590,
+       2651, 2704, 2776, 2844, 2907, 2937, 3014, 3105, 3175, 3243, 3329,
+       3384, 3421, 3501, 3574, 3635, 3720, 3779, 3973, 4085, 4160, 4196,
+       4371, 4560, 4743, 4946])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=328, end=4891, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.95869545238094, _seconds 2, _std 0.12766045093930015
+[find_wave_range] Probe 12545: snarvei→384, start=394, end=4932, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.05400092857144, _seconds 2, _std 0.05248633565281961
+[find_wave_range] Probe 9373/340: snarvei→384, start=385, end=5084, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.58546222222225, _seconds 2, _std 0.007532502740194692
+[find_wave_range] Probe 8804: snarvei→384, start=383, end=4972, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.95162626984126, _seconds 2, _std 0.08068957429068659
+start: 383, end: 4972, debug: {'baseline_mean': np.float64(271.95162626984126), 'baseline_std': np.float64(0.08068957429068659),
+ 'first_motion_idx': np.int64(20), 'samples_per_period': 192, 'detected_peaks': 89, 'keep_periods_used': 24, 'n_periods_target':
+ 24, 'n_periods_found': 24, 'wave_upcrossings': array([ 383,  438,  501,  570,  650,  675,  722,  733,  802,  822,  856,
+        881, 1077, 1120, 1169, 1193, 1292, 1360, 1378, 1450, 1593, 1633,
+       1775, 1791, 1814, 1846, 1973, 2115, 2144, 2292, 2409, 2433, 2572,
+       2695, 2931, 2940, 3173, 3398, 3614, 3815, 4013, 4204, 4392, 4579,
+       4772, 4972])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=384, end=5087, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.96648728571427, _seconds 2, _std 0.10169184644370843
+[find_wave_range] Probe 12545: snarvei→384, start=379, end=4931, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.0759073015873, _seconds 2, _std 0.012184111003565137
+[find_wave_range] Probe 9373/340: snarvei→384, start=379, end=4891, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.6230062222222, _seconds 2, _std 0.007341736653297978
+[find_wave_range] Probe 8804: snarvei→384, start=389, end=4971, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.9117239444444, _seconds 2, _std 0.11846512449154595
+start: 389, end: 4971, debug: {'baseline_mean': np.float64(271.9117239444444), 'baseline_std': np.float64(0.11846512449154595),
+'first_motion_idx': np.int64(0), 'samples_per_period': 192, 'detected_peaks': 88, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 389,  465,  492,  502,  541,  572,  627,  654,  683,  696,  771,
+        819,  864,  889,  908,  912,  994, 1039, 1098, 1169, 1201, 1423,
+       1469, 1767, 1822, 1956, 1964, 2116, 2152, 2283, 2412, 2686, 2938,
+       3174, 3400, 3612, 3816, 4013, 4204, 4392, 4578, 4772, 4971])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=373, end=5034, periods≈24/24
+baselines:
+_samples: 500, _mean: 269.8021178174603, _seconds 2, _std 6.825179450001128
+[find_wave_range] Probe 12545: snarvei→384, start=387, end=4919, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.7424738412698, _seconds 2, _std 0.2363296662246222
+[find_wave_range] Probe 9373/340: snarvei→384, start=394, end=5042, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.3202681031746, _seconds 2, _std 2.8646712458145895
+[find_wave_range] Probe 8804: snarvei→384, start=416, end=5120, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.16944866666665, _seconds 2, _std 3.3404306753984065
+start: 416, end: 5120, debug: {'baseline_mean': np.float64(271.16944866666665), 'baseline_std': np.float64(3.3404306753984065),
+'first_motion_idx': np.int64(0), 'samples_per_period': 192, 'detected_peaks': 87, 'keep_periods_used': 24, 'n_periods_target': 2
+4, 'n_periods_found': 24, 'wave_upcrossings': array([ 416,  479,  540,  609,  642,  713,  771,  844,  907,  973, 1031,
+       1085, 1133, 1173, 1228, 1278, 1327, 1379, 1434, 1486, 1552, 1587,
+       1634, 1663, 1731, 1792, 1845, 1903, 1960, 2017, 2070, 2129, 2191,
+       2251, 2310, 2357, 2413, 2472, 2529, 2602, 2668, 2749, 2816, 2872,
+       2903, 2945, 2995, 3069, 3135, 3192, 3294, 3368, 3417, 3521, 3596,
+       3778, 3827, 3973, 4172, 4347, 4543, 4758, 4927, 5120])}
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+no freq found, assuming no wave
+[find_wave_range] Probe 9373/170: snarvei→500, start=517, end=6591, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.79547746031744, _seconds 2, _std 4.4968649373466985
+[find_wave_range] Probe 12545: snarvei→500, start=504, end=6579, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.981292531746, _seconds 2, _std 0.20014718220696168
+[find_wave_range] Probe 9373/340: snarvei→500, start=520, end=6575, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.65761253174605, _seconds 2, _std 3.746264375282713
+[find_wave_range] Probe 8804: snarvei→500, start=513, end=6482, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.07461211111104, _seconds 2, _std 4.064052778081242
+start: 513, end: 6482, debug: {'baseline_mean': np.float64(271.07461211111104), 'baseline_std': np.float64(4.064052778081242), '
+first_motion_idx': np.int64(0), 'samples_per_period': 250, 'detected_peaks': 66, 'keep_periods_used': 24, 'n_periods_target': 24
+, 'n_periods_found': 24, 'wave_upcrossings': array([ 513,  548,  665,  710,  746,  805,  853,  912,  983, 1055, 1116,
+       1180, 1208, 1255, 1331, 1375, 1451, 1510, 1711, 1782, 1845, 1908,
+       1956, 2015, 2088, 2140, 2205, 2271, 2347, 2447, 2462, 2489, 2610,
+       2729, 2767, 3007, 3131, 3260, 3490, 3736, 3991, 4252, 4480, 4735,
+       5000, 5247, 5478, 5733, 5985, 6232, 6482])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=406, end=5040, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.1929631666667, _seconds 2, _std 3.5909042863867193
+[find_wave_range] Probe 12545: snarvei→384, start=340, end=4907, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.96818834126987, _seconds 2, _std 0.3142643546553869
+[find_wave_range] Probe 9373/340: snarvei→384, start=400, end=5039, periods≈24/24
+baselines:
+_samples: 500, _mean: 270.9665913333333, _seconds 2, _std 3.8538527851372417
+[find_wave_range] Probe 8804: snarvei→384, start=401, end=4926, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.54543315079366, _seconds 2, _std 3.9017529572839362
+start: 401, end: 4926, debug: {'baseline_mean': np.float64(271.54543315079366), 'baseline_std': np.float64(3.9017529572839362),
+'first_motion_idx': np.int64(28), 'samples_per_period': 192, 'detected_peaks': 147, 'keep_periods_used': 24, 'n_periods_target':
+ 24, 'n_periods_found': 24, 'wave_upcrossings': array([ 401,  476,  515,  565,  622,  649,  715,  757,  801,  858,  915,
+        976, 1013, 1072, 1142, 1225, 1295, 1371, 1447, 1520, 1588, 1649,
+       1711, 1784, 1824, 1898, 1963, 2018, 2033, 2080, 2113, 2222, 2296,
+       2357, 2416, 2482, 2563, 2631, 2695, 2767, 2838, 2899, 2942, 2949,
+       3102, 3157, 3201, 3386, 3590, 3779, 3969, 4153, 4344, 4537, 4738,
+       4926])}
+[find_wave_range] Probe 9373/170: snarvei→384, start=372, end=4891, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.71759, _seconds 2, _std 0.12390128736664822
+[find_wave_range] Probe 12545: snarvei→384, start=375, end=4930, periods≈24/24
+baselines:
+_samples: 500, _mean: 272.02607042857136, _seconds 2, _std 0.009649159264422778
+[find_wave_range] Probe 9373/340: snarvei→384, start=204, end=4892, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.843802, _seconds 2, _std 0.20015575633990543
+[find_wave_range] Probe 8804: snarvei→384, start=406, end=4970, periods≈24/24
+baselines:
+_samples: 500, _mean: 271.74777200000005, _seconds 2, _std 0.11202665761326847
+start: 406, end: 4970, debug: {'baseline_mean': np.float64(271.74777200000005), 'baseline_std': np.float64(0.11202665761326847),
+ 'first_motion_idx': np.int64(45), 'samples_per_period': 192, 'detected_peaks': 93, 'keep_periods_used': 24, 'n_periods_target':
+ 24, 'n_periods_found': 24, 'wave_upcrossings': array([ 406,  424,  450,  492,  507,  544,  587,  606,  637,  669,  706,
+        834,  851,  869,  901,  930,  951,  970,  991, 1021, 1041, 1063,
+       1114, 1144, 1167, 1199, 1257, 1379, 1392, 1436, 1467, 1609, 1747,
+       1792, 1993, 2097, 2131, 2403, 2424, 2679, 2938, 2944, 3174, 3399,
+       3613, 3816, 4012, 4204, 4391, 4578, 4771, 4970])}
+Probe 9373/170 PSD amplitude: 0.7115980139422504
+Probe 12545 PSD amplitude: 0.29253441892903376
+Probe 9373/340 PSD amplitude: 0.6462706246618998
+Probe 8804 PSD amplitude: 0.7436363950959101
+Probe 9373/170 PSD amplitude: 0.10396184359476951
+Probe 12545 PSD amplitude: 0.002824333754079062
+Probe 9373/340 PSD amplitude: 0.07104775932935116
+Probe 8804 PSD amplitude: 0.06324751182594683
+Probe 9373/170 PSD amplitude: 9.859568124496771
+Probe 12545 PSD amplitude: 9.139238432869627
+Probe 9373/340 PSD amplitude: 9.818806908710018
+Probe 8804 PSD amplitude: 9.692443579643305
+Probe 9373/170 PSD amplitude: 0.842305861296411
+Probe 12545 PSD amplitude: 0.24281395863335228
+Probe 9373/340 PSD amplitude: 0.6870832138572954
+Probe 8804 PSD amplitude: 0.6469785240190079
+Probe 9373/170 PSD amplitude: 0.1351694536475592
+Probe 12545 PSD amplitude: 0.08753377739745957
+Probe 9373/340 PSD amplitude: 0.08668146181368426
+Probe 8804 PSD amplitude: 0.10523921642874899
+Probe 9373/170 PSD amplitude: 9.904342357536208
+Probe 12545 PSD amplitude: 9.234228026040899
+Probe 9373/340 PSD amplitude: 9.862860977069625
+Probe 8804 PSD amplitude: 9.731260365665703
+Probe 9373/170 PSD amplitude: 0.8323087403823773
+Probe 12545 PSD amplitude: 0.1471470324643896
+Probe 9373/340 PSD amplitude: 0.5083490796458432
+Probe 8804 PSD amplitude: 0.47620718396574113
+Probe 9373/170 PSD amplitude: 0.18833851723769143
+Probe 12545 PSD amplitude: 0.10748683247794862
+Probe 9373/340 PSD amplitude: 0.10084978102630181
+Probe 8804 PSD amplitude: 0.20622878581779638
+Probe 9373/170 PSD amplitude: 0.15330669589098506
+Probe 12545 PSD amplitude: 0.009250237846063785
+Probe 9373/340 PSD amplitude: 0.07436824103108583
+Probe 8804 PSD amplitude: 0.050955117362199896
+Probe 9373/170 PSD amplitude: 1.1363294318022148
+Probe 12545 PSD amplitude: 0.23030753244945493
+Probe 9373/340 PSD amplitude: 1.114816876817385
+Probe 8804 PSD amplitude: 1.603450957076153
+Probe 9373/170 PSD amplitude: 1.0172678559670174
+Probe 12545 PSD amplitude: 0.3426294903035953
+Probe 9373/340 PSD amplitude: 0.9021352511714489
+Probe 8804 PSD amplitude: 0.7759069702613319
+Advarsel: Ingen Input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-
+fullwind-nowave-ULSonly-endofday.csv, skipping
+Probe 9373/170 PSD amplitude: 10.538303568112212
+Probe 12545 PSD amplitude: 9.275982645553261
+Probe 9373/340 PSD amplitude: 10.620010897824626
+Probe 8804 PSD amplitude: 11.095381184649971
+Advarsel: Ingen Input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-
+nowind-nowave-ULSonly-endofday-nestenstille.csv, skipping
+Probe 9373/170 PSD amplitude: 1.8158266500277769
+Probe 12545 PSD amplitude: 0.3713216776920684
+Probe 9373/340 PSD amplitude: 1.561593132398481
+Probe 8804 PSD amplitude: 2.1361546722171316
+Probe 9373/170 PSD amplitude: 0.6886116382815908
+Probe 12545 PSD amplitude: 0.2346516941960632
+Probe 9373/340 PSD amplitude: 2.1756298031183023
+Probe 8804 PSD amplitude: 0.45378734668950177
+Probe 9373/170 PSD amplitude: 1.1023874302109975
+Probe 12545 PSD amplitude: 0.23303499508406217
+Probe 9373/340 PSD amplitude: 0.8924673595902564
+Probe 8804 PSD amplitude: 1.0686210466486075
+Probe 9373/170 PSD amplitude: 0.7320779858344806
+Probe 12545 PSD amplitude: 0.2717407619734415
+Probe 9373/340 PSD amplitude: 0.6277700956150769
+Probe 8804 PSD amplitude: 0.5675456517320463
+Probe 9373/170 PSD amplitude: 8.676701995507994
+Probe 12545 PSD amplitude: 7.4622113942233055
+Probe 9373/340 PSD amplitude: 8.483927263038595
+Probe 8804 PSD amplitude: 7.955674659501556
+Probe 9373/170 PSD amplitude: 2.189692886970137
+Probe 12545 PSD amplitude: 0.213769959561223
+Probe 9373/340 PSD amplitude: 0.7992354401828274
+Probe 8804 PSD amplitude: 1.1743103390232081
+Probe 9373/170 PSD amplitude: 0.6010510078794142
+Probe 12545 PSD amplitude: 0.13988734589582577
+Probe 9373/340 PSD amplitude: 0.5971583617777739
+Probe 8804 PSD amplitude: 0.8322659710624521
+Probe 9373/170 PSD amplitude: 0.11914589990238358
+Probe 12545 PSD amplitude: 0.008906733277153822
+Probe 9373/340 PSD amplitude: 0.0656126466220564
+Probe 8804 PSD amplitude: 0.09534992150607427
+Probe 9373/170 PSD amplitude: 10.978040004265733
+Probe 12545 PSD amplitude: 8.802735760614562
+Probe 9373/340 PSD amplitude: 11.043299042437402
+Probe 8804 PSD amplitude: 11.299389775201574
+Probe 9373/170 PSD amplitude: 0.8207054395779458
+Probe 12545 PSD amplitude: 0.23110357213584715
+Probe 9373/340 PSD amplitude: 0.7352861672100328
+Probe 8804 PSD amplitude: 0.4094006746745944
+Probe 9373/170 PSD amplitude: 0.7823166006640684
+Probe 12545 PSD amplitude: 0.16109790218376682
+Probe 9373/340 PSD amplitude: 0.19873205934060534
+Probe 8804 PSD amplitude: 0.27441690304233884
+Probe 9373/170 PSD amplitude: 0.8046343143946773
+Probe 12545 PSD amplitude: 0.17198409220077296
+Probe 9373/340 PSD amplitude: 1.070851108078114
+Probe 8804 PSD amplitude: 1.4063641360583374
+Probe 9373/170 PSD amplitude: 0.36055833617023864
+Probe 12545 PSD amplitude: 0.25007003216343326
+Probe 9373/340 PSD amplitude: 0.5281946805215396
+Probe 8804 PSD amplitude: 0.5267586644570371
+Advarsel: Ingen Input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-
+nowind-nowave-depth580-mstop30-run1.csv, skipping
+Advarsel: Ingen Input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-
+fullwind-nowave-depth580-ULSonly.csv, skipping
+Probe 9373/170 PSD amplitude: 5.638875113218762
+Probe 12545 PSD amplitude: 3.932906286772488
+Probe 9373/340 PSD amplitude: 5.750321089852876
+Probe 8804 PSD amplitude: 5.421676466392075
+Advarsel: Ingen Input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-
+nowind-nowave-depth580-mstop30-run2.csv, skipping
+Probe 9373/170 PSD amplitude: 5.586533086054533
+Probe 12545 PSD amplitude: 4.092858533236579
+Probe 9373/340 PSD amplitude: 5.532759574143896
+Probe 8804 PSD amplitude: 5.7429743408333085
+Probe 9373/170 PSD amplitude: 1.1267065488405468
+Probe 12545 PSD amplitude: 0.3364290486630283
+Probe 9373/340 PSD amplitude: 1.4052097779080668
+Probe 8804 PSD amplitude: 1.77850014635337
+Probe 9373/170 PSD amplitude: 1.8473029183925886
+Probe 12545 PSD amplitude: 0.509097723301782
+Probe 9373/340 PSD amplitude: 1.9084852282113831
+Probe 8804 PSD amplitude: 2.905448038227295
+Probe 9373/170 PSD amplitude: 9.1667909389344
+Probe 12545 PSD amplitude: 3.9373984018522252
+Probe 9373/340 PSD amplitude: 9.169906179949747
+Probe 8804 PSD amplitude: 9.963237740455055
+Probe 9373/170 PSD amplitude: 4.1525857434928275
+Probe 12545 PSD amplitude: 0.4049680489459467
+Probe 9373/340 PSD amplitude: 1.8900868041524048
+Probe 8804 PSD amplitude: 2.4162197284444917
+Probe 9373/170 PSD amplitude: 2.063899898292495
+Probe 12545 PSD amplitude: 0.5351452715228056
+Probe 9373/340 PSD amplitude: 1.99199729965822
+Probe 8804 PSD amplitude: 4.386509442659157
+Probe 9373/170 PSD amplitude: 9.323405714019069
+Probe 12545 PSD amplitude: 4.357205839448484
+Probe 9373/340 PSD amplitude: 9.44149075841812
+Probe 8804 PSD amplitude: 10.087205593728054
+Probe 9373/170 PSD amplitude: 4.253519078956959
+Probe 12545 PSD amplitude: 0.9435149295031524
+Probe 9373/340 PSD amplitude: 4.369426714323035
+Probe 8804 PSD amplitude: 8.916003516550758
+Probe 9373/170 PSD amplitude: 4.801951219794123
+Probe 12545 PSD amplitude: 2.1135128191918118
+Probe 9373/340 PSD amplitude: 4.621910272041006
+Probe 8804 PSD amplitude: 5.19397255733915
+Probe 9373/170 PSD amplitude: 0.9740140749243774
+Probe 12545 PSD amplitude: 0.2511060480936691
+Probe 9373/340 PSD amplitude: 1.1738604722490729
+Probe 8804 PSD amplitude: 1.475301468851927
+Probe 9373/170 PSD amplitude: 4.578879910070276
+Probe 12545 PSD amplitude: 1.9099428459993966
+Probe 9373/340 PSD amplitude: 4.585159998814004
+Probe 8804 PSD amplitude: 4.981553392314505
+Probe 9373/170 PSD amplitude: 4.693912160874042
+Probe 12545 PSD amplitude: 2.151546406881206
+Probe 9373/340 PSD amplitude: 4.831575725032738
+Probe 8804 PSD amplitude: 4.963106341192339
+Probe 9373/170 PSD amplitude: 8.354487150742571
+Probe 12545 PSD amplitude: 0.8049905065895377
+Probe 9373/340 PSD amplitude: 3.451752151146584
+Probe 8804 PSD amplitude: 4.927170964103522
+Probe 9373/170 PSD amplitude: 1.072342080203595
+Probe 12545 PSD amplitude: 0.26246882836244284
+Probe 9373/340 PSD amplitude: 1.0137042839804817
+Probe 8804 PSD amplitude: 1.4969918114495406
+Probe 9373/170 PSD amplitude: 10.855291973640073
+Probe 12545 PSD amplitude: 8.023684665330904
+Probe 9373/340 PSD amplitude: 10.890568105809166
+Probe 8804 PSD amplitude: 11.434289534313104
+Probe 9373/170 PSD amplitude: 1.3054876730844005
+Probe 12545 PSD amplitude: 0.29367954128621654
+Probe 9373/340 PSD amplitude: 1.5660923108180478
+Probe 8804 PSD amplitude: 1.839125794389123
+Probe 9373/170 PSD amplitude: 0.9239292741354019
+Probe 12545 PSD amplitude: 0.25682540732895226
+Probe 9373/340 PSD amplitude: 0.9949411601746968
+Probe 8804 PSD amplitude: 1.4333297788309962
+Probe 9373/170 PSD amplitude: 0.9976096042229969
+Probe 12545 PSD amplitude: 0.2655122061150757
+Probe 9373/340 PSD amplitude: 0.9740749534748426
+Probe 8804 PSD amplitude: 1.4372145762605826
+Probe 9373/170 PSD amplitude: 1.508940767621299
+Probe 12545 PSD amplitude: 0.2967957236406875
+Probe 9373/340 PSD amplitude: 1.385223889297512
+Probe 8804 PSD amplitude: 1.7912112428819849
+Advarsel: Ingen Input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-
+nowind-nowave-wavemakeroff-1hour-stillwater.csv, skipping
+Probe 9373/170 PSD amplitude: 11.158944164879554
+Probe 12545 PSD amplitude: 8.206544077700308
+Probe 9373/340 PSD amplitude: 10.931839858833008
+Probe 8804 PSD amplitude: 10.744560108693532
+Probe 9373/170 PSD amplitude: 2.4133164746316362
+Probe 12545 PSD amplitude: 0.5050356543704715
+Probe 9373/340 PSD amplitude: 2.435212839205118
+Probe 8804 PSD amplitude: 3.654254693706257
+Probe 9373/170 PSD amplitude: 0.9919791116059055
+Probe 12545 PSD amplitude: 0.2525202825999948
+Probe 9373/340 PSD amplitude: 0.749808981877088
+Probe 8804 PSD amplitude: 1.471021410495722
+=== PSD Complete: 48 records ===
+  Probe 9373/170: Amplitude = 0.421 mm at 1.180 Hz (T = 0.847 s)
+  Probe 12545: Amplitude = 0.205 mm at 1.394 Hz (T = 0.717 s)
+  Probe 9373/340: Amplitude = 0.390 mm at 1.322 Hz (T = 0.757 s)
+  Probe 8804: Amplitude = 0.852 mm at 1.314 Hz (T = 0.761 s)
+  Probe 9373/170: Amplitude = 0.049 mm at 1.813 Hz (T = 0.552 s)
+  Probe 12545: Amplitude = 0.020 mm at 1.670 Hz (T = 0.599 s)
+  Probe 9373/340: Amplitude = 0.034 mm at 1.405 Hz (T = 0.712 s)
+  Probe 8804: Amplitude = 0.044 mm at 1.373 Hz (T = 0.728 s)
+  Probe 9373/170: Amplitude = 7.992 mm at 0.708 Hz (T = 1.413 s)
+  Probe 12545: Amplitude = 7.973 mm at 0.705 Hz (T = 1.419 s)
+  Probe 9373/340: Amplitude = 7.762 mm at 0.709 Hz (T = 1.410 s)
+  Probe 8804: Amplitude = 7.798 mm at 0.692 Hz (T = 1.445 s)
+  Probe 9373/170: Amplitude = 0.553 mm at 1.140 Hz (T = 0.877 s)
+  Probe 12545: Amplitude = 0.154 mm at 1.157 Hz (T = 0.864 s)
+  Probe 9373/340: Amplitude = 0.456 mm at 1.343 Hz (T = 0.744 s)
+  Probe 8804: Amplitude = 0.625 mm at 1.342 Hz (T = 0.745 s)
+  Probe 9373/170: Amplitude = 0.309 mm at 1.188 Hz (T = 0.842 s)
+  Probe 12545: Amplitude = 0.045 mm at 1.118 Hz (T = 0.894 s)
+  Probe 9373/340: Amplitude = 0.319 mm at 1.129 Hz (T = 0.886 s)
+  Probe 8804: Amplitude = 0.405 mm at 1.181 Hz (T = 0.847 s)
+  Probe 9373/170: Amplitude = 8.880 mm at 0.696 Hz (T = 1.437 s)
+  Probe 12545: Amplitude = 7.884 mm at 0.706 Hz (T = 1.417 s)
+  Probe 9373/340: Amplitude = 8.360 mm at 0.705 Hz (T = 1.417 s)
+  Probe 8804: Amplitude = 7.307 mm at 0.689 Hz (T = 1.451 s)
+  Probe 9373/170: Amplitude = 0.463 mm at 2.017 Hz (T = 0.496 s)
+  Probe 12545: Amplitude = 0.073 mm at 1.440 Hz (T = 0.695 s)
+  Probe 9373/340: Amplitude = 0.391 mm at 2.164 Hz (T = 0.462 s)
+  Probe 8804: Amplitude = 0.348 mm at 1.792 Hz (T = 0.558 s)
+  Probe 9373/170: Amplitude = 0.278 mm at 1.202 Hz (T = 0.832 s)
+  Probe 12545: Amplitude = 0.072 mm at 1.055 Hz (T = 0.948 s)
+  Probe 9373/340: Amplitude = 0.279 mm at 1.141 Hz (T = 0.877 s)
+  Probe 8804: Amplitude = 0.408 mm at 1.252 Hz (T = 0.799 s)
+  Probe 9373/170: Amplitude = 0.084 mm at 1.254 Hz (T = 0.797 s)
+  Probe 12545: Amplitude = 0.013 mm at 1.773 Hz (T = 0.564 s)
+  Probe 9373/340: Amplitude = 0.059 mm at 1.333 Hz (T = 0.750 s)
+  Probe 8804: Amplitude = 0.087 mm at 1.233 Hz (T = 0.811 s)
+  Probe 9373/170: Amplitude = 1.511 mm at 1.280 Hz (T = 0.781 s)
+  Probe 12545: Amplitude = 0.269 mm at 1.035 Hz (T = 0.966 s)
+  Probe 9373/340: Amplitude = 1.507 mm at 1.283 Hz (T = 0.780 s)
+  Probe 8804: Amplitude = 2.600 mm at 1.387 Hz (T = 0.721 s)
+  Probe 9373/170: Amplitude = 0.569 mm at 2.144 Hz (T = 0.467 s)
+  Probe 12545: Amplitude = 0.340 mm at 1.761 Hz (T = 0.568 s)
+  Probe 9373/340: Amplitude = 0.662 mm at 1.752 Hz (T = 0.571 s)
+  Probe 8804: Amplitude = 0.600 mm at 1.729 Hz (T = 0.578 s)
+advarsel: No input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-ful
+lwind-nowave-ULSonly-endofday.csv, skipping
+  Probe 9373/170: Amplitude = 9.171 mm at 0.799 Hz (T = 1.252 s)
+  Probe 12545: Amplitude = 7.760 mm at 0.802 Hz (T = 1.246 s)
+  Probe 9373/340: Amplitude = 8.352 mm at 0.790 Hz (T = 1.266 s)
+  Probe 8804: Amplitude = 9.528 mm at 0.805 Hz (T = 1.242 s)
+advarsel: No input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-now
+ind-nowave-ULSonly-endofday-nestenstille.csv, skipping
+  Probe 9373/170: Amplitude = 2.144 mm at 1.301 Hz (T = 0.769 s)
+  Probe 12545: Amplitude = 0.366 mm at 0.979 Hz (T = 1.021 s)
+  Probe 9373/340: Amplitude = 2.017 mm at 1.364 Hz (T = 0.733 s)
+  Probe 8804: Amplitude = 3.032 mm at 1.403 Hz (T = 0.713 s)
+  Probe 9373/170: Amplitude = 0.358 mm at 1.627 Hz (T = 0.615 s)
+  Probe 12545: Amplitude = 0.128 mm at 1.408 Hz (T = 0.710 s)
+  Probe 9373/340: Amplitude = 0.758 mm at 1.918 Hz (T = 0.521 s)
+  Probe 8804: Amplitude = 0.263 mm at 1.993 Hz (T = 0.502 s)
+  Probe 9373/170: Amplitude = 1.036 mm at 1.286 Hz (T = 0.778 s)
+  Probe 12545: Amplitude = 0.193 mm at 0.975 Hz (T = 1.025 s)
+  Probe 9373/340: Amplitude = 1.038 mm at 1.282 Hz (T = 0.780 s)
+  Probe 8804: Amplitude = 1.298 mm at 1.386 Hz (T = 0.722 s)
+  Probe 9373/170: Amplitude = 0.308 mm at 1.710 Hz (T = 0.585 s)
+  Probe 12545: Amplitude = 0.147 mm at 1.765 Hz (T = 0.567 s)
+  Probe 9373/340: Amplitude = 0.365 mm at 1.571 Hz (T = 0.636 s)
+  Probe 8804: Amplitude = 0.337 mm at 1.338 Hz (T = 0.747 s)
+  Probe 9373/170: Amplitude = 8.130 mm at 0.600 Hz (T = 1.667 s)
+  Probe 12545: Amplitude = 6.722 mm at 0.599 Hz (T = 1.669 s)
+  Probe 9373/340: Amplitude = 8.025 mm at 0.601 Hz (T = 1.665 s)
+  Probe 8804: Amplitude = 7.248 mm at 0.601 Hz (T = 1.665 s)
+  Probe 9373/170: Amplitude = 1.456 mm at 1.355 Hz (T = 0.738 s)
+  Probe 12545: Amplitude = 0.171 mm at 0.984 Hz (T = 1.016 s)
+  Probe 9373/340: Amplitude = 0.851 mm at 1.391 Hz (T = 0.719 s)
+  Probe 8804: Amplitude = 1.536 mm at 1.335 Hz (T = 0.749 s)
+  Probe 9373/170: Amplitude = 0.723 mm at 1.280 Hz (T = 0.781 s)
+  Probe 12545: Amplitude = 0.140 mm at 0.991 Hz (T = 1.009 s)
+  Probe 9373/340: Amplitude = 0.742 mm at 1.279 Hz (T = 0.782 s)
+  Probe 8804: Amplitude = 1.178 mm at 1.376 Hz (T = 0.727 s)
+  Probe 9373/170: Amplitude = 0.177 mm at 1.131 Hz (T = 0.884 s)
+  Probe 12545: Amplitude = 0.036 mm at 1.915 Hz (T = 0.522 s)
+  Probe 9373/340: Amplitude = 0.168 mm at 1.137 Hz (T = 0.880 s)
+  Probe 8804: Amplitude = 0.216 mm at 1.174 Hz (T = 0.852 s)
+  Probe 9373/170: Amplitude = 8.102 mm at 0.885 Hz (T = 1.130 s)
+  Probe 12545: Amplitude = 7.010 mm at 0.902 Hz (T = 1.109 s)
+  Probe 9373/340: Amplitude = 8.597 mm at 0.888 Hz (T = 1.126 s)
+  Probe 8804: Amplitude = 9.657 mm at 0.899 Hz (T = 1.112 s)
+  Probe 9373/170: Amplitude = 0.612 mm at 2.182 Hz (T = 0.458 s)
+  Probe 12545: Amplitude = 0.106 mm at 1.354 Hz (T = 0.739 s)
+  Probe 9373/340: Amplitude = 0.812 mm at 2.121 Hz (T = 0.472 s)
+  Probe 8804: Amplitude = 0.290 mm at 2.084 Hz (T = 0.480 s)
+  Probe 9373/170: Amplitude = 0.570 mm at 1.221 Hz (T = 0.819 s)
+  Probe 12545: Amplitude = 0.107 mm at 1.050 Hz (T = 0.952 s)
+  Probe 9373/340: Amplitude = 0.495 mm at 1.207 Hz (T = 0.828 s)
+  Probe 8804: Amplitude = 0.735 mm at 1.316 Hz (T = 0.760 s)
+  Probe 9373/170: Amplitude = 0.753 mm at 1.250 Hz (T = 0.800 s)
+  Probe 12545: Amplitude = 0.143 mm at 1.005 Hz (T = 0.995 s)
+  Probe 9373/340: Amplitude = 0.836 mm at 1.297 Hz (T = 0.771 s)
+  Probe 8804: Amplitude = 1.366 mm at 1.348 Hz (T = 0.742 s)
+  Probe 9373/170: Amplitude = 0.216 mm at 1.745 Hz (T = 0.573 s)
+  Probe 12545: Amplitude = 0.107 mm at 1.432 Hz (T = 0.698 s)
+  Probe 9373/340: Amplitude = 0.431 mm at 1.138 Hz (T = 0.878 s)
+  Probe 8804: Amplitude = 0.417 mm at 1.141 Hz (T = 0.876 s)
+advarsel: No input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-now
+ind-nowave-depth580-mstop30-run1.csv, skipping
+advarsel: No input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-ful
+lwind-nowave-depth580-ULSonly.csv, skipping
+  Probe 9373/170: Amplitude = 4.236 mm at 0.995 Hz (T = 1.005 s)
+  Probe 12545: Amplitude = 2.651 mm at 0.982 Hz (T = 1.018 s)
+  Probe 9373/340: Amplitude = 4.436 mm at 0.999 Hz (T = 1.002 s)
+  Probe 8804: Amplitude = 4.541 mm at 1.001 Hz (T = 0.999 s)
+advarsel: No input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-now
+ind-nowave-depth580-mstop30-run2.csv, skipping
+  Probe 9373/170: Amplitude = 3.978 mm at 0.986 Hz (T = 1.014 s)
+  Probe 12545: Amplitude = 2.745 mm at 0.983 Hz (T = 1.017 s)
+  Probe 9373/340: Amplitude = 3.720 mm at 0.981 Hz (T = 1.020 s)
+  Probe 8804: Amplitude = 4.433 mm at 1.000 Hz (T = 1.000 s)
+  Probe 9373/170: Amplitude = 1.943 mm at 1.288 Hz (T = 0.776 s)
+  Probe 12545: Amplitude = 0.287 mm at 1.095 Hz (T = 0.914 s)
+  Probe 9373/340: Amplitude = 1.981 mm at 1.291 Hz (T = 0.774 s)
+  Probe 8804: Amplitude = 2.322 mm at 1.267 Hz (T = 0.789 s)
+  Probe 9373/170: Amplitude = 3.150 mm at 1.270 Hz (T = 0.787 s)
+  Probe 12545: Amplitude = 0.486 mm at 1.046 Hz (T = 0.956 s)
+  Probe 9373/340: Amplitude = 3.531 mm at 1.275 Hz (T = 0.784 s)
+  Probe 8804: Amplitude = 4.033 mm at 1.312 Hz (T = 0.762 s)
+  Probe 9373/170: Amplitude = 6.517 mm at 1.116 Hz (T = 0.896 s)
+  Probe 12545: Amplitude = 3.458 mm at 1.099 Hz (T = 0.910 s)
+  Probe 9373/340: Amplitude = 6.435 mm at 1.118 Hz (T = 0.895 s)
+  Probe 8804: Amplitude = 7.598 mm at 1.092 Hz (T = 0.915 s)
+  Probe 9373/170: Amplitude = 2.620 mm at 1.199 Hz (T = 0.834 s)
+  Probe 12545: Amplitude = 0.673 mm at 1.109 Hz (T = 0.902 s)
+  Probe 9373/340: Amplitude = 2.536 mm at 1.217 Hz (T = 0.822 s)
+  Probe 8804: Amplitude = 2.747 mm at 1.176 Hz (T = 0.850 s)
+  Probe 9373/170: Amplitude = 2.717 mm at 1.203 Hz (T = 0.831 s)
+  Probe 12545: Amplitude = 0.807 mm at 1.110 Hz (T = 0.901 s)
+  Probe 9373/340: Amplitude = 2.685 mm at 1.201 Hz (T = 0.832 s)
+  Probe 8804: Amplitude = 2.983 mm at 1.184 Hz (T = 0.845 s)
+  Probe 9373/170: Amplitude = 6.496 mm at 1.119 Hz (T = 0.894 s)
+  Probe 12545: Amplitude = 3.519 mm at 1.107 Hz (T = 0.903 s)
+  Probe 9373/340: Amplitude = 6.410 mm at 1.123 Hz (T = 0.890 s)
+  Probe 8804: Amplitude = 7.639 mm at 1.095 Hz (T = 0.913 s)
+  Probe 9373/170: Amplitude = 5.378 mm at 1.211 Hz (T = 0.826 s)
+  Probe 12545: Amplitude = 1.596 mm at 1.113 Hz (T = 0.898 s)
+  Probe 9373/340: Amplitude = 5.260 mm at 1.218 Hz (T = 0.821 s)
+  Probe 8804: Amplitude = 6.074 mm at 1.182 Hz (T = 0.846 s)
+  Probe 9373/170: Amplitude = 3.184 mm at 1.118 Hz (T = 0.895 s)
+  Probe 12545: Amplitude = 1.685 mm at 1.108 Hz (T = 0.903 s)
+  Probe 9373/340: Amplitude = 3.264 mm at 1.115 Hz (T = 0.897 s)
+  Probe 8804: Amplitude = 3.969 mm at 1.101 Hz (T = 0.908 s)
+  Probe 9373/170: Amplitude = 1.547 mm at 1.265 Hz (T = 0.791 s)
+  Probe 12545: Amplitude = 0.230 mm at 1.046 Hz (T = 0.956 s)
+  Probe 9373/340: Amplitude = 1.784 mm at 1.303 Hz (T = 0.768 s)
+  Probe 8804: Amplitude = 1.970 mm at 1.308 Hz (T = 0.764 s)
+  Probe 9373/170: Amplitude = 3.290 mm at 1.113 Hz (T = 0.899 s)
+  Probe 12545: Amplitude = 1.688 mm at 1.096 Hz (T = 0.913 s)
+  Probe 9373/340: Amplitude = 3.194 mm at 1.118 Hz (T = 0.895 s)
+  Probe 8804: Amplitude = 3.828 mm at 1.093 Hz (T = 0.915 s)
+  Probe 9373/170: Amplitude = 3.265 mm at 1.119 Hz (T = 0.893 s)
+  Probe 12545: Amplitude = 1.666 mm at 1.065 Hz (T = 0.939 s)
+  Probe 9373/340: Amplitude = 3.301 mm at 1.075 Hz (T = 0.930 s)
+  Probe 8804: Amplitude = 3.649 mm at 1.110 Hz (T = 0.901 s)
+  Probe 9373/170: Amplitude = 5.336 mm at 1.194 Hz (T = 0.838 s)
+  Probe 12545: Amplitude = 1.379 mm at 1.108 Hz (T = 0.902 s)
+  Probe 9373/340: Amplitude = 5.313 mm at 1.200 Hz (T = 0.833 s)
+  Probe 8804: Amplitude = 5.533 mm at 1.175 Hz (T = 0.851 s)
+  Probe 9373/170: Amplitude = 1.796 mm at 1.281 Hz (T = 0.781 s)
+  Probe 12545: Amplitude = 0.229 mm at 1.040 Hz (T = 0.962 s)
+  Probe 9373/340: Amplitude = 1.793 mm at 1.275 Hz (T = 0.784 s)
+  Probe 8804: Amplitude = 1.968 mm at 1.309 Hz (T = 0.764 s)
+  Probe 9373/170: Amplitude = 7.496 mm at 0.982 Hz (T = 1.019 s)
+  Probe 12545: Amplitude = 5.454 mm at 0.983 Hz (T = 1.018 s)
+  Probe 9373/340: Amplitude = 7.624 mm at 0.983 Hz (T = 1.017 s)
+  Probe 8804: Amplitude = 8.857 mm at 0.997 Hz (T = 1.003 s)
+  Probe 9373/170: Amplitude = 1.804 mm at 1.326 Hz (T = 0.754 s)
+  Probe 12545: Amplitude = 0.315 mm at 1.045 Hz (T = 0.957 s)
+  Probe 9373/340: Amplitude = 2.042 mm at 1.293 Hz (T = 0.773 s)
+  Probe 8804: Amplitude = 2.251 mm at 1.313 Hz (T = 0.762 s)
+  Probe 9373/170: Amplitude = 1.536 mm at 1.260 Hz (T = 0.794 s)
+  Probe 12545: Amplitude = 0.258 mm at 1.046 Hz (T = 0.956 s)
+  Probe 9373/340: Amplitude = 1.794 mm at 1.277 Hz (T = 0.783 s)
+  Probe 8804: Amplitude = 1.940 mm at 1.307 Hz (T = 0.765 s)
+  Probe 9373/170: Amplitude = 1.738 mm at 1.276 Hz (T = 0.784 s)
+  Probe 12545: Amplitude = 0.226 mm at 1.043 Hz (T = 0.959 s)
+  Probe 9373/340: Amplitude = 1.547 mm at 1.274 Hz (T = 0.785 s)
+  Probe 8804: Amplitude = 1.937 mm at 1.309 Hz (T = 0.764 s)
+  Probe 9373/170: Amplitude = 1.967 mm at 1.287 Hz (T = 0.777 s)
+  Probe 12545: Amplitude = 0.273 mm at 0.993 Hz (T = 1.007 s)
+  Probe 9373/340: Amplitude = 2.071 mm at 1.291 Hz (T = 0.775 s)
+  Probe 8804: Amplitude = 2.409 mm at 1.275 Hz (T = 0.784 s)
+advarsel: No input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-now
+ind-nowave-wavemakeroff-1hour-stillwater.csv, skipping
+  Probe 9373/170: Amplitude = 8.079 mm at 0.988 Hz (T = 1.012 s)
+  Probe 12545: Amplitude = 5.635 mm at 0.987 Hz (T = 1.013 s)
+  Probe 9373/340: Amplitude = 8.189 mm at 0.991 Hz (T = 1.009 s)
+  Probe 8804: Amplitude = 8.903 mm at 1.005 Hz (T = 0.995 s)
+  Probe 9373/170: Amplitude = 4.203 mm at 1.294 Hz (T = 0.772 s)
+  Probe 12545: Amplitude = 0.563 mm at 1.040 Hz (T = 0.962 s)
+  Probe 9373/340: Amplitude = 4.056 mm at 1.293 Hz (T = 0.773 s)
+  Probe 8804: Amplitude = 4.496 mm at 1.271 Hz (T = 0.787 s)
+  Probe 9373/170: Amplitude = 1.545 mm at 1.272 Hz (T = 0.786 s)
+  Probe 12545: Amplitude = 0.232 mm at 1.043 Hz (T = 0.959 s)
+  Probe 9373/340: Amplitude = 1.481 mm at 1.280 Hz (T = 0.781 s)
+  Probe 8804: Amplitude = 1.922 mm at 1.260 Hz (T = 0.794 s)
+=== FFT Complete: 48 records ===
+Updated waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof/meta.json → 54 entries (+54 new)
+Metadata safely updated and preserved across 1 experiment(s)!
+Processing complete! 54 files zeroed and ready.
+   Saved 54 processed DataFrames → processed_dfs.parquet
+# === Probe comparison processing === #
+kjører process_processed_data fra processsor2nd.py
+Updated waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof/meta.json → 54 entries (+54 new)
+Metadata safely updated and preserved across 1 experiment(s)!
+Successfully processed 54 selections from 20260307-ProbPos4_31_FPV_2-tett6roof
+==================================================
+PROCESSING COMPLETE - Total datasets processed: 1
+Total selections across all datasets: 54
+==================================================
+Combined meta_selections ready for analysis
+Combined FFT dictionary contains 48 experiments
+Combined metadata contains 54 rows
+Paths in FFT dict: 48
+Unique paths in metadata: 54
+Matching paths: 48
+bosset e tatt ut
