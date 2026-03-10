@@ -37,6 +37,8 @@ NON_FLOAT_COLUMNS = {
     "experiment_folder": str,
     "path": str,
     "file_date": str,
+    "in_position": str,   # e.g. "9373/250" or "9373/170" — slash breaks pd.to_numeric
+    "out_position": str,  # e.g. "12545/170" or "12545/250" — must stay as string
 }
 
 
@@ -72,16 +74,13 @@ class ProbeConfiguration:
     def probe_col_name(self, probe_num: int) -> str:
         """Return the canonical position-based column identifier for a probe.
 
-        Unique longitudinal position  →  '9373'
-        Parallel (shared position)    →  '9373/170'
+        Always 'longitudinal_mm/lateral_mm', e.g. '9373/250', '12545/170'.
+        Both dimensions are always included for unambiguous identification
+        and consistent column naming across all probe configurations.
         """
         dist = int(self.distances_mm[probe_num])
-        parallel = [p for p, d in self.distances_mm.items()
-                    if int(d) == dist and p != probe_num]
-        if parallel:
-            lat = int(self.lateral_mm[probe_num])
-            return f"{dist}/{lat}"
-        return str(dist)
+        lat = int(self.lateral_mm[probe_num])
+        return f"{dist}/{lat}"
 
     def probe_col_names(self) -> Dict[int, str]:
         """Return {probe_num: col_name} for all probes."""

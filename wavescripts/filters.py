@@ -649,6 +649,50 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
     print(f"Unique PanelCondition values: {cmdf[GC.PANEL_CONDITION].unique().tolist()}")
     print(f"Unique WindCondition values: {cmdf[GC.WIND_CONDITION].unique().tolist()}")
 
+    # ─── Recompute OUT/IN from plain (percentile-based) probe amplitudes ───────
+    # The cached OUT/IN (FFT) in meta.json can be stale (e.g. computed with wrong
+    # FFT window). Plain "Probe {pos} Amplitude" columns are computed from the
+    # time-domain signal via percentiles and are always consistent with what
+    # plot_all_probes() shows.  Recomputing here makes the grouper self-consistent
+    # with the amplitude plot without requiring a main.py rerun.
+    _have_positions = (
+        "in_position" in cmdf.columns
+        and "out_position" in cmdf.columns
+        and cmdf["in_position"].notna().any()
+    )
+    if _have_positions:
+        # Collect all plain amplitude column names that exist in this dataframe
+        _plain_amp_cols = {
+            c for c in cmdf.columns
+            if c.startswith("Probe ") and c.endswith(" Amplitude")
+            and "FFT" not in c and "PSD" not in c
+        }
+        def _row_out_in(row):
+            in_pos  = row.get("in_position")
+            out_pos = row.get("out_position")
+            if pd.isna(in_pos) or pd.isna(out_pos):
+                return np.nan
+            in_col  = f"Probe {in_pos} Amplitude"
+            out_col = f"Probe {out_pos} Amplitude"
+            if in_col not in _plain_amp_cols or out_col not in _plain_amp_cols:
+                return np.nan
+            in_amp  = row.get(in_col,  np.nan)
+            out_amp = row.get(out_col, np.nan)
+            if pd.isna(in_amp) or pd.isna(out_amp) or in_amp == 0:
+                return np.nan
+            return out_amp / in_amp
+        recomputed = cmdf.apply(_row_out_in, axis=1)
+        n_valid = recomputed.notna().sum()
+        if n_valid > 0:
+            cmdf[GC.OUT_IN_FFT] = recomputed
+            print(f"   Recomputed OUT/IN from plain probe amplitudes ({n_valid} valid rows)")
+        else:
+            # Fallback: plain amplitude columns didn't match in_position strings —
+            # print diagnostic and keep the cached OUT/IN (FFT) values
+            sample_in  = cmdf["in_position"].dropna().iloc[0] if cmdf["in_position"].notna().any() else "N/A"
+            print(f"   WARNING: OUT/IN recompute yielded 0 valid rows — keeping cached values")
+            print(f"   Sample in_position: '{sample_in}' | plain amp cols: {sorted(_plain_amp_cols)[:4]}")
+
     # Detect position-based FFT amplitude columns dynamically (skip all-null columns)
     fft_amp_cols = [
         c for c in cmdf.columns
@@ -665,6 +709,9 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
         GC.KL,
         GC.OUT_IN_FFT,
     ]
+    # Include Mooring if present (mooring tension affects wave propagation)
+    if "Mooring" in cmdf.columns:
+        base_columns.append("Mooring")
     # Include physical probe position columns if present (added by processor2nd)
     for _pos_col in ("in_position", "out_position"):
         if _pos_col in cmdf.columns:
@@ -697,6 +744,9 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
         PANEL_CONDITION_GROUPED,
         GC.WIND_CONDITION,
     ]
+    # Mooring tension is an experimental variable — keep separate groups
+    if "Mooring" in rmdf.columns and rmdf["Mooring"].notna().any():
+        grouping_keys.append("Mooring")
     for _pos_col in ("in_position", "out_position"):
         if _pos_col in rmdf.columns and rmdf[_pos_col].notna().any():
             grouping_keys.append(_pos_col)
@@ -854,6 +904,8 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
         GC.KL,
         GC.OUT_IN_FFT,
     ]
+    if "Mooring" in cmdf.columns:
+        base_columns.append("Mooring")
     columns = base_columns + fft_amp_cols
 
     missing_cols = [c for c in columns if c not in cmdf.columns]
@@ -880,6 +932,8 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
         PANEL_CONDITION_GROUPED,
         GC.WIND_CONDITION,
     ]
+    if "Mooring" in rmdf.columns and rmdf["Mooring"].notna().any():
+        grouping_keys.append("Mooring")
 
     # Diagnostic: data coverage
     n_combinations = rmdf[grouping_keys].drop_duplicates().shape[0]
