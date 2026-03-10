@@ -169,14 +169,16 @@ def find_wave_range(
     # Both endpoints are snapped to the nearest stillwater upcrossing independently.
     # This is robust for windy signals – no chain-walking required.
 
-    stillwater_col   = PC.STILLWATER.format(i=probe_num_int)
-    stillwater_level = float(
-        meta_row[stillwater_col] if isinstance(meta_row, pd.Series)
-        else meta_row[stillwater_col].iloc[0]
-    )
+    # Use per-run DC mean of the first 2 s as the upcrossing threshold.
+    # The global stillwater can differ from the run-local DC level by 0.1–0.2 mm,
+    # which is enough to delay the first upcrossing by several seconds when waves are
+    # small (e.g. ramp-up phase of nowind runs). The local baseline is always centred
+    # on the actual signal, so the first upcrossing is found reliably.
+    _baseline_n    = int(2 * Fs)
+    upcross_level  = float(np.mean(signal_smooth[:_baseline_n]))
 
     # All zero-upcrossings in the full smoothed signal
-    above_still     = signal_smooth > stillwater_level
+    above_still     = signal_smooth > upcross_level
     all_upcrossings = np.where((~above_still[:-1]) & above_still[1:])[0] + 1
 
     n_periods_target = max(5, int(keep_periods))

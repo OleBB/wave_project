@@ -129,7 +129,7 @@ processvariables = {
     "prosessering": {
         "total_reset": True,  # laster også csv'ene på nytt
         "force_recompute": True,  # kjører alt på nytt, ignorerer gammal json
-        "debug": False,
+        "debug": True,
         "smoothing_window": 10,  # kontrollere denne senere
         "find_range": True,
         "range_plot": False,
