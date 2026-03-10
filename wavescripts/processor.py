@@ -29,56 +29,143 @@ from wavescripts.constants import (
 # ========================================================== #
 # === Make sure stillwater levels are computed and valid === #
 # ========================================================== #
+def _probe_median_from_run(df: pd.DataFrame, probe_col: str) -> float | None:
+    """Return median of a probe column from a single run's dataframe."""
+    if probe_col not in df.columns:
+        return None
+    vals = pd.to_numeric(df[probe_col], errors='coerce').dropna()
+    return float(vals.median()) if len(vals) > 0 else None
+
+
 def ensure_stillwater_columns(
     dfs: dict[str, pd.DataFrame],
     meta: pd.DataFrame,
     cfg,
 ) -> pd.DataFrame:
     """
-    Computes the true still-water level for each probe using ALL "no wind" runs,
-    then copies that value into EVERY row of the metadata (including windy runs).
-    Safe to call multiple times.
+    Computes per-run stillwater levels by linearly interpolating between
+    the first and last true stillwater (no-wind, no-wave) runs of the day.
+
+    Anchor runs: WindCondition == 'no' AND WaveFrequencyInput is NaN.
+    All other runs get a linearly interpolated value based on file_date.
+
+    Includes a control check: all intermediate no-wind/no-wave runs are
+    compared against the interpolated line and deviations are reported.
+
+    Safe to call multiple times — skips if per-row values already exist.
     """
     probe_cols = [f"Stillwater Probe {i}" for i in range(1, 5)]
 
+    # Skip if already computed with time-varying (interpolated) values
     if all(col in meta.columns for col in probe_cols):
         if meta[probe_cols].notna().all().all():
-            print("Stillwater levels already computed and valid → skipping")
-            return meta
+            if meta[probe_cols[0]].std() > 0.001:
+                print("Stillwater levels already time-interpolated → skipping")
+                return meta
+            # Fall through: old flat-value format → recompute with interpolation
 
-    print("Computing still-water levels from all 'WindCondition == no' runs...")
-
-    mask = meta["WindCondition"].astype(str).str.strip().str.lower() == "no"
-    nowind_paths = meta.loc[mask, "path"].tolist()
-
-    if not nowind_paths:
-        raise ValueError("No runs with WindCondition == 'no' found! Cannot compute still water.")
+    print("Computing time-interpolated stillwater levels from no-wind/no-wave anchor runs...")
 
     col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
-    stillwater_values = {}
-    for i, pos in col_names.items():
-        probe_col = f"Probe {pos}"
-        all_values = []
 
-        for path in nowind_paths:
-            if path in dfs:
-                df = dfs[path]
-                if probe_col in df.columns:
-                    clean = pd.to_numeric(df[probe_col], errors='coerce').dropna()
-                    all_values.extend(clean.tolist())
+    # --- Identify stillwater anchor candidates: no-wind AND no-wave ---
+    nowind = meta[GC.WIND_CONDITION].astype(str).str.strip().str.lower() == "no"
+    nowave = meta[GC.WAVE_FREQUENCY_INPUT].isna()
+    anchor_mask = nowind & nowave
+    anchor_rows = meta[anchor_mask].copy()
 
-        if len(all_values) == 0:
-            raise ValueError(f"No valid data found for {probe_col} in any no-wind run!")
+    if len(anchor_rows) < 1:
+        raise ValueError("No no-wind/no-wave runs found — cannot compute stillwater!")
 
-        level = np.median(all_values)
-        stillwater_values[f"Stillwater Probe {i}"] = float(level)
-        print(f"  Stillwater Probe {i} ({probe_col}): {level:.3f} mm  (from {len(all_values):,} samples)")
+    anchor_rows["_t"] = pd.to_datetime(anchor_rows["file_date"])
+    anchor_rows = anchor_rows.sort_values("_t").reset_index(drop=True)
 
-    # Write the same value into EVERY row (this is correct!)
-    for col, value in stillwater_values.items():
-        meta[col] = value
+    if len(anchor_rows) < 2:
+        # Only one stillwater run: use flat value
+        print(f"  Only 1 stillwater anchor found — using flat value (no interpolation).")
+        first_row = anchor_rows.iloc[0]
+        for i, pos in col_names.items():
+            v = _probe_median_from_run(dfs.get(first_row["path"], pd.DataFrame()), f"Probe {pos}")
+            if v is None:
+                raise ValueError(f"No data for Probe {pos} in anchor run {first_row['path']}")
+            meta[f"Stillwater Probe {i}"] = v
+    else:
+        first_row = anchor_rows.iloc[0]
+        last_row  = anchor_rows.iloc[-1]
+        t0 = first_row["_t"].timestamp()
+        t1 = last_row["_t"].timestamp()
 
-    # Make sure we can save correctly
+        print(f"  Anchor 1 (t0): {first_row['_t']}  ←  {Path(first_row['path']).name}")
+        print(f"  Anchor 2 (t1): {last_row['_t']}  ←  {Path(last_row['path']).name}")
+
+        # Compute median probe levels at each anchor
+        anchors = {}
+        for anchor in (first_row, last_row):
+            df_anchor = dfs.get(anchor["path"])
+            if df_anchor is None:
+                raise ValueError(f"Anchor run not loaded: {anchor['path']}")
+            anchors[anchor["path"]] = {}
+            for i, pos in col_names.items():
+                v = _probe_median_from_run(df_anchor, f"Probe {pos}")
+                if v is None:
+                    raise ValueError(f"No data for Probe {pos} in anchor {anchor['path']}")
+                anchors[anchor["path"]][i] = v
+
+        # Linear interpolation: compute all columns as Series, assign in bulk
+        meta_t = pd.to_datetime(meta["file_date"])
+        if meta_t.dt.tz is not None:
+            meta_t = meta_t.dt.tz_localize(None)
+        frac = np.clip((meta_t.map(lambda t: t.timestamp()) - t0) / (t1 - t0), 0.0, 1.0)
+        new_cols = {}
+        for i in range(1, 5):
+            v0 = anchors[first_row["path"]][i]
+            v1 = anchors[last_row["path"]][i]
+            new_cols[f"Stillwater Probe {i}"] = v0 + frac * (v1 - v0)
+        meta = meta.assign(**new_cols)
+
+        # --- Control check + probe noise std for all no-wind/no-wave runs ---
+        print("\n  Control check — no-wind/no-wave runs vs interpolated line:")
+        noise_updates = {}  # path -> {col: std_value}
+        for _, row in anchor_rows.iterrows():
+            t = row["_t"].timestamp()
+            frac = np.clip((t - t0) / (t1 - t0), 0.0, 1.0)
+            df_run = dfs.get(row["path"])
+            label = Path(row["path"]).name
+            if df_run is None:
+                print(f"    {label}: not loaded — skipping")
+                continue
+            deviations = []
+            std_parts = []
+            for i, pos in col_names.items():
+                probe_col = f"Probe {pos}"
+                actual = _probe_median_from_run(df_run, probe_col)
+                if actual is None:
+                    continue
+                v0 = anchors[first_row["path"]][i]
+                v1 = anchors[last_row["path"]][i]
+                predicted = v0 + frac * (v1 - v0)
+                deviations.append(actual - predicted)
+                # Noise std for this run/probe
+                vals = pd.to_numeric(df_run[probe_col], errors='coerce').dropna()
+                std_parts.append((f"Probe {pos} Stillwater Std", float(vals.std())))
+            if deviations:
+                mean_dev = np.mean(deviations)
+                max_dev  = max(deviations, key=abs)
+                tag = " ← ANCHOR" if row["path"] in (first_row["path"], last_row["path"]) else ""
+                std_str = "  [" + "  ".join(f"{c.split()[1]}={v:.4f}" for c, v in std_parts) + "]"
+                print(f"    {label}: mean Δ={mean_dev:+.3f} mm, max Δ={max_dev:+.3f} mm{tag}{std_str}")
+            noise_updates[row["path"]] = dict(std_parts)
+
+        # Write noise std into metadata (only for nowave+nowind rows, rest stay NaN)
+        for col_name in next(iter(noise_updates.values()), {}).keys():
+            if col_name not in meta.columns:
+                meta[col_name] = np.nan
+        for path, std_dict in noise_updates.items():
+            idx = meta.index[meta["path"] == path]
+            for col_name, val in std_dict.items():
+                meta.loc[idx, col_name] = val
+
+    # Ensure PROCESSED_folder is set so meta can be saved
     if "PROCESSED_folder" not in meta.columns:
         if "experiment_folder" in meta.columns:
             meta["PROCESSED_folder"] = "PROCESSED-" + meta["experiment_folder"].iloc[0]
@@ -86,9 +173,8 @@ def ensure_stillwater_columns(
             raw_folder = Path(meta["path"].iloc[0]).parent.name
             meta["PROCESSED_folder"] = f"PROCESSED-{raw_folder}"
 
-    # Save to disk
     update_processed_metadata(meta, force_recompute=False)
-    print("Stillwater levels successfully saved to meta.json for ALL runs")
+    print("\nStillwater levels saved to meta.json")
 
     return meta
 
@@ -100,15 +186,22 @@ def remove_outliers():
     return
 
 def _extract_stillwater_levels(meta_full: pd.DataFrame, debug: bool) -> dict:
-    """Extract stillwater levels from metadata."""
+    """Extract per-path stillwater levels from metadata.
+    Returns {path: {probe_i: value}} with one entry per run.
+    """
     stillwater = {}
-    for i in range(1, 5):
-        val = meta_full[f"Stillwater Probe {i}"].iloc[0]
-        if pd.isna(val):
-            raise ValueError(f"Stillwater Probe {i} is NaN!")
-        stillwater[i] = float(val)
-        if debug:
-            print(f"  Stillwater Probe {i} = {val:.3f} mm")
+    for _, row in meta_full.iterrows():
+        path = row["path"]
+        stillwater[path] = {}
+        for i in range(1, 5):
+            val = row[f"Stillwater Probe {i}"]
+            if pd.isna(val):
+                raise ValueError(f"Stillwater Probe {i} is NaN for {Path(path).name}!")
+            stillwater[path][i] = float(val)
+    if debug:
+        first_path = meta_full["path"].iloc[0]
+        for i in range(1, 5):
+            print(f"  Stillwater Probe {i} @ first run = {stillwater[first_path][i]:.3f} mm")
     return stillwater
 
 
@@ -137,7 +230,7 @@ def _zero_and_smooth_signals(
                 continue
 
             eta_col = f"eta_{pos}"
-            df[eta_col] = -(df[probe_col] - stillwater[i])
+            df[eta_col] = -(df[probe_col] - stillwater[path][i])
             df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
 
             if debug:
@@ -357,11 +450,7 @@ def _update_all_metrics(
     # Windspeed
     meta_indexed[GC.WINDSPEED] = calculate_windspeed(meta_indexed[GC.WIND_CONDITION])
 
-    # Stillwater (keyed by probe number — physical measurement, not position)
-    for i in range(1, 5):
-        col = PC.STILLWATER.format(i=i)
-        if col not in meta_indexed.columns:
-            meta_indexed[col] = stillwater[i]
+    # Stillwater columns are already per-row values set by ensure_stillwater_columns
 
     return meta_indexed.reset_index()
 

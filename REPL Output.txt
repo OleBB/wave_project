@@ -67,239 +67,242 @@ Finished! Total 54 files (reset) from 1 experiment(s)
 # === Filter === #
 Alle valgt, fordi chooseAll=True
 # === Single probe process === #
-Computing still-water levels from all 'WindCondition == no' runs...
-  Stillwater Probe 1 (Probe 9373/170): 271.970 mm  (from 373,297 samples)
-  Stillwater Probe 2 (Probe 12545): 272.120 mm  (from 373,297 samples)
-  Stillwater Probe 3 (Probe 9373/340): 271.750 mm  (from 373,290 samples)
-  Stillwater Probe 4 (Probe 8804): 271.980 mm  (from 373,298 samples)
+Computing time-interpolated stillwater levels from no-wind/no-wave anchor runs...
+  Anchor 1 (t0): 2026-03-07 14:00:58  ←  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv
+  Anchor 2 (t1): 2026-03-07 18:18:47  ←  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv
+  Control check — no-wind/no-wave runs vs interpolated line:
+    fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv: mean Δ=+0.000 mm, max Δ=+0.000 mm ← ANCHOR
+    fullpanel-nowind-nowave-depth580-mstop30-run1.csv: mean Δ=-0.160 mm, max Δ=-0.542 mm
+    fullpanel-nowind-nowave-depth580-mstop30-run2.csv: mean Δ=-0.342 mm, max Δ=-0.644 mm
+    fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv: mean Δ=+0.000 mm, max Δ=+0.000 mm ← ANCHOR
 Loaded 54 existing entries from meta.json
-/Users/ole/Kodevik/wave_project/wavescripts/processor.py:84: PerformanceWarning: DataFrame is highly fragmented.  This is usuall
-y the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.co
-ncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:154: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
   meta["PROCESSED_folder"] = "PROCESSED-" + meta["experiment_folder"].iloc[0]
 Updated waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof/meta.json → 54 entries (+0 new)
 Metadata safely updated and preserved across 1 experiment(s)!
-Stillwater levels successfully saved to meta.json for ALL runs
-  Stillwater Probe 1 = 271.970 mm
-  Stillwater Probe 2 = 272.120 mm
-  Stillwater Probe 3 = 271.750 mm
-  Stillwater Probe 4 = 271.980 mm
-  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.0694 mm
-  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1343 mm
-  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.8334 mm
-  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.7427 mm
-  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3042 mm
-  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0507 mm
-  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.0028 mm
-  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2555 mm
-  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.7580 mm
-  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.2322 mm
-  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.6989 mm
-  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.3731 mm
-  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.7902 mm
-  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0082 mm
-  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.6578 mm
-  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.4064 mm
-  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3651 mm
-  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0632 mm
-  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.2283 mm
-  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.3296 mm
-  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 0.9039 mm
-  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_12545 mean = -0.1998 mm
-  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 0.8255 mm
-  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_8804 mean = 0.4713 mm
-  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.1240 mm
-  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1581 mm
-  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.8028 mm
-  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.6753 mm
-  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1972 mm
-  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0299 mm
-  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.0256 mm
-  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1274 mm
-  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.2569 mm
-  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0050 mm
-  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.0508 mm
-  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2030 mm
-  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.2982 mm
-  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0440 mm
-  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.0068 mm
-  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.3322 mm
-  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.9910 mm
-  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0234 mm
-  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.7963 mm
-  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2730 mm
-  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_9373/170 mean = 0.9533 mm
-  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_12545 mean = -0.2176 mm
-  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_9373/340 mean = 0.7959 mm
-  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_8804 mean = 0.5058 mm
-  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.9225 mm
-  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.2255 mm
-  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.6569 mm
-  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.4434 mm
-  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_9373/170 mean = -0.9149 mm
-  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_12545 mean = -1.1183 mm
-  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_9373/340 mean = -1.0980 mm
-  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_8804 mean = -1.0424 mm
-  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.8583 mm
-  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0383 mm
-  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.6997 mm
-  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5113 mm
-  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.2250 mm
-  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1557 mm
-  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.0072 mm
-  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5674 mm
-  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.1204 mm
-  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1307 mm
-  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.9751 mm
-  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.7758 mm
-  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.8999 mm
-  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0323 mm
-  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.5863 mm
-  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5471 mm
-  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.8448 mm
-  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.2776 mm
-  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.8315 mm
-  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.3899 mm
-  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.0998 mm
-  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.1520 mm
-  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 0.9259 mm
-  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_8804 mean = 0.8414 mm
-  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1790 mm
-  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0413 mm
-  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.0618 mm
-  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1107 mm
-  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.2197 mm
-  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0278 mm
-  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.0097 mm
-  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1587 mm
-  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.7921 mm
-  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.2382 mm
-  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.7067 mm
-  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.3896 mm
-  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.8768 mm
-  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0268 mm
-  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.7329 mm
-  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2806 mm
-  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3293 mm
-  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0434 mm
-  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.0037 mm
-  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2997 mm
-  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.8221 mm
-  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0643 mm
-  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.6211 mm
-  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.4212 mm
-  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.0717 mm
-  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1626 mm
-  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.0206 mm
-  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.6823 mm
-  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.0436 mm
-  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_12545 mean = 0.0252 mm
-  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.1054 mm
-  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_8804 mean = 0.0733 mm
-  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_9373/170 mean = 1.3538 mm
-  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_12545 mean = 0.3625 mm
-  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_9373/340 mean = 1.2512 mm
-  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_8804 mean = 0.9290 mm
-  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.3140 mm
-  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2106 mm
-  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.1076 mm
-  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.8829 mm
-  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_9373/170 mean = -0.1424 mm
-  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_12545 mean = -0.0638 mm
-  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_9373/340 mean = -0.0042 mm
-  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_8804 mean = -0.0749 mm
-  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1678 mm
-  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0603 mm
-  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.0703 mm
-  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.0753 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_9373/170 mean = 1.1240 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_12545 mean = 0.1058 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_9373/340 mean = 1.0693 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_8804 mean = 0.7770 mm
-  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3147 mm
-  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0596 mm
-  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.0077 mm
-  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2646 mm
-  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1934 mm
-  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0909 mm
-  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.0802 mm
-  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1602 mm
-  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1635 mm
-  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0392 mm
-  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.0631 mm
-  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.0703 mm
-  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.3067 mm
-  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1637 mm
-  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.8896 mm
-  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5813 mm
-  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.9529 mm
-  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0345 mm
-  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.8230 mm
-  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5011 mm
-  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.9612 mm
-  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0623 mm
-  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.6943 mm
-  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5193 mm
-  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.1536 mm
-  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2005 mm
-  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.0109 mm
-  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.8877 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_9373/170 mean = 0.0909 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_12545 mean = -0.1026 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_9373/340 mean = -0.1194 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_8804 mean = 0.0138 mm
-  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1522 mm
-  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0098 mm
-  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.0382 mm
-  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.0601 mm
-  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.2327 mm
-  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.1900 mm
-  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 1.1167 mm
-  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_8804 mean = 0.7479 mm
-  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3078 mm
-  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0459 mm
-  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.0031 mm
-  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2417 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_9373/170 mean = 0.0631 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_12545 mean = -0.1335 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_9373/340 mean = -0.1497 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_8804 mean = 0.0081 mm
-  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1645 mm
-  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.1079 mm
-  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.1143 mm
-  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.0986 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.2263 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.1477 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 0.9362 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_8804 mean = 0.7906 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.2036 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0528 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = -0.0479 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1292 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_9373/170 mean = 0.1597 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_12545 mean = -0.0457 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_9373/340 mean = -0.0601 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_8804 mean = 0.0828 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.2027 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2793 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.0753 mm
-  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.7899 mm
-  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_9373/170 mean = 0.3304 mm
-  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_12545 mean = 0.1339 mm
-  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_9373/340 mean = -0.2292 mm
-  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_8804 mean = 0.2817 mm
-  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.0068 mm
-  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0573 mm
-  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.9107 mm
-  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.7397 mm
-  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_9373/170 mean = 1.0305 mm
-  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_12545 mean = -0.0235 mm
-  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_9373/340 mean = 0.8176 mm
-  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_8804 mean = 0.4926 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 0.2007 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_12545 mean = -0.0739 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = -0.0844 mm
-  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_8804 mean = 0.1113 mm
+Stillwater levels saved to meta.json
+  Stillwater Probe 1 @ first run = 272.528 mm
+  Stillwater Probe 2 @ first run = 272.954 mm
+  Stillwater Probe 3 @ first run = 272.619 mm
+  Stillwater Probe 4 @ first run = 272.808 mm
+  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6275 mm
+  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9680 mm
+  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7029 mm
+  fullpanel-fullwind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5706 mm
+  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1968 mm
+  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1066 mm
+  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.4305 mm
+  fullpanel-nowind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2707 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.4877 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.7759 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6824 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4107 mm
+  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.4664 mm
+  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9619 mm
+  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6057 mm
+  fullpanel-fullwind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.3786 mm
+  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.4330 mm
+  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2723 mm
+  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3157 mm
+  fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5589 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.6479 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.8228 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 1.8183 mm
+  fullpanel-fullwind-amp0200-freq0700-per40-depth580-mstop30-run2.csv → eta_8804 mean = 1.5262 mm
+  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.7030 mm
+  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0129 mm
+  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6862 mm
+  fullpanel-fullwind-amp0100-freq1800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5287 mm
+  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.0217 mm
+  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0581 mm
+  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3567 mm
+  fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.0593 mm
+  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1272 mm
+  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1296 mm
+  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.4637 mm
+  fullpanel-nowind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1909 mm
+  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3203 mm
+  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2449 mm
+  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.5068 mm
+  fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5055 mm
+  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6923 mm
+  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9558 mm
+  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7608 mm
+  fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.2758 mm
+  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_9373/170 mean = 1.7472 mm
+  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_12545 mean = 0.8557 mm
+  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_9373/340 mean = 1.8219 mm
+  fullpanel-fullwind-nowave-ULSonly-endofday.csv → eta_8804 mean = 1.6217 mm
+  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6812 mm
+  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.8121 mm
+  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6597 mm
+  fullpanel-fullwind-amp0200-freq0800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5165 mm
+  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_9373/170 mean = -0.0849 mm
+  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_12545 mean = -0.0083 mm
+  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_9373/340 mean = -0.0480 mm
+  fullpanel-nowind-nowave-ULSonly-endofday-nestenstille.csv → eta_8804 mean = 0.1176 mm
+  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5219 mm
+  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9790 mm
+  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6391 mm
+  fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4679 mm
+  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.7982 mm
+  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0047 mm
+  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8866 mm
+  fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4136 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6709 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9567 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8396 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5945 mm
+  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5869 mm
+  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9969 mm
+  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.5413 mm
+  fullpanel-fullwind-amp0200-freq1700-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5325 mm
+  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5653 mm
+  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.7211 mm
+  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8088 mm
+  fullpanel-fullwind-amp0200-freq0600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4162 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.6427 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.9702 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 1.7853 mm
+  fullpanel-fullwind-amp0100-freq1400-per40-depth580-mstop30-run2.csv → eta_8804 mean = 1.6508 mm
+  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.0158 mm
+  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0271 mm
+  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3078 mm
+  fullpanel-nowind-amp0100-freq1400-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.0191 mm
+  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.0651 mm
+  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0815 mm
+  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.4060 mm
+  fullpanel-nowind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1163 mm
+  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5637 mm
+  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.8125 mm
+  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7180 mm
+  fullpanel-fullwind-amp0200-freq0900-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4783 mm
+  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5695 mm
+  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9974 mm
+  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6918 mm
+  fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.2730 mm
+  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3786 mm
+  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2732 mm
+  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.5354 mm
+  fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.5063 mm
+  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.4930 mm
+  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0125 mm
+  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.5654 mm
+  fullpanel-fullwind-amp0200-freq1500-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.3868 mm
+  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6353 mm
+  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0018 mm
+  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8937 mm
+  fullpanel-fullwind-amp0100-freq1600-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5170 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.1287 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_12545 mean = 0.2051 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.5478 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run1.csv → eta_8804 mean = 0.1156 mm
+  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_9373/170 mean = 1.8164 mm
+  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_12545 mean = 1.0991 mm
+  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_9373/340 mean = 2.0572 mm
+  fullpanel-fullwind-nowave-depth580-ULSonly.csv → eta_8804 mean = 1.6403 mm
+  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.8099 mm
+  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9810 mm
+  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.9358 mm
+  fullpanel-fullwind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.6349 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_9373/170 mean = 0.0613 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_12545 mean = 0.4097 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_9373/340 mean = 0.6300 mm
+  fullpanel-nowind-nowave-depth580-mstop30-run2.csv → eta_8804 mean = 0.3202 mm
+  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.1147 mm
+  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0810 mm
+  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.2411 mm
+  fullpanel-nowind-amp0100-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = -0.1234 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_9373/170 mean = 1.7197 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_12545 mean = 0.9776 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_9373/340 mean = 1.9637 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop90-run3.csv → eta_8804 mean = 1.6508 mm
+  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.3148 mm
+  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2069 mm
+  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.5067 mm
+  fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.4111 mm
+  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1557 mm
+  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.1372 mm
+  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3937 mm
+  fullpanel-nowind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.2604 mm
+  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.0808 mm
+  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0212 mm
+  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.2736 mm
+  fullpanel-nowind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = -0.0818 mm
+  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.8343 mm
+  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9663 mm
+  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7389 mm
+  fullpanel-fullwind-amp0100-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.3720 mm
+  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5676 mm
+  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9256 mm
+  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.7300 mm
+  fullpanel-fullwind-amp0200-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.3982 mm
+  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.5881 mm
+  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9659 mm
+  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.6094 mm
+  fullpanel-fullwind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.4312 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6629 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9845 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8479 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.6560 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_9373/170 mean = 0.3563 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_12545 mean = 0.4335 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_9373/340 mean = 0.5557 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run5.csv → eta_8804 mean = 0.4842 mm
+  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.1097 mm
+  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.0095 mm
+  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.2869 mm
+  fullpanel-nowind-amp0100-freq1100-per40-depth580-mstop30-run1.csv → eta_8804 mean = -0.1134 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.7493 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.9814 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 1.9586 mm
+  fullpanel-fullwind-amp0100-freq1100-per40-depth580-mstop30-run2.csv → eta_8804 mean = 1.5251 mm
+  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.2919 mm
+  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.2043 mm
+  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.4853 mm
+  fullpanel-nowind-amp0200-freq1200-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.3686 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_9373/170 mean = 0.2772 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_12545 mean = 0.3505 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_9373/340 mean = 0.4914 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run4.csv → eta_8804 mean = 0.4159 mm
+  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 0.1051 mm
+  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.0981 mm
+  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.3452 mm
+  fullpanel-nowind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 0.1724 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = 1.7606 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_12545 mean = 0.9572 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 1.7899 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_8804 mean = 1.5895 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = -0.1143 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_12545 mean = -0.1096 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 0.2400 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_8804 mean = -0.1128 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_9373/170 mean = -0.0623 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_12545 mean = -0.0050 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_9373/340 mean = 0.2914 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run3.csv → eta_8804 mean = -0.0420 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6800 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_12545 mean = 1.0310 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8912 mm
+  fullpanel-fullwind-amp0100-freq1300-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.5192 mm
+  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_9373/170 mean = -0.0596 mm
+  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_12545 mean = 0.0039 mm
+  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_9373/340 mean = 0.0108 mm
+  fullpanel-nowind-nowave-wavemakeroff-1hour-stillwater.csv → eta_8804 mean = -0.0483 mm
+  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/170 mean = 1.6120 mm
+  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_12545 mean = 0.9389 mm
+  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_9373/340 mean = 1.8114 mm
+  fullpanel-fullwind-amp0200-freq1000-per40-depth580-mstop30-run1.csv → eta_8804 mean = 1.6251 mm
+  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_9373/170 mean = 1.6720 mm
+  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_12545 mean = 0.8948 mm
+  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_9373/340 mean = 1.7424 mm
+  fullpanel-fullwind-amp0200-freq1300-per40-depth580-mstop90-run1.csv → eta_8804 mean = 1.4223 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/170 mean = -0.1070 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_12545 mean = -0.1203 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_9373/340 mean = 0.2102 mm
+  fullpanel-nowind-amp0100-freq1300-per40-depth580-mstop30-run2.csv → eta_8804 mean = -0.1182 mm
 [find_wave_range] Probe 9373/170: snarvei→334, start=349, end=4374, periods≈24/24
 baselines:
 _samples: 500, _mean: 270.8827582460317, _seconds 2, _std 3.6949413140055527
@@ -391,38 +394,6 @@ _samples: 500, _mean: 272.13510442857137, _seconds 2, _std 0.008728527167296352
 [find_wave_range] Probe 9373/340: snarvei→312, start=312, end=4077, periods≈24/24
 baselines:
 _samples: 500, _mean: 271.6864526984127, _seconds 2, _std 0.016434216019801315
-/Users/ole/Kodevik/wave_project/wavescripts/processor.py:170: PerformanceWarning: DataFrame is highly fragmented.  This is usual
-ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
-oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
-  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
-/Users/ole/Kodevik/wave_project/wavescripts/processor.py:171: PerformanceWarning: DataFrame is highly fragmented.  This is usual
-ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
-oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
-  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
-/Users/ole/Kodevik/wave_project/wavescripts/processor.py:170: PerformanceWarning: DataFrame is highly fragmented.  This is usual
-ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
-oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
-  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
-/Users/ole/Kodevik/wave_project/wavescripts/processor.py:171: PerformanceWarning: DataFrame is highly fragmented.  This is usual
-ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
-oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
-  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
-/Users/ole/Kodevik/wave_project/wavescripts/processor.py:170: PerformanceWarning: DataFrame is highly fragmented.  This is usual
-ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
-oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
-  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
-/Users/ole/Kodevik/wave_project/wavescripts/processor.py:171: PerformanceWarning: DataFrame is highly fragmented.  This is usual
-ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
-oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
-  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
-/Users/ole/Kodevik/wave_project/wavescripts/processor.py:170: PerformanceWarning: DataFrame is highly fragmented.  This is usual
-ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
-oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
-  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
-/Users/ole/Kodevik/wave_project/wavescripts/processor.py:171: PerformanceWarning: DataFrame is highly fragmented.  This is usual
-ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
-oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
-  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
 [find_wave_range] Probe 8804: snarvei→312, start=325, end=4135, periods≈24/24
 baselines:
 _samples: 500, _mean: 271.90045183333336, _seconds 2, _std 0.11504953220472446
@@ -556,6 +527,38 @@ irst_motion_idx': np.int64(46), 'samples_per_period': 132, 'detected_peaks': 85,
 no freq found, assuming no wave
 no freq found, assuming no wave
 no freq found, assuming no wave
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:246: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:247: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:246: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:247: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:246: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:247: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:246: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
+/Users/ole/Kodevik/wave_project/wavescripts/processor.py:247: PerformanceWarning: DataFrame is highly fragmented.  This is usual
+ly the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.c
+oncat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+  meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
 no freq found, assuming no wave
 [find_wave_range] Probe 9373/170: snarvei→624, start=594, end=8107, periods≈24/24
 baselines:
@@ -1303,8 +1306,8 @@ start: 406, end: 4970, debug: {'baseline_mean': np.float64(271.74777200000005), 
 Probe 9373/170 PSD amplitude: 0.7115980139422504
 Probe 12545 PSD amplitude: 0.29253441892903376
 Probe 9373/340 PSD amplitude: 0.6462706246618998
-Probe 8804 PSD amplitude: 0.7436363950959103
-Probe 9373/170 PSD amplitude: 0.10396184359476954
+Probe 8804 PSD amplitude: 0.7436363950959101
+Probe 9373/170 PSD amplitude: 0.10396184359476951
 Probe 12545 PSD amplitude: 0.002824333754079062
 Probe 9373/340 PSD amplitude: 0.07104775932935116
 Probe 8804 PSD amplitude: 0.06324751182594683
@@ -1318,7 +1321,7 @@ Probe 9373/340 PSD amplitude: 0.6870832138572954
 Probe 8804 PSD amplitude: 0.6469785240190079
 Probe 9373/170 PSD amplitude: 0.1351694536475592
 Probe 12545 PSD amplitude: 0.08753377739745957
-Probe 9373/340 PSD amplitude: 0.08668146181368427
+Probe 9373/340 PSD amplitude: 0.08668146181368426
 Probe 8804 PSD amplitude: 0.10523921642874899
 Probe 9373/170 PSD amplitude: 9.904342357536208
 Probe 12545 PSD amplitude: 9.234228026040899
@@ -1329,7 +1332,7 @@ Probe 12545 PSD amplitude: 0.1471470324643896
 Probe 9373/340 PSD amplitude: 0.5083490796458432
 Probe 8804 PSD amplitude: 0.47620718396574113
 Probe 9373/170 PSD amplitude: 0.18833851723769143
-Probe 12545 PSD amplitude: 0.10748683247794864
+Probe 12545 PSD amplitude: 0.10748683247794862
 Probe 9373/340 PSD amplitude: 0.10084978102630181
 Probe 8804 PSD amplitude: 0.20622878581779638
 Probe 9373/170 PSD amplitude: 0.15330669589098506
@@ -1339,7 +1342,7 @@ Probe 8804 PSD amplitude: 0.050955117362199896
 Probe 9373/170 PSD amplitude: 1.1363294318022148
 Probe 12545 PSD amplitude: 0.23030753244945493
 Probe 9373/340 PSD amplitude: 1.114816876817385
-Probe 8804 PSD amplitude: 1.6034509570761526
+Probe 8804 PSD amplitude: 1.603450957076153
 Probe 9373/170 PSD amplitude: 1.0172678559670174
 Probe 12545 PSD amplitude: 0.3426294903035953
 Probe 9373/340 PSD amplitude: 0.9021352511714489
@@ -1382,12 +1385,12 @@ Probe 9373/340 PSD amplitude: 0.5971583617777739
 Probe 8804 PSD amplitude: 0.8322659710624521
 Probe 9373/170 PSD amplitude: 0.11914589990238358
 Probe 12545 PSD amplitude: 0.008906733277153822
-Probe 9373/340 PSD amplitude: 0.06561264662205639
+Probe 9373/340 PSD amplitude: 0.0656126466220564
 Probe 8804 PSD amplitude: 0.09534992150607427
 Probe 9373/170 PSD amplitude: 10.978040004265733
-Probe 12545 PSD amplitude: 8.80273576061456
+Probe 12545 PSD amplitude: 8.802735760614562
 Probe 9373/340 PSD amplitude: 11.043299042437402
-Probe 8804 PSD amplitude: 11.299389775201576
+Probe 8804 PSD amplitude: 11.299389775201574
 Probe 9373/170 PSD amplitude: 0.8207054395779458
 Probe 12545 PSD amplitude: 0.23110357213584715
 Probe 9373/340 PSD amplitude: 0.7352861672100328
@@ -1401,7 +1404,7 @@ Probe 12545 PSD amplitude: 0.17198409220077296
 Probe 9373/340 PSD amplitude: 1.070851108078114
 Probe 8804 PSD amplitude: 1.4063641360583374
 Probe 9373/170 PSD amplitude: 0.36055833617023864
-Probe 12545 PSD amplitude: 0.2500700321634333
+Probe 12545 PSD amplitude: 0.25007003216343326
 Probe 9373/340 PSD amplitude: 0.5281946805215396
 Probe 8804 PSD amplitude: 0.5267586644570371
 Advarsel: Ingen Input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-
@@ -1419,7 +1422,7 @@ Probe 12545 PSD amplitude: 4.092858533236579
 Probe 9373/340 PSD amplitude: 5.532759574143896
 Probe 8804 PSD amplitude: 5.7429743408333085
 Probe 9373/170 PSD amplitude: 1.1267065488405468
-Probe 12545 PSD amplitude: 0.33642904866302836
+Probe 12545 PSD amplitude: 0.3364290486630283
 Probe 9373/340 PSD amplitude: 1.4052097779080668
 Probe 8804 PSD amplitude: 1.77850014635337
 Probe 9373/170 PSD amplitude: 1.8473029183925886
@@ -1427,7 +1430,7 @@ Probe 12545 PSD amplitude: 0.509097723301782
 Probe 9373/340 PSD amplitude: 1.9084852282113831
 Probe 8804 PSD amplitude: 2.905448038227295
 Probe 9373/170 PSD amplitude: 9.1667909389344
-Probe 12545 PSD amplitude: 3.9373984018522243
+Probe 12545 PSD amplitude: 3.9373984018522252
 Probe 9373/340 PSD amplitude: 9.169906179949747
 Probe 8804 PSD amplitude: 9.963237740455055
 Probe 9373/170 PSD amplitude: 4.1525857434928275
@@ -1452,12 +1455,12 @@ Probe 9373/340 PSD amplitude: 4.621910272041006
 Probe 8804 PSD amplitude: 5.19397255733915
 Probe 9373/170 PSD amplitude: 0.9740140749243774
 Probe 12545 PSD amplitude: 0.2511060480936691
-Probe 9373/340 PSD amplitude: 1.173860472249073
+Probe 9373/340 PSD amplitude: 1.1738604722490729
 Probe 8804 PSD amplitude: 1.475301468851927
 Probe 9373/170 PSD amplitude: 4.578879910070276
 Probe 12545 PSD amplitude: 1.9099428459993966
 Probe 9373/340 PSD amplitude: 4.585159998814004
-Probe 8804 PSD amplitude: 4.981553392314504
+Probe 8804 PSD amplitude: 4.981553392314505
 Probe 9373/170 PSD amplitude: 4.693912160874042
 Probe 12545 PSD amplitude: 2.151546406881206
 Probe 9373/340 PSD amplitude: 4.831575725032738
@@ -1475,7 +1478,7 @@ Probe 12545 PSD amplitude: 8.023684665330904
 Probe 9373/340 PSD amplitude: 10.890568105809166
 Probe 8804 PSD amplitude: 11.434289534313104
 Probe 9373/170 PSD amplitude: 1.3054876730844005
-Probe 12545 PSD amplitude: 0.2936795412862166
+Probe 12545 PSD amplitude: 0.29367954128621654
 Probe 9373/340 PSD amplitude: 1.5660923108180478
 Probe 8804 PSD amplitude: 1.839125794389123
 Probe 9373/170 PSD amplitude: 0.9239292741354019
@@ -1488,7 +1491,7 @@ Probe 9373/340 PSD amplitude: 0.9740749534748426
 Probe 8804 PSD amplitude: 1.4372145762605826
 Probe 9373/170 PSD amplitude: 1.508940767621299
 Probe 12545 PSD amplitude: 0.2967957236406875
-Probe 9373/340 PSD amplitude: 1.3852238892975117
+Probe 9373/340 PSD amplitude: 1.385223889297512
 Probe 8804 PSD amplitude: 1.7912112428819849
 Advarsel: Ingen Input frequency nan for /Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof/fullpanel-
 nowind-nowave-wavemakeroff-1hour-stillwater.csv, skipping
@@ -1497,9 +1500,9 @@ Probe 12545 PSD amplitude: 8.206544077700308
 Probe 9373/340 PSD amplitude: 10.931839858833008
 Probe 8804 PSD amplitude: 10.744560108693532
 Probe 9373/170 PSD amplitude: 2.4133164746316362
-Probe 12545 PSD amplitude: 0.5050356543704714
+Probe 12545 PSD amplitude: 0.5050356543704715
 Probe 9373/340 PSD amplitude: 2.435212839205118
-Probe 8804 PSD amplitude: 3.6542546937062568
+Probe 8804 PSD amplitude: 3.654254693706257
 Probe 9373/170 PSD amplitude: 0.9919791116059055
 Probe 12545 PSD amplitude: 0.2525202825999948
 Probe 9373/340 PSD amplitude: 0.749808981877088
