@@ -38,7 +38,7 @@ PROCESSED_DIRS = [
 
 # ── Load from cache (fast — no reprocessing) ──────────────────────────────────
 print("Loading analysis data from cache...")
-combined_meta, processed_dfs, fft_dict, psd_dict = load_analysis_data(*PROCESSED_DIRS)
+combined_meta, processed_dfs, fft_dict, psd_dict = load_analysis_data(*PROCESSED_DIRS, load_processed=True)
 
 # Filter to paths that have both FFT data and metadata
 matching_paths = set(fft_dict.keys()) & set(combined_meta["path"].unique())

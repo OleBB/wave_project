@@ -606,12 +606,14 @@ def save_spectra_dicts(
         frames = []
         for path, df in d.items():
             df_copy = df.reset_index()   # Frequencies → plain column
-            # Split complex columns into real/imag float pairs
+            # Downcast float64 → float32 and split complex into real/imag float32 pairs
             for col in list(df_copy.columns):
                 if pd.api.types.is_complex_dtype(df_copy[col]):
-                    df_copy[col + "_real"] = df_copy[col].values.real
-                    df_copy[col + "_imag"] = df_copy[col].values.imag
+                    df_copy[col + "_real"] = df_copy[col].values.real.astype("float32")
+                    df_copy[col + "_imag"] = df_copy[col].values.imag.astype("float32")
                     df_copy = df_copy.drop(columns=[col])
+                elif pd.api.types.is_float_dtype(df_copy[col]):
+                    df_copy[col] = df_copy[col].astype("float32")
             df_copy["_path"] = path
             frames.append(df_copy)
         out = pd.concat(frames, ignore_index=True)
@@ -642,7 +644,10 @@ def load_spectra_dicts(
                 .drop(columns=["_path"])
                 .set_index("Frequencies")
             )
-            # Recombine real/imag pairs back into complex columns
+            # Upcast float32 → float64 and recombine real/imag into complex128
+            for col in list(sub.columns):
+                if sub[col].dtype == "float32":
+                    sub[col] = sub[col].astype("float64")
             real_cols = [c for c in sub.columns if c.endswith("_real")]
             for real_col in real_cols:
                 base = real_col[:-5]          # strip "_real"
@@ -1047,7 +1052,7 @@ def load_meta_json(processed_dir: Path) -> pd.DataFrame:
     return df
 
 
-def load_analysis_data(*processed_dirs: Path):
+def load_analysis_data(*processed_dirs: Path, **kwargs):
     """Load cached data and recompute FFT/PSD dicts for analysis scripts.
 
     Fast path: loads processed_dfs from parquet, then runs FFT/PSD math.
@@ -1055,11 +1060,14 @@ def load_analysis_data(*processed_dirs: Path):
 
     Args:
         *processed_dirs: One or more PROCESSED-* cache directories.
+        load_processed: If True (default False), also load the full time-series
+            processed_dfs. Only needed for wind-only analysis or signal inspection.
+            Skipping it saves ~75 MB of parquet reads and ~20 s on first load.
 
     Returns:
         (combined_meta, processed_dfs, fft_dict, psd_dict)
         combined_meta  — full metadata DataFrame (all runs including nowave)
-        processed_dfs  — {path: DataFrame} zeroed+smoothed time series
+        processed_dfs  — {path: DataFrame} zeroed+smoothed time series (empty if load_processed=False)
         fft_dict       — {path: DataFrame} FFT spectra (wave runs only)
         psd_dict       — {path: DataFrame} PSD spectra (wave runs only)
     """
@@ -1069,6 +1077,11 @@ def load_analysis_data(*processed_dirs: Path):
     )
     from wavescripts.constants import MEASUREMENT
 
+    # Separate keyword arg from positional dirs
+    load_processed: bool = kwargs.pop("load_processed", False)
+    if kwargs:
+        raise TypeError(f"Unexpected keyword arguments: {list(kwargs)}")
+
     all_meta, all_processed, all_fft, all_psd = [], {}, {}, {}
 
     for processed_dir in processed_dirs:
@@ -1076,8 +1089,11 @@ def load_analysis_data(*processed_dirs: Path):
         meta = load_meta_json(processed_dir)
         all_meta.append(meta)
 
-        proc_dfs = load_processed_dfs(processed_dir)
-        all_processed.update(proc_dfs)
+        if load_processed:
+            proc_dfs = load_processed_dfs(processed_dir)
+            all_processed.update(proc_dfs)
+        else:
+            proc_dfs = {}  # not needed for FFT/PSD cache path
 
         if meta.empty:
             continue

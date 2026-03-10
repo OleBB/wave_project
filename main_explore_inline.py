@@ -68,7 +68,7 @@ PROCESSED_DIRS = [
 ]
 
 combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
-    *PROCESSED_DIRS
+    *PROCESSED_DIRS, load_processed=True
 )
 
 # Paths present in both metadata and FFT dict
