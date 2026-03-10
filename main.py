@@ -15,6 +15,10 @@ from pathlib import Path
 import pandas as pd
 from PyQt5.QtWidgets import QApplication
 
+# %% backend setup for inline vs Qt plot
+%gui qt5
+%matplotlib inline
+
 from wavescripts.constants import (
     MEASUREMENT,
     RAMP,
@@ -609,7 +613,7 @@ fig, ax = plot_reconstructed(
 )
 # %% SIGNALplot - for å sammenlikne amplitude med sann amplitude
 fig, axes = plot_reconstructed(
-    combined_fft_dict, filtrert_frequencies, freqplotvariables, data_type="fft"
+    filtered_fft_dict, filtered_meta, freqplotvariables, data_type="fft"
 )
 
 # %% Kjør interaktiv plotter av dekomponert signal.
@@ -633,10 +637,7 @@ browser = RampDetectionBrowser(ramp_df)
 browser.show()
 # %%
 
-import dtale
-import pandas as pd
-
-df = pd.DataFrame({"col1": range(1000), "col2": pd.util.testing.rands_array(5, 1000)})
+# import dtale  # dtale/pd.util.testing removed
 dtale.show(df)  # opens browser tab → success!
 
 # %% debug som fant ut at noen runs ikke har Wave, så de filtreres ut
