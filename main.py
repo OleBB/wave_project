@@ -15,6 +15,7 @@ After processing, use:
     main_explore_inline.py   — cell-by-cell inline plots (Zed REPL)
 """
 
+# %%
 import gc
 import os
 import sys
@@ -27,6 +28,7 @@ from wavescripts.filters import filter_chosen_files
 from wavescripts.improved_data_loader import (
     load_or_update,
     save_processed_dfs,
+    save_spectra_dicts,
 )
 from wavescripts.processor import process_selected_data
 from wavescripts.processor2nd import process_processed_data
@@ -41,11 +43,9 @@ os.chdir(file_dir)
 # ── Dataset paths ─────────────────────────────────────────────────────────────
 # Add / uncomment folders here as new data arrives.
 dataset_paths = [
-    Path(
-        "/Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof"
-    ),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
-    # Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
 ]
 
 # ── Processing options ────────────────────────────────────────────────────────
@@ -111,6 +111,7 @@ for i, data_path in enumerate(dataset_paths):
         meta_sel = process_processed_data(
             psd_dictionary, fft_dictionary, meta_sel, meta, processvariables
         )
+        save_spectra_dicts(fft_dictionary, psd_dictionary, _cache_dir)
         del meta, psd_dictionary, fft_dictionary
 
         all_meta_sel.append(meta_sel)

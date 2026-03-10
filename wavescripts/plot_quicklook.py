@@ -64,6 +64,9 @@ def explore_damping_vs_freq(df: pd.DataFrame,
     Use plot_damping_freq() for thesis output.
     """
     x = GC.WAVE_FREQUENCY_INPUT
+    if df.empty:
+        print("explore_damping_vs_freq: no data to plot (empty dataframe)")
+        return
     g = sns.relplot(
         data=df.sort_values(x),
         x=x, y="mean_out_in",
@@ -140,9 +143,9 @@ class SignalBrowserFiltered(QMainWindow):
 
     def __init__(self, fft_dict: dict, meta_df: pd.DataFrame, plotvars: dict):
         super().__init__()
-        self.fft_dict = fft_dict
-        self.meta_df  = meta_df
-        self.plotvars = copy.deepcopy(plotvars)
+        self.fft_dict  = fft_dict
+        self.meta_df   = meta_df
+        self.plotvars  = copy.deepcopy(plotvars)
         self.setWindowTitle("Signal Browser")
         self.setGeometry(100, 100, 550, 900)
 

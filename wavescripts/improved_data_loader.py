@@ -92,8 +92,8 @@ class ProbeConfiguration:
 PROBE_CONFIGS = [
     ProbeConfiguration(
         name="initial_setup",
-        valid_from=datetime(2025, 1, 1),  # start of experiment
-        valid_until=datetime(2025, 11, 14),  # trokkje d e rette datao
+        valid_from=datetime(2025, 8, 1),  # start of experiment
+        valid_until=datetime(2025, 11, 9),  # trokkje d e rette datao
         # TODO sjekke datoen her og recompute..
         distances_mm={
             1: 18000.0,  # langt bak ein stad
@@ -113,7 +113,7 @@ PROBE_CONFIGS = [
     ),
     ProbeConfiguration(
         name="nov14_normalt_oppsett",
-        valid_from=datetime(2025, 11, 14),
+        valid_from=datetime(2025, 11, 10),
         valid_until=datetime(2026, 1, 1),
         distances_mm={
             1: 8804.0,   # ein liten plate framfor 2
@@ -586,6 +586,76 @@ def load_processed_dfs(*cache_dirs) -> Dict[str, pd.DataFrame]:
     return result
 
 
+def save_spectra_dicts(
+    fft_dict: Dict[str, pd.DataFrame],
+    psd_dict: Dict[str, pd.DataFrame],
+    cache_dir: Path,
+) -> None:
+    """Save fft_dict and psd_dict to parquet for fast reloading.
+
+    Complex columns (e.g. "FFT pos complex") are split into "_real" and "_imag"
+    float columns so they can be stored in parquet. load_spectra_dicts recombines
+    them. The Frequencies index is reset to a plain column.
+    """
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    for fname, d in [("fft_spectra.parquet", fft_dict), ("psd_spectra.parquet", psd_dict)]:
+        if not d:
+            continue
+        frames = []
+        for path, df in d.items():
+            df_copy = df.reset_index()   # Frequencies → plain column
+            # Split complex columns into real/imag float pairs
+            for col in list(df_copy.columns):
+                if pd.api.types.is_complex_dtype(df_copy[col]):
+                    df_copy[col + "_real"] = df_copy[col].values.real
+                    df_copy[col + "_imag"] = df_copy[col].values.imag
+                    df_copy = df_copy.drop(columns=[col])
+            df_copy["_path"] = path
+            frames.append(df_copy)
+        out = pd.concat(frames, ignore_index=True)
+        out.to_parquet(cache_dir / fname, index=False, engine="pyarrow")
+    print(f"   Saved FFT/PSD spectra → {cache_dir.name}/[fft|psd]_spectra.parquet")
+
+
+def load_spectra_dicts(
+    cache_dir: Path,
+) -> tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]:
+    """Load fft_dict and psd_dict from parquet cache.
+
+    Real/imag split columns (e.g. "FFT pos complex_real" / "_imag") are
+    recombined into complex128 columns on load.
+    """
+    cache_dir = Path(cache_dir)
+    result = {}
+    for key, fname in [("fft", "fft_spectra.parquet"), ("psd", "psd_spectra.parquet")]:
+        p = cache_dir / fname
+        if not p.exists():
+            result[key] = {}
+            continue
+        df = pd.read_parquet(p)
+        d = {}
+        for path in df["_path"].unique():
+            sub = (
+                df[df["_path"] == path]
+                .drop(columns=["_path"])
+                .set_index("Frequencies")
+            )
+            # Recombine real/imag pairs back into complex columns
+            real_cols = [c for c in sub.columns if c.endswith("_real")]
+            for real_col in real_cols:
+                base = real_col[:-5]          # strip "_real"
+                imag_col = base + "_imag"
+                if imag_col in sub.columns:
+                    sub[base] = sub[real_col].values + 1j * sub[imag_col].values
+                    sub = sub.drop(columns=[real_col, imag_col])
+            d[path] = sub
+        result[key] = d
+    return result["fft"], result["psd"]
+
+
+
 # -------------------------------------------------
 # File discovery
 # -------------------------------------------------
@@ -1012,16 +1082,24 @@ def load_analysis_data(*processed_dirs: Path):
         if meta.empty:
             continue
 
-        cfg = get_configuration_for_date(meta["file_date"].dropna().iloc[0])
-        meta_wave = meta[
-            meta["WaveFrequencyInput [Hz]"].notna()
-            & (meta["WaveFrequencyInput [Hz]"] > 0)
-        ]
-        fs = MEASUREMENT.SAMPLING_RATE
-        fft_dict, _ = compute_fft_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
-        psd_dict, _ = compute_psd_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
-        all_fft.update(fft_dict)
-        all_psd.update(psd_dict)
+        # Load FFT/PSD from cache if available; recompute otherwise
+        cached_fft, cached_psd = load_spectra_dicts(processed_dir)
+        if cached_fft and cached_psd:
+            print(f"   Loaded {len(cached_fft)} FFT / {len(cached_psd)} PSD spectra from cache")
+            all_fft.update(cached_fft)
+            all_psd.update(cached_psd)
+        else:
+            print(f"   No spectra cache — recomputing FFT/PSD...")
+            cfg = get_configuration_for_date(meta["file_date"].dropna().iloc[0])
+            meta_wave = meta[
+                meta["WaveFrequencyInput [Hz]"].notna()
+                & (meta["WaveFrequencyInput [Hz]"] > 0)
+            ]
+            fs = MEASUREMENT.SAMPLING_RATE
+            fft_dict, _ = compute_fft_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
+            psd_dict, _ = compute_psd_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
+            all_fft.update(fft_dict)
+            all_psd.update(psd_dict)
 
     combined_meta = pd.concat(all_meta, ignore_index=True) if all_meta else pd.DataFrame()
     print(f"load_analysis_data: {len(combined_meta)} rows, {len(all_fft)} FFT experiments")

@@ -29,11 +29,16 @@ from wavescripts.constants import (
 # ========================================================== #
 # === Make sure stillwater levels are computed and valid === #
 # ========================================================== #
-def _probe_median_from_run(df: pd.DataFrame, probe_col: str) -> float | None:
-    """Return median of a probe column from a single run's dataframe."""
+def _probe_median_from_run(df: pd.DataFrame, probe_col: str, n_samples: int | None = None) -> float | None:
+    """Return median of a probe column from a single run's dataframe.
+
+    Args:
+        n_samples: if given, only the first n_samples rows are used (e.g. first 1 second).
+    """
     if probe_col not in df.columns:
         return None
-    vals = pd.to_numeric(df[probe_col], errors='coerce').dropna()
+    src = df[probe_col].iloc[:n_samples] if n_samples is not None else df[probe_col]
+    vals = pd.to_numeric(src, errors='coerce').dropna()
     return float(vals.median()) if len(vals) > 0 else None
 
 
@@ -70,15 +75,32 @@ def ensure_stillwater_columns(
     print("Computing time-interpolated stillwater levels from no-wind/no-wave anchor runs...")
 
     col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
+    first_second_samples = int(MEASUREMENT.SAMPLING_RATE)  # 1 s of data
 
-    # --- Identify stillwater anchor candidates: no-wind AND no-wave ---
-    nowind = meta[GC.WIND_CONDITION].astype(str).str.strip().str.lower() == "no"
-    nowave = meta[GC.WAVE_FREQUENCY_INPUT].isna()
+    # --- nowind: WindCondition == "no" or empty/missing (no wind tag in filename) ---
+    wind_str = meta[GC.WIND_CONDITION].astype(str).str.strip().str.lower()
+    nowind = wind_str.isin(["no", "", "nan", "none"])
+
+    # --- nowave: WaveFrequencyInput is NaN  OR  "nowave" appears in the filename ---
+    nowave_by_meta = meta[GC.WAVE_FREQUENCY_INPUT].isna()
+    nowave_by_name = meta["path"].astype(str).str.lower().str.contains("nowave")
+    nowave = nowave_by_meta | nowave_by_name
+
     anchor_mask = nowind & nowave
     anchor_rows = meta[anchor_mask].copy()
+    anchor_n_samples = None  # use full run
 
     if len(anchor_rows) < 1:
-        raise ValueError("No no-wind/no-wave runs found — cannot compute stillwater!")
+        # Fallback: nowind runs with wave — sample only the first 1 second (pre-wave stillwater)
+        fallback_rows = meta[nowind].copy()
+        if len(fallback_rows) < 1:
+            raise ValueError("No no-wind runs found — cannot compute stillwater!")
+        print(
+            f"  No no-wind/no-wave runs found — falling back to first {first_second_samples} samples "
+            f"({first_second_samples / MEASUREMENT.SAMPLING_RATE:.0f} s) of {len(fallback_rows)} no-wind run(s)."
+        )
+        anchor_rows = fallback_rows
+        anchor_n_samples = first_second_samples
 
     anchor_rows["_t"] = pd.to_datetime(anchor_rows["file_date"])
     anchor_rows = anchor_rows.sort_values("_t").reset_index(drop=True)
@@ -88,7 +110,7 @@ def ensure_stillwater_columns(
         print(f"  Only 1 stillwater anchor found — using flat value (no interpolation).")
         first_row = anchor_rows.iloc[0]
         for i, pos in col_names.items():
-            v = _probe_median_from_run(dfs.get(first_row["path"], pd.DataFrame()), f"Probe {pos}")
+            v = _probe_median_from_run(dfs.get(first_row["path"], pd.DataFrame()), f"Probe {pos}", anchor_n_samples)
             if v is None:
                 raise ValueError(f"No data for Probe {pos} in anchor run {first_row['path']}")
             meta[f"Stillwater Probe {pos}"] = v
@@ -109,7 +131,7 @@ def ensure_stillwater_columns(
                 raise ValueError(f"Anchor run not loaded: {anchor['path']}")
             anchors[anchor["path"]] = {}
             for i, pos in col_names.items():
-                v = _probe_median_from_run(df_anchor, f"Probe {pos}")
+                v = _probe_median_from_run(df_anchor, f"Probe {pos}", anchor_n_samples)
                 if v is None:
                     raise ValueError(f"No data for Probe {pos} in anchor {anchor['path']}")
                 anchors[anchor["path"]][i] = v
@@ -141,7 +163,7 @@ def ensure_stillwater_columns(
             std_parts = []
             for i, pos in col_names.items():
                 probe_col = f"Probe {pos}"
-                actual = _probe_median_from_run(df_run, probe_col)
+                actual = _probe_median_from_run(df_run, probe_col, anchor_n_samples)
                 if actual is None:
                     continue
                 v0 = anchors[first_row["path"]][i]

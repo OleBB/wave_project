@@ -247,18 +247,24 @@ def _update_more_metrics(
 
     # Compute OUT/IN (FFT): read in_probe/out_probe directly from table columns
     if "in_probe" in meta_indexed.columns and "out_probe" in meta_indexed.columns:
-        out_in = pd.Series(index=meta_indexed.index, dtype=float)
+        out_in      = pd.Series(index=meta_indexed.index, dtype=float)
+        in_pos_ser  = pd.Series(index=meta_indexed.index, dtype=object)
+        out_pos_ser = pd.Series(index=meta_indexed.index, dtype=object)
         for (in_p, out_p), idx in meta_indexed.groupby(["in_probe", "out_probe"]).groups.items():
-            in_pos = col_names[int(in_p)]
+            in_pos  = col_names[int(in_p)]
             out_pos = col_names[int(out_p)]
-            in_col = f"Probe {in_pos} Amplitude (FFT)"
+            in_col  = f"Probe {in_pos} Amplitude (FFT)"
             out_col = f"Probe {out_pos} Amplitude (FFT)"
+            in_pos_ser.loc[idx]  = in_pos
+            out_pos_ser.loc[idx] = out_pos
             if in_col in meta_indexed.columns and out_col in meta_indexed.columns:
                 out_in.loc[idx] = (
                     meta_indexed.loc[idx, out_col] / meta_indexed.loc[idx, in_col]
                 )
         out_in = out_in.replace([np.inf, -np.inf], np.nan)
-        meta_indexed[GC.OUT_IN_FFT] = out_in
+        meta_indexed[GC.OUT_IN_FFT]   = out_in
+        meta_indexed["in_position"]   = in_pos_ser   # physical position string, e.g. "9373/170"
+        meta_indexed["out_position"]  = out_pos_ser  # physical position string, e.g. "12545"
 
     # ── Band amplitudes ──────────────────────────────────────────────
     # Assuming compute_amplitude_by_band returns a DataFrame with "path" column
