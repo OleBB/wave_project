@@ -356,124 +356,56 @@ class ColumnGroups:
     Use these instead of calling helper functions repeatedly.
     """
     
-    # Basic amplitude columns (from percentile method)
-    BASIC_AMPLITUDE_COLS = [f"Probe {i} Amplitude" for i in range(1, 5)]
-    
-    # PSD-derived columns
-    PSD_AMPLITUDE_COLS = [f"Probe {i} Amplitude (PSD)" for i in range(1, 5)]
-    PSD_SWELL_AMPLITUDE_COLS = [f"Probe {i} Swell Amplitude (PSD)" for i in range(1, 5)]
-    PSD_WIND_AMPLITUDE_COLS = [f"Probe {i} Wind Amplitude (PSD)" for i in range(1, 5)]
-    PSD_TOTAL_AMPLITUDE_COLS = [f"Probe {i} Total Amplitude (PSD)" for i in range(1, 5)]
-    
-    # FFT-derived columns
-    FFT_AMPLITUDE_COLS = [f"Probe {i} Amplitude (FFT)" for i in range(1, 5)]
-    FFT_FREQUENCY_COLS = [f"Probe {i} Frequency (FFT)" for i in range(1, 5)]
-    FFT_PERIOD_COLS = [f"Probe {i} WavePeriod (FFT)" for i in range(1, 5)]
-    FFT_WAVENUMBER_COLS = [f"Probe {i} Wavenumber (FFT)" for i in range(1, 5)]
-    FFT_WAVELENGTH_COLS = [f"Probe {i} Wavelength (FFT)" for i in range(1, 5)]
-    FFT_KL_COLS = [f"Probe {i} kL (FFT)" for i in range(1, 5)]
-    FFT_AK_COLS = [f"Probe {i} ak (FFT)" for i in range(1, 5)]
-    FFT_TANH_KH_COLS = [f"Probe {i} tanh(kH) (FFT)" for i in range(1, 5)]
-    FFT_CELERITY_COLS = [f"Probe {i} Celerity (FFT)" for i in range(1, 5)]
-    FFT_HS_COLS = [f"Probe {i} Significant Wave Height Hs (FFT)" for i in range(1, 5)]
-    FFT_HM0_COLS = [f"Probe {i} Significant Wave Height Hm0 (FFT)" for i in range(1, 5)]
-    
-    # Physical setup columns
-    STILLWATER_COLS = [f"Stillwater Probe {i}" for i in range(1, 5)]
-    MM_FROM_PADDLE_COLS = [f"Probe {i} mm from paddle" for i in range(1, 5)]
-    
-    # Computed range columns
-    START_COLS = [f"Computed Probe {i} start" for i in range(1, 5)]
-    END_COLS = [f"Computed Probe {i} end" for i in range(1, 5)]
-    
-    # Global wave dimension columns
+    # Position-independent columns (these don't depend on probe arrangement)
     GLOBAL_WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]
-    
-    # Probe ratio columns
     PROBE_RATIO_COLS = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)", "OUT/IN (FFT)"]
-    
+
     @staticmethod
-    def fft_wave_dimension_cols(probe_num: int) -> list[str]:
-        """Get all FFT-derived wave dimension columns for a specific probe.
-        
-        This is the only dynamic helper - use for probe-specific operations.
-        
-        Args:
-            probe_num: Probe number (1-4)
-            
-        Returns:
-            List of column names for that probe's FFT wave dimensions
-        """
+    def fft_wave_dimension_cols(pos: str) -> list[str]:
+        """FFT-derived wave dimension columns for a probe identified by position string."""
         return [
-            f"Probe {probe_num} Wavelength (FFT)",
-            f"Probe {probe_num} kL (FFT)",
-            f"Probe {probe_num} ak (FFT)",
-            f"Probe {probe_num} tanh(kH) (FFT)",
-            f"Probe {probe_num} Celerity (FFT)",
+            f"Probe {pos} Wavelength (FFT)",
+            f"Probe {pos} kL (FFT)",
+            f"Probe {pos} ak (FFT)",
+            f"Probe {pos} tanh(kH) (FFT)",
+            f"Probe {pos} Celerity (FFT)",
         ]
-    
+
     @staticmethod
-    def all_probe_cols_for_category(category: str) -> list[str]:
-        """Get all columns for a specific category across all probes.
-        
+    def all_probe_cols_for_category(category: str, cfg) -> list[str]:
+        """Get all metadata columns for a category, keyed by physical probe position.
+
         Args:
             category: One of 'amplitude', 'fft', 'psd', 'setup'
-            
+            cfg: ProbeConfiguration for the dataset
         Returns:
-            Flat list of all relevant columns
+            Flat list of column names using position strings (e.g. 'Probe 9373/170 Amplitude')
         """
+        positions = list(cfg.probe_col_names().values())
         category_map = {
-            'amplitude': ColumnGroups.BASIC_AMPLITUDE_COLS,
-            'fft': (ColumnGroups.FFT_AMPLITUDE_COLS + 
-                   ColumnGroups.FFT_FREQUENCY_COLS + 
-                   ColumnGroups.FFT_PERIOD_COLS),
-            'psd': (ColumnGroups.PSD_AMPLITUDE_COLS + 
-                   ColumnGroups.PSD_SWELL_AMPLITUDE_COLS + 
-                   ColumnGroups.PSD_WIND_AMPLITUDE_COLS),
-            'setup': ColumnGroups.STILLWATER_COLS + ColumnGroups.MM_FROM_PADDLE_COLS,
+            'amplitude': [f"Probe {p} Amplitude" for p in positions],
+            'fft': (
+                [f"Probe {p} Amplitude (FFT)" for p in positions] +
+                [f"Probe {p} Frequency (FFT)" for p in positions] +
+                [f"Probe {p} WavePeriod (FFT)" for p in positions]
+            ),
+            'psd': (
+                [f"Probe {p} Amplitude (PSD)" for p in positions] +
+                [f"Probe {p} Swell Amplitude (PSD)" for p in positions] +
+                [f"Probe {p} Wind Amplitude (PSD)" for p in positions]
+            ),
+            'setup': (
+                [f"Stillwater Probe {p}" for p in positions] +
+                [f"Probe {p} mm from paddle" for p in positions]
+            ),
         }
         return category_map.get(category.lower(), [])
 
 
-# =============================================================================
-# DATAFRAME COLUMN NAMES (for raw CSV data)
-# =============================================================================
-
-class RawDataColumns:
-    """Column names in the raw CSV files from the wave flume.
-    
-    These are the actual column headers in your measurement data.
-    """
-    TIME = "Time [s]"
-    PROBE_1 = "Probe 1"
-    PROBE_2 = "Probe 2"
-    PROBE_3 = "Probe 3"
-    PROBE_4 = "Probe 4"
-    
-    # All probe columns as a list
-    ALL_PROBES = [PROBE_1, PROBE_2, PROBE_3, PROBE_4]
-
-
-class ProcessedDataColumns:
-    """Column names in processed DataFrames (after zeroing and smoothing)."""
-    
-    TIME = "Time [s]"
-    
-    # Zeroed signals
-    ETA_1 = "eta_1"
-    ETA_2 = "eta_2"
-    ETA_3 = "eta_3"
-    ETA_4 = "eta_4"
-    
-    # Moving averages
-    ETA_1_MA = "eta_1_ma"
-    ETA_2_MA = "eta_2_ma"
-    ETA_3_MA = "eta_3_ma"
-    ETA_4_MA = "eta_4_ma"
-    
-    # All eta columns
-    ALL_ETA = [ETA_1, ETA_2, ETA_3, ETA_4]
-    ALL_ETA_MA = [ETA_1_MA, ETA_2_MA, ETA_3_MA, ETA_4_MA]
+# NOTE: RawDataColumns and ProcessedDataColumns have been removed.
+# Probes are named by physical position at load time (e.g. 'Probe 9373/170'),
+# and eta columns follow the same convention (e.g. 'eta_9373/170').
+# Use ProbeConfiguration.probe_col_names() to get position strings for the active setup.
 
 
 # =============================================================================
@@ -522,20 +454,15 @@ def validate_columns_exist(df, required_columns: list[str], context: str = "") -
 
 def validate_column_constants():
     """Sanity check column name constants."""
-    
-    # Check that pre-computed lists have correct length
-    assert len(ColumnGroups.BASIC_AMPLITUDE_COLS) == MEASUREMENT.NUM_PROBES
-    assert len(ColumnGroups.FFT_AMPLITUDE_COLS) == MEASUREMENT.NUM_PROBES
-    assert len(ColumnGroups.STILLWATER_COLS) == MEASUREMENT.NUM_PROBES
-    
-    # Check that templates work
-    test_col = ProbeColumns.AMPLITUDE.format(i=1)
-    assert test_col == "Probe 1 Amplitude"
-    
-    # Check raw data columns match expected count
-    assert len(RawDataColumns.ALL_PROBES) == MEASUREMENT.NUM_PROBES
-    assert len(ProcessedDataColumns.ALL_ETA) == MEASUREMENT.NUM_PROBES
-    
+
+    # Check that ProbeColumns templates format correctly with a position string
+    test_col = ProbeColumns.AMPLITUDE.format(i="9373/170")
+    assert test_col == "Probe 9373/170 Amplitude", f"Unexpected: {test_col}"
+
+    # GLOBAL_WAVE_DIMENSION_COLS and PROBE_RATIO_COLS are position-independent
+    assert len(ColumnGroups.GLOBAL_WAVE_DIMENSION_COLS) > 0
+    assert len(ColumnGroups.PROBE_RATIO_COLS) > 0
+
     print("✓ All column constants validated")
 
 

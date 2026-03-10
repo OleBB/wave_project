@@ -54,7 +54,10 @@ def ensure_stillwater_columns(
 
     Safe to call multiple times — skips if per-row values already exist.
     """
-    probe_cols = [f"Stillwater Probe {i}" for i in range(1, 5)]
+    meta = meta.copy()  # defragment before any column additions
+
+    probe_positions = list(cfg.probe_col_names().values())  # ["9373/170", "12545", ...]
+    probe_cols = [f"Stillwater Probe {pos}" for pos in probe_positions]
 
     # Skip if already computed with time-varying (interpolated) values
     if all(col in meta.columns for col in probe_cols):
@@ -88,7 +91,7 @@ def ensure_stillwater_columns(
             v = _probe_median_from_run(dfs.get(first_row["path"], pd.DataFrame()), f"Probe {pos}")
             if v is None:
                 raise ValueError(f"No data for Probe {pos} in anchor run {first_row['path']}")
-            meta[f"Stillwater Probe {i}"] = v
+            meta[f"Stillwater Probe {pos}"] = v
     else:
         first_row = anchor_rows.iloc[0]
         last_row  = anchor_rows.iloc[-1]
@@ -117,10 +120,10 @@ def ensure_stillwater_columns(
             meta_t = meta_t.dt.tz_localize(None)
         frac = np.clip((meta_t.map(lambda t: t.timestamp()) - t0) / (t1 - t0), 0.0, 1.0)
         new_cols = {}
-        for i in range(1, 5):
+        for i, pos in col_names.items():
             v0 = anchors[first_row["path"]][i]
             v1 = anchors[last_row["path"]][i]
-            new_cols[f"Stillwater Probe {i}"] = v0 + frac * (v1 - v0)
+            new_cols[f"Stillwater Probe {pos}"] = v0 + frac * (v1 - v0)
         meta = meta.assign(**new_cols)
 
         # --- Control check + probe noise std for all no-wind/no-wave runs ---
@@ -157,9 +160,10 @@ def ensure_stillwater_columns(
             noise_updates[row["path"]] = dict(std_parts)
 
         # Write noise std into metadata (only for nowave+nowind rows, rest stay NaN)
-        for col_name in next(iter(noise_updates.values()), {}).keys():
-            if col_name not in meta.columns:
-                meta[col_name] = np.nan
+        std_col_names = list(next(iter(noise_updates.values()), {}).keys())
+        new_std_cols = {c: np.nan for c in std_col_names if c not in meta.columns}
+        if new_std_cols:
+            meta = meta.assign(**new_std_cols)
         for path, std_dict in noise_updates.items():
             idx = meta.index[meta["path"] == path]
             for col_name, val in std_dict.items():
@@ -185,23 +189,26 @@ def remove_outliers():
     #se Karens script
     return
 
-def _extract_stillwater_levels(meta_full: pd.DataFrame, debug: bool) -> dict:
+def _extract_stillwater_levels(meta_full: pd.DataFrame, cfg, debug: bool) -> dict:
     """Extract per-path stillwater levels from metadata.
     Returns {path: {probe_i: value}} with one entry per run.
+    Probe column names in meta are position-based (e.g. 'Stillwater Probe 9373/170').
     """
+    col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
     stillwater = {}
     for _, row in meta_full.iterrows():
         path = row["path"]
         stillwater[path] = {}
-        for i in range(1, 5):
-            val = row[f"Stillwater Probe {i}"]
+        for i, pos in col_names.items():
+            col = f"Stillwater Probe {pos}"
+            val = row[col]
             if pd.isna(val):
-                raise ValueError(f"Stillwater Probe {i} is NaN for {Path(path).name}!")
+                raise ValueError(f"{col} is NaN for {Path(path).name}!")
             stillwater[path][i] = float(val)
     if debug:
         first_path = meta_full["path"].iloc[0]
-        for i in range(1, 5):
-            print(f"  Stillwater Probe {i} @ first run = {stillwater[first_path][i]:.3f} mm")
+        for i, pos in col_names.items():
+            print(f"  Stillwater Probe {pos} @ first run = {stillwater[first_path][i]:.3f} mm")
     return stillwater
 
 
@@ -506,7 +513,7 @@ def process_selected_data(
 
     # 1. Ensure stillwater levels are computed
     meta_full = ensure_stillwater_columns(dfs, meta_full, cfg)
-    stillwater = _extract_stillwater_levels(meta_full, debug)
+    stillwater = _extract_stillwater_levels(meta_full, cfg, debug)
 
     # 2. Process dataframes: zero and add moving averages
     processed_dfs = _zero_and_smooth_signals(dfs, meta_sel, stillwater, cfg, win, debug)

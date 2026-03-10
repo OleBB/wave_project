@@ -109,14 +109,20 @@ def find_wave_range(
     #  1.b  Snarvei: calibrated per-probe anchors, linearly interpolated in frequency
     # ==========================================================
     # Two verified calibration points per probe (eyeballed, well-verified).
-    # Calibrated at: P1=8800mm, P2=9500mm, P3/P4=12450mm from paddle.
-    # For other frequencies (0.7–1.6 Hz), values are linearly interpolated/extrapolated.
-    # If probes are moved significantly from these positions, update _SNARVEI.
-    _SNARVEI = {                              # (f1,  s1,   f2,   s2)
-        "Probe 1": (0.65, 5104, 1.3, 4700),  # 0.65 Hz: +3 periods (3×385=1154) from 3950
-        "Probe 2": (0.65, 5154, 1.3, 4800),  # 0.65 Hz: +3 periods from 4000
-        "Probe 3": (0.65, 5654, 1.3, 6500),  # 0.65 Hz: +3 periods from 4500
-        "Probe 4": (0.65, 5654, 1.3, 6500),  # 0.65 Hz: +3 periods from 4500
+    # Keyed by physical probe position column name (e.g. "Probe 9373/170").
+    # Format: (f1, start_idx_1, f2, start_idx_2)
+    # For other frequencies, start_idx is linearly interpolated/extrapolated.
+    #
+    # Original calibration positions → current position string mapping:
+    #   ~8800mm  → "Probe 8804"         (Δ=+4mm, negligible)
+    #   ~9500mm  → "Probe 9373/170" and "Probe 9373/340"  (Δ=-127mm, re-verify)
+    #   ~12450mm → "Probe 12545"        (Δ=+95mm, re-verify)
+    # TODO: re-eyeball calibration points after confirming probe positions in tank.
+    _SNARVEI = {                                       # (f1,  s1,   f2,   s2)
+        "Probe 8804":     (0.65, 5104, 1.3, 4700),    # ~8800mm from paddle
+        "Probe 9373/170": (0.65, 5154, 1.3, 4800),    # ~9500mm from paddle
+        "Probe 9373/340": (0.65, 5154, 1.3, 4800),    # same longitudinal pos as 9373/170
+        "Probe 12545":    (0.65, 5654, 1.3, 6500),    # ~12450mm from paddle
     }
 
     good_start_idx   = None
