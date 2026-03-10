@@ -83,25 +83,41 @@ def plot_all_probes(
     show_plot = plotting.get("show_plot", True)
     save_plot = plotting.get("save_plot", False)
 
-    # Detect position-based amplitude columns (skip all-null), sort by leading number
-    amp_cols = [
+    # Collect all non-null amplitude columns across the combined meta
+    all_amp_cols = [
         c for c in meta_df.columns
-        if c.startswith("Probe ") and c.endswith(" Amplitude") and meta_df[c].notna().any()
+        if c.startswith("Probe ") and c.endswith(" Amplitude")
         and "FFT" not in c and "PSD" not in c
+        and meta_df[c].notna().any()
     ]
-    amp_cols.sort(key=lambda c: int(c.replace("Probe ", "").replace(" Amplitude", "").split("/")[0]))
-    positions = [c.replace("Probe ", "").replace(" Amplitude", "") for c in amp_cols]
-    probe_x = list(range(len(amp_cols)))
-    probe_labels = [f"P {pos}" for pos in positions]
+
+    # Group columns by longitudinal distance (the part before "/", e.g. "9373/170" → "9373").
+    # Runs from different probe configs share the same longitudinal positions even when
+    # lateral offsets differ.  We average laterals when both are present for a given run.
+    from collections import defaultdict as _dd
+    long_groups: dict = _dd(list)
+    for c in all_amp_cols:
+        pos = c.replace("Probe ", "").replace(" Amplitude", "")
+        long_mm = pos.split("/")[0]
+        long_groups[long_mm].append(c)
+
+    sorted_long = sorted(long_groups.keys(), key=int)
+    probe_x     = list(range(len(sorted_long)))
+    probe_labels = [f"P {lng}" for lng in sorted_long]
 
     fig, ax = plt.subplots(figsize=plotting.get("figsize") or (10, 6))
 
     for _, row in meta_df.iterrows():
-        color = WIND_COLOR_MAP.get(row.get("WindCondition"), "black")
+        color  = WIND_COLOR_MAP.get(row.get("WindCondition"), "black")
         lstyle = PANEL_STYLES.get(row.get("PanelCondition", ""), "solid")
-        label = make_label(row)
+        label  = make_label(row)
 
-        y = [row.get(c, np.nan) for c in amp_cols]
+        y = []
+        for lng in sorted_long:
+            vals = [row.get(c, np.nan) for c in long_groups[lng]]
+            valid = [v for v in vals if np.isfinite(v)]
+            y.append(float(np.mean(valid)) if valid else np.nan)
+
         ax.plot(
             probe_x,
             y,
@@ -123,7 +139,7 @@ def plot_all_probes(
                     color=color,
                 )
 
-    ax.set_xlabel("Probe position (spacing not to scale)")
+    ax.set_xlabel("Probe position (spacing not to scale) parallels are averaged")
     ax.set_ylabel("Amplitude [mm]")
     ax.set_xticks(probe_x)
     ax.set_xticklabels(probe_labels)

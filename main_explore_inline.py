@@ -12,6 +12,9 @@ For saving publication figures → use main_save_figures.py.
 """
 
 # %% ── imports ────────────────────────────────────────────────────────────────
+import time
+start0 = time.perf_counter()
+
 %matplotlib inline
 import os
 from pathlib import Path
@@ -44,7 +47,10 @@ from wavescripts.plotter import (
     plot_reconstructed,
     plot_swell_scatter,
 )
+end0 = time.perf_counter()
+print(f"imports and validation {end0 - start0:.4f} s")
 
+# %%
 try:
     file_dir = Path(__file__).resolve().parent
 except NameError:
@@ -52,9 +58,13 @@ except NameError:
 os.chdir(file_dir)
 
 # %% ── load from cache (fast — no reprocessing) ───────────────────────────────
+import time
+start = time.perf_counter()
+
 PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
-    # Path("waveprocessed/PROCESSED-20251112-tett6roof"),
+    Path("waveprocessed/PROCESSED-20251112-tett6roof"),
+    Path("waveprocessed/PROCESSED-20251113-tett6roof"),
 ]
 
 combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
@@ -71,6 +81,8 @@ print(f"PanelCondition values: {sorted(combined_meta['PanelCondition'].dropna().
 print(f"WindCondition values:  {sorted(combined_meta['WindCondition'].dropna().unique())}")
 print(f"Frequencies [Hz]:      {sorted(combined_meta['WaveFrequencyInput [Hz]'].dropna().unique())}")
 
+end = time.perf_counter()
+print(f"read_parquet and other stuff took {end - start:.4f} s")
 # %% ── amplitude — all probes physical layout ─────────────────────────────────
 amplitudeplotvariables = {
     "overordnet": {

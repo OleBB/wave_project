@@ -665,6 +665,10 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
         GC.KL,
         GC.OUT_IN_FFT,
     ]
+    # Include physical probe position columns if present (added by processor2nd)
+    for _pos_col in ("in_position", "out_position"):
+        if _pos_col in cmdf.columns:
+            base_columns.append(_pos_col)
     columns = base_columns + fft_amp_cols
 
     # Quick safety check
@@ -685,20 +689,24 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
     print("\nAfter PanelCondition grouping:")
     print(rmdf[PANEL_CONDITION_GROUPED].value_counts().to_string())
 
-    # Define grouping keys using constants
+    # Define grouping keys — include physical in/out probe positions so runs from
+    # different probe configurations are never averaged together.
     grouping_keys = [
         GC.WAVE_AMPLITUDE_INPUT,
         GC.WAVE_FREQUENCY_INPUT,
         PANEL_CONDITION_GROUPED,
         GC.WIND_CONDITION,
     ]
+    for _pos_col in ("in_position", "out_position"):
+        if _pos_col in rmdf.columns and rmdf[_pos_col].notna().any():
+            grouping_keys.append(_pos_col)
 
     # Very useful: see how many unique combinations exist before aggregation
     n_combinations = rmdf[grouping_keys].drop_duplicates().shape[0]
     print(f"\nNumber of unique grouping combinations: {n_combinations}")
 
     # Optional: see distribution of groups
-    group_sizes = rmdf.groupby(grouping_keys).size()
+    group_sizes = rmdf.groupby(grouping_keys, dropna=False).size()
     print("\nGroup sizes (number of rows per group):")
     print(group_sizes.describe())
 
@@ -716,7 +724,7 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
         agg_dict[f"mean_A_{pos}"] = (col, "mean")
 
     stats = (
-        rmdf.groupby(grouping_keys)
+        rmdf.groupby(grouping_keys, dropna=False)
             .agg(**agg_dict)
             .reset_index()
     )
