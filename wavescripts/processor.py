@@ -5,13 +5,14 @@ Created on Mon Nov 17 17:18:03 2025
 
 @author: ole
 """
+from datetime import datetime
 from pathlib import Path
 import pandas as pd
 import numpy as np
 
 from typing import Dict, List, Tuple
 
-from wavescripts.improved_data_loader import update_processed_metadata
+from wavescripts.improved_data_loader import update_processed_metadata, get_configuration_for_date
 from wavescripts.wave_detection import find_wave_range
 from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
@@ -31,6 +32,7 @@ from wavescripts.constants import (
 def ensure_stillwater_columns(
     dfs: dict[str, pd.DataFrame],
     meta: pd.DataFrame,
+    cfg,
 ) -> pd.DataFrame:
     """
     Computes the true still-water level for each probe using ALL "no wind" runs,
@@ -39,44 +41,38 @@ def ensure_stillwater_columns(
     """
     probe_cols = [f"Stillwater Probe {i}" for i in range(1, 5)]
 
-    # If all columns exist AND all values are real numbers → we're done
     if all(col in meta.columns for col in probe_cols):
-        if meta[probe_cols].notna().all().all():  # every cell has a real number
+        if meta[probe_cols].notna().all().all():
             print("Stillwater levels already computed and valid → skipping")
             return meta
 
     print("Computing still-water levels from all 'WindCondition == no' runs...")
 
-    # Find all no-wind runs
     mask = meta["WindCondition"].astype(str).str.strip().str.lower() == "no"
     nowind_paths = meta.loc[mask, "path"].tolist()
 
     if not nowind_paths:
         raise ValueError("No runs with WindCondition == 'no' found! Cannot compute still water.")
 
-    # Compute median from ALL calm data combined
+    col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
     stillwater_values = {}
-    for i in range(1, 5):
-        probe_name = f"probe {i}"  # adjust if your columns are named differently
+    for i, pos in col_names.items():
+        probe_col = f"Probe {pos}"
         all_values = []
 
         for path in nowind_paths:
             if path in dfs:
                 df = dfs[path]
-                if probe_name in df.columns:
-                    clean = pd.to_numeric(df[probe_name], errors='coerce').dropna()
-                    all_values.extend(clean.tolist())
-                # Also try other common names just in case
-                elif f"Probe {i}" in df.columns:
-                    clean = pd.to_numeric(df[f"Probe {i}"], errors='coerce').dropna()
+                if probe_col in df.columns:
+                    clean = pd.to_numeric(df[probe_col], errors='coerce').dropna()
                     all_values.extend(clean.tolist())
 
         if len(all_values) == 0:
-            raise ValueError(f"No valid data found for {probe_name} in any no-wind run!")
+            raise ValueError(f"No valid data found for {probe_col} in any no-wind run!")
 
         level = np.median(all_values)
         stillwater_values[f"Stillwater Probe {i}"] = float(level)
-        print(f"  Stillwater Probe {i}: {level:.3f} mm  (from {len(all_values):,} samples)")
+        print(f"  Stillwater Probe {i} ({probe_col}): {level:.3f} mm  (from {len(all_values):,} samples)")
 
     # Write the same value into EVERY row (this is correct!)
     for col, value in stillwater_values.items():
@@ -117,13 +113,15 @@ def _extract_stillwater_levels(meta_full: pd.DataFrame, debug: bool) -> dict:
 
 
 def _zero_and_smooth_signals(
-    dfs: dict, 
-    meta_sel: pd.DataFrame, 
-    stillwater: dict, 
+    dfs: dict,
+    meta_sel: pd.DataFrame,
+    stillwater: dict,
+    cfg,
     win: int,
     debug: bool
 ) -> dict[str, pd.DataFrame]:
     """Zero signals using stillwater and add moving averages."""
+    col_names = cfg.probe_col_names()  # {1: "9373/170", 2: "12545", ...}
     processed_dfs = {}
     for _, row in meta_sel.iterrows():
         path = row["path"]
@@ -132,47 +130,49 @@ def _zero_and_smooth_signals(
             continue
 
         df = dfs[path].copy()
-        for i in range(1, 5):
-            probe_col = f"Probe {i}"
+        for i, pos in col_names.items():
+            probe_col = f"Probe {pos}"
             if probe_col not in df.columns:
                 print(f"  Missing column {probe_col} in {Path(path).name}")
                 continue
 
-            eta_col = f"eta_{i}"
+            eta_col = f"eta_{pos}"
             df[eta_col] = -(df[probe_col] - stillwater[i])
             df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
-            
+
             if debug:
-                print(f"  {Path(path).name:35} → eta_{i} mean = {df[eta_col].mean():.4f} mm")
-        
+                print(f"  {Path(path).name:35} → {eta_col} mean = {df[eta_col].mean():.4f} mm")
+
         processed_dfs[path] = df
-    
+
     return processed_dfs
 
 
 def run_find_wave_ranges(
     processed_dfs: dict,
     meta_sel: pd.DataFrame,
+    cfg,
     win: int,
     range_plot: bool,
     debug: bool
 ) -> pd.DataFrame:
     """Find wave ranges for all probes."""
+    col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
     for idx, row in meta_sel.iterrows():
         path = row["path"]
         df = processed_dfs[path]
-      
-        for i in range(1, 5):
-            probe = f"Probe {i}"
+
+        for i, pos in col_names.items():
+            probe_col = f"Probe {pos}"
             start, end, debug_info = find_wave_range(
-                df, row, data_col=probe, detect_win=win, range_plot=range_plot, debug=debug
+                df, row, data_col=probe_col, probe_num=i, detect_win=win, range_plot=range_plot, debug=debug
             )
-            meta_sel.loc[idx, f'Computed Probe {i} start'] = start
-            meta_sel.loc[idx, f'Computed Probe {i} end'] = end
-        
+            meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
+            meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
+
         if debug and start:
             print(f'start: {start}, end: {end}, debug: {debug_info}')
-    
+
     return meta_sel
 
 
@@ -286,79 +286,83 @@ def _update_all_metrics(
     stillwater: dict,
     amplitudes_psd_df: pd.DataFrame,
     amplitudes_fft_df: pd.DataFrame,
+    cfg,
 ) -> pd.DataFrame:
-    """..."""
+    """Update metadata with all computed metrics, using position-based probe names."""
     meta_indexed = meta_sel.set_index(GC.PATH).copy()
-    
+    col_names = cfg.probe_col_names()  # {1: "9373/170", 2: "12545", ...}
+
     # ============================================================================
     # SECTION 1: DIRECT ASSIGNMENT of pre-computed values
     # ============================================================================
-    
-    # Amplitudes from np.percentile
-    amplitudes = compute_amplitudes(processed_dfs, meta_sel)
-    meta_indexed.update(amplitudes.set_index(GC.PATH)[CG.BASIC_AMPLITUDE_COLS])
-    
-    # Amplitudes from PSD - NO function call overhead
-    meta_indexed[CG.PSD_AMPLITUDE_COLS] = (
-        amplitudes_psd_df.set_index(GC.PATH)[CG.PSD_AMPLITUDE_COLS]
-    )
-    
-    # Amplitudes, frequencies, and periods from FFT
+
+    # Amplitudes from np.percentile — columns already position-based
+    amplitudes = compute_amplitudes(processed_dfs, meta_sel, cfg)
+    amp_cols = [c for c in amplitudes.columns if c != GC.PATH]
+    meta_indexed[amp_cols] = amplitudes.set_index(GC.PATH)[amp_cols]
+
+    # Amplitudes from PSD
+    psd_cols = [c for c in amplitudes_psd_df.columns if c != GC.PATH]
+    meta_indexed[psd_cols] = amplitudes_psd_df.set_index(GC.PATH)[psd_cols]
+
+    # FFT amplitudes, frequencies, periods
     fft_df_indexed = amplitudes_fft_df.set_index(GC.PATH)
-    meta_indexed[CG.FFT_AMPLITUDE_COLS] = fft_df_indexed[CG.FFT_AMPLITUDE_COLS]
-    meta_indexed[CG.FFT_PERIOD_COLS] = fft_df_indexed[CG.FFT_PERIOD_COLS]
-    meta_indexed[CG.FFT_FREQUENCY_COLS] = fft_df_indexed[CG.FFT_FREQUENCY_COLS]
-    
+    fft_cols = [c for c in amplitudes_fft_df.columns if c != GC.PATH]
+    meta_indexed[fft_cols] = fft_df_indexed[fft_cols]
+
     # ============================================================================
     # SECTION 2: DERIVED CALCULATIONS using the assigned values
     # ============================================================================
-    
-    # Process all probes - vectorized for speed
-    for i in range(1, 5):
-        freq_col = PC.FREQUENCY_FFT.format(i=i)
-        k_col = PC.WAVENUMBER_FFT.format(i=i)
-        
-        freq_data = meta_indexed[freq_col]
-        
+
+    for i, pos in col_names.items():
+        freq_col = f"Probe {pos} Frequency (FFT)"
+        k_col    = f"Probe {pos} Wavenumber (FFT)"
+        amp_col  = f"Probe {pos} Amplitude"
+
         meta_indexed[k_col] = calculate_wavenumbers_vectorized(
-            frequencies=freq_data,
+            frequencies=meta_indexed[freq_col],
             heights=meta_indexed[GC.WATER_DEPTH]
         )
-        
+
         res = calculate_wavedimensions(
             k=meta_indexed[k_col],
             H=meta_indexed[GC.WATER_DEPTH],
             PC=meta_indexed[GC.PANEL_CONDITION],
-            amp=meta_indexed[PC.AMPLITUDE.format(i=i)]
+            amp=meta_indexed[amp_col]
         )
-        
-        # This still calls the function, but only 4 times total (acceptable)
-        meta_indexed[CG.fft_wave_dimension_cols(i)] = res[RC.WAVE_DIMENSION_COLS]
 
-    # Process global columns
+        wave_dim_cols = [
+            f"Probe {pos} Wavelength (FFT)",
+            f"Probe {pos} kL (FFT)",
+            f"Probe {pos} ak (FFT)",
+            f"Probe {pos} tanh(kH) (FFT)",
+            f"Probe {pos} Celerity (FFT)",
+        ]
+        meta_indexed[wave_dim_cols] = res[RC.WAVE_DIMENSION_COLS]
+
+    # Global wave dimensions (use IN probe amplitude as representative)
+    in_pos = col_names[cfg.in_probe]
     meta_indexed[GC.WAVENUMBER] = calculate_wavenumbers_vectorized(
         frequencies=meta_indexed[GC.WAVE_FREQUENCY_INPUT],
         heights=meta_indexed[GC.WATER_DEPTH]
     )
-    
     global_res = calculate_wavedimensions(
         k=meta_indexed[GC.WAVENUMBER],
         H=meta_indexed[GC.WATER_DEPTH],
         PC=meta_indexed[GC.PANEL_CONDITION],
-        amp=meta_indexed[PC.AMPLITUDE.format(i=2)]
+        amp=meta_indexed[f"Probe {in_pos} Amplitude"]
     )
-
     meta_indexed[CG.GLOBAL_WAVE_DIMENSION_COLS] = global_res[RC.WAVE_DIMENSION_COLS_WITH_KH]
-    
+
     # Windspeed
     meta_indexed[GC.WINDSPEED] = calculate_windspeed(meta_indexed[GC.WIND_CONDITION])
-    
-    # Add stillwater columns if missing
+
+    # Stillwater (keyed by probe number — physical measurement, not position)
     for i in range(1, 5):
         col = PC.STILLWATER.format(i=i)
         if col not in meta_indexed.columns:
             meta_indexed[col] = stillwater[i]
-    
+
     return meta_indexed.reset_index()
 
 
@@ -399,35 +403,37 @@ def process_selected_data(
     """
     fs = MEASUREMENT.SAMPLING_RATE
     # 0. unpack processvariables
-    # overordnet = processvariables.get("overordnet", {})
     prosessering = processvariables.get("prosessering", {})
-    
-    force_recompute =prosessering.get("force_recompute", False)
+
+    force_recompute = prosessering.get("force_recompute", False)
     debug = prosessering.get("debug", False)
     win = prosessering.get("smoothing_window", 1)
-    find_range =prosessering.get("find_range", False)
-    range_plot =prosessering.get("range_plot", False)
-    
+    find_range = prosessering.get("find_range", False)
+    range_plot = prosessering.get("range_plot", False)
+
+    # Derive cfg once for the whole folder (all files share the same configuration)
+    file_date = datetime.fromisoformat(str(meta_sel["file_date"].iloc[0]))
+    cfg = get_configuration_for_date(file_date)
+
     # 1. Ensure stillwater levels are computed
-    meta_full = ensure_stillwater_columns(dfs, meta_full)
+    meta_full = ensure_stillwater_columns(dfs, meta_full, cfg)
     stillwater = _extract_stillwater_levels(meta_full, debug)
 
     # 2. Process dataframes: zero and add moving averages
-    processed_dfs = _zero_and_smooth_signals(dfs, meta_sel, stillwater, win, debug)
+    processed_dfs = _zero_and_smooth_signals(dfs, meta_sel, stillwater, cfg, win, debug)
     
     # 3. Optional: find wave ranges
     if find_range:
-        meta_sel = run_find_wave_ranges(processed_dfs, meta_sel, win, range_plot, debug)
+        meta_sel = run_find_wave_ranges(processed_dfs, meta_sel, cfg, win, range_plot, debug)
     
     # 4. a - Compute PSDs and amplitudes from PSD
-    psd_dict, amplitudes_psd_df  = compute_psd_with_amplitudes(processed_dfs, meta_sel, fs=fs,debug=debug)
-   
-    # 4. b - compute FFT and amplitudes from FFT
-    fft_dict, amplitudes_fft_df = compute_fft_with_amplitudes(processed_dfs, meta_sel, fs=fs, debug=debug)
+    psd_dict, amplitudes_psd_df = compute_psd_with_amplitudes(processed_dfs, meta_sel, cfg, fs=fs, debug=debug)
 
+    # 4. b - compute FFT and amplitudes from FFT
+    fft_dict, amplitudes_fft_df = compute_fft_with_amplitudes(processed_dfs, meta_sel, cfg, fs=fs, debug=debug)
 
     # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
-    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater, amplitudes_psd_df, amplitudes_fft_df)
+    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater, amplitudes_psd_df, amplitudes_fft_df, cfg)
 
     # 6. Set output folder and save metadata
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)

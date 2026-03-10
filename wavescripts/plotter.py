@@ -83,8 +83,15 @@ def plot_all_probes(
     show_plot = plotting.get("show_plot", True)
     save_plot = plotting.get("save_plot", False)
 
-    probe_x = [1, 1.1, 1.2, 1.25]
-    probe_labels = ["P1", "P2", "P3", "P4"]
+    # Detect position-based amplitude columns (skip all-null)
+    amp_cols = [
+        c for c in meta_df.columns
+        if c.startswith("Probe ") and c.endswith(" Amplitude") and meta_df[c].notna().any()
+        and "FFT" not in c and "PSD" not in c
+    ]
+    positions = [c.replace("Probe ", "").replace(" Amplitude", "") for c in amp_cols]
+    probe_x = list(range(len(amp_cols)))
+    probe_labels = [f"P {pos}" for pos in positions]
 
     fig, ax = plt.subplots(figsize=plotting.get("figsize") or (10, 6))
 
@@ -93,7 +100,7 @@ def plot_all_probes(
         lstyle = PANEL_STYLES.get(row.get("PanelCondition", ""), "solid")
         label = make_label(row)
 
-        y = [row.get(f"Probe {i} Amplitude", np.nan) for i in range(1, 5)]
+        y = [row.get(c, np.nan) for c in amp_cols]
         ax.plot(
             probe_x,
             y,

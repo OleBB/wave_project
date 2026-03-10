@@ -69,6 +69,24 @@ class ProbeConfiguration:
     out_probe: int = 3  # probe number measuring outgoing wave (after panel)
     notes: str = ""
 
+    def probe_col_name(self, probe_num: int) -> str:
+        """Return the canonical position-based column identifier for a probe.
+
+        Unique longitudinal position  →  '9373'
+        Parallel (shared position)    →  '9373/170'
+        """
+        dist = int(self.distances_mm[probe_num])
+        parallel = [p for p, d in self.distances_mm.items()
+                    if int(d) == dist and p != probe_num]
+        if parallel:
+            lat = int(self.lateral_mm[probe_num])
+            return f"{dist}/{lat}"
+        return str(dist)
+
+    def probe_col_names(self) -> Dict[int, str]:
+        """Return {probe_num: col_name} for all probes."""
+        return {i: self.probe_col_name(i) for i in self.distances_mm}
+
 
 # Define all probe configurations chronologically
 PROBE_CONFIGS = [
@@ -86,8 +104,8 @@ PROBE_CONFIGS = [
         lateral_mm={
             1: 250.0,  # ukjent, antar senter
             2: 250.0,  # senter av tanken
-            3:  17.0,  # parallell, nær referansevegg
-            4:  34.0,  # parallell, 34mm frå referansevegg
+            3:  170.0,  # parallell, nær referansevegg
+            4:  340.0,  # parallell, 340mm frå referansevegg
         },
         in_probe=2,
         out_probe=3,
@@ -104,10 +122,10 @@ PROBE_CONFIGS = [
             4: 12545.0,  # parallell pair
         },
         lateral_mm={
-            1:  17.0,  # same wall side as parallel pair
+            1: 170.0,  # same wall side as parallel pair
             2: 250.0,  # senter av tanken
-            3:  17.0,  # parallell, nær referansevegg
-            4:  34.0,  # parallell, 34mm frå referansevegg
+            3:  170.0,  # parallell, nær referansevegg
+            4:  340.0,  # parallell, 340mm frå referansevegg
         },
         in_probe=2,
         out_probe=3,
@@ -124,9 +142,9 @@ PROBE_CONFIGS = [
             4: 8804.0,
         },
         lateral_mm={
-            1:  17.0,  # parallell, nær referansevegg
+            1:  170.0,  # parallell, nær referansevegg
             2: 250.0,  # senter av tanken
-            3:  34.0,  # parallell, 34mm frå referansevegg
+            3:  340.0,  # parallell, 340mm frå referansevegg
             4: 250.0,  # senter av tanken
         },
         in_probe=1,
@@ -144,9 +162,9 @@ PROBE_CONFIGS = [
             4: 8804.0,
         },
         lateral_mm={
-            1:  17.0,  # parallell, nær referansevegg
+            1:  170.0,  # parallell, nær referansevegg
             2: 250.0,  # senter av tanken
-            3:  34.0,  # parallell, 34mm frå referansevegg
+            3:  340.0,  # parallell, 340mm frå referansevegg
             4: 250.0,  # senter av tanken
         },
         in_probe=1,
@@ -700,6 +718,23 @@ def load_or_update(
             print(f"   No cache found, loading all CSVs")
             csv_files = list(get_data_files(folder_path))
             dfs = _load_csv_files(csv_files, experiment_name)
+
+        # ============================================================
+        # Step 1b: Rename Probe 1..4 columns to position-based names
+        # cfg is fixed for the whole folder — look it up once from any file
+        # ============================================================
+        if dfs:
+            sample_path = next(iter(dfs))
+            sample_date = _extract_file_date(Path(sample_path).name, Path(sample_path))
+            if sample_date:
+                try:
+                    folder_cfg = get_configuration_for_date(sample_date)
+                    col_map = folder_cfg.probe_col_names()  # {1: "9373/170", ...}
+                    rename = {f"Probe {i}": f"Probe {pos}" for i, pos in col_map.items()}
+                    dfs = {p: df.rename(columns=rename) for p, df in dfs.items()}
+                    print(f"   Probe columns → {list(rename.values())}")
+                except ValueError as e:
+                    print(f"   Warning: could not rename probe columns: {e}")
 
         # ============================================================
         # Step 2: Compute or recompute metadata (meta.json)

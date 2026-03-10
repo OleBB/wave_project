@@ -26,14 +26,14 @@ from wavescripts.constants import (
 
 # %% - Fysisk amplitude
 def _extract_probe_signal(
-    df: pd.DataFrame, 
-    row: pd.Series, 
-    probe_num: int
+    df: pd.DataFrame,
+    row: pd.Series,
+    pos: str,
 ) -> Optional[np.ndarray]:
-    """Your original function - unchanged."""
-    col = f"eta_{probe_num}"
-    start_val = row.get(f"Computed Probe {probe_num} start")
-    end_val = row.get(f"Computed Probe {probe_num} end")
+    """Extract signal for a probe identified by position string (e.g. '9373/170')."""
+    col = f"eta_{pos}"
+    start_val = row.get(f"Computed Probe {pos} start")
+    end_val = row.get(f"Computed Probe {pos} end")
     
     if pd.isna(start_val) or pd.isna(end_val) or col not in df.columns:
         return None
@@ -52,12 +52,12 @@ def _extract_probe_signal(
     
 
 def _extract_probe_amplitude(
-    df: pd.DataFrame, 
-    row: pd.Series, 
-    probe_num: int
+    df: pd.DataFrame,
+    row: pd.Series,
+    pos: str,
 ) -> Optional[float]:
     """Finner høyeste percentil a=h/2 for én og én probe."""
-    signal = _extract_probe_signal(df, row, probe_num)
+    signal = _extract_probe_signal(df, row, pos)
     if signal is None:
         return None
     
@@ -69,46 +69,45 @@ def _extract_probe_amplitude(
 
 def _extract_probe_matrix(
     df: pd.DataFrame,
-    row: pd.Series
-) -> tuple[Optional[np.ndarray], list[int]]:
+    row: pd.Series,
+    col_names: dict,
+) -> tuple[Optional[np.ndarray], list[str]]:
     """
     Extract probe signals as a 2D matrix where possible.
-    
+
+    Args:
+        col_names: {probe_num: pos_str} e.g. {1: "9373/170", 2: "12545", ...}
+
     Returns:
-        (matrix, valid_probe_numbers) or (None, []) if extraction fails
+        (matrix, valid_pos_list) or (None, []) if extraction fails
         Matrix shape: (n_samples, n_valid_probes)
     """
-    # Find which probes have same start/end indices
     probe_ranges = {}
-    for i in range(1, 5):
-        start = row.get(f"Computed Probe {i} start")
-        end = row.get(f"Computed Probe {i} end")
-        
+    for pos in col_names.values():
+        start = row.get(f"Computed Probe {pos} start")
+        end = row.get(f"Computed Probe {pos} end")
+
         if pd.notna(start) and pd.notna(end):
             try:
                 s_idx = max(0, int(start))
                 e_idx = min(len(df) - 1, int(end))
                 if s_idx < e_idx:
-                    probe_ranges[i] = (s_idx, e_idx)
+                    probe_ranges[pos] = (s_idx, e_idx)
             except (TypeError, ValueError):
                 pass
-    
+
     if not probe_ranges:
         return None, []
-    
-    # Check if all valid probes have the same range
+
     ranges = list(probe_ranges.values())
     if len(set(ranges)) == 1:
-        # All probes have identical range - can extract as matrix!
         s_idx, e_idx = ranges[0]
-        valid_probes = sorted(probe_ranges.keys())
-        
-        cols = [f"eta_{i}" for i in valid_probes]
+        valid_pos = sorted(probe_ranges.keys())
+        cols = [f"eta_{pos}" for pos in valid_pos]
         if all(col in df.columns for col in cols):
             matrix = df[cols].iloc[s_idx:e_idx+1].values
-            return matrix, valid_probes
-    
-    # Fall back to individual extraction
+            return matrix, valid_pos
+
     return None, []
 
 
@@ -132,38 +131,33 @@ def _compute_matrix_amplitudes(matrix: np.ndarray) -> list[float]:
 
 def compute_amplitudes(
     processed_dfs: dict,
-    meta_row: pd.DataFrame
+    meta_row: pd.DataFrame,
+    cfg,
 ) -> pd.DataFrame:
-    """
-    Use matrix approach when possible, fall back otherwise.
-    
-    """
+    """Use matrix approach when possible, fall back otherwise."""
+    col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
     records = []
-    
+
     for path, df in processed_dfs.items():
         subset_meta = meta_row[meta_row["path"] == path]
-        
+
         for _, row in subset_meta.iterrows():
             row_out = {"path": path}
-            
-            # Try fast matrix extraction first
-            probe_data, valid_probes = _extract_probe_matrix(df, row)
-            
-            if probe_data is not None and len(valid_probes) == 4:
-                # Fast path: all 4 probes with same range
+
+            probe_data, valid_pos = _extract_probe_matrix(df, row, col_names)
+
+            if probe_data is not None and len(valid_pos) == 4:
                 amplitudes = _compute_matrix_amplitudes(probe_data)
-                for probe_idx, amp in zip(valid_probes, amplitudes):
-                    row_out[f"Probe {probe_idx} Amplitude"] = amp
-            
+                for pos, amp in zip(valid_pos, amplitudes):
+                    row_out[f"Probe {pos} Amplitude"] = amp
             else:
-                # Slow path: extract individually (handles mismatched ranges)
-                for i in range(1, 5):
-                    amplitude = _extract_probe_amplitude(df, row, i)
+                for pos in col_names.values():
+                    amplitude = _extract_probe_amplitude(df, row, pos)
                     if amplitude is not None:
-                        row_out[f"Probe {i} Amplitude"] = amplitude
-            
+                        row_out[f"Probe {pos} Amplitude"] = amplitude
+
             records.append(row_out)
-    
+
     return pd.DataFrame.from_records(records)
 
 # %% - PSD og FFT
@@ -220,34 +214,31 @@ def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.
     return amplitude, frequency
 
 
-def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs, debug:bool=False) -> Tuple[dict, pd.DataFrame]:
+def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg, fs, debug: bool = False) -> Tuple[dict, pd.DataFrame]:
     """Compute Power Spectral Density for each probe."""
+    col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
     psd_dict = {}
     amplitude_records = []
     for path, df in processed_dfs.items():
-        subset_meta = meta_row[meta_row["path"] == path ]
+        subset_meta = meta_row[meta_row["path"] == path]
         for _, row in subset_meta.iterrows():
             row_out = {"path": path}
-            
+
             freq = row["WaveFrequencyInput [Hz]"]
-            # Validate frequency
             if pd.isna(freq) or freq <= 0:
                 if debug:
                     print(f"Advarsel: Ingen Input frequency {freq} for {path}, skipping")
                 continue
-            
+
             series_list = []
             npersegment = int(MEASUREMENT.SAMPLING_RATE / SIGNAL.PSD_FREQUENCY_RESOLUTION)
-            for i in range(1, 5):
-                signal = _extract_probe_signal(df, row, i)
+            for i, pos in col_names.items():
+                signal = _extract_probe_signal(df, row, pos)
                 if signal is None or len(signal) < 2:
-                    print('for this probe - no signal')
-                    continue #skip very short signals
-                nperseg = max(2, min(npersegment, len(signal))) #ensure 2 for spectrum
-                overlap_fraction = SIGNAL.PSD_OVERLAP_FRACTION
-                noverlap = int(overlap_fraction * nperseg) if nperseg > 1 else 0
-                noverlap = min(noverlap, nperseg - 1)  # Ensure < nperseg
-                   
+                    continue
+                nperseg = max(2, min(npersegment, len(signal)))
+                noverlap = min(int(SIGNAL.PSD_OVERLAP_FRACTION * nperseg), nperseg - 1)
+
                 f, pxx = welch(
                     signal, fs=fs,
                     window='hann',
@@ -256,12 +247,12 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
                     detrend='constant',
                     scaling='density'
                 )
-                series_list.append(pd.Series(pxx, index=f, name = f"Pxx {i}"))
-                # - - - amplitude
+                series_list.append(pd.Series(pxx, index=f, name=f"Pxx {pos}"))
                 amplitude = compute_amplitudes_from_psd(f, pxx, freq)
                 if debug:
-                    print("amplitden inni PSD loopen er ", amplitude)
-                row_out[f"Probe {i} Amplitude (PSD)"] = amplitude
+                    print(f"Probe {pos} PSD amplitude: {amplitude}")
+                row_out[f"Probe {pos} Amplitude (PSD)"] = amplitude
+
             if series_list:
                 psd_df = pd.concat(series_list, axis=1).sort_index()
                 psd_df.index.name = "Frequencies"
@@ -272,81 +263,55 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs,
         print(f"=== PSD Complete: {len(amplitude_records)} records ===\n")
     return psd_dict, pd.DataFrame(amplitude_records)
 
-def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, fs, debug:bool=False) -> Tuple[dict, pd.DataFrame]:
-    """Compute FFT for each probe and calculate amplitude, frequency, and period"""
+def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg, fs, debug: bool = False) -> Tuple[dict, pd.DataFrame]:
+    """Compute FFT for each probe and calculate amplitude, frequency, and period."""
+    col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
     fft_dict = {}
     amplitude_records = []
-    
+
     for path, df in processed_dfs.items():
         subset_meta = meta_row[meta_row["path"] == path]
-        
+
         for _, row in subset_meta.iterrows():
             row_out = {"path": path}
-            
+
             freq = row["WaveFrequencyInput [Hz]"]
-            # Validate frequency
             if pd.isna(freq) or freq <= 0:
                 if debug:
                     print(f"advarsel: No input frequency {freq} for {path}, skipping")
                 continue
-            
-            fft_df = None
+
             series_list = []
-            
-            for i in range(1, 5):
-                if (signal := _extract_probe_signal(df, row, i)) is not None:
-                    N = len(signal)
-                    
-                    # Compute FFT (returns negative and positive frequencies)
-                    fft_vals = np.fft.fft(signal)
-                    fft_freqs = np.fft.fftfreq(N, d=1/fs)
-                    
-                    # ═══════════════════════════════════════════════
-                    # CORRECTED AMPLITUDE CALCULATION
-                    # ═══════════════════════════════════════════════
-                    # For full FFT (not rfft), the amplitude is just:
-                    # A = |FFT[k]| / N  (no factor of 2 needed!)
-                    # The factor of 2 is only for rfft where negative freqs are implicit
-                    
-                    amplitudes = np.abs(fft_vals) / N
-                    
-                    # DC component (0 Hz) is special - it's real and not doubled
-                    # Actually, no special treatment needed for full FFT!
-                    
-                    # Store both amplitude and complex coefficients
-                    series_list.append(pd.Series(amplitudes, index=fft_freqs, name=f"FFT {i}"))
-                    series_list.append(pd.Series(fft_vals, index=fft_freqs, name=f"FFT {i} complex"))
-                    
-                    # ═══════════════════════════════════════════════
-                    # For peak finding, use POSITIVE frequencies only
-                    # ═══════════════════════════════════════════════
-                    pos_mask = fft_freqs > 0  # Exclude 0 Hz
-                    
-                    # But for positive frequencies, we DO need factor of 2
-                    # because negative mirror contributes equally
-                    amplitudes_pos = 2 * np.abs(fft_vals[pos_mask]) / N
-                    
-                    # Extract amplitude at target frequency
-                    amplitude, frequency = compute_amplitudes_from_fft(
-                        fft_freqs[pos_mask],
-                        amplitudes_pos,
-                        freq
-                    )
-                    
-                    # Store all FFT-derived metrics
-                    row_out[f"Probe {i} Amplitude (FFT)"] = amplitude
-                    row_out[f"Probe {i} Frequency (FFT)"] = frequency
-                    row_out[f"Probe {i} WavePeriod (FFT)"] = 1.0 / frequency if frequency > 0 else np.nan
-                    
-                    if debug:
-                        print(f"  Probe {i}: Amplitude = {amplitude:.3f} mm at {frequency:.3f} Hz (T = {1.0/frequency:.3f} s)")
-            
+
+            for i, pos in col_names.items():
+                signal = _extract_probe_signal(df, row, pos)
+                if signal is None:
+                    continue
+                N = len(signal)
+
+                fft_vals = np.fft.fft(signal)
+                fft_freqs = np.fft.fftfreq(N, d=1/fs)
+                amplitudes = np.abs(fft_vals) / N
+
+                series_list.append(pd.Series(amplitudes, index=fft_freqs, name=f"FFT {pos}"))
+                series_list.append(pd.Series(fft_vals, index=fft_freqs, name=f"FFT {pos} complex"))
+
+                pos_mask = fft_freqs > 0
+                amplitudes_pos = 2 * np.abs(fft_vals[pos_mask]) / N
+                amplitude, frequency = compute_amplitudes_from_fft(fft_freqs[pos_mask], amplitudes_pos, freq)
+
+                row_out[f"Probe {pos} Amplitude (FFT)"] = amplitude
+                row_out[f"Probe {pos} Frequency (FFT)"] = frequency
+                row_out[f"Probe {pos} WavePeriod (FFT)"] = 1.0 / frequency if frequency > 0 else np.nan
+
+                if debug:
+                    print(f"  Probe {pos}: Amplitude = {amplitude:.3f} mm at {frequency:.3f} Hz (T = {1.0/frequency:.3f} s)")
+
             if series_list:
-                fft_df = pd.concat(series_list, axis=1)
-                fft_df = fft_df.sort_index()
+                fft_df = pd.concat(series_list, axis=1).sort_index()
                 fft_df.index.name = "Frequencies"
                 fft_dict[path] = fft_df
-                
+
             amplitude_records.append(row_out)
     
     if debug:
