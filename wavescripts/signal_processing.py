@@ -249,8 +249,6 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg
                 )
                 series_list.append(pd.Series(pxx, index=f, name=f"Pxx {pos}"))
                 amplitude = compute_amplitudes_from_psd(f, pxx, freq)
-                if debug:
-                    print(f"Probe {pos} PSD amplitude: {amplitude}")
                 row_out[f"Probe {pos} Amplitude (PSD)"] = amplitude
 
             if series_list:
@@ -303,9 +301,6 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg
                 row_out[f"Probe {pos} Amplitude (FFT)"] = amplitude
                 row_out[f"Probe {pos} Frequency (FFT)"] = frequency
                 row_out[f"Probe {pos} WavePeriod (FFT)"] = 1.0 / frequency if frequency > 0 else np.nan
-
-                if debug:
-                    print(f"  Probe {pos}: Amplitude = {amplitude:.3f} mm at {frequency:.3f} Hz (T = {1.0/frequency:.3f} s)")
 
             if series_list:
                 fft_df = pd.concat(series_list, axis=1).sort_index()

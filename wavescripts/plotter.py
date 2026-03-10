@@ -658,7 +658,7 @@ def plot_frequency_spectrum(
     save_plot = plotting.get("save_plot", False)
 
     facet_by = plotting.get("facet_by", None)
-    probes = plotting.get("probes", [1])
+    probes = plotting.get("probes", [])
     if not isinstance(probes, (list, tuple)):
         probes = [probes]
     n_peaks = plotting.get("peaks", None)
@@ -702,6 +702,13 @@ def plot_frequency_spectrum(
     )
     axes = axes.flatten()
 
+    print(f"[plot_frequency_spectrum] meta_df rows={len(meta_df)}, fft_dict size={len(fft_dict)}, facet_by={facet_by!r}, probes={probes}")
+    if len(meta_df) > 0:
+        sample_path = meta_df["path"].iloc[0]
+        in_dict = sample_path in fft_dict
+        print(f"  sample path in fft_dict: {in_dict} — {sample_path}")
+        if in_dict:
+            print(f"  fft_df columns: {list(fft_dict[sample_path].columns)}")
     for facet_idx, (group, facet_label) in enumerate(zip(facet_groups, facet_labels)):
         ax = axes[facet_idx]
 
@@ -712,6 +719,7 @@ def plot_frequency_spectrum(
             if facet_by == "panel"
             else meta_df
         )
+        print(f"  facet [{facet_label}]: subset rows={len(subset)}, paths_in_fft={sum(p in fft_dict for p in subset['path'])}")
 
         for _, row in subset.iterrows():
             path = row["path"]
@@ -929,7 +937,7 @@ def plot_reconstructed(
     show_plot = plotting.get("show_plot", True)
     save_plot = plotting.get("save_plot", False)
 
-    probes = plotting.get("probes", [1])
+    probes = plotting.get("probes", [])
     probes = [probes] if not isinstance(probes, (list, tuple)) else probes
     facet_by = plotting.get("facet_by", None)
     show_grid = plotting.get("grid", True)
@@ -966,6 +974,9 @@ def plot_reconstructed(
     lstyle = {"no": "-", "full": "--", "reverse": "-."}.get(panelcond, "-")
 
     n_subplots = len(probes) if facet_by == "probe" else 1
+    if n_subplots == 0:
+        print("plot_reconstructed: no probes selected, nothing to plot")
+        return None, None
     figsize = plotting.get("figsize") or (16, 5 * n_subplots if n_subplots > 1 else 7)
     fig, axes = plt.subplots(n_subplots, 1, figsize=figsize, squeeze=False, dpi=120)
     axes = axes.flatten()
@@ -1149,12 +1160,15 @@ def gather_ramp_data(
             continue
         meta_row = meta_row.iloc[0]
 
-        for i in range(1, MEASUREMENT.NUM_PROBES + 1):
-            col_raw = f"Probe {i}"
-            col_eta = f"eta_{i}"
-            col_ma = f"Probe {i}_ma"
-            col_start = PC.START.format(i=i)
-            col_end = PC.END.format(i=i)
+        # Derive position strings from eta_ columns present in this df
+        positions = [c[len("eta_"):] for c in df.columns if c.startswith("eta_")]
+
+        for pos in positions:
+            col_raw = f"Probe {pos}"
+            col_eta = f"eta_{pos}"
+            col_ma = f"Probe {pos}_ma"
+            col_start = PC.START.format(i=pos)
+            col_end = PC.END.format(i=pos)
 
             if col_raw not in df.columns or col_eta not in df.columns:
                 continue
@@ -1191,7 +1205,7 @@ def gather_ramp_data(
                 {
                     GC.PATH: path,
                     "experiment": Path(path).stem,
-                    "probe": i,
+                    "probe": pos,
                     "data_col": col_raw,
                     GC.WIND_CONDITION: meta_row.get(GC.WIND_CONDITION, "unknown"),
                     GC.PANEL_CONDITION: meta_row.get(GC.PANEL_CONDITION, "unknown"),
@@ -1205,7 +1219,7 @@ def gather_ramp_data(
                     "raw": raw,
                     "signal": signal,
                     "ma": ma,
-                    "baseline_mean": meta_row.get(PC.STILLWATER.format(i=i), 0.0),
+                    "baseline_mean": meta_row.get(PC.STILLWATER.format(i=pos), 0.0),
                     "baseline_std": base_std,
                     "threshold": threshold,
                     "first_motion_idx": first_motion,
