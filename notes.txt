@@ -1,1 +1,11 @@
 note taking in zd?
+
+random selected samples of files with too early of a find_wave_range_ window chosen: fullpanel-nowind-amp0100-freq1500-per40-depth580-mstop30-run1  →  Probe 8804/250
+
+fullpanel-fullwind-amp0200-freq1900-per40-depth580-mstop30-run1  →  Probe 8804/250
+
+fullpanel-fullwind-amp0100-freq1700-per40-depth580-mstop30-run1  →  Probe 8804/250
+
+fullpanel-fullwind-amp0200-freq1800-per40-depth580-mstop30-run1  →  Probe 8804/250
+
+i think i see a pattern here. 8804 is chosen too early for the hig freq waves

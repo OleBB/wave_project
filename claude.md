@@ -3,22 +3,22 @@
 ## 0. Current investigation (pick up here next session)
 
 **Problem**: `explore_damping_vs_freq` shows ~3x wave growth for `nopanel, fullwind, 0.65 Hz, 0.1 V`.
-Physics says no-panel + full-wind should show growth, but 3x seems too high. Investigating whether it's real or a measurement artifact. 
+Physics says no-panel + full-wind should show growth, but 3x seems too high. Investigating whether it's real or a measurement artifact.
 
 **What we know so far** (from diagnostic output):
 
 The run `nopanel-fullwind-amp0100-freq0650-...-20251112`:
 - `in_position = "9373/250"` → amplitude **13.24 mm**
-- `out_position = "12545/170"` → amplitude ? ← supposedly gives the 3x ratio visually in plot. 
+- `out_position = "12545/170"` → amplitude gives the 3x ratio visually in plot
 - But `"12545/340"` (same longitudinal distance, other lateral) → **21.33 mm** (only 1.6x)
 
-**The core anomaly**: two probes at the same distance from paddle (12545 mm) disagree by a factor of ~2, seemingly. Either:
+**The core anomaly**: two probes at the same distance from paddle (12545 mm) disagree by a factor of ~2. Either:
 - The `out_position` assignment (`12545/170`) is wrong — maybe `12545/340` or an average should be used
 - There is real lateral non-uniformity from wind
 
-**Nowave-fullwind baseline unavailable**: the `nopanel-fullwind-nowave` Nov 12 run has all-NaN plain amplitudes in `combined_meta`. Without this baseline we cannot separate wind-generated background from paddle-wave growth. Needs investigation — is the run empty, or did amplitude computation fail for it
+**Nowave-fullwind baseline**: the `nopanel-fullwind-nowave` Nov 12 run previously had all-NaN plain amplitudes. **Fixed** — was caused by `np.percentile` propagating NaN in the matrix path. Now uses `np.nanpercentile`. Re-run `main.py` to confirm.
 
-**Physics note**: wind waves exist only above ~2 Hz — no wind-wave energy at 0.65 Hz in the PSD sense. BUT wind waves (3–5 Hz, broad spectrum, erratic) ride on top of the paddle wave in the time domain. The `"Probe {pos} Amplitude"` values are **time-domain percentile amplitudes** — they include ALL frequency content, not just 0.65 Hz. ... Most importantly we need to check if averaging over a short timewindow gives a very wrong differing amplitudes. 
+**Physics note**: wind waves exist only above ~2 Hz — no wind-wave energy at 0.65 Hz in the PSD sense. BUT wind waves (3–5 Hz, broad spectrum, erratic) ride on top of the paddle wave in the time domain. The `"Probe {pos} Amplitude"` values are **time-domain percentile amplitudes** — they include ALL frequency content, not just 0.65 Hz.
 
 **Better metric for this investigation**: `"Probe {pos} Amplitude (FFT)"` at exactly 0.65 Hz isolates just the paddle wave and is immune to wind-wave contamination. Compare the FFT amplitudes (not time-domain) at `12545/170` vs `12545/340` across runs to test whether the asymmetry survives frequency-isolation.
 
@@ -32,9 +32,9 @@ The run `nopanel-fullwind-amp0100-freq0650-...-20251112`:
 1. Re-run the ratio check using `"Probe 12545/170 Amplitude (FFT)"` vs `"Probe 12545/340 Amplitude (FFT)"` — if asymmetry disappears → wind-wave noise in time-domain is the cause
 2. If FFT asymmetry persists → geometry/reflection or wind skew — check whether it appears in no-wind runs too
 3. Decide whether `out_position` should be `12545/170`, `12545/340`, or averaged — update `nov_normalt_oppsett` config if needed
-4. learn from def ensure_stillwater in processor.py and sample 1-2 seconds of wind data (before wave action) from wave-runs, and ofc use the whole data set for no-wave runs. (no-wave logic is odd, but described by ensure_stillwater)
+4. Learn from `ensure_stillwater` in `processor.py` and sample 1-2 seconds of wind data (before wave action) from wave-runs, and use whole dataset for no-wave runs.
 
-**Diagnostic code** already written, just run these cells in `main_explore_inline.py` wind-only section or a scratch cell:
+**Diagnostic code** (run in `main_explore_inline.py`):
 ```python
 # Lateral asymmetry check
 _wave = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy()
@@ -96,11 +96,11 @@ dependencies:
 
 ```python
 combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
-    *PROCESSED_DIRS, load_processed=False   # default — fast path, ~17 s
+    *PROCESSED_DIRS, load_processed=False   # default — fast path, ~2 s
 )
 ```
 
-- `load_processed=False` (default): skips 75 MB `processed_dfs.parquet`, loads meta + FFT/PSD only
+- `load_processed=False` (default): skips 75 MB `processed_dfs.parquet`, loads meta + FFT/PSD only (~2 s)
 - `load_processed=True`: also loads full time-series `processed_dfs` (~+20 s)
 - `processed_dfs` is lazy-loaded in `main_explore_inline.py` just before the wind-only section:
   ```python
@@ -108,6 +108,7 @@ combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analys
       processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
   ```
 - `waveprocessed/` is **gitignored** — all caches are local, regenerated by `main.py`
+- The 3 dataset directories are loaded **in parallel** via `ThreadPoolExecutor` (I/O-bound)
 
 ### What each variable contains
 
@@ -120,6 +121,16 @@ combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analys
 
 - Complex columns split into `col_real` / `col_imag` float32 pairs on save, recombined to complex128 on load
 - All floats downcast to float32 to halve file size
+- On load: bulk-cast all float32 → float64 once, recombine complex once, then split by path via `groupby` (not per-path boolean masking)
+
+### `repl_out` — tee stdout to file
+
+```python
+with repl_out("filename.txt"):
+    print(...)   # goes to terminal AND repl/filename.txt
+```
+
+Defined in `main_explore_inline.py`. Output files live in `repl/` (gitignored).
 
 ---
 
@@ -174,6 +185,10 @@ Every probe position is always written as `"longitudinal/lateral"` — even for 
 
 **Rule**: Any new string-typed column whose value may contain `/`, letters, or other non-numeric characters **must** be added to `NON_FLOAT_COLUMNS`. Forgetting this causes silent NaN corruption that is very hard to debug.
 
+### `np.percentile` propagates NaN in matrix amplitude computation
+
+`_compute_matrix_amplitudes` in `signal_processing.py` builds a matrix of probe samples and calls `np.nanpercentile`. If `np.percentile` (without `nan`) is used instead, **any probe with even 1 NaN sample in its range gets NaN amplitude** — including all nowave runs (which use the full signal range). Fixed by changing to `np.nanpercentile`.
+
 ### Stale `OUT/IN (FFT)` in meta.json
 
 `meta.json` may contain `OUT/IN (FFT)` values computed with an old wide FFT window (`0.5 Hz`, `argmax`) that picks up wind-wave peaks instead of paddle-wave peaks. Do not trust cached `OUT/IN (FFT)`.
@@ -193,9 +208,33 @@ Always use `"Probe {pos} Amplitude"` (no suffix) for OUT/IN ratio computation.
 
 `compute_amplitudes_from_fft` uses `window=0.1` Hz and `argmin(abs(masked_freqs - target_freq))` (nearest bin). Old code used `window=0.5` Hz + `argmax`, which picked up wind-wave peaks for low-amplitude runs.
 
+### `_SNARVEI` probe name matching
+
+`find_wave_range` in `wave_detection.py` uses `_PROBE_GROUP` dict to map all lateral variants of a probe to a distance group (e.g. `"Probe 12545/170"` → `"12545"`). If a new probe position is added, it **must** be added to `_PROBE_GROUP` — otherwise range detection falls back to `2 * samples_per_period` (stillwater phase), giving near-zero amplitudes and OUT/IN ≈ 0.1.
+
 ---
 
-## 7. Probe configurations over time
+## 7. Wave range detection (`_SNARVEI_CALIB`)
+
+Defined in `wavescripts/wave_detection.py`. Multi-point linear interpolation of stable-wave start sample vs frequency, calibrated by eyeballing `RampDetectionBrowser`.
+
+```python
+_SNARVEI_CALIB = {
+    "8804":  [(0.65, 5104), (1.30, 4700)],
+    "9373":  [(0.65, 5154), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
+    "12545": [(0.65, 5654), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
+}
+```
+
+- Format: `(freq_hz, start_sample)` sorted by frequency; samples at 250 Hz (ms / 4)
+- Interpolates linearly between points; extrapolates linearly beyond the range
+- `_PROBE_GROUP` maps every probe column name variant to a distance group key
+- To add a calibration point: eyeball start in `RampDetectionBrowser`, convert ms → samples (/4), add tuple
+- `8804` group only has 2 points (0.65 and 1.30 Hz) — extrapolates for other frequencies
+
+---
+
+## 8. Probe configurations over time
 
 Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 
@@ -210,7 +249,7 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 
 ---
 
-## 8. Run types
+## 9. Run types
 
 - **Wave runs**: `WaveFrequencyInput [Hz]` > 0 — appear in `fft_dict` / `psd_dict`
 - **Nowave runs**: `WaveFrequencyInput [Hz]` is NaN or `"nowave"` in filename
@@ -220,7 +259,7 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 
 ---
 
-## 9. Core modules (`wavescripts/`)
+## 10. Core modules (`wavescripts/`)
 
 - **`improved_data_loader.py`**: `ProbeConfiguration`, `PROBE_CONFIGS`, `load_analysis_data`, `load_processed_dfs`, `save_spectra_dicts`, `load_spectra_dicts`, `apply_dtypes`, `NON_FLOAT_COLUMNS`
 - **`processor.py`**: `process_selected_data` — full pipeline called by `main.py`
@@ -233,7 +272,7 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 
 ---
 
-## 10. Damping / OUT/IN analysis
+## 11. Damping / OUT/IN analysis
 
 `explore_damping_vs_freq` (in `plot_quicklook.py`) uses `damping_grouper` from `filters.py`.
 
@@ -247,7 +286,7 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 
 ---
 
-## 11. Wind-only analysis
+## 12. Wind-only analysis
 
 In `main_explore_inline.py` (lazy-loaded section):
 
@@ -259,7 +298,7 @@ In `main_explore_inline.py` (lazy-loaded section):
 
 ---
 
-## 12. Debugging tips
+## 13. Debugging tips
 
 ### Inspect a single filtered run
 
@@ -288,7 +327,7 @@ importlib.reload(f)
 
 ---
 
-## 13. Git workflow
+## 14. Git workflow
 
 - Never commit to `main` directly
 - Branch: `git checkout -b exp/<what-you-try>`
@@ -298,7 +337,7 @@ importlib.reload(f)
 
 ---
 
-## 14. Testing (pytest)
+## 15. Testing (pytest)
 
 ```bash
 pytest -q                          # all tests
@@ -311,7 +350,7 @@ When changing analysis logic, propose tests using small synthetic data that asse
 
 ---
 
-## 15. Rules for this assistant
+## 16. Rules for this assistant
 
 - Never reintroduce probe numbers (1–4) in user-facing code
 - Always use `dist/lateral` position strings — never plain-number names

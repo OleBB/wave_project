@@ -616,25 +616,25 @@ def load_spectra_dicts(
             result[key] = {}
             continue
         df = pd.read_parquet(p)
+        # Bulk-cast all float32 → float64 once (avoids per-column per-path loop)
+        f32_cols = [c for c in df.columns if df[c].dtype == "float32"]
+        if f32_cols:
+            df[f32_cols] = df[f32_cols].astype("float64")
+        # Recombine real/imag → complex128 once on the full frame
+        drop_cols = []
+        real_cols = [c for c in df.columns if c.endswith("_real")]
+        for real_col in real_cols:
+            base = real_col[:-5]
+            imag_col = base + "_imag"
+            if imag_col in df.columns:
+                df[base] = df[real_col].values + 1j * df[imag_col].values
+                drop_cols += [real_col, imag_col]
+        if drop_cols:
+            df = df.drop(columns=drop_cols)
+        # Split by path via groupby (O(N log N) once vs O(N×K) repeated masking)
         d = {}
-        for path in df["_path"].unique():
-            sub = (
-                df[df["_path"] == path]
-                .drop(columns=["_path"])
-                .set_index("Frequencies")
-            )
-            # Upcast float32 → float64 and recombine real/imag into complex128
-            for col in list(sub.columns):
-                if sub[col].dtype == "float32":
-                    sub[col] = sub[col].astype("float64")
-            real_cols = [c for c in sub.columns if c.endswith("_real")]
-            for real_col in real_cols:
-                base = real_col[:-5]          # strip "_real"
-                imag_col = base + "_imag"
-                if imag_col in sub.columns:
-                    sub[base] = sub[real_col].values + 1j * sub[imag_col].values
-                    sub = sub.drop(columns=[real_col, imag_col])
-            d[path] = sub
+        for path, sub in df.groupby("_path", sort=False):
+            d[path] = sub.drop(columns=["_path"]).set_index("Frequencies")
         result[key] = d
     return result["fft"], result["psd"]
 
@@ -1061,40 +1061,40 @@ def load_analysis_data(*processed_dirs: Path, **kwargs):
     if kwargs:
         raise TypeError(f"Unexpected keyword arguments: {list(kwargs)}")
 
-    all_meta, all_processed, all_fft, all_psd = [], {}, {}, {}
+    from concurrent.futures import ThreadPoolExecutor
 
-    for processed_dir in processed_dirs:
+    def _load_one(processed_dir: Path):
         processed_dir = Path(processed_dir)
         meta = load_meta_json(processed_dir)
-        all_meta.append(meta)
-
-        if load_processed:
-            proc_dfs = load_processed_dfs(processed_dir)
-            all_processed.update(proc_dfs)
-        else:
-            proc_dfs = {}  # not needed for FFT/PSD cache path
-
+        proc_dfs = load_processed_dfs(processed_dir) if load_processed else {}
         if meta.empty:
-            continue
-
-        # Load FFT/PSD from cache if available; recompute otherwise
+            return meta, proc_dfs, {}, {}
         cached_fft, cached_psd = load_spectra_dicts(processed_dir)
         if cached_fft and cached_psd:
             print(f"   Loaded {len(cached_fft)} FFT / {len(cached_psd)} PSD spectra from cache")
-            all_fft.update(cached_fft)
-            all_psd.update(cached_psd)
-        else:
-            print(f"   No spectra cache — recomputing FFT/PSD...")
-            cfg = get_configuration_for_date(meta["file_date"].dropna().iloc[0])
-            meta_wave = meta[
-                meta["WaveFrequencyInput [Hz]"].notna()
-                & (meta["WaveFrequencyInput [Hz]"] > 0)
-            ]
-            fs = MEASUREMENT.SAMPLING_RATE
-            fft_dict, _ = compute_fft_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
-            psd_dict, _ = compute_psd_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
-            all_fft.update(fft_dict)
-            all_psd.update(psd_dict)
+            return meta, proc_dfs, cached_fft, cached_psd
+        # Cache miss — needs compute (rare after first main.py run)
+        print(f"   No spectra cache — recomputing FFT/PSD...")
+        cfg = get_configuration_for_date(meta["file_date"].dropna().iloc[0])
+        meta_wave = meta[
+            meta["WaveFrequencyInput [Hz]"].notna()
+            & (meta["WaveFrequencyInput [Hz]"] > 0)
+        ]
+        fs = MEASUREMENT.SAMPLING_RATE
+        fft_dict, _ = compute_fft_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
+        psd_dict, _ = compute_psd_with_amplitudes(proc_dfs, meta_wave, cfg, fs=fs)
+        return meta, proc_dfs, fft_dict, psd_dict
+
+    # Load all directories in parallel (I/O-bound — threads help)
+    with ThreadPoolExecutor(max_workers=len(processed_dirs)) as pool:
+        results = list(pool.map(_load_one, processed_dirs))
+
+    all_meta, all_processed, all_fft, all_psd = [], {}, {}, {}
+    for meta, proc_dfs, fft_dict, psd_dict in results:
+        all_meta.append(meta)
+        all_processed.update(proc_dfs)
+        all_fft.update(fft_dict)
+        all_psd.update(psd_dict)
 
     combined_meta = pd.concat(all_meta, ignore_index=True) if all_meta else pd.DataFrame()
     print(f"load_analysis_data: {len(combined_meta)} rows, {len(all_fft)} FFT experiments")
