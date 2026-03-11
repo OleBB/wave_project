@@ -12,7 +12,7 @@ Set save_plot=True in each section when the figure is ready to export.
 
 Requires processed data in waveprocessed/. Run main.py first if missing or stale.
 """
-
+# %%
 import os
 from pathlib import Path
 
@@ -28,7 +28,7 @@ from wavescripts.filters import (
     filter_for_frequencyspectrum,
 )
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import WIND_COLOR_MAP
+from wavescripts.plot_utils import WIND_COLOR_MAP, apply_thesis_style, save_and_stub
 from wavescripts.plotter import (
     plot_all_probes,
     plot_damping_freq,
@@ -61,6 +61,13 @@ combined_meta, _, combined_fft_dict, combined_psd_dict = load_analysis_data(
 )
 processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
 
+# %%
+"""
+
+==== AMPLITUDE PLOT ====
+
+"""
+# %%
 # ── Figure: amplitude all probes ──────────────────────────────────────────────
 # TODO: set save_plot=True and configure save path when ready
 amplitudeplotvariables = {
@@ -99,8 +106,11 @@ amplitudeplotvariables = {
 # TODO
 # plot_swell_scatter(combined_meta, swellplotvariables)
 
+# ##
 """
-WAVE DETECTION
+
+===== WAVE DETECTION =====
+
 """
 
 # ── Figure: first wave arrival ────────────────────────────────────────────────
@@ -183,6 +193,7 @@ plt.tight_layout()
 # plt.savefig(figures_dir / "first_arrival_faceted.pdf", bbox_inches="tight")
 plt.show()
 
+# %% save
 # ── Plot B: all frequencies, single axes, parallel probes averaged ────────────
 WIND_LS = {"no": "-", "lowest": "--", "full": ":"}
 _plot_single = arrival_df[arrival_df["arrival_s"] > MIN_ARRIVAL_S].copy()
@@ -198,6 +209,7 @@ _agg = (
     .reset_index()
 )
 
+apply_thesis_style()
 fig, ax = plt.subplots(figsize=(9, 5))
 for (wind, freq), grp in _agg.groupby(["wind", "freq_hz"]):
     grp_s = grp.sort_values("dist_mm")
@@ -215,9 +227,18 @@ ax.set_title(
 )
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles[::-1], labels[::-1], fontsize=8, title="freq / wind")
-ax.grid(True, alpha=0.3)
 plt.tight_layout()
-# plt.savefig(figures_dir / "first_arrival_all_freq.pdf", bbox_inches="tight")
+
+_meta = {
+    "chapter":   "05",
+    "panel":     None,
+    "wind":      None,
+    "amplitude": None,
+    "frequency": None,
+    "probes":    PROBE_POSITIONS,
+    "script":    "main_save_figures.py::first_arrival",
+}
+save_and_stub(fig, _meta, "first_arrival")
 plt.show()
 
 print("main_save_figures: no figures saved yet (all sections are stubs).")
