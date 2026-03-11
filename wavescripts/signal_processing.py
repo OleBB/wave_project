@@ -122,8 +122,9 @@ def _compute_matrix_amplitudes(matrix: np.ndarray) -> list[float]:
         List of amplitudes (one per probe)
     """
     # Vectorized percentile calculation across axis=0 (for each column/probe)
-    upper = np.percentile(matrix, AMPLITUDE.UPPER_PERCENTILE, axis=0)
-    lower = np.percentile(matrix, AMPLITUDE.LOWER_PERCENTILE, axis=0)
+    # nanpercentile ignores NaN samples (common in nowave runs) instead of propagating them
+    upper = np.nanpercentile(matrix, AMPLITUDE.UPPER_PERCENTILE, axis=0)
+    lower = np.nanpercentile(matrix, AMPLITUDE.LOWER_PERCENTILE, axis=0)
     
     amplitudes = (upper - lower) / AMPLITUDE.AMPLITUDE_DIVISOR
     

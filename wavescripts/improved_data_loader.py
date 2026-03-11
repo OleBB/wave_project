@@ -102,12 +102,12 @@ PROBE_CONFIGS = [
         lateral_mm={
             1: 250.0,  # ukjent, antar senter
             2: 250.0,  # senter av tanken
-            3:  170.0,  # parallell, nær referansevegg
+            3:  170.0,  # parallell, nær referansevegg d
             4:  340.0,  # parallell, 340mm frå referansevegg
         },
         in_probe=2,
         out_probe=3,
-        notes="Utprøvet configuration used until Nov 9, 2025",
+        notes="probe 3 is a few mm infron of 4. (not perfect parallel)",
     ),
     ProbeConfiguration(
         name="nov_normalt_oppsett",
@@ -127,7 +127,7 @@ PROBE_CONFIGS = [
         },
         in_probe=2,
         out_probe=3,
-        notes="Configuration after Nov 14 adjustment",
+        notes="probe 1 moved forward. Probe 3 still a bit ahead of 4, (not perfect parallel",
     ),
     ProbeConfiguration(
         name="march2026_rearranging",
