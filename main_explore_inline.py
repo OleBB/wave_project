@@ -33,8 +33,7 @@ from wavescripts.filters import (
     filter_for_damping,
     filter_for_frequencyspectrum,
 )
-end0 = time.perf_counter()
-print(f"imports  {end0 - start0:.4f} s")
+
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
 from wavescripts.plot_quicklook import (
     explore_damping_vs_amp,
@@ -50,6 +49,8 @@ from wavescripts.plotter import (
     plot_reconstructed,
     plot_swell_scatter,
 )
+end0 = time.perf_counter()
+print(f"imports  {end0 - start0:.4f} s")
 
 
 # %%
@@ -94,7 +95,7 @@ amplitudeplotvariables = {
         "chooseFirstUnique": False,
     },
     "filters": {
-        "WaveAmplitudeInput [Volt]": 0.1,
+        "WaveAmplitudeInput [Volt]": None,
         "WaveFrequencyInput [Hz]":   0.65,
         "WavePeriodInput":           None,
         "WindCondition":             ["full"],
@@ -417,3 +418,43 @@ _stillwater = combined_meta[
 
 print(f"\n=== Stillwater (no wind, no wave): {len(_stillwater)} ===")
 print(_stillwater[["path"] + amp_cols].to_string())
+
+# %%
+_wave = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy()
+_wave["ratio_170_vs_340"] = _wave["Probe 12545/170 Amplitude"] / _wave["Probe 12545/340 Amplitude"]
+print(_wave[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WindCondition",
+             "PanelCondition", "Probe 12545/170 Amplitude", "Probe 12545/340 Amplitude",
+             "ratio_170_vs_340"]].sort_values("ratio_170_vs_340", ascending=False).to_string())
+
+# %% ── diagnose: nov12 nowave+fullwind run ────────────────────────────────────
+_nowave_full = combined_meta[
+    combined_meta["WaveFrequencyInput [Hz]"].isna() &
+    (combined_meta["WindCondition"] == "full")
+].copy()
+
+print(f"Nowave+fullwind rows: {len(_nowave_full)}")
+
+# Check the computed range columns
+range_cols = [c for c in _nowave_full.columns if "Computed Probe" in c]
+amp_cols   = [c for c in _nowave_full.columns if "Amplitude" in c and "FFT" not in c and "PSD" not in c]
+print("\nRange columns:")
+print(_nowave_full[["path"] + range_cols].T.to_string())
+print("\nAmplitude columns:")
+print(_nowave_full[["path"] + amp_cols].T.to_string())
+
+# %% ── diagnose: inspect actual time-series data ──────────────────────────────
+if not processed_dfs:
+    processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+
+for _, row in _nowave_full.iterrows():
+    p = row["path"]
+    df = processed_dfs.get(p)
+    if df is None:
+        print(f"NOT IN processed_dfs: {p}")
+    else:
+        eta_cols = [c for c in df.columns if c.startswith("eta_")]
+        print(f"\n{Path(p).name}")
+        print(f"  Rows: {len(df)}, Duration: {len(df)/250:.1f} s")
+        print(f"  eta cols: {eta_cols}")
+        if eta_cols:
+            print(df[eta_cols].describe().to_string())

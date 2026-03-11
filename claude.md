@@ -3,23 +3,22 @@
 ## 0. Current investigation (pick up here next session)
 
 **Problem**: `explore_damping_vs_freq` shows ~3x wave growth for `nopanel, fullwind, 0.65 Hz, 0.1 V`.
-Physics says no-panel + full-wind should show growth, but 3x seems too high. Investigating whether it's real or a measurement artifact.
+Physics says no-panel + full-wind should show growth, but 3x seems too high. Investigating whether it's real or a measurement artifact. 
 
 **What we know so far** (from diagnostic output):
 
 The run `nopanel-fullwind-amp0100-freq0650-...-20251112`:
 - `in_position = "9373/250"` → amplitude **13.24 mm**
-- `out_position = "12545/170"` → amplitude **40.98 mm** ← gives the 3x ratio
+- `out_position = "12545/170"` → amplitude ? ← supposedly gives the 3x ratio visually in plot. 
 - But `"12545/340"` (same longitudinal distance, other lateral) → **21.33 mm** (only 1.6x)
 
-**The core anomaly**: two probes at the same distance from paddle (12545 mm) disagree by a factor of ~2. Either:
-- `12545/170` is in a zone of enhanced wave activity (wall reflection? tank geometry?)
+**The core anomaly**: two probes at the same distance from paddle (12545 mm) disagree by a factor of ~2, seemingly. Either:
 - The `out_position` assignment (`12545/170`) is wrong — maybe `12545/340` or an average should be used
 - There is real lateral non-uniformity from wind
 
-**Nowave-fullwind baseline unavailable**: the `nopanel-fullwind-nowave` Nov 12 run has all-NaN plain amplitudes in `combined_meta`. Without this baseline we cannot separate wind-generated background from paddle-wave growth. Needs investigation — is the run empty, or did amplitude computation fail for it?
+**Nowave-fullwind baseline unavailable**: the `nopanel-fullwind-nowave` Nov 12 run has all-NaN plain amplitudes in `combined_meta`. Without this baseline we cannot separate wind-generated background from paddle-wave growth. Needs investigation — is the run empty, or did amplitude computation fail for it
 
-**Physics note**: wind waves exist only above ~1 Hz — no wind-wave energy at 0.65 Hz in the PSD sense. BUT wind waves (3–5 Hz, broad spectrum, erratic) ride on top of the paddle wave in the time domain. The `"Probe {pos} Amplitude"` values (13.24, 40.98 mm) are **time-domain percentile amplitudes** — they include ALL frequency content, not just 0.65 Hz. If wind waves are stronger near the 170 mm wall, `12545/170` time-domain amplitude will be inflated relative to `12545/340`.
+**Physics note**: wind waves exist only above ~2 Hz — no wind-wave energy at 0.65 Hz in the PSD sense. BUT wind waves (3–5 Hz, broad spectrum, erratic) ride on top of the paddle wave in the time domain. The `"Probe {pos} Amplitude"` values are **time-domain percentile amplitudes** — they include ALL frequency content, not just 0.65 Hz. ... Most importantly we need to check if averaging over a short timewindow gives a very wrong differing amplitudes. 
 
 **Better metric for this investigation**: `"Probe {pos} Amplitude (FFT)"` at exactly 0.65 Hz isolates just the paddle wave and is immune to wind-wave contamination. Compare the FFT amplitudes (not time-domain) at `12545/170` vs `12545/340` across runs to test whether the asymmetry survives frequency-isolation.
 
@@ -33,6 +32,7 @@ The run `nopanel-fullwind-amp0100-freq0650-...-20251112`:
 1. Re-run the ratio check using `"Probe 12545/170 Amplitude (FFT)"` vs `"Probe 12545/340 Amplitude (FFT)"` — if asymmetry disappears → wind-wave noise in time-domain is the cause
 2. If FFT asymmetry persists → geometry/reflection or wind skew — check whether it appears in no-wind runs too
 3. Decide whether `out_position` should be `12545/170`, `12545/340`, or averaged — update `nov_normalt_oppsett` config if needed
+4. learn from def ensure_stillwater in processor.py and sample 1-2 seconds of wind data (before wave action) from wave-runs, and ofc use the whole data set for no-wave runs. (no-wave logic is odd, but described by ensure_stillwater)
 
 **Diagnostic code** already written, just run these cells in `main_explore_inline.py` wind-only section or a scratch cell:
 ```python
