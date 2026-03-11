@@ -127,12 +127,12 @@ dampingplotvariables = {
         "WavePeriodInput":           None,
         "WindCondition":             None,
         "TunnelCondition":           None,
-        "PanelCondition":            None,
+        "PanelCondition":            None,#["reverse","full"],
     },
-    "plotting": {"figsize": None, "separate": True, "overlay": False, "annotate": True},
+    "plotting": {"figsize": None, "separate": True, "overlay": False, "annotate": True, "single_run_rel_error": 0.10},
 }
 
-damping_filtrert = filter_for_damping(damping_groupedruns_df, dampingplotvariables["filters"])
+damping_filtrert = filter_for_damping(damping_groupedruns_df, dampingplotvariables)
 explore_damping_vs_freq(damping_filtrert, dampingplotvariables)
 
 # %% ── damping vs amplitude ───────────────────────────────────────────────────
@@ -151,9 +151,9 @@ dampingplotvariables_all = {
     },
     "plotting": {
         "show_plot":  True,
-        "save_plot":  False,
-        "figsize":    None,
-        "separate":   False,
+        "save_plot":  True,
+        "figsize":    (7, 3),
+        "separate":   True,
         "facet_by":   None,
         "overlay":    False,
         "annotate":   True,
@@ -258,16 +258,17 @@ print(meta_wavenumber.describe())
 
 # %% ── reconstructed signal — single experiment ───────────────────────────────
 # Pick one experiment to inspect its reconstructed time-domain signal.
-single_path = list(filtered_fft_dict.keys())[0]
-single_meta = filtered_meta[filtered_meta["path"] == single_path]
+single_path = filtrert_frequencies["path"].iloc[0]
+single_meta = filtrert_frequencies.iloc[[0]]
 
 fig, ax = plot_reconstructed(
     {single_path: filtered_fft_dict[single_path]}, single_meta, freqplotvariables
 )
 
 # %% ── reconstructed signal — all filtered experiments ───────────────────────
+_recon_paths = {p: filtered_fft_dict[p] for p in filtrert_frequencies["path"] if p in filtered_fft_dict}
 fig, axes = plot_reconstructed(
-    filtered_fft_dict, filtered_meta, freqplotvariables, data_type="fft"
+    _recon_paths, filtrert_frequencies, freqplotvariables, data_type="fft"
 )
 
 

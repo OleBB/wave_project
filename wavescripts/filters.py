@@ -181,11 +181,21 @@ def filter_for_damping(
     pd.DataFrame
         A filtered copy (``df.copy()``) so the original data stays untouched.
     """
+    overordnet = criteria.get("overordnet", {})
+    filters = criteria.get("filters", criteria)
+
+    if overordnet.get("chooseAll", False):
+        return df.copy()
+    if overordnet.get("chooseFirst", False):
+        return df.iloc[[0]].copy()
+
     out = df.copy()
 
-    for col, val in criteria.items():
+    for col, val in filters.items():
         if val is None:
             continue                # nothing to do for this column
+        if col not in out.columns:
+            continue                # skip keys that aren't DataFrame columns
         if isinstance(val, (list, tuple, set)):
             # treat a 2‑tuple specially: low‑high range
             if len(val) == 2 and not isinstance(val, list):

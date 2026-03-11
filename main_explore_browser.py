@@ -22,11 +22,13 @@ matplotlib.use("Qt5Agg")
 
 import sys
 from pathlib import Path
+import dtale
+
 
 from PyQt5.QtWidgets import QApplication
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_quicklook import RampDetectionBrowser, SignalBrowserFiltered
+from wavescripts.plot_browsers import RampDetectionBrowser, SignalBrowserFiltered
 from wavescripts.plotter import gather_ramp_data
 # %%
 # ── Dataset(s) ────────────────────────────────────────────────────────────────
@@ -83,3 +85,8 @@ browser_ramp.show()
 
 print("Browsers open. Close all windows to exit.")
 app.exec_()
+
+# %%
+# %% dtale — explore combined_meta
+
+dtale.show(combined_meta, host="localhost").open_browser()
