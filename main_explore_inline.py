@@ -151,7 +151,7 @@ dampingplotvariables_all = {
     },
     "plotting": {
         "show_plot":  True,
-        "save_plot":  True,
+        # "save_plot":  False, go to main_save_figures for saving
         "figsize":    (7, 3),
         "separate":   True,
         "facet_by":   None,
@@ -190,7 +190,7 @@ freqplotvariables = {
     },
     "plotting": {
         "show_plot":   True,
-        "save_plot":   False,
+        # "save_plot":   False, go to main_save_figures for saving
         "figsize":     (5, 5),
         "linewidth":   0.7,
         "facet_by":    "probe",
@@ -234,7 +234,7 @@ swellplotvariables = {
     },
     "plotting": {
         "show_plot":  True,
-        "save_plot":  False,
+        # "save_plot":  False, go to main_save_figures for saving
         "figsize":    (5, 5),
         "linewidth":  0.7,
         "facet_by":   "probe",
@@ -344,7 +344,7 @@ _wind_psd_plotvars = {
     },
     "plotting": {
         "show_plot":  True,
-        "save_plot":  False,
+        # "save_plot":  False, go to main_save_figures for saving
         "figsize":    (11, 4 * 4),
         "linewidth":  1.0,
         "facet_by":   "probe",

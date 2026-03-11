@@ -86,9 +86,14 @@ dependencies:
 | `main.py` | Full pipeline: CSV → processed cache | `python main.py` |
 | `main_explore_inline.py` | Primary analysis playground, `# %%` cells | Open in Zed REPL |
 | `main_explore_browser.py` | Qt GUIs for interactive run browsing | `python main_explore_browser.py` |
-| `main_save_figures.py` | (WIP) batch LaTeX/PGF figure export | `python main_save_figures.py` |
+| `main_save_figures.py` | Batch LaTeX/PGF figure export | `python main_save_figures.py` |
 
 `main_explore_browser.py` forces `matplotlib.use("Qt5Agg")` — run from terminal, not REPL.
+
+### Explore → Save workflow
+
+**`save_plot` is always `False` in `main_explore_inline.py`.**
+When a plot looks right in the REPL, copy the relevant `plotvariables` dict + function call to `main_save_figures.py` and set `save_plot=True` there. Never enable `save_plot` in the exploration file.
 
 ---
 
@@ -275,7 +280,8 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 - **`signal_processing.py`**: `compute_fft_with_amplitudes`, `compute_psd_with_amplitudes`, `compute_amplitudes_from_fft`
 - **`filters.py`**: `apply_experimental_filters`, `filter_for_frequencyspectrum`, `damping_grouper`, `damping_all_amplitude_grouper`
 - **`plotter.py`**: `plot_all_probes`, `plot_damping_freq`, `plot_frequency_spectrum`, `plot_reconstructed`, `plot_swell_scatter`
-- **`plot_quicklook.py`**: `SignalBrowserFiltered`, `RampDetectionBrowser` (Qt)
+- **`plot_quicklook.py`**: `explore_damping_vs_freq`, `explore_damping_vs_amp`, `save_interactive_plot` — no Qt, no save_plot
+- **`plot_browsers.py`**: `SignalBrowserFiltered`, `RampDetectionBrowser` (Qt, only imported when used)
 - **`constants.py`**: `MEASUREMENT` (sampling rate 250 Hz), `GlobalColumns (GC)`, `ProbeColumns (PC)`, `ColumnGroups (CG)`
 
 ---
@@ -358,7 +364,36 @@ When changing analysis logic, propose tests using small synthetic data that asse
 
 ---
 
-## 16. Rules for this assistant
+## 16. Recent code changes (session 2026-03-11)
+
+### `plot_quicklook.py` — explore_damping errorbars
+- `_effective_yerr(gsub, fallback_rel)`: uses `std_out_in` for n>1 runs, falls back to `mean_out_in * fallback_rel` for n=1 (default ±10%)
+- `_explore_damping(df, plotvariables, x_col, facet_col, title)`: shared impl for both explore functions; draws open-circle overlay on single-run points
+- `explore_damping_vs_freq` and `explore_damping_vs_amp` now delegate to `_explore_damping`
+- Controlled by `plotvariables["plotting"]["single_run_rel_error"]` (default `0.10`)
+
+### `plotter.py` — plot_damping_freq show_plot scrollable
+- `show_plot` branch replaced with seaborn relplot: `col=amplitude, hue=wind, style=panel` — same layout as `explore_damping_vs_freq`, uses `WIND_COLOR_MAP`, produces enough columns to scroll horizontally in Zed REPL
+- `save_plot` branch unchanged — still uses `_draw_damping_freq_ax`
+
+### `plotter.py` — plot_reconstructed FFT reconstruction fixed
+- Replaced manual frequency-remapping loop (fragile `< 1e-6` tolerance) with `np.fft.ifftshift`
+- Sorted FFT index (negative→positive from `sort_index()`) → numpy natural order via `fft_ord = np.fft.ifftshift(fft_complex)`
+- `peak_idx` / `mirror_idx` now use `argmin` (always finds nearest bin, no tolerance needed)
+- `main_explore_inline.py`: `single_path` and `_recon_paths` now taken from `filtrert_frequencies`, not `filtered_fft_dict` (was picking wrong experiment with missing probe columns)
+
+### `plot_utils.py` — _fmt_probes handles dist/lateral strings
+- `_fmt_probes` no longer calls `int(p)` — replaces `/` with `-` in position strings
+- `"9373/170"` → `"9373-170"` in filenames; old plain-number probes still work
+
+### `main_explore_inline.py`
+- `dampingplotvariables["plotting"]` now includes `"single_run_rel_error": 0.10`
+- `dampingplotvariables_all["plotting"]["figsize"]` set to `(18, 7)`
+- All `save_plot` keys are `False` — this is intentional and permanent
+
+---
+
+## 18. Rules for this assistant
 
 - Never reintroduce probe numbers (1–4) in user-facing code
 - Always use `dist/lateral` position strings — never plain-number names
