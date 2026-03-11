@@ -59,18 +59,21 @@ _META_INFO_COLS = [
 # Metric sort order within a probe position
 _METRIC_ORDER = {
     "Amplitude": 0,
-    "Amplitude (FFT)": 1,
-    "Amplitude (PSD)": 2,
-    "Frequency (FFT)": 3,
-    "WavePeriod (FFT)": 4,
-    "Wavenumber (FFT)": 5,
+    "Uncertainty": 1,      # stillwater noise floor for that probe on that date
+    "Amplitude (FFT)": 2,
+    "Amplitude (PSD)": 3,
+    "Frequency (FFT)": 4,
+    "WavePeriod (FFT)": 5,
+    "Wavenumber (FFT)": 6,
 }
+
 
 
 def _sort_meta_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Return df with columns ordered: info cols → probe cols (by dist/lat/metric) → rest."""
     import re
-    _probe_pat = re.compile(r"^Probe (\d+)/(\d+) (.+)$")
+    _probe_pat     = re.compile(r"^Probe (\d+)/(\d+) (.+)$")
+    _unc_pat       = re.compile(r"^Probe \d+ at (\d+)/(\d+) Uncertainty$")
 
     info  = [c for c in _META_INFO_COLS if c in df.columns]
     probe_keys, other = [], []
@@ -81,8 +84,13 @@ def _sort_meta_columns(df: pd.DataFrame) -> pd.DataFrame:
         if m:
             dist, lat, metric = int(m.group(1)), int(m.group(2)), m.group(3)
             probe_keys.append((dist, lat, _METRIC_ORDER.get(metric, 99), metric, col))
-        else:
-            other.append(col)
+            continue
+        m = _unc_pat.match(col)
+        if m:
+            dist, lat = int(m.group(1)), int(m.group(2))
+            probe_keys.append((dist, lat, _METRIC_ORDER.get("Uncertainty", 1), "Uncertainty", col))
+            continue
+        other.append(col)
 
     probe_keys.sort(key=lambda x: x[:4])
     probe_sorted = [x[4] for x in probe_keys]

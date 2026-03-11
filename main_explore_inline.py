@@ -529,7 +529,195 @@ _sw_summary.index.name = "probe"
 print("\n=== Per-probe summary across all stillwater runs [mm] ===")
 print(_sw_summary.round(4).to_string())
 
-# %%
+# %% ── first wave arrival detection ───────────────────────────────────────────
+# For each wave run × probe: find the first time the rolling amplitude exceeds
+# threshold_factor × stillwater noise floor.
+# Physics: fast long-wave precursors may arrive well before the _SNARVEI_CALIB start.
+from wavescripts.wave_detection import find_first_arrival
+
+_THRESHOLD_FACTOR = 2.0   # detection at 2× noise floor
+_WINDOW_S         = 0.5   # rolling window length [s]
+_PROBE_POSITIONS  = ["8804/250", "9373/170", "9373/340", "12545/250"]  # adjust to your layout
+
+# Noise floor per probe from stillwater summary (mean across runs)
+_noise_floor = _sw_summary["mean"].to_dict()   # {"8804/250": 0.34, ...}
+
+_arrival_rows = []
+for _, _row in combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].iterrows():
+    _df = processed_dfs.get(_row["path"])
+    if _df is None:
+        continue
+    for _pos in _PROBE_POSITIONS:
+        _eta_col = f"eta_{_pos}"
+        if _eta_col not in _df.columns:
+            continue
+        _noise = _noise_floor.get(_pos)
+        if _noise is None or _noise <= 0:
+            continue
+        _sig = _df[_eta_col].dropna().values
+        _idx, _t_s = find_first_arrival(_sig, _noise,
+                                         fs=_FS,
+                                         threshold_factor=_THRESHOLD_FACTOR,
+                                         window_s=_WINDOW_S)
+        _arrival_rows.append({
+            "run":           _Path(_row["path"]).name,
+            "freq_hz":       _row["WaveFrequencyInput [Hz]"],
+            "amp_volt":      _row.get("WaveAmplitudeInput [Volt]"),
+            "wind":          _row.get("WindCondition"),
+            "panel":         _row.get("PanelCondition"),
+            "probe":         _pos,
+            "dist_mm":       int(_pos.split("/")[0]),
+            "arrival_idx":   _idx,
+            "arrival_s":     _t_s,
+            "snarvei_s":     None,   # placeholder — fill from _SNARVEI_CALIB if needed
+        })
+
+_arrival_df = pd.DataFrame(_arrival_rows)
+print(f"Arrival detections: {_arrival_df['arrival_s'].notna().sum()} / {len(_arrival_df)} probe-runs")
+print(_arrival_df.sort_values(["freq_hz", "probe"]).to_string(index=False))
+
+# %% ── first arrival — plot arrival time vs distance ─────────────────────────
+import seaborn as sns
+from wavescripts.plot_utils import WIND_COLOR_MAP as _WCM
+sns.set_style("ticks", {"axes.grid": True})
+_plot_df = _arrival_df.dropna(subset=["arrival_s"])
+g = sns.relplot(
+    data=_plot_df, x="dist_mm", y="arrival_s",
+    hue="wind", col="freq_hz",
+    kind="line", marker="o", dashes=False,
+    errorbar=None, markersize=10, linewidth=0.8,
+    height=3.5, aspect=1.3,
+    palette=_WCM,
+    facet_kws={"sharey": True},
+)
+for ax in g.axes.flat:
+    ax.set_xlabel("Probe distance from paddle [mm]")
+    ax.set_ylabel("First arrival [s]")
+g.figure.suptitle(
+    f"First wave arrival  (threshold = {_THRESHOLD_FACTOR}× noise floor,"
+    f"  window = {_WINDOW_S} s)",
+    y=1.02, fontsize=9,
+)
+plt.tight_layout()
+plt.show()
+
+# %% -- no facet
+sns.set_style("ticks", {"axes.grid": True})
+_plot_df = _arrival_df.dropna(subset=["arrival_s"])
+g = sns.scatterplot(
+    data=_plot_df, x="dist_mm", y="arrival_s",
+    hue="wind", col="freq_hz",
+    kind="line", marker="o", dashes=False,
+    errorbar=None, markersize=10, linewidth=0.8,
+    height=3.5, aspect=1.3,
+    palette=_WCM,
+)
+for ax in g.axes.flat:
+    ax.set_xlabel("Probe distance from paddle [mm]")
+    ax.set_ylabel("First arrival [s]")
+g.figure.suptitle(
+    f"First wave arrival  (threshold = {_THRESHOLD_FACTOR}× noise floor,"
+    f"  window = {_WINDOW_S} s)",
+    y=1.02, fontsize=9,
+)
+plt.tight_layout()
+plt.show()
+
+# %% ── wind-only — overview + zoom (solo & parallel probes) ───────────────────
+_wind_row = _meta_wind_only.iloc[0]
+_wind_df  = processed_dfs.get(_wind_row["path"])
+
+if _wind_df is None:
+    print("processed_dfs not loaded — run the lazy-load cell first")
+else:
+    _wind_cond = _wind_row.get("WindCondition", "?")
+    _run_name  = _Path(_wind_row["path"]).name
+    _t = np.arange(len(_wind_df)) / _FS
+    _mid = len(_wind_df) // 2
+    _zm_slice = slice(_mid - 125, _mid + 125)
+
+    # Group eta columns by longitudinal distance
+    _all_eta = sorted([c for c in _wind_df.columns if c.startswith("eta_")])
+    from collections import defaultdict
+    _by_dist = defaultdict(list)
+    for _col in _all_eta:
+        _pos  = _col.replace("eta_", "")          # e.g. "9373/170"
+        _dist = int(_pos.split("/")[0])
+        _by_dist[_dist].append(_col)
+
+    _solo_cols     = [cols[0] for cols in _by_dist.values() if len(cols) == 1]
+    _parallel_cols = [col for cols in _by_dist.values() if len(cols) > 1 for col in cols]
+
+    def _wind_plot(eta_cols, subtitle):
+        _colors = plt.cm.tab10(np.linspace(0, 0.9, max(len(eta_cols), 1)))
+        fig, (ax_ov, ax_zm) = plt.subplots(2, 1, figsize=(14, 6),
+                                            gridspec_kw={"height_ratios": [2, 1]})
+        for col, color in zip(eta_cols, _colors):
+            label = col.replace("eta_", "")
+            ax_ov.plot(_t, _wind_df[col], lw=0.6, label=label, color=color)
+            ax_zm.plot(_t[_zm_slice], _wind_df[col].iloc[_zm_slice],
+                       lw=1.0, label=label, color=color)
+
+        ax_ov.set_xlabel("Time [s]")
+        ax_ov.set_ylabel("η [mm]")
+        ax_ov.set_title(f"Wind-only ({_wind_cond}) — {subtitle} — {_run_name}", fontsize=10)
+        ax_ov.legend(fontsize=8, loc="upper right")
+        ax_ov.grid(True, alpha=0.3)
+
+        ax_zm.set_xlabel("Time [s]")
+        ax_zm.set_ylabel("η [mm]")
+        ax_zm.set_title("Zoom — 1 s window (250 samples)", fontsize=9)
+        ax_zm.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.show()
+
+    _wind_plot(_solo_cols,     "solo probes")
+    _wind_plot(_parallel_cols, "parallel probes")
+
+    print(f"{len(_wind_df)} samples  |  {len(_wind_df)/_FS:.1f} s  |  wind: {_wind_cond}")
+    print(f"Solo:     {[c.replace('eta_','') for c in _solo_cols]}")
+    print(f"Parallel: {[c.replace('eta_','') for c in _parallel_cols]}")
+
+# %% ── first arrival — single plot, all frequencies, no wind-waves ────────────
+_MIN_ARRIVAL_S = 0.5   # below this = wind-wave false detection, ignore
+_plot_df2 = _arrival_df[_arrival_df["arrival_s"] > _MIN_ARRIVAL_S].copy()
+
+_WIND_LS = {"no": "-", "lowest": "--", "full": ":"}  # linestyle by wind
+_freqs_sorted = sorted(_plot_df2["freq_hz"].dropna().unique())
+_freq_colors  = {f: c for f, c in zip(_freqs_sorted,
+                  plt.cm.rainbow(np.linspace(0, 1, len(_freqs_sorted))))}
+
+# Average parallel probes (same dist_mm, same run/wind/freq) → mean ± half-range
+_agg = (
+    _plot_df2
+    .groupby(["wind", "freq_hz", "dist_mm"])["arrival_s"]
+    .agg(mean="mean", err=lambda x: (x.max() - x.min()) / 2)
+    .reset_index()
+)
+
+fig, ax = plt.subplots(figsize=(9, 5))
+for (wind, freq), grp in _agg.groupby(["wind", "freq_hz"]):
+    grp_s = grp.sort_values("dist_mm")
+    ax.errorbar(grp_s["dist_mm"], grp_s["mean"], yerr=grp_s["err"],
+                marker="o", markersize=8, linewidth=1.2, capsize=4,
+                color=_freq_colors[freq],
+                linestyle=_WIND_LS.get(wind, "-"),
+                label=f"{freq} Hz")
+
+ax.set_xlabel("Probe distance from paddle [mm]")
+ax.set_ylabel("First arrival [s]")
+ax.set_title(
+    f"First wave arrival — all frequencies  "
+    f"(threshold {_THRESHOLD_FACTOR}× noise,  arrivals > {_MIN_ARRIVAL_S} s shown)"
+)
+_handles, _labels = ax.get_legend_handles_labels()
+ax.legend(_handles[::-1], _labels[::-1], fontsize=8, title="freq / wind")
+ax.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+# %%  ----- push d tale to end
 import dtale
 # med et forsøk på å få mere info på skjermen, med at
 # tittelkolonnen er høyere, så de under kan være bredere
@@ -542,6 +730,6 @@ import dtale
 #     """
 # )
 dtale.show(combined_meta, host="localhost").open_browser()
-# %%
+
 
 print(combined_meta.columns.to_list())

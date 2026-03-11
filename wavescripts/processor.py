@@ -42,6 +42,22 @@ def _probe_median_from_run(df: pd.DataFrame, probe_col: str, n_samples: int | No
     return float(vals.median()) if len(vals) > 0 else None
 
 
+def _probe_noise_amplitude_from_run(df: pd.DataFrame, probe_col: str, n_samples: int | None = None) -> float | None:
+    """Return (P97.5 - P2.5) / 2 of a probe column — the pipeline amplitude definition.
+
+    This is the noise floor for that probe in that run: the smallest wave amplitude
+    indistinguishable from background fluctuations.  Consistent with how
+    'Probe {pos} Amplitude' is computed everywhere else in the pipeline.
+    """
+    if probe_col not in df.columns:
+        return None
+    src = df[probe_col].iloc[:n_samples] if n_samples is not None else df[probe_col]
+    vals = pd.to_numeric(src, errors='coerce').dropna().values
+    if len(vals) < 2:
+        return None
+    return float((np.nanpercentile(vals, 97.5) - np.nanpercentile(vals, 2.5)) / 2.0)
+
+
 def ensure_stillwater_columns(
     dfs: dict[str, pd.DataFrame],
     meta: pd.DataFrame,
@@ -190,6 +206,29 @@ def ensure_stillwater_columns(
             idx = meta.index[meta["path"] == path]
             for col_name, val in std_dict.items():
                 meta.loc[idx, col_name] = val
+
+        # Compute (P97.5-P2.5)/2 noise floor per probe, averaged across all stillwater
+        # runs, and broadcast to EVERY row as "Probe {n} at {pos} Uncertainty".
+        # This is the pipeline amplitude definition — consistent with "Probe {pos} Amplitude".
+        noise_floor_accum: dict[int, list[float]] = {i: [] for i in col_names}
+        for _, row in anchor_rows.iterrows():
+            df_run = dfs.get(row["path"])
+            if df_run is None:
+                continue
+            for i, pos in col_names.items():
+                v = _probe_noise_amplitude_from_run(df_run, f"Probe {pos}", anchor_n_samples)
+                if v is not None:
+                    noise_floor_accum[i].append(v)
+
+        unc_cols = {}
+        for i, pos in col_names.items():
+            vals = noise_floor_accum[i]
+            if vals:
+                unc_cols[f"Probe {i} at {pos} Uncertainty"] = float(np.mean(vals))
+                print(f"  Noise floor  Probe {i} at {pos}: {np.mean(vals):.4f} mm"
+                      f"  (n={len(vals)}, range {min(vals):.4f}–{max(vals):.4f})")
+        if unc_cols:
+            meta = meta.assign(**{c: v for c, v in unc_cols.items()})
 
     # Ensure PROCESSED_folder is set so meta can be saved
     if "PROCESSED_folder" not in meta.columns:
