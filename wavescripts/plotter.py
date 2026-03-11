@@ -1033,25 +1033,23 @@ def plot_reconstructed(
             if fft_series.empty:
                 print(f"Skipping probe {probe_num}: column '{col}' is all-NaN")
                 continue
-            freq_bins = fft_series.index.values
+            freq_bins = fft_series.index.values      # sorted: negative → positive
             fft_complex = fft_series.values
             N = len(fft_complex)
-            df_freq = freq_bins[1] - freq_bins[0]
-            sr = abs(df_freq * N)
-            fftfreqs = np.fft.fftfreq(N, d=1 / sr)
+            df_freq = abs(freq_bins[1] - freq_bins[0])
+            sr = df_freq * N                          # ≈ sampling rate (Hz)
 
-            fft_ord = np.zeros(N, dtype=complex)
-            for i, tf in enumerate(fftfreqs):
-                ci = np.argmin(np.abs(freq_bins - tf))
-                if np.abs(freq_bins[ci] - tf) < 1e-6:
-                    fft_ord[i] = fft_complex[ci]
+            # freq_bins is the sorted (fftshifted) order from sort_index().
+            # ifftshift converts it back to numpy's natural FFT order [0, pos, neg].
+            fft_ord = np.fft.ifftshift(fft_complex).astype(complex)
+            fftfreqs = np.fft.ifftshift(freq_bins)
 
             signal_full = np.real(np.fft.ifft(fft_ord))
             time_axis = np.arange(N) / sr
             pos_freqs = fftfreqs[fftfreqs > 0]
             actual_freq = pos_freqs[np.argmin(np.abs(pos_freqs - target_freq))]
-            peak_idx = np.where(np.abs(fftfreqs - actual_freq) < 1e-6)[0][0]
-            mirror_idx = np.where(np.abs(fftfreqs + actual_freq) < 1e-6)[0][0]
+            peak_idx   = np.argmin(np.abs(fftfreqs - actual_freq))
+            mirror_idx = np.argmin(np.abs(fftfreqs + actual_freq))
 
             fft_swell = np.zeros_like(fft_ord, dtype=complex)
             fft_swell[peak_idx] = fft_ord[peak_idx]
