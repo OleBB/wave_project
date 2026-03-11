@@ -28,7 +28,7 @@ from PyQt5.QtWidgets import QApplication
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
 from wavescripts.plot_quicklook import RampDetectionBrowser, SignalBrowserFiltered
 from wavescripts.plotter import gather_ramp_data
-
+# %%
 # ── Dataset(s) ────────────────────────────────────────────────────────────────
 # List all PROCESSED-* folders you want to load. Add more for multi-dataset sessions.
 PROCESSED_DIRS = [
@@ -75,7 +75,7 @@ browser_signal = SignalBrowserFiltered(
 browser_signal.setWindowTitle("Signal Browser — FFT reconstruction")
 browser_signal.show()
 
-# %%
+# %% ---------------------------------
 ramp_df = gather_ramp_data(processed_dfs, combined_meta)
 browser_ramp = RampDetectionBrowser(ramp_df)
 browser_ramp.setWindowTitle("Ramp Detection Browser")

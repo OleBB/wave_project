@@ -119,7 +119,7 @@ def find_wave_range(
     # TODO: re-eyeball and add more calibration points, especially for intermediate freqs.
     _SNARVEI_CALIB = {
         # ~8800 mm from paddle
-        "8804":  [(0.65, 5104), (1.30, 4700)],
+        "8804":  [(0.65, 5104), (1.30, 4700), (1.80, 6000)],
         # ~9373 mm from paddle
         "9373":  [(0.65, 5154), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
         # ~12545 mm from paddle
