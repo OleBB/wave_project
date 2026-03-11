@@ -583,3 +583,42 @@ def find_wave_range(
     }
 
     return good_start_idx, good_end_idx, debug_info
+
+
+def find_first_arrival(
+    signal: np.ndarray,
+    noise_floor_mm: float,
+    fs: float = 250.0,
+    threshold_factor: float = 2.0,
+    window_s: float = 0.5,
+) -> tuple[int | None, float | None]:
+    """Detect the first sample where wave energy exceeds the stillwater noise floor.
+
+    Uses a rolling (P97.5 - P2.5) / 2 amplitude in a short sliding window —
+    the same definition as the pipeline amplitude — and finds the first window
+    whose amplitude exceeds threshold_factor * noise_floor_mm.
+
+    Args:
+        signal:            1-D array of probe elevation [mm], already zeroed.
+        noise_floor_mm:    Stillwater noise amplitude for this probe [mm]
+                           (mean of 'Probe {pos} Amplitude' across stillwater runs).
+        fs:                Sampling rate [Hz]. Default 250.
+        threshold_factor:  Detection threshold = threshold_factor × noise_floor.
+                           2.0 means "twice the stillwater noise". Default 2.0.
+        window_s:          Rolling window length [s]. Default 0.5 s (125 samples).
+
+    Returns:
+        (arrival_idx, arrival_s): sample index and time [s] of first detection,
+        or (None, None) if signal never exceeds the threshold.
+    """
+    threshold = threshold_factor * noise_floor_mm
+    win = max(1, int(round(window_s * fs)))
+    n = len(signal)
+
+    for i in range(0, n - win + 1):
+        chunk = signal[i : i + win]
+        amp = (np.nanpercentile(chunk, 97.5) - np.nanpercentile(chunk, 2.5)) / 2.0
+        if amp >= threshold:
+            return i, i / fs
+
+    return None, None

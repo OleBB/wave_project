@@ -393,7 +393,108 @@ When changing analysis logic, propose tests using small synthetic data that asse
 
 ---
 
-## 18. Rules for this assistant
+## 17. Physical assumptions — always in mind
+
+These are not negotiable. Every analysis decision must be consistent with them.
+
+### Measurement precision
+- **Target resolution: 0.25 mm** (quarter millimeter). No discrepancy is too small to investigate.
+- Stillwater noise floor is **probe-dependent** — measured as `"Probe {pos} Amplitude"` = (P97.5−P2.5)/2 from no-wind, no-wave runs:
+
+Reference data: `wave_project/dtale-probe-uncertainty.csv` (5 rows, paths included).
+
+Run identity per row:
+
+| Row | Path (short) | Status |
+|-----|-------------|--------|
+| 1 | `20260307/.../nestenstille.csv` | ⚠ **outlier** — "almost still", water not settled |
+| 2 | `20260307/.../nowave-depth580-run1.csv` | Normal |
+| 3 | `20260307/.../nowave-depth580-run2.csv` | Normal |
+| 4 | `20260307/.../wavemakeroff-1hour-stillwater.csv` | ✓ **gold standard** — most settled |
+| 5 | `20251112/.../nopanel-nowind-nowave-per40-run1.csv` | Nov 2025, different probe config |
+
+Measured noise floor per probe (excluding row 1 outlier):
+
+| Probe | Gold std (row 4) | Runs 2–4 range | Notes |
+|-------|-----------------|---------------|-------|
+| `8804/250` | 0.330 mm | 0.315–0.350 | **~0.33 mm** — stable |
+| `8804/170` | — | 0.260 (row 5) | Single Nov-2025 measurement |
+| `9373/170` | 0.330 mm | 0.305–0.330 | **~0.32 mm** — stable |
+| `9373/250` | — | 0.600 (row 5) | ⚠ Nov-2025 only — suspiciously high; probe calibration issue? |
+| `9373/340` | 0.075 mm | 0.075–0.315 | **Unreliable — 4× spread across settled runs** |
+| `12545/250` | 0.130 mm | 0.130–0.165 | **~0.14 mm — quietest, most stable** |
+| `12545/170` | — | 0.305 (row 5) | Single Nov-2025 measurement |
+| `12545/340` | — | 0.255 (row 5) | Single Nov-2025 measurement |
+
+- **Gold standard noise floor**: use row 4 (`wavemakeroff-1hour`) values — tank maximally settled.
+- `9373/340` high variability (0.075–0.315 mm across runs on same day) is unexplained — probe sensitivity or positioning issue.
+- `9373/250` = 0.600 mm in Nov 2025 while `9373/170` ≈ 0.32 mm in March 2026 — same longitudinal distance, factor-of-2 difference. Likely probe-specific calibration difference between the two physical probes used at those times.
+- Detection threshold: **2× probe noise floor** individually. For `12545/250` → ~0.26 mm; for `8804/250` / `9373/170` → ~0.65 mm.
+- Any amplitude below the probe's own noise floor is indistinguishable from noise — must be flagged, not reported as signal.
+
+### Wave physics
+- **Wind waves exist only above ~2 Hz** — no wind-wave energy at paddle frequencies (0.65–1.8 Hz) in the PSD sense.
+- BUT wind waves (3–5 Hz, broad, erratic) **ride on top** of the paddle wave in the time domain. Time-domain percentile amplitudes include ALL frequency content. FFT amplitude at the target frequency does not.
+- **Two amplitude types are not interchangeable**:
+  - `"Probe {pos} Amplitude"` = (P97.5−P2.5)/2 of time-domain signal — includes wind waves
+  - `"Probe {pos} Amplitude (FFT)"` = FFT peak within 0.1 Hz of target — paddle-wave only
+- The **OUT/IN ratio** must always be computed from `"Probe {pos} Amplitude"` (time-domain), not FFT amplitude, unless a specific reason exists to isolate the paddle frequency.
+
+### Probe geometry
+- Parallel probes at the same longitudinal distance (e.g. `9373/170` and `9373/340`) are **not redundant** — they measure lateral wave non-uniformity. A factor-of-2 difference between them is physically meaningful and must be explained, not averaged away silently.
+- Wall-side probe (`/170`) is closer to the tank wall — susceptible to wall reflections and wind-driven lateral asymmetry.
+- Center probe (`/250`) is the most representative single measurement of the 1D wave field.
+
+### Wave arrival
+- First stable wave energy arrives at ~12545 mm in approximately **10 seconds** from paddle start (frequency-dependent).
+- Wavemaker ramp-up (13–20 periods) dominates the pre-stable window — not wave travel time.
+- Anything arriving before ~0.5 s at any probe is a wind-wave or instrument artifact, not a paddle wave.
+
+### Stillwater as ground truth
+- Stillwater (no wind, no wave) defines the true zero and the noise floor for each probe.
+- Every probe's `"Probe {pos} Amplitude"` in a stillwater run is a direct noise floor measurement.
+- This noise floor must be measured fresh per probe position — it is not transferable across configurations.
+
+---
+
+## 18. Rigorous analysis workflow
+
+Precision standard: **0.25 mm**. Nothing is too small to ignore. Follow this sequence whenever a new result or anomaly appears.
+
+### 1. Before trusting any amplitude
+- [ ] Verify `in_position` and `out_position` are correct for the run's date (`get_configuration_for_date`)
+- [ ] Confirm the stillwater noise floor for the relevant probe and date — is the signal above 2× noise?
+- [ ] Check for NaN in the amplitude columns (`_sel.T.to_string()` with transpose)
+
+### 2. Before trusting an OUT/IN ratio
+- [ ] Check both time-domain AND FFT amplitude — do they agree? If not, wind-wave contamination is likely.
+- [ ] Compare parallel probes at the same distance — do they agree within ~10%? Factor-of-2 disagreement requires investigation.
+- [ ] Confirm n (number of runs) — for n=1, apply ±10% fallback errorbar, not a hard conclusion.
+- [ ] Never trust cached `OUT/IN (FFT)` — always recompute from `"Probe {pos} Amplitude"` columns.
+
+### 3. Diagnosing an anomaly
+Systematic elimination order:
+1. **Noise**: is the amplitude above 2× stillwater noise floor for that probe?
+2. **Wind-wave contamination**: compare time-domain vs FFT amplitude — does the anomaly survive FFT isolation?
+3. **Lateral asymmetry**: compare both parallel probes — is one side inflated?
+4. **Probe config error**: was `in_position`/`out_position` assigned correctly for that run's date?
+5. **Data quality**: are there NaN samples? Was the run cut short? Check `processed_dfs` time series directly.
+6. **Physics**: only after 1–5 are ruled out, conclude the effect is real.
+
+### 4. Plotting
+- Always show errorbars. Use `std` when n>1, ±10% fallback when n=1.
+- Parallel probes: average and show half-range errorbar — never plot both as independent points without comment.
+- Y-axis must always be shared (`sharey=True`) when comparing across conditions or frequencies.
+- Color = the physically meaningful primary variable. Linestyle = secondary modifier (e.g. wind condition).
+
+### 5. Recording results
+- If a value changes after pipeline fix (e.g. re-running `main.py`), note both the old and new value and what changed.
+- `repl_out("filename.txt")` to capture diagnostic prints permanently.
+- Update `CLAUDE.md §0` (current investigation) whenever a conclusion changes.
+
+---
+
+## 19. Rules for this assistant
 
 - Never reintroduce probe numbers (1–4) in user-facing code
 - Always use `dist/lateral` position strings — never plain-number names
