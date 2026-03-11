@@ -12,6 +12,8 @@
 
 **Still open**:
 - `9373/250` noise floor 0.600 mm in Nov 2025 vs `9373/170` ~0.32 mm in March 2026 — likely different physical probes used at those dates, not a position effect. No action needed unless it affects a key result.
+- **Wind-wave characterization**: for fullwind runs, overlay the two parallel probe signals (`/170` and `/340` at the same longitudinal distance) in a single time-domain plot. Seeing them on top of each other will directly show how correlated the short wind waves are laterally — coherent = tank-wide swell, incoherent = local turbulence. Use `processed_dfs` eta columns.
+- **TODO: autocorrelation** on the wind-only `eta` signals — quantify the dominant wind-wave period and coherence length. `scipy.signal.correlate` or `np.correlate` on a single probe; cross-correlate between `/170` and `/340` at the same distance to test lateral coherence.
 - After `main.py` re-run: quick sanity check — lateral ratio `12545/170 / 12545/340` should be near 1.0 for no-wind runs:
 ```python
 _wave = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy()
