@@ -37,9 +37,56 @@ NON_FLOAT_COLUMNS = {
     "experiment_folder": str,
     "path": str,
     "file_date": str,
-    "in_position": str,   # e.g. "9373/250" or "9373/170" — slash breaks pd.to_numeric
-    "out_position": str,  # e.g. "12545/170" or "12545/250" — must stay as string
+    "in_position": str,    # e.g. "9373/250" — slash breaks pd.to_numeric
+    "out_position": str,   # e.g. "12545/170" — must stay as string
+    "in_probe": "Int64",   # probe index 1–4, nullable integer
+    "out_probe": "Int64",
 }
+
+# Stale probe-number ratio columns — removed at load time
+_STALE_RATIO_COLS = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]
+
+# Preferred order for info columns (non-probe) at the front of combined_meta
+_META_INFO_COLS = [
+    "path", "file_date", "experiment_folder",
+    "WindCondition", "TunnelCondition", "PanelCondition", "Mooring",
+    "Run number",
+    "WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WavePeriodInput",
+    "in_position", "out_position", "in_probe", "out_probe",
+    "OUT/IN (FFT)",
+]
+
+# Metric sort order within a probe position
+_METRIC_ORDER = {
+    "Amplitude": 0,
+    "Amplitude (FFT)": 1,
+    "Amplitude (PSD)": 2,
+    "Frequency (FFT)": 3,
+    "WavePeriod (FFT)": 4,
+    "Wavenumber (FFT)": 5,
+}
+
+
+def _sort_meta_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Return df with columns ordered: info cols → probe cols (by dist/lat/metric) → rest."""
+    import re
+    _probe_pat = re.compile(r"^Probe (\d+)/(\d+) (.+)$")
+
+    info  = [c for c in _META_INFO_COLS if c in df.columns]
+    probe_keys, other = [], []
+    for col in df.columns:
+        if col in _META_INFO_COLS:
+            continue
+        m = _probe_pat.match(col)
+        if m:
+            dist, lat, metric = int(m.group(1)), int(m.group(2)), m.group(3)
+            probe_keys.append((dist, lat, _METRIC_ORDER.get(metric, 99), metric, col))
+        else:
+            other.append(col)
+
+    probe_keys.sort(key=lambda x: x[:4])
+    probe_sorted = [x[4] for x in probe_keys]
+    return df[info + probe_sorted + other]
 
 
 def apply_dtypes(meta_df: pd.DataFrame) -> pd.DataFrame:
@@ -1097,6 +1144,14 @@ def load_analysis_data(*processed_dirs: Path, **kwargs):
         all_psd.update(psd_dict)
 
     combined_meta = pd.concat(all_meta, ignore_index=True) if all_meta else pd.DataFrame()
+
+    # Drop stale probe-number ratio columns (superseded by OUT/IN (FFT))
+    combined_meta = combined_meta.drop(
+        columns=[c for c in _STALE_RATIO_COLS if c in combined_meta.columns]
+    )
+    # Sort columns: info → probe (by dist/lat/metric) → rest
+    combined_meta = _sort_meta_columns(combined_meta)
+
     print(f"load_analysis_data: {len(combined_meta)} rows, {len(all_fft)} FFT experiments")
     return combined_meta, all_processed, all_fft, all_psd
 
