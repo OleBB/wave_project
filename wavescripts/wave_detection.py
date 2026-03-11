@@ -106,37 +106,62 @@ def find_wave_range(
     good_range = keep_idx
 
     # ==========================================================
-    #  1.b  Snarvei: calibrated per-probe anchors, linearly interpolated in frequency
+    #  1.b  Snarvei: calibrated per-probe anchors, interpolated across frequency
     # ==========================================================
-    # Two verified calibration points per probe (eyeballed, well-verified).
-    # Keyed by physical probe position column name (e.g. "Probe 9373/170").
-    # Format: (f1, start_idx_1, f2, start_idx_2)
-    # For other frequencies, start_idx is linearly interpolated/extrapolated.
+    # Calibration points: eyeballed good-start sample indices at specific frequencies.
+    # All laterals at the same longitudinal distance share the same arrival timing.
+    # Add more points by eyeballing the RampDetectionBrowser — more points = better fit.
     #
-    # Original calibration positions → current position string mapping:
-    #   ~8800mm  → "Probe 8804"         (Δ=+4mm, negligible)
-    #   ~9500mm  → "Probe 9373/170" and "Probe 9373/340"  (Δ=-127mm, re-verify)
-    #   ~12450mm → "Probe 12545"        (Δ=+95mm, re-verify)
-    # TODO: re-eyeball calibration points after confirming probe positions in tank.
-    _SNARVEI = {                                       # (f1,  s1,   f2,   s2)
-        "Probe 8804":     (0.65, 5104, 1.3, 4700),    # ~8800mm from paddle
-        "Probe 9373/170": (0.65, 5154, 1.3, 4800),    # ~9500mm from paddle
-        "Probe 9373/340": (0.65, 5154, 1.3, 4800),    # same longitudinal pos as 9373/170
-        "Probe 12545":    (0.65, 5654, 1.3, 6500),    # ~12450mm from paddle
+    # Format: list of (freq_hz, start_sample) sorted by frequency.
+    # Interpolation: linear between calibrated points; linear extrapolation beyond range.
+    # Samples at 250 Hz (ms / 4).
+    #
+    # TODO: re-eyeball and add more calibration points, especially for intermediate freqs.
+    _SNARVEI_CALIB = {
+        # ~8800 mm from paddle
+        "8804":  [(0.65, 5104), (1.30, 4700)],
+        # ~9373 mm from paddle
+        "9373":  [(0.65, 5154), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
+        # ~12545 mm from paddle
+        "12545": [(0.65, 5654), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
     }
+
+    # Map every probe column name to a distance group
+    _PROBE_GROUP = {
+        "Probe 8804":      "8804",
+        "Probe 8804/170":  "8804",
+        "Probe 8804/250":  "8804",
+        "Probe 9373/170":  "9373",
+        "Probe 9373/250":  "9373",
+        "Probe 9373/340":  "9373",
+        "Probe 12545":     "12545",
+        "Probe 12545/170": "12545",
+        "Probe 12545/250": "12545",
+        "Probe 12545/340": "12545",
+    }
+
+    def _snarvei_start(freq: float, calib: list[tuple[float, int]]) -> int:
+        """Linear interp/extrap of start sample from calibration points."""
+        fs = [p[0] for p in calib]
+        ss = [p[1] for p in calib]
+        if freq <= fs[0]:
+            slope = (ss[1] - ss[0]) / (fs[1] - fs[0])
+            return int(round(ss[0] + slope * (freq - fs[0])))
+        if freq >= fs[-1]:
+            slope = (ss[-1] - ss[-2]) / (fs[-1] - fs[-2])
+            return int(round(ss[-1] + slope * (freq - fs[-1])))
+        return int(round(float(np.interp(freq, fs, ss))))
 
     good_start_idx   = None
     good_end_idx     = None
     wave_upcrossings = None
 
-    if data_col in _SNARVEI:
-        f1, s1, f2, s2 = _SNARVEI[data_col]
-        slope          = (s2 - s1) / (f2 - f1)
-        intercept      = s1 - slope * f1
-        good_start_idx = int(round(intercept + slope * importertfrekvens))
+    _group = _PROBE_GROUP.get(data_col)
+    if _group is not None and _group in _SNARVEI_CALIB:
+        good_start_idx = _snarvei_start(importertfrekvens, _SNARVEI_CALIB[_group])
         good_end_idx   = good_start_idx + int(keep_idx)
         if debug:
-            print(f"[snarvei] {data_col}: f={importertfrekvens:.3f} Hz → "
+            print(f"[snarvei] {data_col} (group={_group}): f={importertfrekvens:.3f} Hz → "
                   f"good_start={good_start_idx}")
 
     """
