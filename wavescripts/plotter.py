@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
-import seaborn as sns
+# seaborn imported lazily (heavy) — used only in plot_damping_scatter
 
 from datetime import datetime
 
@@ -65,7 +65,7 @@ from wavescripts.plot_utils import (
     save_and_stub,
     write_figure_stub,
 )
-from wavescripts.signal_processing import get_positive_spectrum
+# get_positive_spectrum imported lazily (pulls in scipy.signal, ~2s)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PROBE AMPLITUDE PROFILE
@@ -247,14 +247,31 @@ def plot_damping_freq(
     n_rows, n_cols = len(panel_conditions), len(wind_conditions)
 
     if show_plot:
-        figsize = plotting.get("figsize") or (4.5 * n_cols, 3.5 * n_rows)
-        fig, axes = plt.subplots(
-            n_rows, n_cols, figsize=figsize, squeeze=False, sharex=True, sharey=True
+        import seaborn as sns
+        from wavescripts.plot_utils import WIND_COLOR_MAP
+        sns.set_style("ticks", {"axes.grid": True})
+        g = sns.relplot(
+            data=stats_df.sort_values(GC.WAVE_FREQUENCY_INPUT),
+            x=GC.WAVE_FREQUENCY_INPUT, y="mean_out_in",
+            hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
+            style=GC.PANEL_CONDITION_GROUPED,
+            col=GC.WAVE_AMPLITUDE_INPUT,
+            kind="line", marker=True,
+            facet_kws={"sharex": True, "sharey": True},
+            height=3.5, aspect=1.4, errorbar=None,
         )
-        for i, panel in enumerate(panel_conditions):
-            for j, wind in enumerate(wind_conditions):
-                _draw_damping_freq_ax(axes[i, j], stats_df, panel, wind)
-        fig.suptitle("Damping Ratio OUT/IN vs Frequency", fontsize=13, y=1.0)
+        for ax in g.axes.flat:
+            ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
+        for ax, (amp, sub) in zip(
+            g.axes.flat,
+            stats_df.groupby(GC.WAVE_AMPLITUDE_INPUT),
+        ):
+            for (wind, panel), gsub in sub.groupby([GC.WIND_CONDITION, GC.PANEL_CONDITION_GROUPED]):
+                gsub = gsub.sort_values(GC.WAVE_FREQUENCY_INPUT)
+                ax.errorbar(gsub[GC.WAVE_FREQUENCY_INPUT], gsub["mean_out_in"],
+                            yerr=gsub["std_out_in"], fmt="none", capsize=3, alpha=0.5)
+        g.figure.suptitle("Damping Ratio OUT/IN vs Frequency  [quicklook]",
+                           y=1.02, fontsize=11)
         plt.tight_layout()
         plt.show()
 
@@ -300,6 +317,7 @@ def plot_damping_scatter(
     show_plot = plotting.get("show_plot", True)
     save_plot = plotting.get("save_plot", False)
 
+    import seaborn as sns
     sns.set_style("ticks", {"axes.grid": True})
     fig, ax = plt.subplots(figsize=plotting.get("figsize") or (10, 6))
     plot_data = stats_df.sort_values(GC.WAVE_FREQUENCY_INPUT)
@@ -748,6 +766,7 @@ def plot_frequency_spectrum(
                 col = f"{col_prefix} {probe_num}"
                 if col not in df_fft:
                     continue
+                from wavescripts.signal_processing import get_positive_spectrum
                 df_pos = get_positive_spectrum(df_fft)
                 y = df_pos[col].dropna().iloc[:max_points]
                 if y.empty:
@@ -860,6 +879,7 @@ def plot_frequency_spectrum(
                         col = f"{col_prefix} {probe_num}"
                         if col not in df_fft:
                             continue
+                        from wavescripts.signal_processing import get_positive_spectrum
                         df_pos = get_positive_spectrum(df_fft)
                         y = df_pos[col].dropna().iloc[:max_points]
                         if y.empty:
@@ -1005,10 +1025,14 @@ def plot_reconstructed(
             if col not in df_fft:
                 col = f"FFT {probe_num}"
             if col not in df_fft:
-                print(f"Skipping probe {probe_num}: column not found")
+                available = [c for c in df_fft.columns if c.startswith("FFT") and "complex" in c]
+                print(f"Skipping probe {probe_num}: column not found. Available: {available}")
                 continue
 
             fft_series = df_fft[col].dropna()
+            if fft_series.empty:
+                print(f"Skipping probe {probe_num}: column '{col}' is all-NaN")
+                continue
             freq_bins = fft_series.index.values
             fft_complex = fft_series.values
             N = len(fft_complex)

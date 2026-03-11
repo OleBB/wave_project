@@ -257,12 +257,15 @@ def _fmt_freq(val) -> str:
 
 
 def _fmt_probes(val) -> str:
-    """[2,3] → '2og3'  |  2 → '2'  |  None → 'allprobes'"""
+    """['9373/170','12545/250'] → '9373-170og12545-250'  |  None → 'allprobes'"""
     if val is None:
         return "allprobes"
+    def _fmt_one(p):
+        s = str(p).replace("/", "-")
+        return s
     if isinstance(val, (list, tuple)):
-        return "og".join(str(int(p)) for p in val)
-    return str(int(val))
+        return "og".join(_fmt_one(p) for p in val)
+    return _fmt_one(val)
 
 
 def build_filename(plot_type: str, meta: dict) -> str:
