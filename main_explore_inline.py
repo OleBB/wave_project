@@ -95,7 +95,7 @@ amplitudeplotvariables = {
     },
     "filters": {
         "WaveAmplitudeInput [Volt]": 0.1,
-        "WaveFrequencyInput [Hz]":   1.3,
+        "WaveFrequencyInput [Hz]":   0.65,
         "WavePeriodInput":           None,
         "WindCondition":             ["full"],
         "TunnelCondition":           None,
@@ -379,3 +379,41 @@ for _, row_meta in _meta_nowave_all.iterrows():
 
 _stats_df = pd.DataFrame(_stats_rows).sort_values("WindCondition")
 print(_stats_df.to_string(index=False))
+
+# %% ── investigate: wind-only growth 9373 → 12545 vs claimed wave growth ─────
+import pandas as pd
+
+# 1. The suspicious wave run
+_wave_run = combined_meta[
+    (combined_meta["WaveFrequencyInput [Hz]"] == 0.65) &
+    (combined_meta["WaveAmplitudeInput [Volt]"] == 0.1) &
+    (combined_meta["WindCondition"] == "full")
+].copy()
+
+print("=== Wave run(s) at 0.65 Hz, 0.1 V, full wind ===")
+cols = ["path", "PanelCondition", "Mooring",
+        "Probe 9373/170 Amplitude", "Probe 9373/250 Amplitude",
+        "Probe 9373/340 Amplitude", "Probe 12545/250 Amplitude",
+        "Probe 12545/170 Amplitude", "Probe 12545/340 Amplitude",
+        "in_position", "out_position", "OUT/IN (FFT)"]
+print(_wave_run[[c for c in cols if c in _wave_run.columns]].T.to_string())
+
+# 2. Nowave + full wind: what do the probes read?
+_nowave_full = combined_meta[
+    combined_meta["WaveFrequencyInput [Hz]"].isna() &
+    (combined_meta["WindCondition"] == "full")
+].copy()
+
+print(f"\n=== Nowave + full wind runs: {len(_nowave_full)} ===")
+amp_cols = [c for c in _nowave_full.columns
+            if "Amplitude" in c and "FFT" not in c and "PSD" not in c]
+print(_nowave_full[["path", "PanelCondition", "Mooring"] + amp_cols].to_string())
+
+# 3. Stillwater baseline (no wind, no wave)
+_stillwater = combined_meta[
+    combined_meta["WaveFrequencyInput [Hz]"].isna() &
+    (combined_meta["WindCondition"] == "no")
+].copy()
+
+print(f"\n=== Stillwater (no wind, no wave): {len(_stillwater)} ===")
+print(_stillwater[["path"] + amp_cols].to_string())

@@ -1,90 +1,69 @@
-# Project Overview
+# Wave Project — Context for Code Assistants
 
-- **Repo URL**: `https://github.com/OleBB/wave_project`
-- **Project type**: Python data / signal / wave analysis (Jupyter + Spyder)
-- **Primary goals for this assistant**:
-  - Understand the structure and purpose of this repo
-  - Help design, refactor, and test analysis code
-  - Help keep experiments organized via git branches
-  - Help write and improve pytest tests
+## 0. Current investigation (pick up here next session)
 
-If you (the chatbot) need context, ask before assuming missing details.
+**Problem**: `explore_damping_vs_freq` shows ~3x wave growth for `nopanel, fullwind, 0.65 Hz, 0.1 V`.
+Physics says no-panel + full-wind should show growth, but 3x seems too high. Investigating whether it's real or a measurement artifact.
 
----
+**What we know so far** (from diagnostic output):
 
-## Git Workflow (Solo)
+The run `nopanel-fullwind-amp0100-freq0650-...-20251112`:
+- `in_position = "9373/250"` → amplitude **13.24 mm**
+- `out_position = "12545/170"` → amplitude **40.98 mm** ← gives the 3x ratio
+- But `"12545/340"` (same longitudinal distance, other lateral) → **21.33 mm** (only 1.6x)
 
-**Core rules**
+**The core anomaly**: two probes at the same distance from paddle (12545 mm) disagree by a factor of ~2. Either:
+- `12545/170` is in a zone of enhanced wave activity (wall reflection? tank geometry?)
+- The `out_position` assignment (`12545/170`) is wrong — maybe `12545/340` or an average should be used
+- There is real lateral non-uniformity from wind
 
-- Never commit directly to `main`.
-- Work in experiment branches:  
-  `git checkout -b exp/<descriptive-name>`
-- Commit small, often, with clear messages.
-- When an experiment works:
-  - `git checkout main`
-  - `git pull`
-  - `git merge exp/<descriptive-name>`
-  - `git push`
-  - Optionally tag: `git tag v0.1-baseline`
-  - Delete branch: `git branch -d exp/<descriptive-name>`
+**Nowave-fullwind baseline unavailable**: the `nopanel-fullwind-nowave` Nov 12 run has all-NaN plain amplitudes in `combined_meta`. Without this baseline we cannot separate wind-generated background from paddle-wave growth. Needs investigation — is the run empty, or did amplitude computation fail for it?
 
-**Safety net**
+**Physics note**: wind waves exist only above ~1 Hz — no wind-wave energy at 0.65 Hz in the PSD sense. BUT wind waves (3–5 Hz, broad spectrum, erratic) ride on top of the paddle wave in the time domain. The `"Probe {pos} Amplitude"` values (13.24, 40.98 mm) are **time-domain percentile amplitudes** — they include ALL frequency content, not just 0.65 Hz. If wind waves are stronger near the 170 mm wall, `12545/170` time-domain amplitude will be inflated relative to `12545/340`.
 
-Before risky changes:
+**Better metric for this investigation**: `"Probe {pos} Amplitude (FFT)"` at exactly 0.65 Hz isolates just the paddle wave and is immune to wind-wave contamination. Compare the FFT amplitudes (not time-domain) at `12545/170` vs `12545/340` across runs to test whether the asymmetry survives frequency-isolation.
 
-```bash
-git commit -am "safety: everything working before I break it"
+**The real question**: two probes at same distance from paddle (12545 mm) disagree by ~2x. Possible causes:
+- Wind-wave noise inflating time-domain amplitude more on the 170 side (near wall)
+- Wall reflection at 170 mm side creating constructive interference at 0.65 Hz (would survive FFT isolation)
+- Wind skewing the wave crest laterally (would only appear in wind runs)
+- `out_probe=3` (`12545/170`) is simply the wrong choice — `12545/340` or average may be better
+
+**Next steps**:
+1. Re-run the ratio check using `"Probe 12545/170 Amplitude (FFT)"` vs `"Probe 12545/340 Amplitude (FFT)"` — if asymmetry disappears → wind-wave noise in time-domain is the cause
+2. If FFT asymmetry persists → geometry/reflection or wind skew — check whether it appears in no-wind runs too
+3. Decide whether `out_position` should be `12545/170`, `12545/340`, or averaged — update `nov_normalt_oppsett` config if needed
+
+**Diagnostic code** already written, just run these cells in `main_explore_inline.py` wind-only section or a scratch cell:
+```python
+# Lateral asymmetry check
+_wave = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy()
+_wave["ratio_170_vs_340"] = _wave["Probe 12545/170 Amplitude"] / _wave["Probe 12545/340 Amplitude"]
+print(_wave[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WindCondition",
+             "PanelCondition", "Probe 12545/170 Amplitude", "Probe 12545/340 Amplitude",
+             "ratio_170_vs_340"]].sort_values("ratio_170_vs_340", ascending=False).to_string())
 ```
 
-This ensures I can always restore a working state by using `git log` and `git checkout <commit-sha>`.
+---
 
-**How you (the assistant) should use this**
+## 1. Project overview
 
-- When suggesting changes, propose a branch name: `exp/<what-you-try>`.
-- When generating commit messages, keep them short and descriptive, e.g.  
-  `exp: try random forest, F1=0.68`.
+Wave-tank experiment analysis pipeline:
+
+- Raw CSV runs in `wavedata/`
+- `main.py` processes CSVs → cache in `waveprocessed/PROCESSED-*`
+- Exploration scripts load processed cache, never raw CSVs
+- Probes identified by **physical position**, not probe number 1–4
+
+Repo: `https://github.com/OleBB/wave_project`
 
 ---
 
-## Testing (pytest)
+## 2. Environment
 
-The project uses **pytest** for automated checks.
-
-**Common commands**
-
-- Run one file: `pytest -q test_sandkasse.py`
-- Run all tests in current folder: `pytest -q`
-- Run a single test function:  
-  `pytest -q test_sandkasse.py -k test_svaret`
-- Verbose: `pytest -vv`
-- Stop at first failure: `pytest -x`
-- Show `print()` output: `pytest -s`
-- Re-run only last failures: `pytest --last-failed`
-- List fixtures: `pytest --fixtures`
-- Help: `pytest -h`
-
-**Why tests matter here**
-
-- Prevent silent regressions in signal/data processing
-- Encode assumptions (e.g. monotonic timestamps, sampling rate, peak distances)
-- Make refactoring safe
-- Provide fast, automated feedback instead of manual visual checks
-
-**How you (the assistant) should use this**
-
-- When changing logic, propose or update tests that:
-  - Use small synthetic data
-  - Check key metrics (e.g. peak counts, frequencies)
-  - Verify error handling (e.g. raising `ValueError` on bad input)
-- Prefer:
-  - A few “smoke tests” for end-to-end pipeline
-  - “Golden” tests with known outputs/metrics
-
----
-
-## Environment
-
-Target environment (conda):
+- OS: macOS, Editor: Zed, conda (never pip)
+- Active local env: `draumkvedet`
+- Exported/shared env name: `draumeriket`
 
 ```yaml
 name: draumeriket
@@ -93,645 +72,252 @@ channels:
 dependencies:
   - python=3.11
   - spyder=6.1.0
-  - notebook
-  - spyder-notebook
-  - scipy
-  - pytest
-  - numpy
-  - matplotlib
-  - sympy
-  - pandas
-  - plotly
-  - seaborn
-  - pyarrow
-  - tabulate
-  - spyder-unittest
+  - notebook, spyder-notebook, spyder-unittest
+  - numpy, scipy, pandas, matplotlib, seaborn, plotly
+  - pytest, sympy, pyarrow, tabulate
 ```
 
-**How you (the assistant) should use this**
+---
 
-- Assume Python 3.11 and the above packages are available.
-- Prefer numpy/pandas/scipy for core computations.
-- For plotting, suggest matplotlib/plotly/seaborn.
+## 3. Entry points (repo root)
+
+| File | Role | How to run |
+|------|------|------------|
+| `main.py` | Full pipeline: CSV → processed cache | `python main.py` |
+| `main_explore_inline.py` | Primary analysis playground, `# %%` cells | Open in Zed REPL |
+| `main_explore_browser.py` | Qt GUIs for interactive run browsing | `python main_explore_browser.py` |
+| `main_save_figures.py` | (WIP) batch LaTeX/PGF figure export | `python main_save_figures.py` |
+
+`main_explore_browser.py` forces `matplotlib.use("Qt5Agg")` — run from terminal, not REPL.
 
 ---
 
-## Notebooks and `.gitignore`
-
-- Some notebooks are ignored by git.
-- Only selected notebooks are shared/committed.
-
-**How you (the assistant) should behave**
-
-- When proposing new notebooks, assume they may need to be added explicitly (not all are tracked).
-- For reusable code, prefer Python modules over big notebooks, and then import them into notebooks.
-
----
-
-## How to Help Me Most Effectively
-
-When responding, you (the chatbot) should:
-
-1. **Ask for file content** before editing:
-   - e.g., “Paste `wave_analysis.py`” or “Show the relevant notebook cell.”
-2. **Propose branch + commit messages** when suggesting non-trivial changes.
-3. **Suggest tests** alongside any important new logic or refactor.
-4. **Keep examples small and runnable** with synthetic data.
-5. **Explain assumptions explicitly** (sampling rate, units, signal length, etc.).
-
-If something in this file conflicts with the actual codebase, ask for clarification instead of guessing.```markdown
-## Project: wave_project – quick context for code assistants
-
-### What this repo does
-
-Wave tank experiment analysis pipeline:
-
-- Load raw CSV runs from `wavedata/`
-- Process & cache to `waveprocessed/PROCESSED-*`
-- Compute FFT/PSD & wave physics
-- Explore runs via inline notebooks or Qt browsers
-- (Later) export publication-quality figures with LaTeX/PGF
-
-Main constraints:
-
-- Must handle multiple probe layouts over time
-- Probes are identified by **physical position**, not 1–4
-- Need fast reload from cached processed data
-- Need robust handling of “nowave / nowind / wind-only” runs
-
----
-
-## High-level workflow
-
-### 1. Solo git workflow (from README)
-
-Always work on branches:
-
-```bash
-git checkout -b exp/what-im-trying
-# work, then:
-git add .
-git commit -m "exp: short message"
-git checkout main
-git pull
-git merge exp/what-im-trying
-git push
-git branch -d exp/what-im-trying
-```
-
-Safety snapshot before risky edits:
-
-```bash
-git commit -am "safety: everything working before I break it"
-```
-
-### 2. Environments & requirements
-
-Conda env (`draumeriket`):
-
-- `python=3.11`
-- `spyder`, `notebook`, `spyder-notebook`, `spyder-unittest`
-- `numpy`, `scipy`, `pandas`, `matplotlib`, `seaborn`, `plotly`
-- `pytest`, `sympy`, `pyarrow`, `tabulate`
-
-(Prefers conda over pip.)
-
-### 3. Entry points / scripts
-
-At repo root:
-
-- `main.py`  
-  Full batch processing:
-  - Load raw CSVs from `wavedata/…`
-  - Use `wavescripts/processor.py` & `wavescripts/signal_processing.py`
-  - Compute stillwater, wave ranges, FFT/PSD, amplitudes
-  - Save to `waveprocessed/PROCESSED-*` (parquet + meta JSON)
-  - **No plotting, no Qt**
-
-- `main_explore_inline.py`  
-  Inline exploration (Zed REPL, `%matplotlib inline`):
-  - Calls `load_analysis_data(*PROCESSED_DIRS)`
-  - Works with:
-    - `combined_meta` (all runs)
-    - `processed_dfs` (zeroed+smoothed time series)
-    - `combined_fft_dict`, `combined_psd_dict` (wave runs only)
-  - Contains:
-    - Amplitude / damping / FFT / PSD plots
-    - Swell scatter, wavenumber checks
-    - Example reconstructed-signal plots for a single run and all runs
-    - Wind-only analysis (nowave + wind, plus stillwater baseline)
-
-- `main_explore_browser.py`  
-  Qt GUIs (run from terminal, not REPL):
-  - `SignalBrowserFiltered` → pick runs; calls `plot_reconstructed`
-  - `RampDetectionBrowser` → inspect ramp detection
-  - Uses Qt backend (`Qt5Agg`), free-floating matplotlib windows
-
-- `main_save_figures.py`  
-  Stub for later:
-  - Will call plotting functions with `save_plot/save_pgf`
-  - Target: LaTeX-ready figures to `figures/` or similar
-
----
-
-## Core modules (wavescripts/)
-
-- `improved_data_loader.py`
-  - `ProbeConfiguration`, `PROBE_CONFIGS`
-  - `load_meta_json(processed_dir)`
-    - Handles `meta.json` as list of records
-    - Casts types via `apply_dtypes`
-    - Converts `"file_date"` to datetime
-  - `load_analysis_data(*processed_dirs, load_processed=False)`
-    - Always loads `combined_meta` and FFT/PSD from parquet cache
-    - `load_processed=False` (default): skips loading `processed_dfs` (saves ~75 MB + ~20 s)
-    - `load_processed=True`: also loads full time-series `processed_dfs` (needed for wind-only analysis)
-    - Both `main_explore_inline.py` and `main_explore_browser.py` pass `load_processed=True`
-  - `save_spectra_dicts(fft_dict, psd_dict, cache_dir)`
-    - Saves `fft_spectra.parquet` and `psd_spectra.parquet`
-    - All float columns downcast to **float32** to halve file size
-    - Complex columns (e.g. `"FFT pos complex"`) split into `col_real` + `col_imag` float32 pairs
-  - `load_spectra_dicts(cache_dir)`
-    - Loads parquet; upcasts float32 → float64
-    - Recombines `_real`/`_imag` pairs back into complex128 columns
-
-- `processor.py`
-  - `process_selected_data(...)` (called by `main.py`)
-  - `ensure_stillwater_columns(dfs, meta, cfg)`
-    - Uses “no-wind/no-wave” anchor runs to compute stillwater:
-      - Anchor condition:
-        - `WindCondition == "no"` or missing  
-        - **AND** nowave (`WaveFrequencyInput` NaN or `"nowave"` in path)
-      - If no such anchors:
-        - Falls back to `WindCondition == "no"` runs with waves,
-        - Samples only the **first 1 second** (pre-wave stillwater)
-    - Computes per-probe stillwater level and noise std
-  - Calls:
-    - `find_wave_range` (wave onset/offset)
-    - `compute_fft_with_amplitudes`
-    - `compute_psd_with_amplitudes`
-    - `calculate_wavenumbers_vectorized`, `calculate_wavedimensions`, `calculate_windspeed`
-
-- `signal_processing.py`
-  - `compute_fft_with_amplitudes(processed_dfs, meta_wave, cfg, fs, debug=False)`
-    - Builds `fft_dict` with columns:
-      - `"FFT {pos}"`, `"FFT {pos} complex"` (index = Frequencies)
-    - Stores per-run FFT amplitude/frequency/period back into `meta`
-    - Skips runs where `WaveFrequencyInput [Hz]` is NaN or ≤ 0
-  - `compute_psd_with_amplitudes(...)`
-    - Builds `psd_dict` with `"Pxx {pos}"` columns
-    - Computes band amplitudes and writes to `meta`:
-      - `"Probe {pos} Amplitude (PSD)"`, `"Swell Amplitude (PSD)"`, `"Wind Amplitude (PSD)"`, etc.
-  - Debug prints are minimal (per-run summaries, not per-sample spam)
-
-- `plotter.py`
-  - `plot_all_probes(meta_sel, plotvariables)`
-  - `plot_damping_freq`, `plot_damping_scatter`
-  - `plot_frequency_spectrum(fft_or_psd_dict, meta_df, plotvariables, data_type="fft")`
-    - `fft_dict` or `psd_dict` style:
-      - dict[path → DataFrame with `"FFT {pos}"` / `"Pxx {pos}"`]
-    - `plotvariables["plotting"]["probes"]` is a list of **position strings**
-      - e.g. `["9373/170", "12545"]`
-    - `facet_by` can be `"probe" | "wind" | "panel"`
-  - `plot_swell_scatter(...)`
-  - `plot_reconstructed(fft_dict, filtrert_frequencies, freqplotvariables, data_type="fft")`
-    - Expects **single run** if called with `{path: df}` and matching `meta`
-    - Handles:
-      - `plotting["probes"]` = list of position strings
-      - `plotting["facet_by"] == "probe"` → multiple subplots
-      - Safely returns early if no probes selected
-    - Returns `(fig, axes)`; uses `plt.show(block=False)` when `show_plot=True`
-  - `gather_ramp_data`, `plot_ramp_detection` for ramp browser
-
-- `plot_quicklook.py`
-  - `SignalBrowserFiltered(QMainWindow)`
-    - Takes `fft_dict`, `meta_df`, `freqplotvariables`
-    - Derives probe positions from columns starting with `"FFT "`
-      - Builds checkboxes labeled by position (e.g. `"12545"`, `"9373/340"`)
-    - On selection:
-      - Copies `plotvars`, updates `"plotting"` section
-      - Calls `plot_reconstructed({path: df}, single_meta, plotvars)`
-      - Resizes figure to ~¾ screen
-  - `RampDetectionBrowser(QMainWindow)`
-    - Steps through ramp detection results (`gather_ramp_data` output)
-    - Zoom control; shows full ramp detection plot per run
-  - `explore_damping_vs_freq`, `explore_damping_vs_amp`
-  - `save_interactive_plot(df, filename="damping_analysis.html")` (plotly)
-
-- `filters.py`
-  - Central place for `plotvariables["filters"]` handling:
-    - `apply_experimental_filters`
-    - `filter_for_frequencyspectrum`
-    - `damping_grouper`, `damping_all_amplitude_grouper`
-    - `filter_for_amplitude_plot`, etc.
-
-- `constants.py`
-  - `MEASUREMENT`:
-    - `SAMPLING_RATE = 250.0`
-    - `STILLWATER_SAMPLES = 250`
-  - `GlobalColumns (GC)`:
-    - e.g. `WIND_CONDITION`, `PANEL_CONDITION`, `WAVE_FREQUENCY_INPUT`, `PATH`
-  - `ProbeColumns (PC)`:
-    - Templates like `"Probe {i} Amplitude"`, `"Probe {i} Amplitude (FFT)"`, …
-  - `ColumnGroups (CG)`:
-    - Helpers to list groups of columns (amplitude, FFT, PSD, setup)
-
----
-
-## Probe naming & column conventions
-
-### Probe positions
-
-Refactored from numeric `Probe 1–4` to physical positions:
-
-- Logical probes:
-  - 1 → `"9373/170"`
-  - 2 → `"12545"`
-  - 3 → `"9373/340"`
-  - 4 → `"8804"`
-- `ProbeConfiguration.probe_col_names()` returns `{1: "9373/170", 2: "12545", ...}`
-
-### Raw & processed time series
-
-For each run in `processed_dfs[path]`:
-
-- Time: `"Date"`
-- Raw probes: `"Probe 9373/170"`, `"Probe 12545"`, ...
-- Processed elevation:
-  - `"eta_9373/170"`, `"eta_12545"`, `"eta_9373/340"`, `"eta_8804"`
-- Smoothed:
-  - `"Probe 9373/170_ma"`, etc.
-- Other:
-  - `"Mach"` (wind tunnel info)
-
-### Metadata columns (combined_meta)
-
-Per run:
-
-- Base:
-  - `"path"`, `"experiment_folder"`, `"file_date"`
-  - `"WindCondition"`, `"PanelCondition"`, `"Mooring"`, `"TunnelCondition"`
-  - `"WaveAmplitudeInput [Volt]"`, `"WaveFrequencyInput [Hz]"`, `"WavePeriodInput"`
-- Stillwater & geometry:
-  - `"Probe i mm from paddle"`, `"Probe i mm from wall"`
-  - `"Stillwater Probe {i}"` (original numbering)
-  - `"Stillwater Probe 9373/170"`, etc. (position-based)
-- FFT/PSD amplitudes:
-  - `"Probe {pos} Amplitude"`
-  - `"Probe {pos} Amplitude (FFT)"`, `"Probe {pos} Amplitude (PSD)"`
-  - `"Probe {pos} Swell Amplitude (PSD)"`, `"Probe {pos} Wind Amplitude (PSD)"`, `"Total Amplitude (PSD)"`
-- Wave physics:
-  - `"Probe {pos} Wavenumber (FFT)"`, `"Wavelength (FFT)"`, `"kL (FFT)"`, `"ak (FFT)"`, `"tanh(kH) (FFT)"`, `"Celerity (FFT)"`
-  - Global: `"Waveperiod"`, `"Wavenumber"`, `"Wavelength"`, `"kL"`, `"ak"`, `"kH"`, `"tanh(kH)"`, `"Celerity"`
-- Ratios & damping:
-  - `"P2/P1 (FFT)"`, `"P3/P2 (FFT)"`, `"P4/P3 (FFT)"`, `"OUT/IN (FFT)"`
-- Swell scatter support:
-  - `"Probe {pos} Swell Amplitude (PSD)"`, `"Probe {pos} Wind Amplitude (PSD)"`
-
-Note: Nowave runs (`WaveFrequencyInput NaN`) have PSD amplitude columns as NaN but do appear in `combined_meta`.
-
----
-
-## Run types (important for filtering)
-
-From `combined_meta`:
-
-- **Wave runs**:
-  - `WaveFrequencyInput [Hz]` > 0
-  - Appear in `fft_dict` / `psd_dict`
-- **Nowave runs** (no paddle wave):
-  - `WaveFrequencyInput [Hz]` NaN **OR** `"nowave"` in filename
-  - Includes:
-    - stillwater: `WindCondition == "no"`
-    - wind-only: `WindCondition in {"full","lowest"}` + nowave
-- **Old/odd filenames**:
-  - E.g. `"fullpanel-nowind-NO-depth580-..."`:
-    - No `-amp####-` and no `-freq####-` → treated as nowave
-  - Rule in `_extract_wave_parameters`:
-    - Both amp and freq must be present to set wave parameters
-
----
-
-## How FFT/PSD caches are built
-
-`main.py` computes FFT/PSD and calls `save_spectra_dicts(fft_dict, psd_dict, cache_dir)` to write:
-- `waveprocessed/PROCESSED-*/fft_spectra.parquet`
-- `waveprocessed/PROCESSED-*/psd_spectra.parquet`
-
-These files store all FFT/PSD data including **complex columns** (split to float32 real+imag).
-
-`load_analysis_data` then loads from cache (fast path):
-1. Load `meta.json` → `combined_meta`
-2. Try `load_spectra_dicts(processed_dir)` → `fft_dict`, `psd_dict` from parquet
-3. If no cache: fall back to recomputing from `processed_dfs` (slow)
-4. If `load_processed=True`: also load `processed_dfs.parquet` (~75 MB)
-
-`waveprocessed/` is **gitignored** — all parquet/json cache files are local only, regenerated by `main.py`.
-
-Nowave runs are **not** in `fft_dict` / `psd_dict` but remain in `combined_meta` and `processed_dfs`.
-
----
-
-## Wind-only analysis (current approach)
-
-In `main_explore_inline.py`:
-
-- Filter:
-  - `_meta_nowave = combined_meta[WaveFrequencyInput is NaN]`
-  - `_meta_wind_only = _meta_nowave[WindCondition in {"full","lowest"}]`
-  - `_meta_stillwater = _meta_nowave[WindCondition == "no"]`
-- Build `wind_psd_dict` from `processed_dfs` using `scipy.signal.welch` on `eta_{pos}` columns:
-  - Same format as `psd_dict`: `{path: DataFrame(index = Frequencies, cols = "Pxx {pos}")}`
-- Plot:
-  - `plot_frequency_spectrum(wind_psd_dict, _meta_nowave, plotvars, data_type="psd")`
-  - `facet_by="probe"`; log scale; xlim (0, 5 Hz)
-- Stats:
-  - For each nowave run and each probe:
-    - Mean(`eta_{pos}`) → wind setup
-    - Std(`eta_{pos}`) → RMS surface fluctuations
-
----
-
-## Pytest usage (from README, shortened)
-
-Useful commands (run from repo root):
-
-- Run all tests:
-  ```bash
-  pytest -q
-  ```
-
-- Single file:
-  ```bash
-  pytest -q tests/test_sandkasse.py
-  ```
-
-- Single test:
-  ```bash
-  pytest -q tests/test_sandkasse.py -k test_svaret
-  ```
-
-- Verbose / show prints / stop early:
-  ```bash
-  pytest -vv
-  pytest -s
-  pytest -x
-  ```
-
-Rationale: tests codify assumptions (sampling rate, monotonic timestamps, wave range, probe mapping), so refactors don’t silently break the physics.
-
----
-
-## What a helper model should know / respect
-
-- **Do not** reintroduce probe numbers (1–4) in user-facing code; use position strings consistently.
-- When adding new plots:
-  - Accept `plotvariables` with `filters` + `plotting`.
-  - Use the same column naming patterns.
-  - Prefer `plot_frequency_spectrum` / `plot_reconstructed` rather than duplicating logic.
-- When touching stillwater logic:
-  - Honor the new anchor rules (prefer nowind+nowave; fall back to first 1s of nowind+wave).
-- When adding new analysis:
-  - Prefer to extend `main_explore_inline.py` and optionally mirror into `main_save_figures.py`.
-- When touching data loading:
-  - Always go through `load_analysis_data()` unless there is a very good reason not to.
-```
-
-
-
-[Bruker]
-
-please give me a .md file
-
-
-[gpt-5.1]
-
-```markdown
-# claude.md — Wave Project overview for code assistants
-
-## 1. User + environment context
-
-- OS: macOS
-- Editor: Zed
-- Package manager: conda (not pip) <ref: index=2648723 firstWord=3 lastWord=8/>
-- Main Jupyter/REPL env: `draumkvedet` (local), but this repo’s exported env for others is `draumeriket` <ref: index=2648739 firstWord=20 lastWord=28/><ref: index=2648696 firstWord=60 lastWord=80/>
-
-Conda env (shared / exportable):
-
-```yaml
-name: draumeriket
-channels:
-  - defaults
-dependencies:
-  - python=3.11
-  - spyder=6.1.0
-  - notebook
-  - spyder-notebook
-  - scipy
-  - pytest
-  - numpy
-  - matplotlib
-  - sympy
-  - pandas
-  - plotly
-  - seaborn
-  - pyarrow
-  - tabulate
-  - spyder-unittest
-```
-<ref: index=2648696 firstWord=80 lastWord=112/>
-
-Assume these libs are available when proposing code.
-
----
-
-## 2. High-level purpose
-
-This repo is a **wave-tank experiment analysis pipeline**:
-
-- Raw CSV experiments in `wavedata/`
-- `main.py` runs the full processing pipeline:
-  - load CSVs
-  - compute stillwater levels
-  - detect usable wave ranges
-  - compute FFT/PSD and wave-physics quantities
-  - cache results in `waveprocessed/PROCESSED-*`
-- Exploration scripts load **processed data**, not raw CSVs
-
-Processed caches contain:
-
-- `meta.json`: one row per run (all runs, including “nowave”) with typed columns <ref: index=2648707 firstWord=40 lastWord=51/>
-- `processed_dfs.parquet`: all zeroed+smoothed time series, keyed by original CSV path <ref: index=2648711 firstWord=537 lastWord=553/>
-- FFT/PSD dicts are recomputed from `processed_dfs` on load (fast, no CSV parsing) <ref: index=2648705 firstWord=981 lastWord=993/>
-
----
-
-## 3. Entry points (root of repo)
-
-From `project_structure.md` (assistant memory): <ref: index=2648739 firstWord=40 lastWord=80/>
-
-| File                     | Role                                                       | How to run                            |
-|--------------------------|------------------------------------------------------------|---------------------------------------|
-| `main.py`                | Full pipeline: CSV → processed cache (meta + dfs)         | `python main.py`                      |
-| `main_explore_inline.py` | Inline, cell-based exploration + plots (Zed / Jupyter)    | Open in Zed, run `# %%` cells         |
-| `main_explore_browser.py`| Qt GUIs for exploring runs interactively                  | `python main_explore_browser.py`      |
-| `main_save_figures.py`   | (WIP) batch export of LaTeX/PGF figures                   | `python main_save_figures.py`         |
-
-Important notes:
-
-- `main_explore_inline.py` is the **primary analysis playground** <ref: index=2648739 firstWord=80 lastWord=96/>
-- `main_explore_browser.py` explicitly forces Qt backend:
-
-  ```python
-  import matplotlib
-  matplotlib.use("Qt5Agg")
-  ```
-  <ref: index=2648671 firstWord=1 lastWord=8/>
-
----
-
-## 4. Data structures you must respect
-
-### 4.1. Metadata (`combined_meta`)
-
-Loaded via `load_analysis_data(*PROCESSED_DIRS, load_processed=True)` in `wavescripts/improved_data_loader.py`:
+## 4. Data loading
 
 ```python
-combined_meta, processed_dfs, fft_dict, psd_dict = load_analysis_data(
-    *PROCESSED_DIRS, load_processed=True
+combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
+    *PROCESSED_DIRS, load_processed=False   # default — fast path, ~17 s
 )
 ```
 
-- `combined_meta`: all runs (wave + nowave), typed with `apply_dtypes`
-- `processed_dfs`: `{path: DataFrame}` of processed signals (empty dict if `load_processed=False`)
-- `fft_dict`: `{path: DataFrame}` for **wave runs only** — includes complex columns
-- `psd_dict`: `{path: DataFrame}` for **wave runs only**
+- `load_processed=False` (default): skips 75 MB `processed_dfs.parquet`, loads meta + FFT/PSD only
+- `load_processed=True`: also loads full time-series `processed_dfs` (~+20 s)
+- `processed_dfs` is lazy-loaded in `main_explore_inline.py` just before the wind-only section:
+  ```python
+  if not processed_dfs:
+      processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+  ```
+- `waveprocessed/` is **gitignored** — all caches are local, regenerated by `main.py`
 
-Type enforcement example:
+### What each variable contains
 
-- `WaveFrequencyInput [Hz]` is coerced to `float64`, missing/invalid → `NaN` <ref: index=2648705 firstWord=1041 lastWord=1066/>
+- `combined_meta`: DataFrame, one row per run (wave + nowave), all runs
+- `processed_dfs`: `{csv_path: DataFrame}` of zeroed+smoothed time series (empty if `load_processed=False`)
+- `combined_fft_dict`: `{csv_path: DataFrame}` for **wave runs only** — columns `"FFT {pos}"` + `"FFT {pos} complex"`
+- `combined_psd_dict`: `{csv_path: DataFrame}` — columns `"Pxx {pos}"`
 
-### 4.2. Processed time series (`processed_dfs`)
+### FFT/PSD parquet storage
 
-Each `processed_dfs[path]` DataFrame (per run) typically contains:
+- Complex columns split into `col_real` / `col_imag` float32 pairs on save, recombined to complex128 on load
+- All floats downcast to float32 to halve file size
 
-- Time: a timestamp column (often `"Date"` or similar)
-- Raw probes: `"Probe {pos}"` columns; “pos” is **physical position**, not 1–4
-- Processed elevation: `eta_{pos}` columns (same position convention) <ref: index=2648711 firstWord=457 lastWord=460/>
-- Other channels (e.g. `"Mach"` for wind tunnel state)
+---
 
-### 4.3. FFT and PSD dicts
+## 5. Probe naming convention (CRITICAL)
 
-`psd_dict` example from a real run: <ref: index=2648735 firstWord=1 lastWord=15/>
+### Always `distance_mm/lateral_mm`
+
+Every probe position is always written as `"longitudinal/lateral"` — even for probes with a unique longitudinal distance:
+
+| Probe | Position string |
+|-------|----------------|
+| 9373 mm from paddle, center (250 mm) | `"9373/250"` |
+| 9373 mm from paddle, near wall (170 mm) | `"9373/170"` |
+| 9373 mm from paddle, far side (340 mm) | `"9373/340"` |
+| 12545 mm, center | `"12545/250"` |
+| 12545 mm, near wall | `"12545/170"` |
+| 12545 mm, far side | `"12545/340"` |
+| 8804 mm, center | `"8804/250"` |
+
+`probe_col_name()` always returns `f"{dist}/{lat}"` — no parallel-detection logic.
+
+**Do not** use plain-number names like `"9373"`, `"12545"`, `"8804"` — these were the old convention, replaced in Mar 2026.
+
+### Column name patterns
+
+- Raw signal: `"Probe 9373/250"`
+- Processed elevation: `"eta_9373/250"`
+- Smoothed: `"Probe 9373/250_ma"`
+- Amplitude (time-domain, percentile): `"Probe 9373/250 Amplitude"` ← used by `plot_all_probes` and `damping_grouper`
+- FFT amplitude: `"Probe 9373/250 Amplitude (FFT)"`
+- PSD amplitude: `"Probe 9373/250 Amplitude (PSD)"`
+- FFT spectrum: `"FFT 9373/250"`, `"FFT 9373/250 complex"`
+- PSD spectrum: `"Pxx 9373/250"`
+
+**Do not** reintroduce probe numbers (1–4) in user-facing code.
+
+### `in_position` / `out_position` in combined_meta
+
+- Set by `processor2nd.py` from `ProbeConfiguration.in_probe` / `out_probe` via `probe_col_name()`
+- Stored as position strings: `"9373/250"`, `"12545/170"`, etc.
+- Used by `damping_grouper` to recompute OUT/IN ratio on-the-fly from plain amplitude columns
+
+---
+
+## 6. Known pitfalls / gotchas
+
+### `apply_dtypes` destroys position strings with `/`
+
+`apply_dtypes` in `improved_data_loader.py` calls `pd.to_numeric(..., errors="coerce")` on all columns not in `NON_FLOAT_COLUMNS`. Position strings containing `/` (e.g. `"12545/170"`) become **NaN**. Plain-number strings (e.g. `"9373"`) become floats (`9373.0`).
+
+**Fix already applied**: `in_position` and `out_position` are now in `NON_FLOAT_COLUMNS`.
+
+**Rule**: Any new string-typed column whose value may contain `/`, letters, or other non-numeric characters **must** be added to `NON_FLOAT_COLUMNS`. Forgetting this causes silent NaN corruption that is very hard to debug.
+
+### Stale `OUT/IN (FFT)` in meta.json
+
+`meta.json` may contain `OUT/IN (FFT)` values computed with an old wide FFT window (`0.5 Hz`, `argmax`) that picks up wind-wave peaks instead of paddle-wave peaks. Do not trust cached `OUT/IN (FFT)`.
+
+`damping_grouper` now recomputes OUT/IN on-the-fly from `"Probe {pos} Amplitude"` (plain time-domain, percentile-based) columns. It falls back to the cached value only if recomputation yields 0 valid rows (prints a diagnostic).
+
+### Two amplitude types — not interchangeable
+
+| Column | Source | Used by |
+|--------|--------|---------|
+| `"Probe {pos} Amplitude"` | Percentile of time-domain signal | `plot_all_probes`, `damping_grouper` |
+| `"Probe {pos} Amplitude (FFT)"` | FFT peak near target frequency | Old OUT/IN cached values |
+
+Always use `"Probe {pos} Amplitude"` (no suffix) for OUT/IN ratio computation.
+
+### FFT amplitude window
+
+`compute_amplitudes_from_fft` uses `window=0.1` Hz and `argmin(abs(masked_freqs - target_freq))` (nearest bin). Old code used `window=0.5` Hz + `argmax`, which picked up wind-wave peaks for low-amplitude runs.
+
+---
+
+## 7. Probe configurations over time
+
+Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
+
+| Config name | Valid from | in_pos | out_pos | Notes |
+|-------------|-----------|--------|---------|-------|
+| `initial_setup` | Aug 2025 | `9373/250` | `12545/170` | Probe 1 far back at 18000 mm |
+| `nov14_normalt_oppsett` | Nov 10 2025 | `9373/250` | `12545/170` | Probe 1 moved to 8804 mm |
+| `march2026_rearranging` | Mar 4 2026 | `9373/170` | `12300/250` | Temporary, 2 days |
+| `march2026_better_rearranging` | Mar 7 2026 | `9373/170` | `12545/250` | Current layout |
+
+`get_configuration_for_date(file_date)` selects the right config.
+
+---
+
+## 8. Run types
+
+- **Wave runs**: `WaveFrequencyInput [Hz]` > 0 — appear in `fft_dict` / `psd_dict`
+- **Nowave runs**: `WaveFrequencyInput [Hz]` is NaN or `"nowave"` in filename
+  - Stillwater: `WindCondition == "no"`
+  - Wind-only: `WindCondition in {"full", "lowest"}`
+- Both amp and freq tags must be present in filename to set wave parameters
+
+---
+
+## 9. Core modules (`wavescripts/`)
+
+- **`improved_data_loader.py`**: `ProbeConfiguration`, `PROBE_CONFIGS`, `load_analysis_data`, `load_processed_dfs`, `save_spectra_dicts`, `load_spectra_dicts`, `apply_dtypes`, `NON_FLOAT_COLUMNS`
+- **`processor.py`**: `process_selected_data` — full pipeline called by `main.py`
+- **`processor2nd.py`**: post-processing after main pipeline — sets `in_position`, `out_position`, `OUT/IN (FFT)`, band amplitudes
+- **`signal_processing.py`**: `compute_fft_with_amplitudes`, `compute_psd_with_amplitudes`, `compute_amplitudes_from_fft`
+- **`filters.py`**: `apply_experimental_filters`, `filter_for_frequencyspectrum`, `damping_grouper`, `damping_all_amplitude_grouper`
+- **`plotter.py`**: `plot_all_probes`, `plot_damping_freq`, `plot_frequency_spectrum`, `plot_reconstructed`, `plot_swell_scatter`
+- **`plot_quicklook.py`**: `SignalBrowserFiltered`, `RampDetectionBrowser` (Qt)
+- **`constants.py`**: `MEASUREMENT` (sampling rate 250 Hz), `GlobalColumns (GC)`, `ProbeColumns (PC)`, `ColumnGroups (CG)`
+
+---
+
+## 10. Damping / OUT/IN analysis
+
+`explore_damping_vs_freq` (in `plot_quicklook.py`) uses `damping_grouper` from `filters.py`.
+
+`damping_grouper`:
+- Groups by: `WaveFrequencyInput [Hz]`, `WaveAmplitudeInput [Volt]`, `WindCondition`, `PanelCondition`, `Mooring`
+- Recomputes `OUT/IN` from `"Probe {in_position} Amplitude"` / `"Probe {out_position} Amplitude"` per row
+- Requires `in_position` and `out_position` to be valid strings in `combined_meta` (not NaN, not float)
+- Falls back to cached `OUT/IN (FFT)` with a diagnostic print if recompute fails
+
+`damping_all_amplitude_grouper`: same grouping, but across all amplitude levels.
+
+---
+
+## 11. Wind-only analysis
+
+In `main_explore_inline.py` (lazy-loaded section):
+
+- Filters `combined_meta` for nowave runs
+- Builds `wind_psd_dict` using `scipy.signal.welch` on `eta_{pos}` columns from `processed_dfs`
+- Same dict format as `psd_dict`: `{path: DataFrame(index=Frequencies, cols="Pxx {pos}")}`
+- Plots with `plot_frequency_spectrum(..., data_type="psd", facet_by="probe")`
+- Computes mean (wind setup) and std (RMS fluctuations) per probe
+
+---
+
+## 12. Debugging tips
+
+### Inspect a single filtered run
 
 ```python
-psd_dict[path].columns
-# ['Pxx 9373/170', 'Pxx 12545', 'Pxx 9373/340', 'Pxx 8804']
-
-psd_dict[path].index.name  # 'Frequencies'
+from wavescripts.filters import apply_experimental_filters
+_sel = apply_experimental_filters(combined_meta, myplotvariables)
+amp_cols = [c for c in _sel.columns if "Amplitude" in c and "FFT" not in c and "PSD" not in c]
+print(_sel[["path", "file_date", "in_position", "out_position", "OUT/IN (FFT)"] + amp_cols].T.to_string())
 ```
 
-- Keys are **original CSV paths**
-- Columns are `"Pxx {pos}"` where `{pos}` is the physical probe identifier
+`.T` (transpose) is essential — with 1 row and many columns it prints much more readably.
 
-`fft_dict` uses analogous `"FFT {pos}"` (magnitude) and `"FFT {pos} complex"` (complex128) columns. Both are always present — stored in parquet as float32 real+imag pairs and recombined on load.
+### View a DataFrame interactively (Zed REPL)
 
----
+- Last expression in a cell: renders as HTML table inline
+- `df.to_clipboard()` → paste into Numbers/Excel
+- `df.to_html("/tmp/x.html"); import subprocess; subprocess.run(["open", "/tmp/x.html"])`
 
-## 5. Probe naming (critical convention)
+### Reload a module without restarting REPL
 
-Probes are identified by **position**, not index:
-
-- Position strings come from `ProbeConfiguration.probe_col_name` and `.probe_col_names()` <ref: index=2648718 firstWord=69 lastWord=88/>
-- Examples: `"9373/170"`, `"12545"`, `"9373/340"`, `"8804"`
-- Raw columns: `"Probe {pos}"`
-- Processed: `"eta_{pos}"`, `"Probe {pos}_ma"`, etc.
-
-Do **not** introduce `"Probe 1"`/`"Probe 2"` style names in new code; always go through the configuration or reuse existing patterns.
-
----
-
-## 6. Run types and wave parameters
-
-Filename parsing lives in `wavescripts/improved_data_loader.py` / `_extract_wave_parameters`-style helpers:
-
-- `-amp####-` → `WaveAmplitudeInput [Volt]` (scaled)  
-- `-freq####-` → `WaveFrequencyInput [Hz]` (scaled) <ref: index=2648758 firstWord=478 lastWord=483/>
-- Other tags: `-per####-`, `-depth####`, `-mstop####`, `-run#` <ref: index=2648758 firstWord=485 lastWord=495/>
-
-Key semantics (from recent work and REPL logs): <ref: index=2648730 firstWord=1113 lastWord=1124/><ref: index=2648753 firstWord=1 lastWord=24/>
-
-- **Wave runs**: both amp and freq present → positive `WaveFrequencyInput [Hz]`
-- **Nowave runs**:
-  - No amp/freq tags → both wave fields remain `NaN`
-  - Or filenames explicitly containing `nowave` / special tags; these are treated as no-wave even if a stray `freq####` appears
-- Stillwater anchors (no wind, no wave) are used to compute baseline “stillwater” levels
-- Wind-only runs: nowave + `WindCondition` in `{"full", "lowest"}`
-
-When filtering:
-
-- Wave runs: `meta["WaveFrequencyInput [Hz]"].notna() & (meta["WaveFrequencyInput [Hz]"] > 0)` <ref: index=2648705 firstWord=1015 lastWord=1019/>
-- Nowave: `WaveFrequencyInput [Hz]` is `NaN` (and/or filename tags)
-
----
-
-## 7. Plotting + browsers
-
-### 7.1. Core plotting module
-
-`wavescripts/plotter.py` provides:
-
-- High-level plotting functions (damping, spectra, reconstruction, swell scatter, etc.)
-- `plot_reconstructed(fft_dict, meta, freqplotvariables, data_type="fft")`
-  - Returns `(fig, axes)`
-  - For Qt uses `plt.show()` (the Qt backend is set in `main_explore_browser.py`) <ref: index=2648699 firstWord=914 lastWord=919/>
-
-When adding plots:
-
-- Prefer reusing `plot_reconstructed` / `plot_frequency_spectrum` instead of writing ad-hoc plotting in scripts
-- Accept and extend existing `plotvariables` / `freqplotvariables` dicts rather than inventing new argument shapes
-
-### 7.2. Qt exploration (`plot_quicklook.py` + `main_explore_browser.py`)
-
-`wavescripts/plot_quicklook.py` defines Qt browsers: <ref: index=2648691 firstWord=13 lastWord=18/><ref: index=2648691 firstWord=34 lastWord=37/>
-
-- `SignalBrowserFiltered(fft_dict, meta_df, freqplotvariables)`:
-  - Lists runs and probe checkboxes (positions derived from `"FFT {pos}"` columns)
-  - On selection: calls `plot_reconstructed({path: fft_df}, single_meta, plotvars)` directly — complex columns are in cache now, no on-demand recompute needed
-  - Resizes figure to ~¾ of screen via `_resize_to_fraction`
-- `RampDetectionBrowser`:
-  - Steps through ramp detection results (`gather_ramp_data`)
-  - Uses `plot_ramp_detection`-style logic and also resizes plots to ~¾ screen <ref: index=2648688 firstWord=435 lastWord=437/><ref: index=2648675 firstWord=1 lastWord=6/>
-
----
-
-## 8. Git + workflow expectations
-
-(Short version, extracted from README and prior instructions) <ref: index=2648696 firstWord=1 lastWord=40/>
-
-- Work on **branches**, not `main`:
-  - `git checkout -b exp/<short-description>`
-- Commit small, descriptive steps
-- Merge to `main` only after experiments are stable
-- Before risky refactors, make a “safety” commit so you can roll back easily
-- Use `pytest` for quick feedback:
-  - `pytest -q` for all tests
-  - `pytest -q path/to/test_file.py -k test_name` for focused runs
-
----
-
-## 9. How you (the assistant) should behave
-
-When proposing changes or analysis:
-
-1. **Ask for file contents** (or relevant parts) before editing anything non-trivial.
-2. Suggest a **branch name** (`exp/<topic>`) when the change is more than a one-liner.
-3. Propose or update **pytest tests** whenever changing analysis logic:
-   - Use small synthetic signals
-   - Assert on key outputs (e.g. amplitudes, wavenumbers, wave ranges)
-4. Respect the existing conventions:
-   - Position-based probe naming
-   - `combined_meta` + `processed_dfs` + `fft_dict`/`psd_dict` data model
-   - Wave/nowave classification rules
-5. If this document disagrees with code in the repo, **ask for clarification** instead of guessing.
+```python
+import importlib
+import wavescripts.filters as f
+importlib.reload(f)
 ```
+
+---
+
+## 13. Git workflow
+
+- Never commit to `main` directly
+- Branch: `git checkout -b exp/<what-you-try>`
+- Safety snapshot: `git commit -am "safety: working before I break it"`
+- Merge to main after experiment works, then delete branch
+- `waveprocessed/` is gitignored — never commit it
+
+---
+
+## 14. Testing (pytest)
+
+```bash
+pytest -q                          # all tests
+pytest -q tests/test_sandkasse.py  # single file
+pytest -q -k test_name             # single test
+pytest -vv / -s / -x               # verbose / show prints / stop at first fail
+```
+
+When changing analysis logic, propose tests using small synthetic data that assert on key outputs (peak counts, amplitudes, wavenumbers).
+
+---
+
+## 15. Rules for this assistant
+
+- Never reintroduce probe numbers (1–4) in user-facing code
+- Always use `dist/lateral` position strings — never plain-number names
+- When adding columns that are strings (especially with `/`), add them to `NON_FLOAT_COLUMNS`
+- When adding new plots: accept `plotvariables` dict with `filters` + `plotting` keys; reuse `plot_frequency_spectrum` / `plot_reconstructed`
+- When touching stillwater: honor anchor rules (prefer nowind+nowave; fall back to first 1s)
+- When touching data loading: go through `load_analysis_data()` unless there is a clear reason not to
+- Propose a branch name (`exp/<topic>`) for any non-trivial change
+- If this file disagrees with the actual code, ask for clarification

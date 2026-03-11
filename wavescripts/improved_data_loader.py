@@ -91,9 +91,8 @@ class ProbeConfiguration:
 PROBE_CONFIGS = [
     ProbeConfiguration(
         name="initial_setup",
-        valid_from=datetime(2025, 8, 1),  # start of experiment
-        valid_until=datetime(2025, 11, 9),  # trokkje d e rette datao
-        # TODO sjekke datoen her og recompute..
+        valid_from=datetime(2025, 8, 1),
+        valid_until=datetime(2025, 11, 10), #ikke inklusive denne datoen altså
         distances_mm={
             1: 18000.0,  # langt bak ein stad
             2: 9373.0,
@@ -108,10 +107,10 @@ PROBE_CONFIGS = [
         },
         in_probe=2,
         out_probe=3,
-        notes="Utprøvet configuration used until Nov 13, 2025",
+        notes="Utprøvet configuration used until Nov 9, 2025",
     ),
     ProbeConfiguration(
-        name="nov14_normalt_oppsett",
+        name="nov_normalt_oppsett",
         valid_from=datetime(2025, 11, 10),
         valid_until=datetime(2026, 1, 1),
         distances_mm={
