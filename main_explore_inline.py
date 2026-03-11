@@ -13,6 +13,8 @@ For saving publication figures → use main_save_figures.py.
 
 # %% ── imports ────────────────────────────────────────────────────────────────
 import time
+
+from pandas._libs.lib import fast_unique_multiple_list_gen
 start0 = time.perf_counter()
 
 %matplotlib inline
@@ -120,14 +122,14 @@ save_interactive_plot(damping_groupedruns_df)
 
 # %% ── damping vs frequency ───────────────────────────────────────────────────
 dampingplotvariables = {
-    "overordnet": {"chooseAll": True, "chooseFirst": False, "chooseFirstUnique": False},
+    "overordnet": {"chooseAll": False, "chooseFirst": False, "chooseFirstUnique": False},
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
         "WaveFrequencyInput [Hz]":   None,
         "WavePeriodInput":           None,
         "WindCondition":             None,
         "TunnelCondition":           None,
-        "PanelCondition":            None,#["reverse","full"],
+        "PanelCondition":            "reverse",#"full"],
     },
     "plotting": {"figsize": None, "separate": True, "overlay": False, "annotate": True, "single_run_rel_error": 0.10},
 }

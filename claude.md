@@ -2,46 +2,22 @@
 
 ## 0. Current investigation (pick up here next session)
 
-**Problem**: `explore_damping_vs_freq` shows ~3x wave growth for `nopanel, fullwind, 0.65 Hz, 0.1 V`.
-Physics says no-panel + full-wind should show growth, but 3x seems too high. Investigating whether it's real or a measurement artifact.
+**RESOLVED**: The apparent ~3x wave growth (`nopanel, fullwind, 0.65 Hz, 0.1 V`) was a **pipeline artifact** — root cause was incomplete `find_wave_range` logic. The amplitude window included the wavemaker ramp-up phase, inflating the OUT amplitude. Fixed by improving `_SNARVEI_CALIB`. Re-run `main.py` and confirm ratios are plausible before doing any damping analysis.
 
-**What we know so far** (from diagnostic output):
+**Dead theories — do not revisit without new evidence**:
+- Wall reflection at `12545/170` creating constructive interference
+- Wind skewing wave crests laterally
+- Wrong `out_position` assignment
+- Wind-wave contamination inflating time-domain amplitude
 
-The run `nopanel-fullwind-amp0100-freq0650-...-20251112`:
-- `in_position = "9373/250"` → amplitude **13.24 mm**
-- `out_position = "12545/170"` → amplitude gives the 3x ratio visually in plot
-- But `"12545/340"` (same longitudinal distance, other lateral) → **21.33 mm** (only 1.6x)
-
-**The core anomaly**: two probes at the same distance from paddle (12545 mm) disagree by a factor of ~2. Either:
-- The `out_position` assignment (`12545/170`) is wrong — maybe `12545/340` or an average should be used
-- There is real lateral non-uniformity from wind
-
-**Nowave-fullwind baseline**: the `nopanel-fullwind-nowave` Nov 12 run previously had all-NaN plain amplitudes. **Fixed** — was caused by `np.percentile` propagating NaN in the matrix path. Now uses `np.nanpercentile`. Re-run `main.py` to confirm.
-
-**Physics note**: wind waves exist only above ~2 Hz — no wind-wave energy at 0.65 Hz in the PSD sense. BUT wind waves (3–5 Hz, broad spectrum, erratic) ride on top of the paddle wave in the time domain. The `"Probe {pos} Amplitude"` values are **time-domain percentile amplitudes** — they include ALL frequency content, not just 0.65 Hz.
-
-**Better metric for this investigation**: `"Probe {pos} Amplitude (FFT)"` at exactly 0.65 Hz isolates just the paddle wave and is immune to wind-wave contamination. Compare the FFT amplitudes (not time-domain) at `12545/170` vs `12545/340` across runs to test whether the asymmetry survives frequency-isolation.
-
-**The real question**: two probes at same distance from paddle (12545 mm) disagree by ~2x. Possible causes:
-- Wind-wave noise inflating time-domain amplitude more on the 170 side (near wall)
-- Wall reflection at 170 mm side creating constructive interference at 0.65 Hz (would survive FFT isolation)
-- Wind skewing the wave crest laterally (would only appear in wind runs)
-- `out_probe=3` (`12545/170`) is simply the wrong choice — `12545/340` or average may be better
-
-**Next steps**:
-1. Re-run the ratio check using `"Probe 12545/170 Amplitude (FFT)"` vs `"Probe 12545/340 Amplitude (FFT)"` — if asymmetry disappears → wind-wave noise in time-domain is the cause
-2. If FFT asymmetry persists → geometry/reflection or wind skew — check whether it appears in no-wind runs too
-3. Decide whether `out_position` should be `12545/170`, `12545/340`, or averaged — update `nov_normalt_oppsett` config if needed
-4. Learn from `ensure_stillwater` in `processor.py` and sample 1-2 seconds of wind data (before wave action) from wave-runs, and use whole dataset for no-wave runs.
-
-**Diagnostic code** (run in `main_explore_inline.py`):
+**Still open**:
+- `9373/250` noise floor 0.600 mm in Nov 2025 vs `9373/170` ~0.32 mm in March 2026 — likely different physical probes used at those dates, not a position effect. No action needed unless it affects a key result.
+- After `main.py` re-run: quick sanity check — lateral ratio `12545/170 / 12545/340` should be near 1.0 for no-wind runs:
 ```python
-# Lateral asymmetry check
 _wave = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy()
-_wave["ratio_170_vs_340"] = _wave["Probe 12545/170 Amplitude"] / _wave["Probe 12545/340 Amplitude"]
-print(_wave[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WindCondition",
-             "PanelCondition", "Probe 12545/170 Amplitude", "Probe 12545/340 Amplitude",
-             "ratio_170_vs_340"]].sort_values("ratio_170_vs_340", ascending=False).to_string())
+_wave["ratio"] = _wave["Probe 12545/170 Amplitude"] / _wave["Probe 12545/340 Amplitude"]
+print(_wave[["WaveFrequencyInput [Hz]", "WindCondition", "PanelCondition", "ratio"]]
+      .sort_values("ratio", ascending=False).to_string())
 ```
 
 ---
@@ -90,10 +66,7 @@ dependencies:
 
 `main_explore_browser.py` forces `matplotlib.use("Qt5Agg")` — run from terminal, not REPL.
 
-### Explore → Save workflow
-
-**`save_plot` is always `False` in `main_explore_inline.py`.**
-When a plot looks right in the REPL, copy the relevant `plotvariables` dict + function call to `main_save_figures.py` and set `save_plot=True` there. Never enable `save_plot` in the exploration file.
+See §19 for the full three-phase call hierarchy and plotting script roles.
 
 ---
 
@@ -364,36 +337,7 @@ When changing analysis logic, propose tests using small synthetic data that asse
 
 ---
 
-## 16. Recent code changes (session 2026-03-11)
-
-### `plot_quicklook.py` — explore_damping errorbars
-- `_effective_yerr(gsub, fallback_rel)`: uses `std_out_in` for n>1 runs, falls back to `mean_out_in * fallback_rel` for n=1 (default ±10%)
-- `_explore_damping(df, plotvariables, x_col, facet_col, title)`: shared impl for both explore functions; draws open-circle overlay on single-run points
-- `explore_damping_vs_freq` and `explore_damping_vs_amp` now delegate to `_explore_damping`
-- Controlled by `plotvariables["plotting"]["single_run_rel_error"]` (default `0.10`)
-
-### `plotter.py` — plot_damping_freq show_plot scrollable
-- `show_plot` branch replaced with seaborn relplot: `col=amplitude, hue=wind, style=panel` — same layout as `explore_damping_vs_freq`, uses `WIND_COLOR_MAP`, produces enough columns to scroll horizontally in Zed REPL
-- `save_plot` branch unchanged — still uses `_draw_damping_freq_ax`
-
-### `plotter.py` — plot_reconstructed FFT reconstruction fixed
-- Replaced manual frequency-remapping loop (fragile `< 1e-6` tolerance) with `np.fft.ifftshift`
-- Sorted FFT index (negative→positive from `sort_index()`) → numpy natural order via `fft_ord = np.fft.ifftshift(fft_complex)`
-- `peak_idx` / `mirror_idx` now use `argmin` (always finds nearest bin, no tolerance needed)
-- `main_explore_inline.py`: `single_path` and `_recon_paths` now taken from `filtrert_frequencies`, not `filtered_fft_dict` (was picking wrong experiment with missing probe columns)
-
-### `plot_utils.py` — _fmt_probes handles dist/lateral strings
-- `_fmt_probes` no longer calls `int(p)` — replaces `/` with `-` in position strings
-- `"9373/170"` → `"9373-170"` in filenames; old plain-number probes still work
-
-### `main_explore_inline.py`
-- `dampingplotvariables["plotting"]` now includes `"single_run_rel_error": 0.10`
-- `dampingplotvariables_all["plotting"]["figsize"]` set to `(18, 7)`
-- All `save_plot` keys are `False` — this is intentional and permanent
-
----
-
-## 17. Physical assumptions — always in mind
+## 16. Physical assumptions — always in mind
 
 These are not negotiable. Every analysis decision must be consistent with them.
 
@@ -457,7 +401,7 @@ Measured noise floor per probe (excluding row 1 outlier):
 
 ---
 
-## 18. Rigorous analysis workflow
+## 17. Rigorous analysis workflow
 
 Precision standard: **0.25 mm**. Nothing is too small to ignore. Follow this sequence whenever a new result or anomaly appears.
 
@@ -494,7 +438,82 @@ Systematic elimination order:
 
 ---
 
+## 18. Script architecture and call hierarchy
+
+### The three phases
+
+```
+PHASE 1 — PIPELINE (run once, or when data changes)
+─────────────────────────────────────────────────────────────────
+  main.py
+    ├─ processor.py           raw CSV → zeroed+smoothed time series,
+    │                          FFT, PSD, wave-range detection,
+    │                          stillwater anchor, probe noise floors
+    ├─ processor2nd.py        post-processing: in/out positions,
+    │                          OUT/IN ratio, band amplitudes
+    └─ improved_data_loader.py  saves → waveprocessed/PROCESSED-*/
+                                          meta.json, fft.parquet,
+                                          psd.parquet, processed_dfs.parquet
+
+PHASE 2 — EXPLORATION (human analysis, after pipeline)
+─────────────────────────────────────────────────────────────────
+  main_explore_inline.py      # %% cells in Zed REPL — primary playground
+  main_explore_browser.py     Qt GUIs — interactive browsing / calibration
+                              (forces Qt5Agg, run from terminal)
+
+  Both load waveprocessed/ cache — NEVER raw CSVs.
+  All save_plot keys are permanently False here.
+
+PHASE 3 — EXPORT (when a plot is ready)
+─────────────────────────────────────────────────────────────────
+  main_save_figures.py        copy plotvariables + call from exploration,
+                              set save_plot=True, run as script
+                              → output/FIGURES/  (PDF + PGF)
+                              → output/TEXFIGU/  (LaTeX stubs, written once)
+```
+
+### Plotting script hierarchy
+
+| Script | Role | Stability |
+|--------|------|-----------|
+| `plot_utils.py` | Style + save infrastructure: `apply_thesis_style`, `save_and_stub`, `build_fig_meta`, `WIND_COLOR_MAP` | **Core — never dead code** |
+| `plotter.py` | Reusable publication-grade plot functions: `plot_all_probes`, `plot_damping_freq`, `plot_frequency_spectrum`, `plot_swell_scatter` | **Core — stable public API** |
+| `plot_quicklook.py` | Fast exploratory functions: `explore_damping_vs_freq`, `explore_damping_vs_amp` — no save_plot, no TeX stubs | Exploratory — **will accumulate dead code** |
+| `plot_browsers.py` | Qt interactive browsers: `SignalBrowserFiltered`, `RampDetectionBrowser` — diagnostic / calibration only | Diagnostic — stable but narrow scope |
+
+### Explore → publication call chain
+
+```
+main_explore_inline.py
+  │  (experiment, iterate, all save_plot=False)
+  │  "looks right"
+  ▼
+main_save_figures.py
+  │  (copy plotvariables dict + function call, set save_plot=True)
+  │  calls
+  ▼
+plotter.py  (stable, reusable plot function)
+  │  calls at the end
+  ▼
+plot_utils.save_and_stub(fig, meta, plot_type)
+  ├─ output/FIGURES/{filename}.pdf   ← include in LaTeX
+  ├─ output/FIGURES/{filename}.pgf   ← PGF native
+  └─ output/TEXFIGU/{filename}.tex   ← stub written ONCE, never overwritten
+```
+
+`plot_quicklook.py` functions are **outside this chain** — they are never called from `main_save_figures.py`. Once an exploratory function matures into a publishable plot, it either calls an existing `plotter.py` function or a new one is added to `plotter.py`.
+
+### Expected evolution
+
+- `plot_quicklook.py` will grow dead functions as the analysis moves on — this is intentional. Only functions actively imported in `main_explore_*.py` should be considered live.
+- `plotter.py` grows slowly and deliberately — every function here has a corresponding call in `main_save_figures.py`.
+- The stubs in `output/TEXFIGU/` are write-once: captions and `\label` are edited by hand after generation, never regenerated (use `force_stub=True` only after a git commit).
+
+---
+
 ## 19. Rules for this assistant
+
+> **For orientation**: §18 has the full three-phase call hierarchy and where each script fits. §5 has probe naming. §6 has known pitfalls. §0 is the current open investigation.
 
 - Never reintroduce probe numbers (1–4) in user-facing code
 - Always use `dist/lateral` position strings — never plain-number names
