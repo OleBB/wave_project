@@ -60,7 +60,7 @@ except NameError:
     file_dir = Path.cwd()
 os.chdir(file_dir)
 
-# %% ── load from cache (fast — no reprocessing) ───────────────────────────────
+# ── load from cache (fast — no reprocessing) ───────────────────────────────
 import time
 start = time.perf_counter()
 
@@ -140,12 +140,12 @@ explore_damping_vs_amp(damping_filtrert, dampingplotvariables)
 
 # %% ── damping all amplitudes grouped ────────────────────────────────────────
 dampingplotvariables_all = {
-    "overordnet": {"chooseAll": True, "chooseFirst": False},
+    "overordnet": {"chooseAll": False, "chooseFirst": False},
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
         "WaveFrequencyInput [Hz]":   None,
         "WavePeriodInput":           None,
-        "WindCondition":             ["no", "lowest", "full"],
+        "WindCondition":             ["no", "full"], #"lowest"
         "TunnelCondition":           None,
         "PanelCondition":            None,
     },
@@ -270,6 +270,8 @@ fig, axes = plot_reconstructed(
     filtered_fft_dict, filtered_meta, freqplotvariables, data_type="fft"
 )
 
+
+
 # =============================================================================
 # WIND-ONLY ANALYSIS
 # Runs with no wave input (WaveFrequencyInput NaN) to characterise wind-only
@@ -358,6 +360,8 @@ fig, axes = plot_frequency_spectrum(
     _wind_psd_dict, _meta_nowave_all, _wind_psd_plotvars, data_type="psd"
 )
 
+
+
 # %% ── wind-only — statistics (mean setup + RMS per probe) ───────────────────
 _PROBE_POSITIONS = ["9373/170", "12545/250", "9373/340", "8804/250"]
 _stats_rows = []
@@ -426,35 +430,75 @@ print(_wave[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WindCondit
              "PanelCondition", "Probe 12545/170 Amplitude", "Probe 12545/340 Amplitude",
              "ratio_170_vs_340"]].sort_values("ratio_170_vs_340", ascending=False).to_string())
 
+# %% ── repl_out helper — tee stdout to repl/<name>.txt ───────────────────────
+import contextlib, sys as _sys
+from pathlib import Path as _Path
+
+@contextlib.contextmanager
+def repl_out(filename: str):
+    """Write cell output to repl/<filename> while still printing to terminal."""
+    _outdir = _Path("repl")
+    _outdir.mkdir(exist_ok=True)
+    _orig = _sys.stdout
+    class _Tee:
+        def __init__(self, f): self._f = f
+        def write(self, s): _orig.write(s); self._f.write(s)
+        def flush(self): _orig.flush(); self._f.flush()
+    with open(_outdir / filename, "w") as _f:
+        _sys.stdout = _Tee(_f)
+        try:
+            yield
+        finally:
+            _sys.stdout = _orig
+    print(f"→ saved to repl/{filename}")
+
 # %% ── diagnose: nov12 nowave+fullwind run ────────────────────────────────────
 _nowave_full = combined_meta[
     combined_meta["WaveFrequencyInput [Hz]"].isna() &
     (combined_meta["WindCondition"] == "full")
 ].copy()
 
-print(f"Nowave+fullwind rows: {len(_nowave_full)}")
-
-# Check the computed range columns
-range_cols = [c for c in _nowave_full.columns if "Computed Probe" in c]
-amp_cols   = [c for c in _nowave_full.columns if "Amplitude" in c and "FFT" not in c and "PSD" not in c]
-print("\nRange columns:")
-print(_nowave_full[["path"] + range_cols].T.to_string())
-print("\nAmplitude columns:")
-print(_nowave_full[["path"] + amp_cols].T.to_string())
+with repl_out("diag_nowave_fullwind.txt"):
+    print(f"Nowave+fullwind rows: {len(_nowave_full)}")
+    range_cols = [c for c in _nowave_full.columns if "Computed Probe" in c]
+    amp_cols   = [c for c in _nowave_full.columns if "Amplitude" in c and "FFT" not in c and "PSD" not in c]
+    print("\nRange columns:")
+    print(_nowave_full[["path"] + range_cols].T.to_string())
+    print("\nAmplitude columns:")
+    print(_nowave_full[["path"] + amp_cols].T.to_string())
 
 # %% ── diagnose: inspect actual time-series data ──────────────────────────────
 if not processed_dfs:
     processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
 
-for _, row in _nowave_full.iterrows():
-    p = row["path"]
-    df = processed_dfs.get(p)
-    if df is None:
-        print(f"NOT IN processed_dfs: {p}")
-    else:
-        eta_cols = [c for c in df.columns if c.startswith("eta_")]
-        print(f"\n{Path(p).name}")
-        print(f"  Rows: {len(df)}, Duration: {len(df)/250:.1f} s")
-        print(f"  eta cols: {eta_cols}")
-        if eta_cols:
-            print(df[eta_cols].describe().to_string())
+with repl_out("diag_timeseries.txt"):
+    for _, row in _nowave_full.iterrows():
+        p = row["path"]
+        df = processed_dfs.get(p)
+        if df is None:
+            print(f"NOT IN processed_dfs: {p}")
+        else:
+            eta_cols = [c for c in df.columns if c.startswith("eta_")]
+            print(f"\n{Path(p).name}")
+            print(f"  Rows: {len(df)}, Duration: {len(df)/250:.1f} s")
+            print(f"  eta cols: {eta_cols}")
+            if eta_cols:
+                print(df[eta_cols].describe().to_string())
+
+# %% ── reload fresh data ──────────────────────────────────────────────────────
+combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
+    *PROCESSED_DIRS, load_processed=False
+)
+processed_dfs: dict = {}
+
+# %% ── check: nowave+fullwind amplitudes now valid? ───────────────────────────
+_nowave_full = combined_meta[
+    combined_meta["WaveFrequencyInput [Hz]"].isna() &
+    (combined_meta["WindCondition"] == "full")
+].copy()
+
+amp_cols = [c for c in _nowave_full.columns
+            if "Amplitude" in c and "FFT" not in c and "PSD" not in c
+            and "Probe" in c]
+with repl_out("check_fullwind_amplitudes.txt"):
+    print(_nowave_full[["path"] + amp_cols].T.to_string())
