@@ -220,17 +220,25 @@ Defined in `wavescripts/wave_detection.py`. Multi-point linear interpolation of 
 
 ```python
 _SNARVEI_CALIB = {
-    "8804":  [(0.65, 5104), (1.30, 4700)],
-    "9373":  [(0.65, 5154), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
-    "12545": [(0.65, 5654), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
+    "8804":  [(0.65, 3975), (1.30, 4700), (1.80, 6000)],
+    "9373":  [(0.65, 4075), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
+    "12545": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
 }
 ```
+
+**Key insight**: ramp-up duration (13–20 periods) dominates the start time — wave travel time (< 5 s) is a minor secondary effect. All probes in a run see their first stable peak at nearly the same sample index, with only a small per-probe offset from travel time. The "first stable peak" is the second visible peak in the ramp: the first peak is still part of the wavemaker's soft-start program and is unreliable.
 
 - Format: `(freq_hz, start_sample)` sorted by frequency; samples at 250 Hz (ms / 4)
 - Interpolates linearly between points; extrapolates linearly beyond the range
 - `_PROBE_GROUP` maps every probe column name variant to a distance group key
 - To add a calibration point: eyeball start in `RampDetectionBrowser`, convert ms → samples (/4), add tuple
-- `8804` group only has 2 points (0.65 and 1.30 Hz) — extrapolates for other frequencies
+- `8804` group has 3 points (0.65, 1.30, 1.80 Hz) — extrapolates outside that range
+
+### TODO: investigate wavemaker ramp-up shape
+
+The wavemaker controller uses frequency-dependent acceleration profiles — higher frequencies have a different (longer?) soft-start program. This means the signal **before** the eyeballed good-start index is not simply "stillwater + linear ramp": it contains a wavemaker-programmed pre-ramp that varies by frequency.
+
+Before relying on the region before `good_start_idx` for anything (e.g. stillwater baseline, ramp characterization), we must understand what the controller actually does in that window. The `_SNARVEI_CALIB` start values are conservative eyeballs at the first clearly stable period — the true stable onset may be 1–2 periods earlier or later depending on frequency. Needs systematic inspection in `RampDetectionBrowser` across frequencies.
 
 ---
 
