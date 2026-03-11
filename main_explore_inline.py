@@ -272,15 +272,18 @@ fig, axes = plot_reconstructed(
 )
 
 
-
+"""
+#
+#
 # =============================================================================
 # WIND-ONLY ANALYSIS
 # Runs with no wave input (WaveFrequencyInput NaN) to characterise wind-only
 # surface response. Compare wind conditions against stillwater baseline (no wind).
 # =============================================================================
-
+"""
 # %% ── wind-only — filter runs ────────────────────────────────────────────────
 from pathlib import Path as _Path
+import matplotlib.pyplot as plt
 from scipy.signal import welch as _welch
 from wavescripts.constants import MEASUREMENT
 
@@ -453,53 +456,92 @@ def repl_out(filename: str):
             _sys.stdout = _orig
     print(f"→ saved to repl/{filename}")
 
-# %% ── diagnose: nov12 nowave+fullwind run ────────────────────────────────────
-_nowave_full = combined_meta[
-    combined_meta["WaveFrequencyInput [Hz]"].isna() &
-    (combined_meta["WindCondition"] == "full")
-].copy()
+"""
+åssen bruke repl out:
+with repl_out("filnavn.txt"):
+    print(f"Nowave+fullwind rows: {len(funksjon)}")
+"""
 
-with repl_out("diag_nowave_fullwind.txt"):
-    print(f"Nowave+fullwind rows: {len(_nowave_full)}")
-    range_cols = [c for c in _nowave_full.columns if "Computed Probe" in c]
-    amp_cols   = [c for c in _nowave_full.columns if "Amplitude" in c and "FFT" not in c and "PSD" not in c]
-    print("\nRange columns:")
-    print(_nowave_full[["path"] + range_cols].T.to_string())
-    print("\nAmplitude columns:")
-    print(_nowave_full[["path"] + amp_cols].T.to_string())
+# %% ── stillwater — overview + zoom ──────────────────────────────────────────
+import matplotlib.pyplot as plt
+_sw_row = _meta_stillwater.iloc[0]
+_sw_df  = processed_dfs.get(_sw_row["path"])
 
-# %% ── diagnose: inspect actual time-series data ──────────────────────────────
-if not processed_dfs:
-    processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+if _sw_df is None:
+    print("processed_dfs not loaded — run the lazy-load cell first")
+else:
+    _eta_cols = sorted([c for c in _sw_df.columns if c.startswith("eta_")])
+    _t = np.arange(len(_sw_df)) / _FS
+    _colors = plt.cm.tab10(np.linspace(0, 0.9, len(_eta_cols)))
 
-with repl_out("diag_timeseries.txt"):
-    for _, row in _nowave_full.iterrows():
-        p = row["path"]
-        df = processed_dfs.get(p)
-        if df is None:
-            print(f"NOT IN processed_dfs: {p}")
-        else:
-            eta_cols = [c for c in df.columns if c.startswith("eta_")]
-            print(f"\n{Path(p).name}")
-            print(f"  Rows: {len(df)}, Duration: {len(df)/250:.1f} s")
-            print(f"  eta cols: {eta_cols}")
-            if eta_cols:
-                print(df[eta_cols].describe().to_string())
+    fig, (ax_ov, ax_zm) = plt.subplots(2, 1, figsize=(14, 6),
+                                        gridspec_kw={"height_ratios": [2, 1]})
+    for col, color in zip(_eta_cols, _colors):
+        label = col.replace("eta_", "")
+        ax_ov.plot(_t, _sw_df[col], lw=0.6, label=label, color=color)
 
-# %% ── reload fresh data ──────────────────────────────────────────────────────
-combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
-    *PROCESSED_DIRS, load_processed=False
+    ax_ov.set_xlabel("Time [s]")
+    ax_ov.set_ylabel("η [mm]")
+    ax_ov.set_title(f"Stillwater — {_Path(_sw_row['path']).name}", fontsize=10)
+    ax_ov.legend(fontsize=8, loc="upper right")
+    ax_ov.grid(True, alpha=0.3)
+
+    _mid = len(_sw_df) // 2
+    _zm_slice = slice(_mid - 12, _mid + 13)
+    for col, color in zip(_eta_cols, _colors):
+        ax_zm.plot(_t[_zm_slice], _sw_df[col].iloc[_zm_slice],
+                   lw=1.2, marker=".", markersize=5,
+                   label=col.replace("eta_", ""), color=color)
+
+    ax_zm.set_xlabel("Time [s]")
+    ax_zm.set_ylabel("η [mm]")
+    ax_zm.set_title("Zoom — 25 samples", fontsize=9)
+    ax_zm.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+    print(f"{len(_sw_df)} samples  |  {len(_sw_df)/_FS:.1f} s")
+
+# %% ── stillwater — probe uncertainty statistics ──────────────────────────────
+# "Probe {pos} Amplitude" = (P97.5 - P2.5) / 2 — already in combined_meta for all runs.
+# No need to reload processed_dfs; just filter stillwater rows and pivot.
+_amp_cols = [c for c in _meta_stillwater.columns
+             if c.startswith("Probe ") and c.endswith(" Amplitude")
+             and "FFT" not in c and "PSD" not in c
+             and _meta_stillwater[c].notna().any()]
+
+_sw_stats = (
+    _meta_stillwater[["path"] + _amp_cols]
+    .copy()
+    .rename(columns={"path": "run"})
 )
-processed_dfs: dict = {}
+_sw_stats["run"] = _sw_stats["run"].apply(lambda p: _Path(p).name)
+_sw_stats = _sw_stats.rename(columns={c: c.replace("Probe ", "").replace(" Amplitude", "")
+                                       for c in _amp_cols})
 
-# %% ── check: nowave+fullwind amplitudes now valid? ───────────────────────────
-_nowave_full = combined_meta[
-    combined_meta["WaveFrequencyInput [Hz]"].isna() &
-    (combined_meta["WindCondition"] == "full")
-].copy()
+print("=== Stillwater noise amplitude per run [mm] (pipeline definition: (P97.5−P2.5)/2) ===")
+print(_sw_stats.to_string(index=False))
 
-amp_cols = [c for c in _nowave_full.columns
-            if "Amplitude" in c and "FFT" not in c and "PSD" not in c
-            and "Probe" in c]
-with repl_out("check_fullwind_amplitudes.txt"):
-    print(_nowave_full[["path"] + amp_cols].T.to_string())
+# Summary across runs
+_probe_cols = [c.replace("Probe ", "").replace(" Amplitude", "") for c in _amp_cols]
+_sw_summary = _sw_stats[_probe_cols].agg(["mean", "std", "min", "max"]).T
+_sw_summary.index.name = "probe"
+print("\n=== Per-probe summary across all stillwater runs [mm] ===")
+print(_sw_summary.round(4).to_string())
+
+# %%
+import dtale
+# med et forsøk på å få mere info på skjermen, med at
+# tittelkolonnen er høyere, så de under kan være bredere
+# dtale.app.initialize(
+#     custom_css="""
+#       .rt-th {
+#         white-space: normal !important;   /* allow wrapping */
+#         word-break: break-word;           /* break long tokens */
+#       }
+#     """
+# )
+dtale.show(combined_meta, host="localhost").open_browser()
+# %%
+
+print(combined_meta.columns.to_list())
