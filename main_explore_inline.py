@@ -350,7 +350,7 @@ _wind_psd_plotvars = {
         "max_points": 500,
         "xlim":       (0, 5),
         "legend":     "inside",
-        "logaritmic": True,
+        "logaritmic": False,
         "peaks":      0,
         "probes":     ["9373/170", "12545/250", "9373/340", "8804/250"],
     },
