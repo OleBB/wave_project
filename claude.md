@@ -33,8 +33,23 @@
 
 ### Two important next investigations
 
-**1. Quantify wind noise at IN probe using nowave+fullwind runs**
-The nowave+fullwind runs give the wind-only amplitude at `9373/170` directly — no paddle wave, so any amplitude is pure wind noise. Compare this to the paddle-wave amplitude from wave+fullwind runs at the same wind condition. This gives a principled SNR estimate and a defensible quality threshold, rather than an arbitrary `wave_stability` cutoff. Use `combined_meta` filtered to `WindCondition == "full"` and `WaveFrequencyInput [Hz]` is NaN for the nowave baseline, then compare to the wave runs probe-by-probe.
+**1. Quantify wind noise at IN probe using nowave+fullwind runs — DONE (March 2026)**
+Wind-only amplitude at full wind (March 2026 mean of 2 nowave+fullwind runs):
+- `9373/170`: **10.18 mm** (IN probe — fully exposed to wind)
+- `9373/340`: **9.48 mm** (parallel probe — same exposure)
+- `8804/250`: **8.41 mm** (upstream probe)
+- `12545/250`: **0.88 mm** (OUT probe — panel kills the wind almost completely)
+
+SNR = wave_amplitude / wind_only_amplitude for fullwind wave runs:
+
+| Voltage | IN probe SNR (`9373/170`) | Wind fraction at IN | OUT probe SNR (`12545/250`) | Wind fraction at OUT |
+|---------|--------------------------|---------------------|-----------------------------|----------------------|
+| 0.1V    | 1.3–1.6                  | **63–77%**          | 5–8                         | 13–20%               |
+| 0.2V    | 1.7–3.1                  | **32–61%**          | 10–16                       | 6–10%                |
+
+**Conclusion**: for fullwind runs, time-domain OUT/IN is not measuring damping — it is measuring `(OUT signal) / (paddle wave + wind noise at IN)`. The 0.1V denominator is 2/3 wind. The 0.2V denominator is ≥ 1/3 wind. **Neither is trustworthy for damping conclusions under fullwind conditions using time-domain amplitude.**
+
+**Next step**: compare time-domain amplitude vs FFT amplitude (paddle frequency only) for the IN probe on fullwind runs. FFT amplitude isolates the paddle-wave component and should give a much better denominator for OUT/IN. This would make fullwind damping results usable.
 
 **2. Panel reflection affecting IN probe**
 When the panel is present, it reflects incoming waves back toward the wavemaker. The IN probe at `9373/170` sits between the wavemaker and the panel — it may be measuring a superposition of the incident wave and the reflected wave, not the pure incident amplitude. This would make OUT/IN systematically wrong for panel runs (the denominator is inflated by the reflection). To investigate: (a) compare IN probe amplitude with-panel vs without-panel for the same wave condition and no wind, (b) check if the effect is frequency-dependent (reflection coefficient varies with frequency), (c) consider whether FFT amplitude (single-frequency) is less affected than time-domain percentile amplitude, since standing-wave nodes/antinodes depend on probe position relative to wavelength.
@@ -207,13 +222,13 @@ Every probe position is always written as `"longitudinal/lateral"` — even for 
 
 `meta.json` may contain `OUT/IN (FFT)` values computed with an old wide FFT window (`0.5 Hz`, `argmax`) that picks up wind-wave peaks instead of paddle-wave peaks. Do not trust cached `OUT/IN (FFT)`.
 
-`damping_grouper` now recomputes OUT/IN on-the-fly from `"Probe {pos} Amplitude"` (plain time-domain, percentile-based) columns. It falls back to the cached value only if recomputation yields 0 valid rows (prints a diagnostic).
+`damping_grouper` now recomputes OUT/IN on-the-fly from `"Probe {pos} Amplitude (FFT)"` columns (paddle frequency, narrow 0.1 Hz window). It falls back to the cached value only if recomputation yields 0 valid rows (prints a diagnostic).
 
 ### Two amplitude types — not interchangeable
 
 | Column | Source | Used by |
 |--------|--------|---------|
-| `"Probe {pos} Amplitude"` | Percentile of time-domain signal | `plot_all_probes`, `damping_grouper` |
+| `"Probe {pos} Amplitude"` | Percentile of time-domain signal | `plot_all_probes` |
 | `"Probe {pos} Amplitude (FFT)"` | FFT peak near target frequency | Old OUT/IN cached values |
 
 Always use `"Probe {pos} Amplitude"` (no suffix) for OUT/IN ratio computation.
@@ -418,7 +433,7 @@ Measured noise floor per probe (excluding row 1 outlier):
 - **Two amplitude types are not interchangeable**:
   - `"Probe {pos} Amplitude"` = (P97.5−P2.5)/2 of time-domain signal — includes wind waves
   - `"Probe {pos} Amplitude (FFT)"` = FFT peak within 0.1 Hz of target — paddle-wave only
-- The **OUT/IN ratio** must always be computed from `"Probe {pos} Amplitude"` (time-domain), not FFT amplitude, unless a specific reason exists to isolate the paddle frequency.
+- The **OUT/IN ratio** must always be computed from `"Probe {pos} Amplitude (FFT)"` (paddle frequency only). Time-domain amplitude includes wind-wave energy which inflates the IN probe under fullwind conditions, making OUT/IN meaningless for damping. Wind waves are a real physical phenomenon to characterize separately, not noise to average into the damping ratio.
 
 ### Probe geometry
 - Parallel probes at the same longitudinal distance (e.g. `9373/170` and `9373/340`) are **not redundant** — they measure lateral wave non-uniformity. A factor-of-2 difference between them is physically meaningful and must be explained, not averaged away silently.
