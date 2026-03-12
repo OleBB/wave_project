@@ -313,7 +313,7 @@ print(f"wind_psd_dict: {len(_wind_psd_dict)} nowave runs from cache")
 
 # %% ── wind-only — PSD spectrum plot ─────────────────────────────────────────
 _wind_psd_plotvars = {
-    "overordnet": {"chooseAll": True, "chooseFirst": False, "chooseFirstUnique": False},
+    "overordnet": {"chooseAll": True, "chooseFirst": False, "chooseFirstUnique": True},
     "filters": {
         "WaveFrequencyInput [Hz]": None,
         "WindCondition":           None,
@@ -339,6 +339,13 @@ fig, axes = plot_frequency_spectrum(
 )
 
 
+
+# %% ── lazy-load processed_dfs (needed for stats, stillwater plot, arrival) ──
+if not processed_dfs:
+    print("Loading processed_dfs (~75 MB, ~20 s)...")
+    _t0 = time.perf_counter()
+    processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+    print(f"Loaded {len(processed_dfs)} runs in {time.perf_counter() - _t0:.1f} s")
 
 # %% ── wind-only — statistics (mean setup + RMS per probe) ───────────────────
 _PROBE_POSITIONS = ["9373/170", "12545/250", "9373/340", "8804/250"]

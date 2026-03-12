@@ -49,10 +49,36 @@ SNR = wave_amplitude / wind_only_amplitude for fullwind wave runs:
 
 **Conclusion**: for fullwind runs, time-domain OUT/IN is not measuring damping — it is measuring `(OUT signal) / (paddle wave + wind noise at IN)`. The 0.1V denominator is 2/3 wind. The 0.2V denominator is ≥ 1/3 wind. **Neither is trustworthy for damping conclusions under fullwind conditions using time-domain amplitude.**
 
-**Next step**: compare time-domain amplitude vs FFT amplitude (paddle frequency only) for the IN probe on fullwind runs. FFT amplitude isolates the paddle-wave component and should give a much better denominator for OUT/IN. This would make fullwind damping results usable.
+**DONE**: `damping_grouper` in `filters.py` now recomputes OUT/IN from `"Probe {pos} Amplitude (FFT)"` (narrow 0.1 Hz window, paddle frequency only) instead of time-domain amplitude. Wind waves are a real physical phenomenon to characterize separately — they should not be folded into the damping ratio. FFT amplitude at the paddle frequency is the correct basis for OUT/IN.
 
 **2. Panel reflection affecting IN probe**
 When the panel is present, it reflects incoming waves back toward the wavemaker. The IN probe at `9373/170` sits between the wavemaker and the panel — it may be measuring a superposition of the incident wave and the reflected wave, not the pure incident amplitude. This would make OUT/IN systematically wrong for panel runs (the denominator is inflated by the reflection). To investigate: (a) compare IN probe amplitude with-panel vs without-panel for the same wave condition and no wind, (b) check if the effect is frequency-dependent (reflection coefficient varies with frequency), (c) consider whether FFT amplitude (single-frequency) is less affected than time-domain percentile amplitude, since standing-wave nodes/antinodes depend on probe position relative to wavelength.
+
+### Pipeline changes made today
+
+**Nowave PSDs now in cache** (`processor.py` + `signal_processing.py`):
+- New function `compute_nowave_psd` in `signal_processing.py` computes broadband Welch PSD for all nowave runs (full `eta_` signal, `nperseg=4096`, no wave-range window).
+- Called in `process_selected_data` after the wave PSD, merged into `psd_dict` before saving.
+- `psd_dict` / `combined_psd_dict` now contains **all 143 runs** (132 wave + 11 nowave) — no format change.
+- `main_explore_inline.py` wind section: `_wind_psd_dict` is now a one-line filter of `combined_psd_dict` — no `processed_dfs` needed for the PSD plot.
+- `processed_dfs` lazy-load is still needed for the stats cell (343), stillwater plot (439), and arrival detection (506).
+
+### Next session — start here
+
+**A. Finalize wind/probe-uncertainty plots → `main_save_figures.py`**
+- In `main_explore_inline.py`, the wind section has a working probe-uncertainty/stillwater plot (around line 479) and wind PSD plots. Review these, polish, then copy the finalized `plotvariables` + function calls to `main_save_figures.py` following the explore→publication chain (§18).
+- The wind PSD plot at ~line 314 is also a candidate — shows broadband wind spectrum per probe with stillwater baseline.
+
+**B. More plots and visualisations**
+- `damping_vs_freq`: OUT/IN ratio vs frequency, split by wind condition and amplitude — the primary damping result. Uses `explore_damping_vs_freq` / `plot_damping_freq`.
+- `wave_stability` vs frequency/wind — show where the IN probe quality degrades. Useful as a companion figure to the damping plot.
+- `parallel_ratio` vs frequency — does lateral asymmetry depend on frequency or wind?
+- Panel reflection investigation (see §0 item 2): plot IN amplitude with-panel vs without-panel, no wind, across frequencies.
+
+**C. Tables**
+- Probe noise floor table: stillwater amplitude per probe, formatted for thesis (already computed in cell 479 — extract to `plotter.py` or a LaTeX stub).
+- SNR table: wind-only amplitude vs wave amplitude at 0.1V and 0.2V — already computed this session, formalize it.
+- OUT/IN summary table: mean ± std per (frequency, amplitude, wind, panel) group — the core damping result in tabular form.
 
 ### Still open
 - `9373/250` noise floor 0.600 mm in Nov 2025 vs `9373/170` ~0.32 mm in March 2026 — likely different physical probes, not a position effect. No action needed unless it affects a key result.
@@ -562,7 +588,77 @@ plot_utils.save_and_stub(fig, meta, plot_type)
 
 ---
 
-## 19. Rules for this assistant
+## 19. Thesis structure and key variables
+
+### Where keys appear
+
+**Methodology plots (Ch04)** — diagnostic. Keys shown only as needed (e.g. frequency matters for wave-range detection; wind condition matters for noise floor). No need to show all keys on every methodology figure.
+
+**Results plots and tables (Ch05)** — every wave-data figure must give the reader enough context to know what wave they are looking at. The reader-facing keys are:
+- `ka` — the primary wave descriptor (see below). Replaces raw frequency + voltage for the reader.
+- `PanelCondition` — always shown (it is the geometry variable being studied)
+- `WindCondition` — always shown (it is the forcing variable; the central question)
+
+`WaveAmplitudeInput [Volt]` and `WaveFrequencyInput [Hz]` are **writer/script-facing** — useful in code and internal tables, but not reader-friendly in figures. They are encoded inside `ka`.
+
+**Script-facing keys** (used in filters, column names, `plotvariables`):
+- `WaveAmplitudeInput [Volt]` — 0.1 V / 0.2 V
+- `WaveFrequencyInput [Hz]` — 0.65–1.9 Hz
+- `PanelCondition` — full / reverse / no
+- `WindCondition` — full / lowest / no
+
+**Reader-facing output keys** (shown on figures):
+- `OUT/IN (FFT)` — damping ratio. Always from `"Probe {pos} Amplitude (FFT)"` (paddle freq only, 0.1 Hz window). Wind waves excluded.
+- `ka` — wavenumber × amplitude, measured per probe per run (not pre-calculated). Encodes both wavelength (hidden in k) and wave steepness (via a). Almost an all-in-one wave descriptor for the reader.
+
+### Thesis chapter outline (`main_save_figures.py` is the backbone)
+
+**Chapter 04 — Methodology:**
+1. Probe uncertainty / noise floor — stillwater amplitude per probe, detection threshold
+2. Stillwater timing — how long between runs; low-freq swell decay; wind shortens wait
+3. Probe placement — longitudinal/lateral effects, what parallel probes reveal
+4. Wind characterisation — wind PSD, spatial extent, lateral coherence, SNR at IN vs OUT
+5. Full signal overview — annotated time-domain: ramp, stable train, wind riding on wave
+6. Wave-range detection — _SNARVEI_CALIB, threshold crossing, stable wavetrain window
+7. Autocorrelation A — wavetrain stability (`wave_stability`, `period_cv`)
+8. Autocorrelation B — lateral equality (parallel probes, wind vs no-wind)
+9. (additional steps TBD from processor / processor2nd logic)
+
+**Chapter 05 — Results:**
+1. Damping vs frequency — OUT/IN (FFT) vs Hz (and vs ka). The central result.
+2. Damping vs amplitude — weaker effect, but absence of effect is itself a finding.
+3. Wind effect on damping — the single key question: "How does wind affect damping?"
+   Formally: "How much of the paddle-frequency wave survives through the panel geometry, when wind is added?"
+
+### The ka debate
+
+`ka` is not trivial to define because the panel changes both amplitude and effective wavenumber between IN and OUT:
+- Frequency changes very little (panel does not alter wave period significantly).
+- Amplitude can drop up to ~95% through the panel geometry.
+- The IN-side `ka` (at `9373/170`, no-panel run) represents the "undisturbed" incident wave from the wavemaker — the ideal reference.
+- In reality with panel present, IN probe sees incident + reflected wave superposition. OUT probe sees transmitted wave only.
+- Both IN-side and OUT-side `ka` should be reported separately where relevant.
+- For cross-run comparison, use the no-panel IN-side `ka` as the reference axis (closest to "what the wavemaker delivers").
+
+### Water depth regime — important wave physics context
+
+Tank depth is ~580 mm (from filenames: `depth580`). Wave classification by depth-to-wavelength ratio:
+
+| Regime | Condition | Effect |
+|--------|-----------|--------|
+| Deep water | d > λ/2 | Waves don't feel the bottom. Standard dispersion ω² = gk applies. |
+| Intermediate | λ/20 < d < λ/2 | Partial bottom interaction. Full dispersion ω² = gk·tanh(kd). |
+| Shallow water | d < λ/20 | Waves press against the bottom. Speed limited by depth: c = √(gd), independent of frequency. "Speed limits apply." |
+
+At 580 mm depth, the regime depends on frequency. Higher frequencies (shorter λ) are deeper-water; lower frequencies (longer λ) may enter intermediate water. **This must be checked per frequency** — it affects dispersion, wave speed, and potentially how the panel interacts with the wave. The correct dispersion relation is always ω² = gk·tanh(kd); the deep-water simplification ω² = gk is only valid when kd >> 1.
+
+**Observed (2026-03-12)**: visible wave-induced water movement at the tank bottom at low frequencies. This is the direct physical signature of intermediate/shallow water — orbital motion is no longer confined to the surface but reaches the bottom. Confirms that at least the lowest frequencies (0.65–0.7 Hz, longest wavelengths) are not in the deep-water regime at 580 mm depth.
+
+**TODO**: compute kd for each frequency at d=580 mm and classify each run. Flag any runs in the shallow/intermediate transition zone — the physics there differs from the deep-water assumption and should be noted in the thesis. The bottom-motion observation is supporting evidence for the methodology chapter.
+
+---
+
+## 20. Rules for this assistant
 
 > **For orientation**: §18 has the full three-phase call hierarchy and where each script fits. §5 has probe naming. §6 has known pitfalls. §0 is the current open investigation.
 
