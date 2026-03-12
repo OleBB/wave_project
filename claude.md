@@ -2,25 +2,59 @@
 
 ## 0. Current investigation (pick up here next session)
 
-**RESOLVED**: The apparent ~3x wave growth (`nopanel, fullwind, 0.65 Hz, 0.1 V`) was a **pipeline artifact** — root cause was incomplete `find_wave_range` logic. The amplitude window included the wavemaker ramp-up phase, inflating the OUT amplitude. Fixed by improving `_SNARVEI_CALIB`. Re-run `main.py` and confirm ratios are plausible before doing any damping analysis.
+**RESOLVED**: The apparent ~3x wave growth (`nopanel, fullwind, 0.65 Hz, 0.1 V`) was a **pipeline artifact** — root cause was incomplete `find_wave_range` logic. The amplitude window included the wavemaker ramp-up phase, inflating the OUT amplitude. Fixed by improving `_SNARVEI_CALIB`. `main.py` has been re-run; ratios are now plausible.
+
+### New columns added (both in cache after latest `main.py` run)
+
+**`parallel_ratio`** (in `combined_meta`, computed by `processor2nd.py`):
+- `= Probe {wall_pos} Amplitude / Probe {far_pos} Amplitude` (wall = smaller lateral, e.g. `/170`; far = larger, e.g. `/340`)
+- Detects lateral asymmetry between the parallel probe pair. Near 1.0 = probes agree. Far from 1.0 = asymmetry (wall reflection, lateral wind effect, etc.)
+- Added via `ProbeConfiguration.parallel_pair()` in `improved_data_loader.py` — auto-detects which two probes share the same longitudinal distance.
+
+**`wave_stability {pos}`** and **`period_cv {pos}`** (in `combined_meta`, computed by `processor.py` in `run_find_wave_ranges`):
+- `wave_stability` = autocorrelation of the wave signal (within the stable window) at lag = 1 period. Near 1.0 = clean repeating wave; lower = phase/amplitude drift across periods.
+- `period_cv` = coefficient of variation (std/mean) of per-period peak-to-trough amplitudes. Low = uniform amplitude; high = wave ramping or irregular.
+- Computed using FFT-based autocorrelation (`np.fft.rfft`) and `wave_upcrossings` from `debug_info`.
+- Available for every probe, every wave run where `find_wave_range` succeeded.
+
+### Key physical finding from wave_stability / period_cv
+
+**Wind-zone context** (confirmed by experiment):
+- Probes up to ~9373 mm: **heavy wind exposure** — short wind waves ride on top of paddle wave
+- Probes ~12300–12700 mm: **almost no wind** — panel damps the short wind waves almost completely
+- Probes at ~18000 mm: wind builds up again over the new fetch after the panel
+
+**Observed in data (March 2026)**:
+- `9373/170` (IN probe, full wind exposure): `wave_stability` drops to 0.55–0.74 at low amplitude (0.1V) + full wind. `period_cv` reaches 0.3–0.6 — the signal is dominated by wind-wave noise, not the paddle wave.
+- `12545/250` (OUT probe, protected by panel): `wave_stability` stays at 0.93–0.96 even with full wind. `period_cv` stays below 0.10.
+- No-wind runs: both probes show `wave_stability` ~0.94–0.96 and `period_cv` ~0.02–0.05 — clean waves.
+
+**Implication for OUT/IN ratio**: full-wind + low-amplitude (0.1V) runs have unreliable IN amplitude at `9373/170`. The time-domain percentile amplitude includes wind-wave energy, inflating the denominator and deflating OUT/IN. Use `wave_stability < 0.85` or `period_cv > 0.15` on the IN probe as a quality flag before trusting OUT/IN.
+
+### Two important next investigations
+
+**1. Quantify wind noise at IN probe using nowave+fullwind runs**
+The nowave+fullwind runs give the wind-only amplitude at `9373/170` directly — no paddle wave, so any amplitude is pure wind noise. Compare this to the paddle-wave amplitude from wave+fullwind runs at the same wind condition. This gives a principled SNR estimate and a defensible quality threshold, rather than an arbitrary `wave_stability` cutoff. Use `combined_meta` filtered to `WindCondition == "full"` and `WaveFrequencyInput [Hz]` is NaN for the nowave baseline, then compare to the wave runs probe-by-probe.
+
+**2. Panel reflection affecting IN probe**
+When the panel is present, it reflects incoming waves back toward the wavemaker. The IN probe at `9373/170` sits between the wavemaker and the panel — it may be measuring a superposition of the incident wave and the reflected wave, not the pure incident amplitude. This would make OUT/IN systematically wrong for panel runs (the denominator is inflated by the reflection). To investigate: (a) compare IN probe amplitude with-panel vs without-panel for the same wave condition and no wind, (b) check if the effect is frequency-dependent (reflection coefficient varies with frequency), (c) consider whether FFT amplitude (single-frequency) is less affected than time-domain percentile amplitude, since standing-wave nodes/antinodes depend on probe position relative to wavelength.
+
+### Still open
+- `9373/250` noise floor 0.600 mm in Nov 2025 vs `9373/170` ~0.32 mm in March 2026 — likely different physical probes, not a position effect. No action needed unless it affects a key result.
+- **Wind-wave characterization**: cross-correlate `/170` and `/340` at the same longitudinal distance for fullwind runs to test lateral coherence of wind waves. Use `processed_dfs` eta columns + `scipy.signal.correlate`.
+- **NaN wave_stability runs**: a handful of runs show NaN for wave_stability (e.g. some 0.7 Hz, 1.4 Hz full-wind runs). These are cases where `find_wave_range` returned `None` start/end. Investigate in `RampDetectionBrowser`.
+- Lateral ratio sanity check (no-wind runs, `parallel_ratio` should be ~1.0):
+```python
+_wave = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy()
+print(_wave[["WaveFrequencyInput [Hz]", "WindCondition", "PanelCondition", "parallel_ratio"]]
+      .sort_values("parallel_ratio", ascending=False).to_string())
+```
 
 **Dead theories — do not revisit without new evidence**:
 - Wall reflection at `12545/170` creating constructive interference
 - Wind skewing wave crests laterally
 - Wrong `out_position` assignment
-- Wind-wave contamination inflating time-domain amplitude
-
-**Still open**:
-- `9373/250` noise floor 0.600 mm in Nov 2025 vs `9373/170` ~0.32 mm in March 2026 — likely different physical probes used at those dates, not a position effect. No action needed unless it affects a key result.
-- **Wind-wave characterization**: for fullwind runs, overlay the two parallel probe signals (`/170` and `/340` at the same longitudinal distance) in a single time-domain plot. Seeing them on top of each other will directly show how correlated the short wind waves are laterally — coherent = tank-wide swell, incoherent = local turbulence. Use `processed_dfs` eta columns.
-- **TODO: autocorrelation** on the wind-only `eta` signals — quantify the dominant wind-wave period and coherence length. `scipy.signal.correlate` or `np.correlate` on a single probe; cross-correlate between `/170` and `/340` at the same distance to test lateral coherence.
-- After `main.py` re-run: quick sanity check — lateral ratio `12545/170 / 12545/340` should be near 1.0 for no-wind runs:
-```python
-_wave = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy()
-_wave["ratio"] = _wave["Probe 12545/170 Amplitude"] / _wave["Probe 12545/340 Amplitude"]
-print(_wave[["WaveFrequencyInput [Hz]", "WindCondition", "PanelCondition", "ratio"]]
-      .sort_values("ratio", ascending=False).to_string())
-```
+- Wind-wave contamination inflating time-domain amplitude (now quantified via `wave_stability`/`period_cv` — effect is real but understood)
 
 ---
 

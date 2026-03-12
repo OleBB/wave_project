@@ -141,6 +141,22 @@ class ProbeConfiguration:
         """Return {probe_num: col_name} for all probes."""
         return {i: self.probe_col_name(i) for i in self.distances_mm}
 
+    def parallel_pair(self) -> Optional[tuple]:
+        """Return (pos_wall, pos_far) for the parallel probe pair, or None.
+
+        Wall side = smaller lateral_mm (170), far side = larger (340).
+        Returns None if no two probes share the same longitudinal distance.
+        """
+        from collections import defaultdict
+        groups: dict = defaultdict(list)
+        for num in self.distances_mm:
+            groups[self.distances_mm[num]].append(num)
+        for nums in groups.values():
+            if len(nums) == 2:
+                sorted_nums = sorted(nums, key=lambda n: self.lateral_mm[n])
+                return (self.probe_col_name(sorted_nums[0]), self.probe_col_name(sorted_nums[1]))
+        return None
+
 
 # Define all probe configurations chronologically
 PROBE_CONFIGS = [
@@ -218,7 +234,7 @@ PROBE_CONFIGS = [
             1:  170.0,  # parallell, nær referansevegg
             2: 250.0,  # senter av tanken
             3:  340.0,  # parallell, 340mm frå referansevegg
-            4: 250.0,  # senter av tanken
+            4: 250.0,  # !!TK, 230 er egentlig mer korrekt her.
         },
         in_probe=1,
         out_probe=2,

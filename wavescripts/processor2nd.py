@@ -266,6 +266,17 @@ def _update_more_metrics(
         meta_indexed["in_position"]   = in_pos_ser   # physical position string, e.g. "9373/170"
         meta_indexed["out_position"]  = out_pos_ser  # physical position string, e.g. "12545"
 
+    # ── Parallel probe ratio ─────────────────────────────────────────
+    # parallel_ratio = wall-side amplitude / far-side amplitude
+    parallel = cfg.parallel_pair()
+    if parallel:
+        pos_wall, pos_far = parallel
+        col_wall = f"Probe {pos_wall} Amplitude"
+        col_far  = f"Probe {pos_far} Amplitude"
+        if col_wall in meta_indexed.columns and col_far in meta_indexed.columns:
+            ratio = meta_indexed[col_wall] / meta_indexed[col_far]
+            meta_indexed["parallel_ratio"] = ratio.replace([np.inf, -np.inf], np.nan)
+
     # ── Band amplitudes ──────────────────────────────────────────────
     # Assuming compute_amplitude_by_band returns a DataFrame with "path" column
     band_amplitudes = compute_amplitude_by_band(psd_dict)

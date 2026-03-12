@@ -92,7 +92,7 @@ print(f"read_parquet and other stuff took {end - start:.4f} s")
 # %% ── amplitude — all probes physical layout ─────────────────────────────────
 amplitudeplotvariables = {
     "overordnet": {
-        "chooseAll": False,
+        "chooseAll": True,
         "chooseFirst": False,
         "chooseFirstUnique": False,
     },
