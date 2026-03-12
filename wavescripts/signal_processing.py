@@ -266,6 +266,50 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg
         print(f"=== PSD Complete: {len(amplitude_records)} records ===\n")
     return psd_dict, pd.DataFrame(amplitude_records)
 
+def compute_nowave_psd(
+    processed_dfs: dict,
+    meta_nowave: pd.DataFrame,
+    cfg,
+    fs: float,
+    nperseg: int = 4096,
+) -> dict:
+    """Compute broadband Welch PSD for nowave runs (wind-only + stillwater).
+
+    Uses the full zeroed signal (eta_) — no wave-range window — with a large
+    nperseg suitable for resolving wind-wave frequencies (2–10 Hz).
+    Returns a dict in the same format as psd_dict: {path: DataFrame(index=Frequencies)}.
+    """
+    col_names = cfg.probe_col_names()
+    nowave_paths = set(meta_nowave["path"].values)
+    result = {}
+
+    for path, df in processed_dfs.items():
+        if path not in nowave_paths:
+            continue
+        series_list = []
+        for pos in col_names.values():
+            eta_col = f"eta_{pos}"
+            sig = df[eta_col].dropna().values if eta_col in df.columns else None
+            if sig is None or len(sig) < nperseg:
+                continue
+            _nperseg = min(nperseg, len(sig))
+            f, pxx = welch(
+                sig, fs=fs,
+                window="hann",
+                nperseg=_nperseg,
+                noverlap=_nperseg // 2,
+                detrend="constant",
+                scaling="density",
+            )
+            series_list.append(pd.Series(pxx, index=f, name=f"Pxx {pos}"))
+        if series_list:
+            psd_df = pd.concat(series_list, axis=1).sort_index()
+            psd_df.index.name = "Frequencies"
+            result[path] = psd_df
+
+    return result
+
+
 def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg, fs, debug: bool = False) -> Tuple[dict, pd.DataFrame]:
     """Compute FFT for each probe and calculate amplitude, frequency, and period."""
     col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
