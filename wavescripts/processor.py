@@ -323,6 +323,9 @@ def run_find_wave_ranges(
         path = row["path"]
         df = processed_dfs[path]
 
+        freq = row.get("WaveFrequencyInput [Hz]")
+        freq = float(freq) if freq is not None and not pd.isna(freq) else None
+
         for i, pos in col_names.items():
             probe_col = f"Probe {pos}"
             start, end, debug_info = find_wave_range(
@@ -330,6 +333,46 @@ def run_find_wave_ranges(
             )
             meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
             meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
+
+            # Wave quality metrics from upcrossings
+            if (
+                debug_info is not None
+                and freq is not None
+                and start is not None
+                and end is not None
+            ):
+                upcrossings = debug_info.get("wave_upcrossings")
+                samples_per_period = int(round(MEASUREMENT.SAMPLING_RATE / freq))
+                sig = df[probe_col].values[start:end]
+
+                # 1. wave_stability: autocorrelation at lag = 1 period (FFT-based, O(n log n))
+                sig_centered = sig - np.mean(sig)
+                n = len(sig_centered)
+                if n > 2 * samples_per_period:
+                    fft_sig = np.fft.rfft(sig_centered, n=2 * n)
+                    ac = np.fft.irfft(fft_sig * np.conj(fft_sig))[:n].real
+                    ac_norm = ac / ac[0] if ac[0] != 0 else ac
+                    wave_stability = float(ac_norm[samples_per_period])
+                else:
+                    wave_stability = np.nan
+
+                # 2. period_amplitude_cv: coefficient of variation of per-period amplitudes
+                if upcrossings is not None and len(upcrossings) >= 2:
+                    period_amps = [
+                        float(np.ptp(sig[upcrossings[j] - start : upcrossings[j + 1] - start]))
+                        for j in range(len(upcrossings) - 1)
+                        if upcrossings[j + 1] - start <= n and upcrossings[j] - start >= 0
+                    ]
+                    if len(period_amps) >= 2:
+                        mean_amp = np.mean(period_amps)
+                        period_cv = float(np.std(period_amps) / mean_amp) if mean_amp > 0 else np.nan
+                    else:
+                        period_cv = np.nan
+                else:
+                    period_cv = np.nan
+
+                meta_sel.loc[idx, f"wave_stability {pos}"] = wave_stability
+                meta_sel.loc[idx, f"period_cv {pos}"]      = period_cv
 
         if debug and start:
             print(f'start: {start}, end: {end}, debug: {debug_info}')
