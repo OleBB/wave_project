@@ -306,39 +306,10 @@ print(f"\nStillwater baseline ({len(_meta_stillwater)}):")
 for _, r in _meta_stillwater.iterrows():
     print(f"  {_Path(r['path']).name}")
 
-# %% ── wind-only — lazy-load processed_dfs (skipped during normal load) ─────
-if not processed_dfs:
-    print("Loading processed_dfs (~75 MB, ~20 s)...")
-    _t0 = time.perf_counter()
-    processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
-    print(f"Loaded {len(processed_dfs)} runs in {time.perf_counter() - _t0:.1f} s")
-
-# %% ── wind-only — build PSD dict (same format as psd_dict) ──────────────────
-# Compute Welch PSD for all nowave runs so we can reuse plot_frequency_spectrum.
-_NPERSEG = 4096
-
-_wind_psd_dict = {}
-for path, df in processed_dfs.items():
-    if path not in _meta_nowave_all["path"].values:
-        continue
-    eta_cols = [c for c in df.columns if c.startswith("eta_")]
-    if not eta_cols:
-        continue
-    records = {}
-    freqs_ref = None
-    for eta_col in eta_cols:
-        pos = eta_col[len("eta_"):]          # "eta_9373/170" → "9373/170"
-        sig = df[eta_col].dropna().values
-        if len(sig) < _NPERSEG:
-            continue
-        f, pxx = _welch(sig, fs=_FS, nperseg=_NPERSEG)
-        if freqs_ref is None:
-            freqs_ref = f
-        records[f"Pxx {pos}"] = pxx
-    if records and freqs_ref is not None:
-        _wind_psd_dict[path] = pd.DataFrame(records, index=pd.Index(freqs_ref, name="Frequencies"))
-
-print(f"Built wind_psd_dict for {len(_wind_psd_dict)} nowave runs")
+# %% ── wind-only — PSD dict from cache (nowave PSDs computed in pipeline) ────
+_nowave_paths = set(_meta_nowave_all["path"].values)
+_wind_psd_dict = {k: v for k, v in combined_psd_dict.items() if k in _nowave_paths}
+print(f"wind_psd_dict: {len(_wind_psd_dict)} nowave runs from cache")
 
 # %% ── wind-only — PSD spectrum plot ─────────────────────────────────────────
 _wind_psd_plotvars = {

@@ -14,7 +14,7 @@ from typing import Dict, List, Tuple
 
 from wavescripts.improved_data_loader import update_processed_metadata, get_configuration_for_date
 from wavescripts.wave_detection import find_wave_range
-from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes
+from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes, compute_nowave_psd
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
@@ -626,8 +626,13 @@ def process_selected_data(
     if find_range:
         meta_sel = run_find_wave_ranges(processed_dfs, meta_sel, cfg, win, range_plot, debug)
     
-    # 4. a - Compute PSDs and amplitudes from PSD
+    # 4. a - Compute PSDs and amplitudes from PSD (wave runs only)
     psd_dict, amplitudes_psd_df = compute_psd_with_amplitudes(processed_dfs, meta_sel, cfg, fs=fs, debug=debug)
+
+    # 4. a2 - Broadband PSD for nowave runs (wind-only + stillwater), merged into psd_dict
+    _meta_nowave = meta_sel[meta_sel["WaveFrequencyInput [Hz]"].isna()]
+    if not _meta_nowave.empty:
+        psd_dict.update(compute_nowave_psd(processed_dfs, _meta_nowave, cfg, fs=fs))
 
     # 4. b - compute FFT and amplitudes from FFT
     fft_dict, amplitudes_fft_df = compute_fft_with_amplitudes(processed_dfs, meta_sel, cfg, fs=fs, debug=debug)
