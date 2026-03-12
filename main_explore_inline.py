@@ -68,6 +68,7 @@ start = time.perf_counter()
 
 PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20251112-tett6roof"),
     Path("waveprocessed/PROCESSED-20251113-tett6roof"),
 ]
@@ -92,18 +93,18 @@ print(f"read_parquet and other stuff took {end - start:.4f} s")
 # %% ── amplitude — all probes physical layout ─────────────────────────────────
 amplitudeplotvariables = {
     "overordnet": {
-        "chooseAll": True,
+        "chooseAll": False,
         "chooseFirst": False,
         "chooseFirstUnique": False,
     },
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   0.65,
+        "WaveFrequencyInput [Hz]":   (0.5,1.0),
         "WavePeriodInput":           None,
         "WindCondition":             ["full"],
         "TunnelCondition":           None,
         "Mooring":                   "low",
-        "PanelCondition":            "no", #"["reverse", "full"],
+        "PanelCondition":            None, #"no", #"["reverse", "full"],
     },
     "plotting": {
         "figsize":   [7, 4],
@@ -122,7 +123,7 @@ save_interactive_plot(damping_groupedruns_df)
 
 # %% ── damping vs frequency ───────────────────────────────────────────────────
 dampingplotvariables = {
-    "overordnet": {"chooseAll": False, "chooseFirst": False, "chooseFirstUnique": False},
+    "overordnet": {"chooseAll": True, "chooseFirst": False, "chooseFirstUnique": False},
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
         "WaveFrequencyInput [Hz]":   None,
@@ -183,7 +184,7 @@ freqplotvariables = {
     },
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],
-        "WaveFrequencyInput [Hz]":   [1.3],
+        "WaveFrequencyInput [Hz]":   [1.7],
         "WavePeriodInput":           None,
         "WindCondition":             ["no", "lowest", "full"],
         "TunnelCondition":           None,
@@ -245,7 +246,7 @@ swellplotvariables = {
         "legend":     "inside",
         "logaritmic": False,
         "peaks":      3,
-        "probes":     ["12545/250", "9373/340"],
+        "probes":     ["12545/250", "9373/170"],
     },
 }
 
@@ -273,7 +274,7 @@ fig, axes = plot_reconstructed(
     _recon_paths, filtrert_frequencies, freqplotvariables, data_type="fft"
 )
 
-
+# %% - Wind section
 """
 #
 #

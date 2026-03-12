@@ -1,0 +1,26 @@
+ny dag, nye muligheter. 
+
+Ser jo at probe 1 er plassert på venstresiden av stanga. Stanga er sentrert midt i tanken. Så ekte lateral posisjon er vel mer: 230mm
+
+Samme med 9373, probene er jo på innsiden av hver sin, så det er ikke mer enn 150mm mellom dem. 
+
+vindobservasjon. 
+høyere trykkgradient oppstrøms?
+det er tydelig at vindbølgene generert de første 3meterne ved inngangen er steile, for å finne tilsvarende vindbølger nedstrøms må vi vente kanskje 6meter etter panel. Interessant!
+
+amp0300-freq2000tilfreq1700, disse bølgende endrer noe med fetchen . veldig steile, spennende bølger. ser ut som de spiser hele vindbølgen.
+
+mooring-lengde: 16 cm. høyde 3-5 cm over vannet. se bilde på tlf. 
+
+oooh... glemte å endre triggern, fra 60. det betyr at alle kjøringer bare er 60 
+frem til
+fullpanel-fullwind-amp0300-freq0600-per40-depth580-mstop30-run1
+---
+stoppet nå vinden.
+repeterer så alle kjøringer nå uten vind. 
+
+hva er det som demper? kontraksjonen? de trekkes over hverandre?
+
+glemte Å lagre freq1000 -kjører derfor på nytt. 
+
+ved en amp0300-freq0600 så beveger grumset på bunnen seg totalt 2cm. 
