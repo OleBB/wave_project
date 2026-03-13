@@ -35,9 +35,9 @@ from wavescripts.plotter import gather_ramp_data
 # List all PROCESSED-* folders you want to load. Add more for multi-dataset sessions.
 PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"), # mange kjøringer med -per15
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"), # noen kjøringer med  -per30-
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"), #et par kjøringer med -per15-
     Path("waveprocessed/PROCESSED-20251112-tett6roof"),
     Path("waveprocessed/PROCESSED-20251113-tett6roof"),
     Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
@@ -48,8 +48,6 @@ PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
 ]
-
-
 
 # ── Load from cache (fast — no reprocessing) ──────────────────────────────────
 print("Loading analysis data from cache...")
@@ -80,7 +78,6 @@ freqplotvariables = {
     },
 }
 
-
 # ── Launch ────────────────────────────────────────────────────────────────────
 app = QApplication.instance() or QApplication(sys.argv)
 
@@ -102,6 +99,6 @@ print("Browsers open. Close all windows to exit.")
 app.exec_()
 
 # %%
-# %% dtale — explore combined_meta
+# %% ----------dtale----------- explore combined_meta
 
 dtale.show(combined_meta, host="localhost").open_browser()

@@ -68,9 +68,9 @@ start = time.perf_counter()
 
 PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"), # mange kjøringer med -per15
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"), # noen kjøringer med  -per30-
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"), #et par kjøringer med -per15-
     Path("waveprocessed/PROCESSED-20251112-tett6roof"),
     Path("waveprocessed/PROCESSED-20251113-tett6roof"),
     Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
@@ -132,9 +132,9 @@ save_interactive_plot(damping_groupedruns_df)
 
 # %% ── damping vs frequency ───────────────────────────────────────────────────
 dampingplotvariables = {
-    "overordnet": {"chooseAll": True, "chooseFirst": False, "chooseFirstUnique": False},
+    "overordnet": {"chooseAll": False, "chooseFirst": False, "chooseFirstUnique": False},
     "filters": {
-        "WaveAmplitudeInput [Volt]": None,
+        "WaveAmplitudeInput [Volt]": (0.1,0.3),
         "WaveFrequencyInput [Hz]":   None,
         "WavePeriodInput":           None,
         "WindCondition":             None,
@@ -154,7 +154,7 @@ explore_damping_vs_amp(damping_filtrert, dampingplotvariables)
 dampingplotvariables_all = {
     "overordnet": {"chooseAll": False, "chooseFirst": False},
     "filters": {
-        "WaveAmplitudeInput [Volt]": None,
+        "WaveAmplitudeInput [Volt]": 0.1,
         "WaveFrequencyInput [Hz]":   None,
         "WavePeriodInput":           None,
         "WindCondition":             ["no", "full"], #"lowest"
@@ -176,6 +176,8 @@ dampingplotvariables_all = {
     },
 }
 
+#TODO: fix this to handle actual input... doesnt seem to react to filters.
+#TODO: seems like the other plots does it as well..
 damping_groupedallruns_df = damping_all_amplitude_grouper(combined_meta)
 plot_damping_freq(damping_groupedallruns_df, dampingplotvariables_all)
 
@@ -720,6 +722,4 @@ import dtale
 #     """
 # )
 dtale.show(combined_meta, host="localhost").open_browser()
-
-
-print(combined_meta.columns.to_list())
+# print(combined_meta.columns.to_list())
