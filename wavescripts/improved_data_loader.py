@@ -244,6 +244,11 @@ PROBE_CONFIGS = [
 
 # TK TODO: måle alle målene på tanken. få det inn i en tikz-tegning. spesielt måle probeavstandene ordentlig.
 
+# Standard 4-probe analysis set for the current layout (march2026_better_rearranging and earlier).
+# Import this in explore/save scripts instead of hardcoding the list — single source of truth.
+# Order: IN probe, OUT probe, secondary parallel probe, upstream probe.
+ANALYSIS_PROBES = ["9373/170", "12400/250", "9373/340", "8804/250"]
+
 
 def get_probe_positions(file_date: datetime) -> Dict[int, float]:
     """
