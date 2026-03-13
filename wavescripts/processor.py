@@ -17,6 +17,7 @@ from wavescripts.wave_detection import find_wave_range
 from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes, compute_nowave_psd
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
+from scipy.interpolate import PchipInterpolator
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, get_smoothing_window
 from wavescripts.constants import (
     ProbeColumns as PC, 
@@ -273,6 +274,21 @@ def _extract_stillwater_levels(meta_full: pd.DataFrame, cfg, debug: bool) -> dic
     return stillwater
 
 
+def _remask_long_gaps(filled: np.ndarray, nan_mask: np.ndarray, max_gap: int) -> np.ndarray:
+    """Re-apply NaN to runs that were longer than max_gap before interpolation."""
+    run_start = None
+    for j in range(len(nan_mask) + 1):
+        if j < len(nan_mask) and nan_mask[j]:
+            if run_start is None:
+                run_start = j
+        else:
+            if run_start is not None:
+                if j - run_start > max_gap:
+                    filled[run_start:j] = np.nan
+                run_start = None
+    return filled
+
+
 def _zero_and_smooth_signals(
     dfs: dict,
     meta_sel: pd.DataFrame,
@@ -280,10 +296,17 @@ def _zero_and_smooth_signals(
     cfg,
     win: int,
     debug: bool
-) -> dict[str, pd.DataFrame]:
-    """Zero signals using stillwater and add moving averages."""
-    col_names = cfg.probe_col_names()  # {1: "9373/170", 2: "12545", ...}
+) -> tuple[dict, dict]:
+    """Zero signals using stillwater, clean outliers, interpolate small gaps, add moving averages.
+
+    Returns (processed_dfs, clip_stats) where
+    clip_stats = {path: {pos: {"samples_clipped": int, "max_gap": int}}}
+    """
+    fs = MEASUREMENT.SAMPLING_RATE
+    col_names = cfg.probe_col_names()
     processed_dfs = {}
+    clip_stats = {}
+
     for _, row in meta_sel.iterrows():
         path = row["path"]
         if path not in dfs:
@@ -291,6 +314,21 @@ def _zero_and_smooth_signals(
             continue
 
         df = dfs[path].copy()
+        clip_stats[path] = {}
+
+        freq = row.get("WaveFrequencyInput [Hz]")
+        wind = row.get("WindCondition", "no")
+        is_wave_run = freq is not None and not pd.isna(freq)
+        is_stillwater = not is_wave_run and wind == "no"
+
+        # Max gap to interpolate: 1/4 wavelength for wave runs, fixed fallback otherwise
+        if is_wave_run:
+            max_interp_gap = int(fs / (4.0 * float(freq)))
+        else:
+            max_interp_gap = CLIP.INTERP_MAX_GAP
+
+        clip_mm = CLIP.NOWIND_MM if is_stillwater else CLIP.WAVE_MM
+
         for i, pos in col_names.items():
             probe_col = f"Probe {pos}"
             if probe_col not in df.columns:
@@ -300,80 +338,82 @@ def _zero_and_smooth_signals(
             eta_col = f"eta_{pos}"
             df[eta_col] = -(df[probe_col] - stillwater[path][i])
 
-            # Clip outliers: replace samples outside physical range with NaN.
-            # Tight threshold (±5 mm) only for stillwater runs (no wind, no wave) —
-            # these should be dead quiet and anything beyond 5 mm is a gross glitch.
-            # Wind-only runs (nowave + wind) have real signal up to ~10 mm and must use
-            # the physical hard cap, same as wave runs.
-            freq = row.get("WaveFrequencyInput [Hz]")
-            wind = row.get("WindCondition", "no")
-            is_wave_run = freq is not None and not pd.isna(freq)
-            is_stillwater = not is_wave_run and wind == "no"
-            clip_mm = CLIP.NOWIND_MM if is_stillwater else CLIP.WAVE_MM
+            # ── Layer 1: Hard cap ────────────────────────────────────────────
             outlier_mask = df[eta_col].abs() > clip_mm
-            n_clipped = int(outlier_mask.sum())
-            if n_clipped > 0:
+            if outlier_mask.any():
                 df.loc[outlier_mask, eta_col] = np.nan
-                print(f"  CLIP [{Path(path).name}] {pos}: {n_clipped} samples |η| > {clip_mm} mm → NaN")
+                print(f"  CLIP [{Path(path).name}] {pos}: {int(outlier_mask.sum())} samples |η| > {clip_mm} mm → NaN")
 
-            # Velocity filter: a single-sample electrical spike produces two large
-            # consecutive differences with opposite sign. Flag the spike, not the neighbours.
-            # Max physical wave velocity: 2π × 10 Hz × 10 mm ≈ 2.5 mm/sample at 250 Hz.
-            # CLIP.DIFF_MM = 10 mm/sample → 4× safety margin above any real signal.
+            # ── Layer 2: Velocity filter + ±VEL_BUFFER shoulder removal ─────
             _eta = df[eta_col].to_numpy(dtype=float)
             _d = np.diff(_eta)
-            _rise = _d[:-1]   # diff arriving at sample k  (d[k-1])
-            _fall = _d[1:]    # diff leaving  sample k  (d[k])
-            _spike = (
+            _rise = _d[:-1]
+            _fall = _d[1:]
+            _spike_core = (
                 (np.abs(_rise) > CLIP.DIFF_MM) &
                 (np.abs(_fall) > CLIP.DIFF_MM) &
-                (_rise * _fall < 0)   # opposite sign → spike, not a step
+                (_rise * _fall < 0)
             )
-            spike_indices = np.where(_spike)[0] + 1  # +1: _rise starts at index 1
+            spike_indices = np.where(_spike_core)[0] + 1
             if spike_indices.size > 0:
-                _eta[spike_indices] = np.nan
+                buf_mask = np.zeros(len(_eta), dtype=bool)
+                for offset in range(-CLIP.VEL_BUFFER, CLIP.VEL_BUFFER + 1):
+                    shifted = spike_indices + offset
+                    valid = (shifted >= 0) & (shifted < len(_eta))
+                    buf_mask[shifted[valid]] = True
+                _eta[buf_mask] = np.nan
                 df[eta_col] = _eta
-                print(f"  VELCLIP [{Path(path).name}] {pos}: {spike_indices.size} spike(s) → NaN")
+                print(f"  VELCLIP [{Path(path).name}] {pos}: {spike_indices.size} spike(s), {int(buf_mask.sum())} samples → NaN")
 
-            # Isolated sample check: a valid sample with NaN on both immediate neighbours
-            # is a survivor inside a data gap — not a real wave reading. Remove it.
+            # ── Layer 3: Isolated sample check ───────────────────────────────
             _nan_mask = np.isnan(_eta)
             _isolated = ~_nan_mask & np.roll(_nan_mask, 1) & np.roll(_nan_mask, -1)
-            _isolated[[0, -1]] = False  # boundaries are not isolated by this definition
+            _isolated[[0, -1]] = False
             if _isolated.any():
                 _eta[_isolated] = np.nan
                 df[eta_col] = _eta
                 print(f"  ISOCLIP [{Path(path).name}] {pos}: {int(_isolated.sum())} isolated sample(s) → NaN")
 
-            # Interpolate small NaN gaps before smoothing so _ma stays continuous.
-            # eta_ keeps its original NaN (used by FFT quality check and visualisation).
+            # ── Clip stats ───────────────────────────────────────────────────
+            _final_nan = np.isnan(_eta)
+            n_clipped_total = int(_final_nan.sum())
+            if _final_nan.any():
+                runs = np.diff(np.concatenate([[0], _final_nan.astype(int), [0]]))
+                starts = np.where(runs == 1)[0]
+                ends   = np.where(runs == -1)[0]
+                max_gap_val = int((ends - starts).max())
+            else:
+                max_gap_val = 0
+            clip_stats[path][pos] = {"samples_clipped": n_clipped_total, "max_gap": max_gap_val}
+
+            # ── eta_interp: pchip fill of small gaps (display layer) ─────────
+            interp_col = f"eta_{pos}_interp"
+            _valid = ~_final_nan
+            if _final_nan.any() and _valid.sum() > 3:
+                _idx = np.arange(len(_eta))
+                _pchip = PchipInterpolator(_idx[_valid], _eta[_valid], extrapolate=False)
+                _filled_interp = _pchip(_idx)
+                _filled_interp = _remask_long_gaps(_filled_interp, _final_nan, max_interp_gap)
+                df[interp_col] = _filled_interp
+            else:
+                df[interp_col] = _eta.copy()
+
+            # ── _ma: linear fill of small gaps then smooth ───────────────────
             ma_col = f"{probe_col}_ma"
-            _eta_for_ma = df[eta_col].to_numpy(dtype=float)
-            _nan = np.isnan(_eta_for_ma)
-            if _nan.any() and (~_nan).sum() > 2:
-                _idx = np.arange(len(_eta_for_ma))
-                _filled = np.interp(_idx, _idx[~_nan], _eta_for_ma[~_nan])
-                # Re-mask long NaN runs (> INTERP_MAX_GAP) — don't hide real data loss
-                _pos = 0
-                _run_start = None
-                for j in range(len(_nan) + 1):
-                    if j < len(_nan) and _nan[j]:
-                        if _run_start is None:
-                            _run_start = j
-                    else:
-                        if _run_start is not None:
-                            if j - _run_start > CLIP.INTERP_MAX_GAP:
-                                _filled[_run_start:j] = np.nan
-                            _run_start = None
-                _eta_for_ma = _filled
-            df[ma_col] = pd.Series(_eta_for_ma, index=df.index).rolling(window=win, center=False).mean()
+            if _final_nan.any() and _valid.sum() > 2:
+                _idx = np.arange(len(_eta))
+                _filled_ma = np.interp(_idx, _idx[_valid], _eta[_valid])
+                _filled_ma = _remask_long_gaps(_filled_ma, _final_nan, max_interp_gap)
+            else:
+                _filled_ma = _eta.copy()
+            df[ma_col] = pd.Series(_filled_ma, index=df.index).rolling(window=win, center=False).mean()
 
             if debug:
                 print(f"  {Path(path).name:35} → {eta_col} mean = {df[eta_col].mean():.4f} mm")
 
         processed_dfs[path] = df
 
-    return processed_dfs
+    return processed_dfs, clip_stats
 
 
 def run_find_wave_ranges(
@@ -686,8 +726,16 @@ def process_selected_data(
     meta_full = ensure_stillwater_columns(dfs, meta_full, cfg)
     stillwater = _extract_stillwater_levels(meta_full, cfg, debug)
 
-    # 2. Process dataframes: zero and add moving averages
-    processed_dfs = _zero_and_smooth_signals(dfs, meta_sel, stillwater, cfg, win, debug)
+    # 2. Process dataframes: zero, clean, interpolate, add moving averages
+    processed_dfs, clip_stats = _zero_and_smooth_signals(dfs, meta_sel, stillwater, cfg, win, debug)
+
+    # Merge clip quality stats into meta_sel
+    col_names = cfg.probe_col_names()
+    for path, probe_stats in clip_stats.items():
+        mask = meta_sel["path"] == path
+        for pos, stats in probe_stats.items():
+            meta_sel.loc[mask, f"samples_clipped_{pos}"] = stats["samples_clipped"]
+            meta_sel.loc[mask, f"max_gap_{pos}"] = stats["max_gap"]
     
     # 3. Optional: find wave ranges
     if find_range:

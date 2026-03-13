@@ -1215,6 +1215,8 @@ def gather_ramp_data(
             signal = df[col_eta].to_numpy()
             raw = df[col_raw].to_numpy()
             ma = df[col_ma].to_numpy() if col_ma in df.columns else signal
+            col_interp = f"eta_{pos}_interp"
+            signal_interp = df[col_interp].to_numpy() if col_interp in df.columns else signal
 
             n_base = min(
                 good_start,
@@ -1254,6 +1256,7 @@ def gather_ramp_data(
                     "time_ms": time_ms,
                     "raw": raw,
                     "signal": signal,
+                    "signal_interp": signal_interp,
                     "ma": ma,
                     "baseline_mean": baseline_mean_val,
                     "baseline_std": base_std,
@@ -1287,6 +1290,8 @@ def plot_ramp_detection(
     peak_amplitudes=None,
     ramp_peak_indices: Optional[np.ndarray] = None,
     title: str = "Ramp Detection",
+    signal_interp: Optional[np.ndarray] = None,
+    expected_sine: Optional[np.ndarray] = None,
 ) -> Tuple[plt.Figure, plt.Axes]:
     """Diagnostic plot for ramp detection on a single experiment/probe."""
     if "Date" not in df.columns:
@@ -1310,7 +1315,12 @@ def plot_ramp_detection(
     fig.suptitle(title)
 
     ax.plot(time_ms, raw, color="lightgray", alpha=0.6, label="Raw")
-    ax.plot(time_ms, signal, color="black", lw=2, label=f"Smoothed {data_col}")
+    if signal_interp is not None:
+        ax.plot(time_ms, signal_interp, color="steelblue", lw=1.2, alpha=0.7, label="Cleaned (interp)")
+    ax.plot(time_ms, signal, color="black", lw=1.5, alpha=0.8, label=f"Cleaned (gaps=NaN)")
+    if expected_sine is not None:
+        ax.plot(time_ms, expected_sine, color="darkorange", lw=1.5, alpha=0.8,
+                linestyle="--", label="Expected sine (FFT-fit)")
     ax.axhline(
         baseline_mean,
         color="blue",

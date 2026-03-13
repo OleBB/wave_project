@@ -74,12 +74,12 @@ freqplotvariables = {
 # ── Launch ────────────────────────────────────────────────────────────────────
 app = QApplication.instance() or QApplication(sys.argv)
 
-# %% ----- Signal Browser
 browser_signal = SignalBrowserFiltered(
     filtered_fft_dict, filtered_meta, freqplotvariables
 )
 browser_signal.setWindowTitle("Signal Browser — FFT reconstruction")
 browser_signal.show()
+# %% ----- Signal Browser
 
 # %% ---------------------------------
 ramp_df = gather_ramp_data(processed_dfs, combined_meta)

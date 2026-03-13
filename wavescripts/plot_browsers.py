@@ -243,7 +243,7 @@ class RampDetectionBrowser(QMainWindow):
         self.setGeometry(100, 100, 600, 900)
 
         from PyQt5.QtWidgets import (QComboBox, QGroupBox,
-                                      QGridLayout, QDoubleSpinBox)
+                                      QGridLayout, QDoubleSpinBox, QCheckBox)
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -292,6 +292,9 @@ class RampDetectionBrowser(QMainWindow):
         self.zoom_spin.setValue(30.0)
         self.zoom_spin.setSingleStep(5.0)
         plot_layout.addWidget(self.zoom_spin, 0, 1)
+        self.sine_cb = QCheckBox("Show expected sine")
+        self.sine_cb.setChecked(False)
+        plot_layout.addWidget(self.sine_cb, 1, 0, 1, 2)
         plot_box.setLayout(plot_layout)
         layout.addWidget(plot_box)
 
@@ -318,7 +321,7 @@ class RampDetectionBrowser(QMainWindow):
         if panel != "All panel":  df = df[df[GC.PANEL_CONDITION] == panel]
         if freq  != "All freq":   df = df[df[GC.WAVE_FREQUENCY_INPUT] == float(freq)]
         if amp   != "All amp":    df = df[df[GC.WAVE_AMPLITUDE_INPUT] == float(amp)]
-        if probe != "All probes": df = df[df["probe"] == int(probe.split()[-1])]
+        if probe != "All probes": df = df[df["probe"] == probe.split(None, 1)[-1]]
 
         self.list_widget.clear()
         self.current_rows = []
@@ -344,6 +347,30 @@ class RampDetectionBrowser(QMainWindow):
         dummy_dates = pd.to_datetime(row["time_ms"], unit="ms")
         df_plot = pd.DataFrame({"Date": dummy_dates, row["data_col"]: row["raw"]})
 
+        # Expected sine: FFT-reconstruct dominant frequency from stable window
+        expected_sine = None
+        freq = row[GC.WAVE_FREQUENCY_INPUT]
+        if self.sine_cb.isChecked() and pd.notna(freq) and float(freq) > 0:
+            sig = row["signal"]
+            gs = int(row["good_start_idx"])
+            ge = int(row["good_end_idx"])
+            stable = sig[gs:ge]
+            n_stable = len(stable)
+            if n_stable > 4:
+                from wavescripts.constants import MEASUREMENT
+                fs = MEASUREMENT.SAMPLING_RATE
+                fft_c = np.fft.rfft(stable - np.nanmean(stable))
+                freqs_r = np.fft.rfftfreq(n_stable, d=1.0 / fs)
+                best_bin = int(np.argmin(np.abs(freqs_r - float(freq))))
+                amp = 2.0 * np.abs(fft_c[best_bin]) / n_stable
+                phase = np.angle(fft_c[best_bin])
+                # Build full-length sine aligned to sample 0
+                t_all = np.arange(len(sig)) / fs
+                t_gs = gs / fs
+                expected_sine = row["baseline_mean"] + amp * np.sin(
+                    2 * np.pi * float(freq) * (t_all - t_gs) + phase
+                )
+
         plt.close("all")
         fig, ax = plot_ramp_detection(
             df=df_plot,
@@ -356,6 +383,8 @@ class RampDetectionBrowser(QMainWindow):
             }),
             data_col=row["data_col"],
             signal=row["signal"],
+            signal_interp=row.get("signal_interp"),
+            expected_sine=expected_sine,
             baseline_mean=row["baseline_mean"],
             threshold=row["threshold"],
             first_motion_idx=row["first_motion_idx"],
