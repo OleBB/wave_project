@@ -72,7 +72,7 @@ freqplotvariables = {
 # ── Launch ────────────────────────────────────────────────────────────────────
 app = QApplication.instance() or QApplication(sys.argv)
 
-# %%
+# %% ----- Signal Browser
 browser_signal = SignalBrowserFiltered(
     filtered_fft_dict, filtered_meta, freqplotvariables
 )

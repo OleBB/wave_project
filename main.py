@@ -43,10 +43,18 @@ os.chdir(file_dir)
 # ── Dataset paths ─────────────────────────────────────────────────────────────
 # Add / uncomment folders here as new data arrives.
 dataset_paths = [
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20260312-ProbPos4_31_FPV_2-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251112-tett6roof"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-loosepaneltaped"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251113-tett6roof-probeadjusted"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260305-newProbePos-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260306-newProbePos-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260312-ProbPos4_31_FPV_2-tett6roof"),
 ]
 
 # ── Processing options ────────────────────────────────────────────────────────
