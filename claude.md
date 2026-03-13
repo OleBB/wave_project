@@ -2,6 +2,83 @@
 
 ## 0. Current investigation (pick up here next session)
 
+### ⚠ SESSION SUMMARY — cache is stale, plotters show nothing, start here next session
+
+**Status at end of session**: the cache (`waveprocessed/PROCESSED-*/`) still contains **old column names** (`12545`, `12300`). All scripts now use the corrected names (`12400`, `11800`). This mismatch means `combined_meta` lookups return NaN for every amplitude/FFT/PSD column, `out_position` is stale, and virtually all plots produce empty or near-empty output. **This is expected and correct — the fix is one pipeline run.**
+
+#### Step 1 — Regenerate cache (do this first, before anything else)
+
+`main.py` is already configured correctly (`force_recompute=True`, `total_reset=False`). Just run it:
+
+    conda activate draumkvedet && python main.py
+
+Expected duration: ~5–10 minutes for all 12 datasets. Watch for:
+- No Python errors or tracebacks
+- `out_position` printed values showing `12400/...` not `12545/...`
+- `VELCLIP` / `ISOCLIP` diagnostic lines (expected on a few runs, not on clean ones)
+
+#### Step 2 — Sanity-check the cache
+
+In `main_explore_inline.py`, run the load cell, then:
+
+    # Column names should now be 12400, not 12545
+    print([c for c in combined_meta.columns if "12400" in c][:5])
+    print([c for c in combined_meta.columns if "12545" in c][:5])  # must be empty
+
+    # out_position should be 12400-series
+    print(combined_meta["out_position"].value_counts())
+
+    # Damping plot should show data again
+    damping_groupedallruns_df = damping_all_amplitude_grouper(combined_meta)
+    plot_damping_freq(damping_groupedallruns_df, dampingplotvariables_all)
+
+#### Step 3 — Verify outlier pipeline (was pending before this session too)
+
+- Zero `VELCLIP` messages on clean no-wind runs
+- `ISOCLIP` fires for isolated sample at idx ~37794 in `reversepanel-nowind-amp0300-freq1300...run1 → 12400/340`
+- `samples_clipped_*` and `max_gap_*` columns appear in `combined_meta`
+- Open `RampDetectionBrowser`, enable "Show expected sine", verify orange dashed line fits stable wave
+
+#### Step 4 — Eyeball `Probe 11800/250` ramp detection
+
+Open `RampDetectionBrowser`, filter to `Probe 11800/250`. Current calibration values are interpolated estimates only:
+
+    "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)]
+
+Eyeball at several frequencies across the 0.4–1.8 Hz sweep and update `_SNARVEI_CALIB` in `wavescripts/wave_detection.py`. Re-run `main.py` after any calibration changes.
+
+---
+
+#### Full list of code changes made this session
+
+**`wavescripts/improved_data_loader.py`**
+- `PROBE_CONFIGS`: `12545` → `12400` in all configs (`initial_setup`, `nov_normalt_oppsett`, `march2026_better_rearranging`); `12300` → `11800` in `march2026_rearranging`
+- Added `ANALYSIS_PROBES = ["9373/170", "12400/250", "9373/340", "8804/250"]` — single source for the standard 4-probe analysis list
+
+**`wavescripts/wave_detection.py`**
+- `_SNARVEI_CALIB`: renamed keys `"12545"` → `"12400"`, `"12300"` → `"11800"`; recalculated `"11800"` interpolation values at fraction 0.802
+- `_PROBE_GROUP`: replaced hardcoded 11-entry dict with a 4-line comprehension over `PROBE_CONFIGS`. Auto-populates all probe→distance-group mappings for every config ever defined. Also gained `"Probe 18000/250"` which was previously missing. **This is the fix that prevents this class of bug recurring.**
+- Added `PROBE_CONFIGS` to import from `improved_data_loader`
+
+**`main_explore_inline.py`**
+- Import: added `ANALYSIS_PROBES`
+- Replaced 5 hardcoded `["9373/170", "12400/250", "9373/340", "8804/250"]` lists with `ANALYSIS_PROBES`
+- Left intentional subset choices (`["12400/250", "9373/340"]`, `["12400/250", "9373/170"]`) hardcoded — deliberate per-plot editorial decisions
+
+**`main_save_figures.py`**
+- Import: added `ANALYSIS_PROBES`
+- `PROBE_POSITIONS = ANALYSIS_PROBES` (was a hardcoded list)
+- Comment updated: `12545 mm` → `12400 mm`
+
+**`main_explore_browser.py`**
+- `"probes"` initial browser state: `"12545/250"` → `"12400/250"`
+
+**`claude.md`**
+- All probe distance references updated throughout (sections 0, 5, 6, 7, 8, 16)
+- Added thorough design note on minimising hardcoded probe positions (§0)
+
+---
+
 ### ⚠ Probe distances corrected — cache must be regenerated
 
 **All probe distances were physically re-measured and corrected (this session).** Two distances changed:

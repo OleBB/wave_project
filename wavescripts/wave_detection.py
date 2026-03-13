@@ -13,7 +13,7 @@ Created on Fri Jan 30 09:44:49 2026
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from wavescripts.improved_data_loader import update_processed_metadata
+from wavescripts.improved_data_loader import update_processed_metadata, PROBE_CONFIGS
 from scipy.signal import find_peaks
 from scipy.signal import welch
 from scipy.optimize import brentq
@@ -130,19 +130,14 @@ def find_wave_range(
         "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
     }
 
-    # Map every probe column name to a distance group
+    # Map every probe column name to a distance group — auto-generated from PROBE_CONFIGS
+    # so this never goes stale when distances are corrected in improved_data_loader.py.
+    # Keys are "Probe dist/lat" strings; values are the distance prefix used as
+    # the _SNARVEI_CALIB key (e.g. "Probe 12400/250" → "12400").
     _PROBE_GROUP = {
-        "Probe 8804":      "8804",
-        "Probe 8804/170":  "8804",
-        "Probe 8804/250":  "8804",
-        "Probe 9373/170":  "9373",
-        "Probe 9373/250":  "9373",
-        "Probe 9373/340":  "9373",
-        "Probe 11800/250": "11800",  # march2026_rearranging only
-        "Probe 12400":     "12400",
-        "Probe 12400/170": "12400",
-        "Probe 12400/250": "12400",
-        "Probe 12400/340": "12400",
+        f"Probe {pos}": pos.split("/")[0]
+        for cfg in PROBE_CONFIGS
+        for pos in cfg.probe_col_names().values()
     }
 
     def _snarvei_start(freq: float, calib: list[tuple[float, int]]) -> int:

@@ -39,7 +39,7 @@ from wavescripts.filters import (
     damping_all_amplitude_grouper,
     filter_for_frequencyspectrum,
 )
-from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
+from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs, ANALYSIS_PROBES
 from wavescripts.plot_utils import WIND_COLOR_MAP, apply_thesis_style, save_and_stub
 from wavescripts.plotter import (
     plot_all_probes,
@@ -307,7 +307,7 @@ THRESHOLD_FACTOR = 2.0    # 2× stillwater noise floor
 WINDOW_S         = 0.5    # rolling window length [s]
 MIN_ARRIVAL_S    = 0.5    # arrivals below this are wind-wave artefacts
 
-PROBE_POSITIONS = ["8804/250", "9373/170", "9373/340", "12400/250"]
+PROBE_POSITIONS = ANALYSIS_PROBES
 
 _sw_mask = (
     combined_meta["WaveFrequencyInput [Hz]"].isna()
