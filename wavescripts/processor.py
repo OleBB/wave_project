@@ -335,6 +335,16 @@ def _zero_and_smooth_signals(
                 df[eta_col] = _eta
                 print(f"  VELCLIP [{Path(path).name}] {pos}: {spike_indices.size} spike(s) → NaN")
 
+            # Isolated sample check: a valid sample with NaN on both immediate neighbours
+            # is a survivor inside a data gap — not a real wave reading. Remove it.
+            _nan_mask = np.isnan(_eta)
+            _isolated = ~_nan_mask & np.roll(_nan_mask, 1) & np.roll(_nan_mask, -1)
+            _isolated[[0, -1]] = False  # boundaries are not isolated by this definition
+            if _isolated.any():
+                _eta[_isolated] = np.nan
+                df[eta_col] = _eta
+                print(f"  ISOCLIP [{Path(path).name}] {pos}: {int(_isolated.sum())} isolated sample(s) → NaN")
+
             # Interpolate small NaN gaps before smoothing so _ma stays continuous.
             # eta_ keeps its original NaN (used by FFT quality check and visualisation).
             ma_col = f"{probe_col}_ma"
