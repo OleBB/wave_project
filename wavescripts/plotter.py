@@ -1226,6 +1226,12 @@ def gather_ramp_data(
             exceeded = np.where(np.abs(signal) > threshold)[0]
             first_motion = int(exceeded[0]) if len(exceeded) > 0 else good_start
 
+            _sw = meta_row.get(PC.STILLWATER.format(i=pos), np.nan)
+            baseline_mean_val = (
+                float(_sw) if pd.notna(_sw)
+                else (float(np.nanmean(base_region)) if len(base_region) > 0 else 0.0)
+            )
+
             t0 = df["Date"].iat[0]
             time_ms = (
                 df["Date"] - t0
@@ -1249,7 +1255,7 @@ def gather_ramp_data(
                     "raw": raw,
                     "signal": signal,
                     "ma": ma,
-                    "baseline_mean": meta_row.get(PC.STILLWATER.format(i=pos), 0.0),
+                    "baseline_mean": baseline_mean_val,
                     "baseline_std": base_std,
                     "threshold": threshold,
                     "first_motion_idx": first_motion,
