@@ -1,78 +1,69 @@
 # Wave Project — Context for Code Assistants
 
+---
+
+## WHAT THIS PROJECT IS — READ THIS FIRST
+
+**Thesis experiment**: A floating solar panel (FPV) geometry is placed in a wave tank. Paddle waves are generated at 0.65–1.9 Hz. The central question is:
+
+> **Does wind increase or decrease how much of an incoming wave is transmitted past the panel geometry?**
+
+**Key metric**: `OUT/IN (FFT)` — ratio of wave amplitude *past* the panel to incident wave amplitude, computed at the paddle frequency only (narrow 0.1 Hz FFT window). Time-domain amplitude is NOT used for damping — it includes wind-wave energy.
+
+**Experiment variables**: `WaveFrequencyInput [Hz]` · `WaveAmplitudeInput [Volt]` (0.1 V / 0.2 V) · `WindCondition` (full / lowest / no) · `PanelCondition` (full / reverse / no) · `Mooring`
+
+**Probes**: 4 wave gauges identified by physical position `"longitudinal_mm/lateral_mm"`:
+- `9373/170` — IN probe, between paddle and panel, fully exposed to wind
+- `12400/250` — OUT probe, past panel, almost no wind (panel blocks wind fetch)
+- `9373/340` — parallel to IN probe, same longitudinal distance, other lateral side
+- `8804/250` — upstream probe, closest to wavemaker
+
+**Pipeline**: `main.py` → raw CSVs in `wavedata/` → processed cache in `waveprocessed/PROCESSED-*/` → exploration in `main_explore_inline.py` (Zed REPL) → publication figures in `main_save_figures.py`
+
+**Known physical complication**: at full wind + low amplitude (0.1 V), the IN probe signal is ~2/3 wind-wave energy — time-domain OUT/IN is meaningless for damping. FFT amplitude at the paddle frequency is the only trustworthy metric.
+
+---
+
 ## 0. Current investigation (pick up here next session)
 
-### ✅ Pipeline verified — cache is current, plots working normally
+### ⚠ New dataset added — needs first-time processing
 
-**Status**: `main.py` has been run with `force_recompute=True`. Cache is up to date with corrected probe distances (`12400`, `11800`). All plots loading and displaying normally. Outlier pipeline (Phase 2) is active and producing `samples_clipped_*` / `max_gap_*` columns in `combined_meta`.
+**Status**: A new dataset `20260313-ProbePos4_31_FPV_2-tett6roof` was added to `dataset_paths` in `main.py`. Two bugs were fixed this session that blocked processing. **Run `main.py` with `total_reset=False, force_recompute=False`** — all 12 existing datasets will be skipped instantly (already processed), only dataset 13 will be processed.
 
-#### Summary of all code changes since last known-good commit
+**What was fixed this session:**
 
-**`wavescripts/improved_data_loader.py`**
-- `PROBE_CONFIGS`: `12545` → `12400` in all configs (`initial_setup`, `nov_normalt_oppsett`, `march2026_better_rearranging`); `12300` → `11800` in `march2026_rearranging`
-- Added `ANALYSIS_PROBES = ["9373/170", "12400/250", "9373/340", "8804/250"]` — single source for the standard 4-probe analysis list
-- Added `ProbeConfiguration.parallel_pair()` method — auto-detects the parallel probe pair (same distance, different lateral) and returns `(pos_wall, pos_far)`
+1. **`total_reset` / `force_recompute` now actually skip processed datasets** (`main.py`)
+   - Previously, these flags only controlled raw CSV loading — the full pipeline (FFT, PSD, stillwater) still ran for *every* dataset every time.
+   - Now: at the top of the loop, if `processed_dfs.parquet` + `fft_spectra.parquet` + `psd_spectra.parquet` all exist and neither flag is set → dataset is skipped with `✓ Already processed` message.
+   - `force_recompute=True` = re-run full pipeline for all datasets (loads from `dfs.parquet`, not CSVs)
+   - `total_reset=True` = wipe everything, reload from CSVs, reprocess all
 
-**`wavescripts/wave_detection.py`**
-- `_SNARVEI_CALIB`: renamed keys `"12545"` → `"12400"`, `"12300"` → `"11800"`; recalculated `"11800"` interpolation values at fraction 0.802
-- `_PROBE_GROUP`: replaced hardcoded dict with a 4-line comprehension over `PROBE_CONFIGS` — auto-populates all probe→distance-group mappings, never goes stale
+2. **Folder name typo for dataset 13** (`main.py`)
+   - `dataset_paths` had `20260313-ProbPos4_31_FPV_2-tett6roof` (missing `e`)
+   - Actual folder on disk: `20260313-ProbePos4_31_FPV_2-tett6roof`
+   - Fixed to match disk.
 
-**`wavescripts/processor.py`**
-- `_zero_and_smooth_signals` fully rewritten: three-layer outlier removal (hard cap → velocity filter ±`VEL_BUFFER=2` shoulders → isolated sample check), dynamic `max_interp_gap` (1/4 wavelength for wave runs, 10-sample fallback for nowave), `eta_{pos}_interp` pchip display layer, returns `(processed_dfs, clip_stats)` dict
-- `_remask_long_gaps` helper added
-- `process_selected_data` merges clip stats into `meta_sel` as `samples_clipped_{pos}` / `max_gap_{pos}`
+3. **ZeroDivisionError when both stillwater anchors share the same timestamp** (`processor.py`, `ensure_stillwater_columns`)
+   - Dataset `20251110-tett6roof-lowMooring` has two no-wind/no-wave files both timestamped `2025-11-10 11:16:50`, so `t1 - t0 = 0`.
+   - The existing `len(anchor_rows) < 2` guard only checks count, not time distinctness.
+   - Fix: after computing `t0`, `t1`, check `if t0 == t1:` → print warning and fall back to the same flat-value path used for single-anchor case, then `return meta`.
 
-**`wavescripts/constants.py`**
-- `CLIP`: added `VEL_BUFFER=2`, `INTERP_MAX_GAP=10`
+#### Summary of significant code changes (cumulative, condensed)
 
-**`wavescripts/processor2nd.py`**
-- Added `parallel_ratio` column computation using `cfg.parallel_pair()`
-
-**`wavescripts/plotter.py`**
-- `gather_ramp_data`: `signal_interp` layer, NaN-safe `baseline_mean` fallback, `baseline_mean_val` local variable
-- `plot_ramp_detection`: added `signal_interp` (steelblue) and `expected_sine` (dashed orange) optional layers
-
-**`wavescripts/plot_browsers.py`**
-- Fixed probe filter crash for `/`-separated position strings (`int()` → string comparison)
-- Added `QCheckBox("Show expected sine")` — FFTs stable window, extracts A+φ at target freq, overlays `baseline_mean + A·sin(2π·f·t + φ)`
-
-**`main_explore_inline.py`**, **`main_save_figures.py`**, **`main_explore_browser.py`**
-- All hardcoded probe position strings updated to `12400`/`11800`
-- Import: `ANALYSIS_PROBES` replacing repeated hardcoded 4-probe lists
+| File | What changed |
+|------|-------------|
+| `improved_data_loader.py` | Probe distances corrected: `12545`→`12400`, `12300`→`11800` in `PROBE_CONFIGS`; added `ANALYSIS_PROBES` constant; added `ProbeConfiguration.parallel_pair()` |
+| `wave_detection.py` | `_SNARVEI_CALIB` + `_PROBE_GROUP` keys updated to new distances; `_PROBE_GROUP` auto-generated from `PROBE_CONFIGS` (no longer a hardcoded dict) |
+| `processor.py` | `_zero_and_smooth_signals` rewritten: 3-layer outlier removal (hard cap → velocity filter → isolated sample); dynamic `max_interp_gap`; `eta_{pos}_interp` pchip display layer; `samples_clipped_*` / `max_gap_*` columns added to `combined_meta`; `t0==t1` zero-division guard in `ensure_stillwater_columns` |
+| `processor2nd.py` | `parallel_ratio` column via `cfg.parallel_pair()` |
+| `plotter.py` / `plot_browsers.py` | `signal_interp` layer; "Show expected sine" checkbox in `RampDetectionBrowser`; probe filter crash fix for `/`-position strings |
+| `main.py` | Skip-if-already-processed logic: datasets with all 3 output parquets are skipped unless `force_recompute=True` or `total_reset=True`; fixed `ProbePos` typo for dataset 13 |
+| `constants.py` | `CLIP`: added `VEL_BUFFER=2`, `INTERP_MAX_GAP=10` |
+| All explore/save scripts | Hardcoded probe strings updated; `ANALYSIS_PROBES` import replacing repeated lists |
 
 ---
 
-#### Full list of code changes made this session (historical reference)
-
-**`wavescripts/improved_data_loader.py`**
-- `PROBE_CONFIGS`: `12545` → `12400` in all configs (`initial_setup`, `nov_normalt_oppsett`, `march2026_better_rearranging`); `12300` → `11800` in `march2026_rearranging`
-- Added `ANALYSIS_PROBES = ["9373/170", "12400/250", "9373/340", "8804/250"]` — single source for the standard 4-probe analysis list
-
-**`wavescripts/wave_detection.py`**
-- `_SNARVEI_CALIB`: renamed keys `"12545"` → `"12400"`, `"12300"` → `"11800"`; recalculated `"11800"` interpolation values at fraction 0.802
-- `_PROBE_GROUP`: replaced hardcoded 11-entry dict with a 4-line comprehension over `PROBE_CONFIGS`. Auto-populates all probe→distance-group mappings for every config ever defined. Also gained `"Probe 18000/250"` which was previously missing. **This is the fix that prevents this class of bug recurring.**
-- Added `PROBE_CONFIGS` to import from `improved_data_loader`
-
-**`main_explore_inline.py`**
-- Import: added `ANALYSIS_PROBES`
-- Replaced 5 hardcoded `["9373/170", "12400/250", "9373/340", "8804/250"]` lists with `ANALYSIS_PROBES`
-- Left intentional subset choices (`["12400/250", "9373/340"]`, `["12400/250", "9373/170"]`) hardcoded — deliberate per-plot editorial decisions
-
-**`main_save_figures.py`**
-- Import: added `ANALYSIS_PROBES`
-- `PROBE_POSITIONS = ANALYSIS_PROBES` (was a hardcoded list)
-- Comment updated: `12545 mm` → `12400 mm`
-
-**`main_explore_browser.py`**
-- `"probes"` initial browser state: `"12545/250"` → `"12400/250"`
-
-**`claude.md`**
-- All probe distance references updated throughout (sections 0, 5, 6, 7, 8, 16)
-- Added thorough design note on minimising hardcoded probe positions (§0)
-
----
-
-### ⚠ Probe distances corrected — cache must be regenerated
+### ✅ Probe distances corrected — cache regenerated, RESOLVED
 
 **All probe distances were physically re-measured and corrected (this session).** Two distances changed:
 
@@ -97,12 +88,7 @@
 - `main_explore_inline.py`, `main_explore_browser.py`, `main_save_figures.py` — all hardcoded probe position strings updated
 - `claude.md` — all sections updated
 
-**To regenerate cache**: run `main.py` with `force_recompute=True` (already set), `total_reset=False`. Do NOT use `total_reset` — the raw CSVs have not changed, only the Python config. `force_recompute` is sufficient because `processed_dfs.parquet`, `fft.parquet`, `psd.parquet`, and `meta.json` amplitude columns are always fully regenerated on every pipeline run; only `dfs.parquet` (raw CSV cache) is skipped.
-
-**After re-run, verify**:
-- `combined_meta` columns contain `12400` not `12545`
-- `out_position` values are `"12400/250"` (or `"12400/170"` for older configs)
-- `RampDetectionBrowser`: filter to `Probe 11800/250` and eyeball-refine the interpolated `_SNARVEI_CALIB` points across the 0.4–1.8 Hz sweep (these are first estimates only)
+**Cache already regenerated** with `force_recompute=True`. Columns in `combined_meta` now use `12400` / `11800`. `out_position` values are `"12400/250"` (or `"12400/170"` for older configs). Still worth eyeballing `_SNARVEI_CALIB["11800"]` in `RampDetectionBrowser` for the Mar 4–6 datasets — those calibration points are first estimates only.
 
 ---
 
@@ -249,7 +235,13 @@ Three-layer outlier removal implemented in `wavescripts/processor.py` (`_zero_an
 
 ### Next session — start here
 
-**0. Quick sanity checks (pipeline re-run ✅ done — plots working normally)**
+**0. Process the new dataset first** ⚠ NOT YET DONE
+- Run `main.py` with `total_reset=False, force_recompute=False`
+- Expect: datasets 1–12 print `✓ Already processed — skipping`, dataset 13 runs the full pipeline
+- Dataset 3 (`20251110-tett6roof-lowMooring`) will also re-run (it lacks `processed_dfs.parquet` / `fft_spectra.parquet` / `psd_spectra.parquet`). It will now print `Both anchors share the same timestamp — using flat value` instead of crashing.
+- After run: spot-check `combined_meta` for dataset 13 rows — check `Probe 12400/250 Amplitude`, `wave_stability 12400/250`, `Stillwater Probe 1`–`4` are non-NaN and physically plausible. Use `wavetable` alias to open dtale.
+
+**1. Quick sanity checks**
 - Open `RampDetectionBrowser`, enable "Show expected sine" checkbox, verify dashed orange line fits stable wave at a few runs
 - Spot-check `11800/250` metrics for the March 4–6 datasets are non-NaN and physically plausible:
 ```python
@@ -333,8 +325,11 @@ dependencies:
 | `main_explore_inline.py` | Primary analysis playground, `# %%` cells | Open in Zed REPL |
 | `main_explore_browser.py` | Qt GUIs for interactive run browsing | `python main_explore_browser.py` |
 | `main_save_figures.py` | Batch LaTeX/PGF figure export | `python main_save_figures.py` |
+| `dtale_meta.py` | Open `combined_meta` in dtale browser, nothing else | `python dtale_meta.py` or shell alias `wavetable` |
 
 `main_explore_browser.py` forces `matplotlib.use("Qt5Agg")` — run from terminal, not REPL.
+
+Shell alias `wavetable` is saved in `~/.zshrc` → `cd ~/Kodevik/wave_project && conda activate draumkvedet && python dtale_meta.py`. Type `wavetable` from any terminal to open the table instantly.
 
 See §19 for the full three-phase call hierarchy and plotting script roles.
 
