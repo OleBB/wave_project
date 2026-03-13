@@ -176,8 +176,9 @@ class ClipParams:
     NOWIND_MM: float = 5.0    # nowind/stillwater runs: noise floor ~0.3 mm; ±5 mm catches only gross glitches
     WAVE_MM:   float = 200.0  # wave runs: physical hard cap (tank depth ~580 mm; no real wave can exceed this)
     MAX_NAN_FRACTION: float = 0.05  # if >5% of a signal window is clipped, skip that probe/run for FFT
-    DIFF_MM: float = 10.0     # velocity threshold: 10 mm/sample = 2500 mm/s (~4× max physical wave velocity)
-    INTERP_MAX_GAP: int = 10  # max consecutive NaN samples to bridge when computing _ma (avoids NaN propagation)
+    DIFF_MM: float = 10.0         # velocity threshold: 10 mm/sample = 2500 mm/s (~4× max physical wave velocity)
+    INTERP_MAX_GAP: int = 10      # fallback max gap (nowave/stillwater runs); wave runs use 1/4 wavelength
+    VEL_BUFFER: int = 2           # samples removed on each side of a velocity-detected spike (shoulder contamination)
 
 CLIP = ClipParams()
 

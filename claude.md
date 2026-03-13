@@ -54,6 +54,40 @@ SNR = wave_amplitude / wind_only_amplitude for fullwind wave runs:
 **2. Panel reflection affecting IN probe**
 When the panel is present, it reflects incoming waves back toward the wavemaker. The IN probe at `9373/170` sits between the wavemaker and the panel — it may be measuring a superposition of the incident wave and the reflected wave, not the pure incident amplitude. This would make OUT/IN systematically wrong for panel runs (the denominator is inflated by the reflection). To investigate: (a) compare IN probe amplitude with-panel vs without-panel for the same wave condition and no wind, (b) check if the effect is frequency-dependent (reflection coefficient varies with frequency), (c) consider whether FFT amplitude (single-frequency) is less affected than time-domain percentile amplitude, since standing-wave nodes/antinodes depend on probe position relative to wavelength.
 
+### Outlier removal pipeline — Phase 2 DONE (March 2026, exp/probepos branch)
+
+Three-layer outlier removal implemented in `wavescripts/processor.py` (`_zero_and_smooth_signals`):
+
+1. **Hard cap** (Phase 1, already in place): `±200 mm` wave runs, `±5 mm` stillwater-only runs
+2. **Velocity filter**: `|diff[k-1]| > CLIP.DIFF_MM=10` AND `|diff[k]| > CLIP.DIFF_MM` AND opposite signs → spike at sample k. Buffer of `CLIP.VEL_BUFFER=2` samples removed on each side (shoulder contamination). Prints `VELCLIP` diagnostic.
+3. **Isolated sample check**: single valid sample between NaN gaps on both sides → also set to NaN. Prints `ISOCLIP` diagnostic.
+
+**Display layers** added to `processed_dfs`:
+- `eta_{pos}` — truth column, NaN where bad data removed
+- `eta_{pos}_interp` — pchip-interpolated display copy; gaps ≤ `max_interp_gap` bridged, longer gaps stay NaN
+- `Probe {pos}_ma` — `_eta_for_ma` (linearly filled then re-masked at long gaps) → rolling mean for upcrossing detection
+
+**Dynamic `max_interp_gap`**: wave runs use `int(fs / (4 * freq))` = 1/4 wavelength; nowave/stillwater use `CLIP.INTERP_MAX_GAP=10` fallback.
+
+**New quality columns in `combined_meta`** (after `main.py` run):
+- `samples_clipped_{pos}` — total samples set to NaN for that probe/run (all three layers)
+- `max_gap_{pos}` — longest consecutive NaN run in `eta_{pos}` for that probe/run
+
+**Constants added to `CLIP` in `constants.py`**: `DIFF_MM=10.0`, `INTERP_MAX_GAP=10`, `VEL_BUFFER=2`
+
+**`RampDetectionBrowser` fixes and improvements** (`plot_browsers.py` + `plotter.py`):
+- Fixed `baseline_mean` NaN crash: falls back to `nanmean(base_region)` if `Stillwater Probe {pos}` is NaN in meta
+- Three signal layers: Raw (lightgray), Cleaned interp (steelblue), Cleaned NaN (black)
+- Fixed probe filter crash for `/`-separated position strings (`int()` → string comparison)
+- **Expected sine toggle**: checkbox "Show expected sine" — FFTs the stable window, extracts amplitude+phase at target freq, overlays `baseline_mean + A·sin(2π·f·t + φ)` as dashed orange line
+
+**NOTE**: `main.py` has NOT yet been re-run with these changes. Run with `force_recompute=True` to regenerate cache and verify:
+- Zero `VELCLIP` messages on clean runs
+- `ISOCLIP` fires for isolated sample at idx ~37794 in `reversepanel-nowind-amp0300-freq1300...run1 → 12545/340`
+- `samples_clipped_*` and `max_gap_*` columns appear in `combined_meta`
+
+---
+
 ### Pipeline changes made today
 
 **Nowave PSDs now in cache** (`processor.py` + `signal_processing.py`):
@@ -64,6 +98,12 @@ When the panel is present, it reflects incoming waves back toward the wavemaker.
 - `processed_dfs` lazy-load is still needed for the stats cell (343), stillwater plot (439), and arrival detection (506).
 
 ### Next session — start here
+
+**0. Verify outlier pipeline (run `main.py` with `force_recompute=True` first)**
+- Check zero `VELCLIP` messages on clean runs
+- Check `ISOCLIP` fires for isolated sample at idx ~37794 in `reversepanel-nowind-amp0300-freq1300...run1 → 12545/340`
+- Confirm `samples_clipped_*` and `max_gap_*` columns appear in `combined_meta`
+- Open `RampDetectionBrowser`, enable "Show expected sine" checkbox, verify dashed orange line fits the stable wave at several runs
 
 **A. Finalize wind/probe-uncertainty plots → `main_save_figures.py`**
 - In `main_explore_inline.py`, the wind section has a working probe-uncertainty/stillwater plot (around line 479) and wind PSD plots. Review these, polish, then copy the finalized `plotvariables` + function calls to `main_save_figures.py` following the explore→publication chain (§18).

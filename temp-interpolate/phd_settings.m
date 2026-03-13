@@ -1,0 +1,10 @@
+PhDroot = "/mn/sarpanitu/ansatte-u3/karensam/Documents/PhD/Master_nyAnalyse";
+evaADVdataroot = "/mn/kadingir/msc_lab_000000/evacbe/ADV copy/2021.11.12";
+evaADVroot = "/mn/kadingir/msc_lab_000000/evacbe/ADV copy";
+evaoverflateroot = "/mn/kadingir/msc_lab_000000/evacbe/Probes copy";
+masterroot = "/mn/sarpanitu/ansatte-u3/karensam/Documents/PhD/Master";
+KarensEvaroot = "/mn/kadingir/hydrolab_010002/karensam/evacbe_postprosessert";
+stianroot = "/mn/sarpanitu/ansatte-u3/karensam/Documents/Stians_data";
+anneroot = "/mn/sarpanitu/ansatte-u3/karensam/Documents/Annes_data/AR";
+kadingirKarenroot = "/mn/kadingir/msc_lab_000000/karensam";
+kadingirNyPostprosroot = "/mn/kadingir/hydrolab_010002/karensam/Master_NyPostpros";
