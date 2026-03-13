@@ -2,6 +2,86 @@
 
 ## 0. Current investigation (pick up here next session)
 
+### ⚠ Probe distances corrected — cache must be regenerated
+
+**All probe distances were physically re-measured and corrected (this session).** Two distances changed:
+
+| Probe group | Old (estimated) | New (measured) | Affected configs |
+|-------------|----------------|----------------|-----------------|
+| OUT probe (main parallel pair) | `12545 mm` | `12400 mm` | `initial_setup`, `nov_normalt_oppsett`, `march2026_better_rearranging` |
+| Temporary OUT probe (Mar 4–6 only) | `12300 mm` | `11800 mm` | `march2026_rearranging` only |
+
+**Every column name in the cache that contained `12545` or `12300` is now stale.** This includes:
+- `"Probe 12545/250 Amplitude"`, `"Probe 12545/170 Amplitude"`, `"Probe 12545/340 Amplitude"` → now `12400`
+- `"Computed Probe 12545/250 start"` / `end` → now `12400`
+- `"wave_stability 12545/250"`, `"period_cv 12545/250"` → now `12400`
+- `"samples_clipped_12545/250"`, `"max_gap_12545/250"` → now `12400`
+- `"eta_12545/250"` in `processed_dfs` → now `12400`
+- `"FFT 12545/250"`, `"Pxx 12545/250"` → now `12400`
+- `out_position` column values `"12545/170"` / `"12545/250"` → now `12400`
+- Same pattern for `12300` → `11800` for the March 4–6 dataset
+
+**Files changed**:
+- `wavescripts/improved_data_loader.py` — `PROBE_CONFIGS` distances updated
+- `wavescripts/wave_detection.py` — `_SNARVEI_CALIB` and `_PROBE_GROUP` renamed; `11800` calibration values recalculated at distance fraction 0.802 (between 9373 and 12400): `[(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)]`
+- `main_explore_inline.py`, `main_explore_browser.py`, `main_save_figures.py` — all hardcoded probe position strings updated
+- `claude.md` — all sections updated
+
+**To regenerate cache**: run `main.py` with `force_recompute=True` (already set), `total_reset=False`. Do NOT use `total_reset` — the raw CSVs have not changed, only the Python config. `force_recompute` is sufficient because `processed_dfs.parquet`, `fft.parquet`, `psd.parquet`, and `meta.json` amplitude columns are always fully regenerated on every pipeline run; only `dfs.parquet` (raw CSV cache) is skipped.
+
+**After re-run, verify**:
+- `combined_meta` columns contain `12400` not `12545`
+- `out_position` values are `"12400/250"` (or `"12400/170"` for older configs)
+- `RampDetectionBrowser`: filter to `Probe 11800/250` and eyeball-refine the interpolated `_SNARVEI_CALIB` points across the 0.4–1.8 Hz sweep (these are first estimates only)
+
+---
+
+### Design note — minimising hardcoded probe position strings
+
+**Goal**: `improved_data_loader.py` (`PROBE_CONFIGS`) is the single source of truth for all probe distances and lateral positions. No other file should contain hardcoded distance numbers in executable code. Notes and comments are fine.
+
+**Current state after audit:**
+
+| Location | Status | What's there |
+|----------|--------|-------------|
+| `processor.py`, `processor2nd.py`, `signal_processing.py` | already data-driven | All use `cfg.probe_col_names()` — zero hardcoded positions |
+| `plotter.py`, `plot_browsers.py` | already data-driven | Discover positions dynamically from data columns / `combined_meta` |
+| `wave_detection.py` `_SNARVEI_CALIB` | acceptable as-is | Calibration table (manually eyeballed values) — keys are distance strings, unavoidably manual |
+| `wave_detection.py` `_PROBE_GROUP` | **should be auto-generated** | Maps `"Probe 12400/250"` to `"12400"` — currently a hardcoded dict that duplicates `PROBE_CONFIGS`; will go stale again on the next distance correction |
+| `main_explore_inline.py` probe lists | partially reducible | `plotvariables["probes"]` entries are intentional per-plot choices — cannot be fully automated. But the repeated 4-probe `_PROBE_POSITIONS` constant could be a shared import. |
+| `main_explore_browser.py` probe lists | partially reducible | Same as above |
+| `main_save_figures.py` `PROBE_POSITIONS` | partially reducible | Same as above |
+
+**Two concrete improvements to make (not yet implemented):**
+
+**1. Auto-generate `_PROBE_GROUP` in `wave_detection.py`** (highest priority — this is what caused the stale-name bug today)
+
+Replace the hardcoded dict with code that reads `PROBE_CONFIGS` at function entry:
+
+    from wavescripts.improved_data_loader import PROBE_CONFIGS
+    _PROBE_GROUP = {
+        f"Probe {pos}": pos.split("/")[0]
+        for cfg in PROBE_CONFIGS
+        for pos in cfg.probe_col_names().values()
+    }
+
+This auto-populates every `"Probe dist/lat"` -> `"dist"` mapping for all configs ever defined. No manual maintenance needed when distances change. The `_SNARVEI_CALIB` keys still need to match (they use the distance prefix), but that dict is manually eyeballed anyway.
+
+**2. Add `ANALYSIS_PROBES` constant to `improved_data_loader.py`**
+
+The four-probe analysis set (`["9373/170", "12400/250", "9373/340", "8804/250"]`) is repeated verbatim in `main_explore_inline.py`, `main_explore_browser.py`, and `main_save_figures.py`. Define it once:
+
+    # In improved_data_loader.py — standard 4-probe set for the current layout
+    ANALYSIS_PROBES = ["9373/170", "12400/250", "9373/340", "8804/250"]
+
+Then import it in those three scripts. When the probe layout changes, only `improved_data_loader.py` needs updating.
+
+**What stays hardcoded (intentionally):**
+- `plotvariables["probes"]` lists that select a specific subset for a specific plot — these are deliberate editorial choices, not config duplicates
+- `_SNARVEI_CALIB` keys and values — keys must match `_PROBE_GROUP` distance prefixes; values are manually eyeballed sample indices that cannot be derived from `PROBE_CONFIGS`
+
+---
+
 **RESOLVED**: The apparent ~3x wave growth (`nopanel, fullwind, 0.65 Hz, 0.1 V`) was a **pipeline artifact** — root cause was incomplete `find_wave_range` logic. The amplitude window included the wavemaker ramp-up phase, inflating the OUT amplitude. Fixed by improving `_SNARVEI_CALIB`. `main.py` has been re-run; ratios are now plausible.
 
 ### New columns added (both in cache after latest `main.py` run)
