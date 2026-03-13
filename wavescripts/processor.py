@@ -17,7 +17,7 @@ from wavescripts.wave_detection import find_wave_range
 from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes, compute_nowave_psd
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
-from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, get_smoothing_window
 from wavescripts.constants import (
     ProbeColumns as PC, 
     GlobalColumns as GC, 
@@ -299,7 +299,64 @@ def _zero_and_smooth_signals(
 
             eta_col = f"eta_{pos}"
             df[eta_col] = -(df[probe_col] - stillwater[path][i])
-            df[f"{probe_col}_ma"] = df[eta_col].rolling(window=win, center=False).mean()
+
+            # Clip outliers: replace samples outside physical range with NaN.
+            # Tight threshold (±5 mm) only for stillwater runs (no wind, no wave) —
+            # these should be dead quiet and anything beyond 5 mm is a gross glitch.
+            # Wind-only runs (nowave + wind) have real signal up to ~10 mm and must use
+            # the physical hard cap, same as wave runs.
+            freq = row.get("WaveFrequencyInput [Hz]")
+            wind = row.get("WindCondition", "no")
+            is_wave_run = freq is not None and not pd.isna(freq)
+            is_stillwater = not is_wave_run and wind == "no"
+            clip_mm = CLIP.NOWIND_MM if is_stillwater else CLIP.WAVE_MM
+            outlier_mask = df[eta_col].abs() > clip_mm
+            n_clipped = int(outlier_mask.sum())
+            if n_clipped > 0:
+                df.loc[outlier_mask, eta_col] = np.nan
+                print(f"  CLIP [{Path(path).name}] {pos}: {n_clipped} samples |η| > {clip_mm} mm → NaN")
+
+            # Velocity filter: a single-sample electrical spike produces two large
+            # consecutive differences with opposite sign. Flag the spike, not the neighbours.
+            # Max physical wave velocity: 2π × 10 Hz × 10 mm ≈ 2.5 mm/sample at 250 Hz.
+            # CLIP.DIFF_MM = 10 mm/sample → 4× safety margin above any real signal.
+            _eta = df[eta_col].to_numpy(dtype=float)
+            _d = np.diff(_eta)
+            _rise = _d[:-1]   # diff arriving at sample k  (d[k-1])
+            _fall = _d[1:]    # diff leaving  sample k  (d[k])
+            _spike = (
+                (np.abs(_rise) > CLIP.DIFF_MM) &
+                (np.abs(_fall) > CLIP.DIFF_MM) &
+                (_rise * _fall < 0)   # opposite sign → spike, not a step
+            )
+            spike_indices = np.where(_spike)[0] + 1  # +1: _rise starts at index 1
+            if spike_indices.size > 0:
+                _eta[spike_indices] = np.nan
+                df[eta_col] = _eta
+                print(f"  VELCLIP [{Path(path).name}] {pos}: {spike_indices.size} spike(s) → NaN")
+
+            # Interpolate small NaN gaps before smoothing so _ma stays continuous.
+            # eta_ keeps its original NaN (used by FFT quality check and visualisation).
+            ma_col = f"{probe_col}_ma"
+            _eta_for_ma = df[eta_col].to_numpy(dtype=float)
+            _nan = np.isnan(_eta_for_ma)
+            if _nan.any() and (~_nan).sum() > 2:
+                _idx = np.arange(len(_eta_for_ma))
+                _filled = np.interp(_idx, _idx[~_nan], _eta_for_ma[~_nan])
+                # Re-mask long NaN runs (> INTERP_MAX_GAP) — don't hide real data loss
+                _pos = 0
+                _run_start = None
+                for j in range(len(_nan) + 1):
+                    if j < len(_nan) and _nan[j]:
+                        if _run_start is None:
+                            _run_start = j
+                    else:
+                        if _run_start is not None:
+                            if j - _run_start > CLIP.INTERP_MAX_GAP:
+                                _filled[_run_start:j] = np.nan
+                            _run_start = None
+                _eta_for_ma = _filled
+            df[ma_col] = pd.Series(_eta_for_ma, index=df.index).rolling(window=win, center=False).mean()
 
             if debug:
                 print(f"  {Path(path).name:35} → {eta_col} mean = {df[eta_col].mean():.4f} mm")

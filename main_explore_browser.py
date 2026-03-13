@@ -35,7 +35,7 @@ from wavescripts.plotter import gather_ramp_data
 # List all PROCESSED-* folders you want to load. Add more for multi-dataset sessions.
 PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-202603012-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20251112-tett6roof"),
     Path("waveprocessed/PROCESSED-20251113-tett6roof"),
 ]

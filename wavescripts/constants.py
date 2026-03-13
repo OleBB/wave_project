@@ -166,6 +166,22 @@ class AmplitudeParams:
 AMPLITUDE = AmplitudeParams()
 
 
+@dataclass
+class ClipParams:
+    """Outlier clipping thresholds applied to zeroed eta_ signals.
+
+    Samples whose absolute value exceeds the threshold are replaced with NaN.
+    Downstream code (nanpercentile, dropna, interpolation) handles NaN safely.
+    """
+    NOWIND_MM: float = 5.0    # nowind/stillwater runs: noise floor ~0.3 mm; ±5 mm catches only gross glitches
+    WAVE_MM:   float = 200.0  # wave runs: physical hard cap (tank depth ~580 mm; no real wave can exceed this)
+    MAX_NAN_FRACTION: float = 0.05  # if >5% of a signal window is clipped, skip that probe/run for FFT
+    DIFF_MM: float = 10.0     # velocity threshold: 10 mm/sample = 2500 mm/s (~4× max physical wave velocity)
+    INTERP_MAX_GAP: int = 10  # max consecutive NaN samples to bridge when computing _ma (avoids NaN propagation)
+
+CLIP = ClipParams()
+
+
 # =============================================================================
 # WAVENUMBER CALCULATION (DISPERSION RELATION)
 # =============================================================================
