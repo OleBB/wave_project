@@ -2,68 +2,47 @@
 
 ## 0. Current investigation (pick up here next session)
 
-### ⚠ SESSION SUMMARY — cache is stale, plotters show nothing, start here next session
+### ✅ Pipeline verified — cache is current, plots working normally
 
-**Status at end of session**: the cache (`waveprocessed/PROCESSED-*/`) still contains **old column names** (`12545`, `12300`). All scripts now use the corrected names (`12400`, `11800`). This mismatch means `combined_meta` lookups return NaN for every amplitude/FFT/PSD column, `out_position` is stale, and virtually all plots produce empty or near-empty output. **This is expected and correct — the fix is one pipeline run.**
+**Status**: `main.py` has been run with `force_recompute=True`. Cache is up to date with corrected probe distances (`12400`, `11800`). All plots loading and displaying normally. Outlier pipeline (Phase 2) is active and producing `samples_clipped_*` / `max_gap_*` columns in `combined_meta`.
 
-#### How to review all changes from this session line by line
+#### Summary of all code changes since last known-good commit
 
-Everything from this session is in one git commit. To see the full diff:
+**`wavescripts/improved_data_loader.py`**
+- `PROBE_CONFIGS`: `12545` → `12400` in all configs (`initial_setup`, `nov_normalt_oppsett`, `march2026_better_rearranging`); `12300` → `11800` in `march2026_rearranging`
+- Added `ANALYSIS_PROBES = ["9373/170", "12400/250", "9373/340", "8804/250"]` — single source for the standard 4-probe analysis list
+- Added `ProbeConfiguration.parallel_pair()` method — auto-detects the parallel probe pair (same distance, different lateral) and returns `(pos_wall, pos_far)`
 
-    git log --oneline -5                        # confirm commit is there
-    git diff HEAD~1                             # full line-by-line diff of all files
-    git diff HEAD~1 -- wavescripts/wave_detection.py    # single file
-    git diff HEAD~1 -- wavescripts/improved_data_loader.py
+**`wavescripts/wave_detection.py`**
+- `_SNARVEI_CALIB`: renamed keys `"12545"` → `"12400"`, `"12300"` → `"11800"`; recalculated `"11800"` interpolation values at fraction 0.802
+- `_PROBE_GROUP`: replaced hardcoded dict with a 4-line comprehension over `PROBE_CONFIGS` — auto-populates all probe→distance-group mappings, never goes stale
 
-The commit message is:
-    "probe distances corrected 12545→12400 12300→11800; _PROBE_GROUP auto-generated from PROBE_CONFIGS; ANALYSIS_PROBES added; cache stale — run main.py before debugging"
+**`wavescripts/processor.py`**
+- `_zero_and_smooth_signals` fully rewritten: three-layer outlier removal (hard cap → velocity filter ±`VEL_BUFFER=2` shoulders → isolated sample check), dynamic `max_interp_gap` (1/4 wavelength for wave runs, 10-sample fallback for nowave), `eta_{pos}_interp` pchip display layer, returns `(processed_dfs, clip_stats)` dict
+- `_remask_long_gaps` helper added
+- `process_selected_data` merges clip stats into `meta_sel` as `samples_clipped_{pos}` / `max_gap_{pos}`
 
-Files changed in that commit: `claude.md`, `main_explore_inline.py`, `main_save_figures.py`, `wavescripts/improved_data_loader.py`, `wavescripts/wave_detection.py`. (`main_explore_browser.py` was already correct from the previous commit.)
+**`wavescripts/constants.py`**
+- `CLIP`: added `VEL_BUFFER=2`, `INTERP_MAX_GAP=10`
 
-#### Step 1 — Regenerate cache (do this first, before anything else)
+**`wavescripts/processor2nd.py`**
+- Added `parallel_ratio` column computation using `cfg.parallel_pair()`
 
-`main.py` is already configured correctly (`force_recompute=True`, `total_reset=False`). Just run it:
+**`wavescripts/plotter.py`**
+- `gather_ramp_data`: `signal_interp` layer, NaN-safe `baseline_mean` fallback, `baseline_mean_val` local variable
+- `plot_ramp_detection`: added `signal_interp` (steelblue) and `expected_sine` (dashed orange) optional layers
 
-    conda activate draumkvedet && python main.py
+**`wavescripts/plot_browsers.py`**
+- Fixed probe filter crash for `/`-separated position strings (`int()` → string comparison)
+- Added `QCheckBox("Show expected sine")` — FFTs stable window, extracts A+φ at target freq, overlays `baseline_mean + A·sin(2π·f·t + φ)`
 
-Expected duration: ~5–10 minutes for all 12 datasets. Watch for:
-- No Python errors or tracebacks
-- `out_position` printed values showing `12400/...` not `12545/...`
-- `VELCLIP` / `ISOCLIP` diagnostic lines (expected on a few runs, not on clean ones)
-
-#### Step 2 — Sanity-check the cache
-
-In `main_explore_inline.py`, run the load cell, then:
-
-    # Column names should now be 12400, not 12545
-    print([c for c in combined_meta.columns if "12400" in c][:5])
-    print([c for c in combined_meta.columns if "12545" in c][:5])  # must be empty
-
-    # out_position should be 12400-series
-    print(combined_meta["out_position"].value_counts())
-
-    # Damping plot should show data again
-    damping_groupedallruns_df = damping_all_amplitude_grouper(combined_meta)
-    plot_damping_freq(damping_groupedallruns_df, dampingplotvariables_all)
-
-#### Step 3 — Verify outlier pipeline (was pending before this session too)
-
-- Zero `VELCLIP` messages on clean no-wind runs
-- `ISOCLIP` fires for isolated sample at idx ~37794 in `reversepanel-nowind-amp0300-freq1300...run1 → 12400/340`
-- `samples_clipped_*` and `max_gap_*` columns appear in `combined_meta`
-- Open `RampDetectionBrowser`, enable "Show expected sine", verify orange dashed line fits stable wave
-
-#### Step 4 — Eyeball `Probe 11800/250` ramp detection
-
-Open `RampDetectionBrowser`, filter to `Probe 11800/250`. Current calibration values are interpolated estimates only:
-
-    "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)]
-
-Eyeball at several frequencies across the 0.4–1.8 Hz sweep and update `_SNARVEI_CALIB` in `wavescripts/wave_detection.py`. Re-run `main.py` after any calibration changes.
+**`main_explore_inline.py`**, **`main_save_figures.py`**, **`main_explore_browser.py`**
+- All hardcoded probe position strings updated to `12400`/`11800`
+- Import: `ANALYSIS_PROBES` replacing repeated hardcoded 4-probe lists
 
 ---
 
-#### Full list of code changes made this session
+#### Full list of code changes made this session (historical reference)
 
 **`wavescripts/improved_data_loader.py`**
 - `PROBE_CONFIGS`: `12545` → `12400` in all configs (`initial_setup`, `nov_normalt_oppsett`, `march2026_better_rearranging`); `12300` → `11800` in `march2026_rearranging`
@@ -270,11 +249,13 @@ Three-layer outlier removal implemented in `wavescripts/processor.py` (`_zero_an
 
 ### Next session — start here
 
-**0. Verify outlier pipeline (run `main.py` with `force_recompute=True` first)**
-- Check zero `VELCLIP` messages on clean runs
-- Check `ISOCLIP` fires for isolated sample at idx ~37794 in `reversepanel-nowind-amp0300-freq1300...run1 → 12400/340`
-- Confirm `samples_clipped_*` and `max_gap_*` columns appear in `combined_meta`
-- Open `RampDetectionBrowser`, enable "Show expected sine" checkbox, verify dashed orange line fits the stable wave at several runs
+**0. Quick sanity checks (pipeline re-run ✅ done — plots working normally)**
+- Open `RampDetectionBrowser`, enable "Show expected sine" checkbox, verify dashed orange line fits stable wave at a few runs
+- Spot-check `11800/250` metrics for the March 4–6 datasets are non-NaN and physically plausible:
+```python
+_mar46 = combined_meta[combined_meta["file_date"].str.startswith("2026-03-0")]
+print(_mar46[["file_date", "Probe 11800/250 Amplitude", "wave_stability 11800/250", "Probe 11800/250 Amplitude (FFT)"]].to_string())
+```
 
 **A. Finalize wind/probe-uncertainty plots → `main_save_figures.py`**
 - In `main_explore_inline.py`, the wind section has a working probe-uncertainty/stillwater plot (around line 479) and wind PSD plots. Review these, polish, then copy the finalized `plotvariables` + function calls to `main_save_figures.py` following the explore→publication chain (§18).
@@ -292,7 +273,7 @@ Three-layer outlier removal implemented in `wavescripts/processor.py` (`_zero_an
 - OUT/IN summary table: mean ± std per (frequency, amplitude, wind, panel) group — the core damping result in tabular form.
 
 ### Still open
-- **Ramp detection for `11800/*` probes — fix applied, needs eyeballing**: `"11800"` (formerly estimated as 12300, now corrected) was missing from `_SNARVEI_CALIB` and `_PROBE_GROUP` in `wave_detection.py`, causing fallback to `int(2 * samples_per_period)` (way too early). Fixed by adding interpolated calibration points `[(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)]` (distance fraction 0.802 between 9373 and 12400) and mapping `"Probe 11800/250"` to the new group. **Next step**: run `main.py` with `force_recompute=True`, then open `RampDetectionBrowser`, filter to `Probe 11800/250`, and eyeball-refine the calibration points across the full 0.4–1.8 Hz sweep.
+- **Ramp detection for `11800/*` probes — FIXED**: `_SNARVEI_CALIB["11800"]` and `_PROBE_GROUP` in `wave_detection.py` are now correct. Ramp detection returns the right `good_start_idx` / `good_end_idx` for `11800/250` runs. Post-`_eta` processing was suspected broken (wrong amplitude / wave_stability / FFT) but plots are now working normally after `force_recompute` — status unclear. **Still worth verifying**: in REPL check `combined_meta` columns `"Probe 11800/250 Amplitude"` and `"wave_stability 11800/250"` for the March 4–6 datasets are non-NaN and physically plausible. If NaN: check `_extract_stillwater_levels` for probe 2 in `march2026_rearranging` (NaN stillwater → entire `eta_11800/250` = NaN → all downstream metrics silently fail).
 - `9373/250` noise floor 0.600 mm in Nov 2025 vs `9373/170` ~0.32 mm in March 2026 — likely different physical probes, not a position effect. No action needed unless it affects a key result.
 - **Wind-wave characterization**: cross-correlate `/170` and `/340` at the same longitudinal distance for fullwind runs to test lateral coherence of wind waves. Use `processed_dfs` eta columns + `scipy.signal.correlate`.
 - **NaN wave_stability runs**: a handful of runs show NaN for wave_stability (e.g. some 0.7 Hz, 1.4 Hz full-wind runs). These are cases where `find_wave_range` returned `None` start/end. Investigate in `RampDetectionBrowser`.

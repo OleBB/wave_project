@@ -137,6 +137,17 @@ def ensure_stillwater_columns(
         t0 = first_row["_t"].timestamp()
         t1 = last_row["_t"].timestamp()
 
+        if t0 == t1:
+            # Both anchors share the same timestamp — interpolation is undefined,
+            # fall back to a flat value from the single anchor.
+            print(f"  Both anchors share the same timestamp ({first_row['_t']}) — using flat value.")
+            for i, pos in col_names.items():
+                v = _probe_median_from_run(dfs.get(first_row["path"], pd.DataFrame()), f"Probe {pos}", anchor_n_samples)
+                if v is None:
+                    raise ValueError(f"No data for Probe {pos} in anchor run {first_row['path']}")
+                meta[f"Stillwater Probe {pos}"] = v
+            return meta
+
         print(f"  Anchor 1 (t0): {first_row['_t']}  ←  {Path(first_row['path']).name}")
         print(f"  Anchor 2 (t1): {last_row['_t']}  ←  {Path(last_row['path']).name}")
 
@@ -345,7 +356,7 @@ def _zero_and_smooth_signals(
                 print(f"  CLIP [{Path(path).name}] {pos}: {int(outlier_mask.sum())} samples |η| > {clip_mm} mm → NaN")
 
             # ── Layer 2: Velocity filter + ±VEL_BUFFER shoulder removal ─────
-            _eta = df[eta_col].to_numpy(dtype=float)
+            _eta = df[eta_col].to_numpy(dtype=float).copy()
             _d = np.diff(_eta)
             _rise = _d[:-1]
             _fall = _d[1:]
