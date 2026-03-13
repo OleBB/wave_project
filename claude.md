@@ -21,12 +21,12 @@
 
 **Wind-zone context** (confirmed by experiment):
 - Probes up to ~9373 mm: **heavy wind exposure** — short wind waves ride on top of paddle wave
-- Probes ~12300–12700 mm: **almost no wind** — panel damps the short wind waves almost completely
+- Probes ~11800–12700 mm: **almost no wind** — panel damps the short wind waves almost completely
 - Probes at ~18000 mm: wind builds up again over the new fetch after the panel
 
 **Observed in data (March 2026)**:
 - `9373/170` (IN probe, full wind exposure): `wave_stability` drops to 0.55–0.74 at low amplitude (0.1V) + full wind. `period_cv` reaches 0.3–0.6 — the signal is dominated by wind-wave noise, not the paddle wave.
-- `12545/250` (OUT probe, protected by panel): `wave_stability` stays at 0.93–0.96 even with full wind. `period_cv` stays below 0.10.
+- `12400/250` (OUT probe, protected by panel): `wave_stability` stays at 0.93–0.96 even with full wind. `period_cv` stays below 0.10.
 - No-wind runs: both probes show `wave_stability` ~0.94–0.96 and `period_cv` ~0.02–0.05 — clean waves.
 
 **Implication for OUT/IN ratio**: full-wind + low-amplitude (0.1V) runs have unreliable IN amplitude at `9373/170`. The time-domain percentile amplitude includes wind-wave energy, inflating the denominator and deflating OUT/IN. Use `wave_stability < 0.85` or `period_cv > 0.15` on the IN probe as a quality flag before trusting OUT/IN.
@@ -38,11 +38,11 @@ Wind-only amplitude at full wind (March 2026 mean of 2 nowave+fullwind runs):
 - `9373/170`: **10.18 mm** (IN probe — fully exposed to wind)
 - `9373/340`: **9.48 mm** (parallel probe — same exposure)
 - `8804/250`: **8.41 mm** (upstream probe)
-- `12545/250`: **0.88 mm** (OUT probe — panel kills the wind almost completely)
+- `12400/250`: **0.88 mm** (OUT probe — panel kills the wind almost completely)
 
 SNR = wave_amplitude / wind_only_amplitude for fullwind wave runs:
 
-| Voltage | IN probe SNR (`9373/170`) | Wind fraction at IN | OUT probe SNR (`12545/250`) | Wind fraction at OUT |
+| Voltage | IN probe SNR (`9373/170`) | Wind fraction at IN | OUT probe SNR (`12400/250`) | Wind fraction at OUT |
 |---------|--------------------------|---------------------|-----------------------------|----------------------|
 | 0.1V    | 1.3–1.6                  | **63–77%**          | 5–8                         | 13–20%               |
 | 0.2V    | 1.7–3.1                  | **32–61%**          | 10–16                       | 6–10%                |
@@ -83,7 +83,7 @@ Three-layer outlier removal implemented in `wavescripts/processor.py` (`_zero_an
 
 **NOTE**: `main.py` has NOT yet been re-run with these changes. Run with `force_recompute=True` to regenerate cache and verify:
 - Zero `VELCLIP` messages on clean runs
-- `ISOCLIP` fires for isolated sample at idx ~37794 in `reversepanel-nowind-amp0300-freq1300...run1 → 12545/340`
+- `ISOCLIP` fires for isolated sample at idx ~37794 in `reversepanel-nowind-amp0300-freq1300...run1 → 12400/340`
 - `samples_clipped_*` and `max_gap_*` columns appear in `combined_meta`
 
 ---
@@ -101,7 +101,7 @@ Three-layer outlier removal implemented in `wavescripts/processor.py` (`_zero_an
 
 **0. Verify outlier pipeline (run `main.py` with `force_recompute=True` first)**
 - Check zero `VELCLIP` messages on clean runs
-- Check `ISOCLIP` fires for isolated sample at idx ~37794 in `reversepanel-nowind-amp0300-freq1300...run1 → 12545/340`
+- Check `ISOCLIP` fires for isolated sample at idx ~37794 in `reversepanel-nowind-amp0300-freq1300...run1 → 12400/340`
 - Confirm `samples_clipped_*` and `max_gap_*` columns appear in `combined_meta`
 - Open `RampDetectionBrowser`, enable "Show expected sine" checkbox, verify dashed orange line fits the stable wave at several runs
 
@@ -121,6 +121,7 @@ Three-layer outlier removal implemented in `wavescripts/processor.py` (`_zero_an
 - OUT/IN summary table: mean ± std per (frequency, amplitude, wind, panel) group — the core damping result in tabular form.
 
 ### Still open
+- **Ramp detection for `11800/*` probes — fix applied, needs eyeballing**: `"11800"` (formerly estimated as 12300, now corrected) was missing from `_SNARVEI_CALIB` and `_PROBE_GROUP` in `wave_detection.py`, causing fallback to `int(2 * samples_per_period)` (way too early). Fixed by adding interpolated calibration points `[(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)]` (distance fraction 0.802 between 9373 and 12400) and mapping `"Probe 11800/250"` to the new group. **Next step**: run `main.py` with `force_recompute=True`, then open `RampDetectionBrowser`, filter to `Probe 11800/250`, and eyeball-refine the calibration points across the full 0.4–1.8 Hz sweep.
 - `9373/250` noise floor 0.600 mm in Nov 2025 vs `9373/170` ~0.32 mm in March 2026 — likely different physical probes, not a position effect. No action needed unless it affects a key result.
 - **Wind-wave characterization**: cross-correlate `/170` and `/340` at the same longitudinal distance for fullwind runs to test lateral coherence of wind waves. Use `processed_dfs` eta columns + `scipy.signal.correlate`.
 - **NaN wave_stability runs**: a handful of runs show NaN for wave_stability (e.g. some 0.7 Hz, 1.4 Hz full-wind runs). These are cases where `find_wave_range` returned `None` start/end. Investigate in `RampDetectionBrowser`.
@@ -132,7 +133,7 @@ print(_wave[["WaveFrequencyInput [Hz]", "WindCondition", "PanelCondition", "para
 ```
 
 **Dead theories — do not revisit without new evidence**:
-- Wall reflection at `12545/170` creating constructive interference
+- Wall reflection at `12400/170` creating constructive interference
 - Wind skewing wave crests laterally
 - Wrong `out_position` assignment
 - Wind-wave contamination inflating time-domain amplitude (now quantified via `wave_stability`/`period_cv` — effect is real but understood)
@@ -240,14 +241,14 @@ Every probe position is always written as `"longitudinal/lateral"` — even for 
 | 9373 mm from paddle, center (250 mm) | `"9373/250"` |
 | 9373 mm from paddle, near wall (170 mm) | `"9373/170"` |
 | 9373 mm from paddle, far side (340 mm) | `"9373/340"` |
-| 12545 mm, center | `"12545/250"` |
-| 12545 mm, near wall | `"12545/170"` |
-| 12545 mm, far side | `"12545/340"` |
+| 12400 mm, center | `"12400/250"` |
+| 12400 mm, near wall | `"12400/170"` |
+| 12400 mm, far side | `"12400/340"` |
 | 8804 mm, center | `"8804/250"` |
 
 `probe_col_name()` always returns `f"{dist}/{lat}"` — no parallel-detection logic.
 
-**Do not** use plain-number names like `"9373"`, `"12545"`, `"8804"` — these were the old convention, replaced in Mar 2026.
+**Do not** use plain-number names like `"9373"`, `"12400"`, `"8804"` — these were the old convention, replaced in Mar 2026.
 
 ### Column name patterns
 
@@ -265,7 +266,7 @@ Every probe position is always written as `"longitudinal/lateral"` — even for 
 ### `in_position` / `out_position` in combined_meta
 
 - Set by `processor2nd.py` from `ProbeConfiguration.in_probe` / `out_probe` via `probe_col_name()`
-- Stored as position strings: `"9373/250"`, `"12545/170"`, etc.
+- Stored as position strings: `"9373/250"`, `"12400/170"`, etc.
 - Used by `damping_grouper` to recompute OUT/IN ratio on-the-fly from plain amplitude columns
 
 ---
@@ -274,7 +275,7 @@ Every probe position is always written as `"longitudinal/lateral"` — even for 
 
 ### `apply_dtypes` destroys position strings with `/`
 
-`apply_dtypes` in `improved_data_loader.py` calls `pd.to_numeric(..., errors="coerce")` on all columns not in `NON_FLOAT_COLUMNS`. Position strings containing `/` (e.g. `"12545/170"`) become **NaN**. Plain-number strings (e.g. `"9373"`) become floats (`9373.0`).
+`apply_dtypes` in `improved_data_loader.py` calls `pd.to_numeric(..., errors="coerce")` on all columns not in `NON_FLOAT_COLUMNS`. Position strings containing `/` (e.g. `"12400/170"`) become **NaN**. Plain-number strings (e.g. `"9373"`) become floats (`9373.0`).
 
 **Fix already applied**: `in_position` and `out_position` are now in `NON_FLOAT_COLUMNS`.
 
@@ -305,7 +306,7 @@ Always use `"Probe {pos} Amplitude"` (no suffix) for OUT/IN ratio computation.
 
 ### `_SNARVEI` probe name matching
 
-`find_wave_range` in `wave_detection.py` uses `_PROBE_GROUP` dict to map all lateral variants of a probe to a distance group (e.g. `"Probe 12545/170"` → `"12545"`). If a new probe position is added, it **must** be added to `_PROBE_GROUP` — otherwise range detection falls back to `2 * samples_per_period` (stillwater phase), giving near-zero amplitudes and OUT/IN ≈ 0.1.
+`find_wave_range` in `wave_detection.py` uses `_PROBE_GROUP` dict to map all lateral variants of a probe to a distance group (e.g. `"Probe 12400/170"` → `"12400"`). If a new probe position is added, it **must** be added to `_PROBE_GROUP` — otherwise range detection falls back to `2 * samples_per_period` (stillwater phase), giving near-zero amplitudes and OUT/IN ≈ 0.1.
 
 ---
 
@@ -317,7 +318,8 @@ Defined in `wavescripts/wave_detection.py`. Multi-point linear interpolation of 
 _SNARVEI_CALIB = {
     "8804":  [(0.65, 3975), (1.30, 4700), (1.80, 6000)],
     "9373":  [(0.65, 4075), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
-    "12545": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
+    "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)],  # march2026_rearranging only; needs eyeballing
+    "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
 }
 ```
 
@@ -343,10 +345,10 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 
 | Config name | Valid from | in_pos | out_pos | Notes |
 |-------------|-----------|--------|---------|-------|
-| `initial_setup` | Aug 2025 | `9373/250` | `12545/170` | Probe 1 far back at 18000 mm |
-| `nov14_normalt_oppsett` | Nov 10 2025 | `9373/250` | `12545/170` | Probe 1 moved to 8804 mm |
-| `march2026_rearranging` | Mar 4 2026 | `9373/170` | `12300/250` | Temporary, 2 days |
-| `march2026_better_rearranging` | Mar 7 2026 | `9373/170` | `12545/250` | Current layout |
+| `initial_setup` | Aug 2025 | `9373/250` | `12400/170` | Probe 1 far back at 18000 mm |
+| `nov_normalt_oppsett` | Nov 10 2025 | `9373/250` | `12400/170` | Probe 1 moved to 8804 mm |
+| `march2026_rearranging` | Mar 4 2026 | `9373/170` | `11800/250` | Temporary, 2 days |
+| `march2026_better_rearranging` | Mar 7 2026 | `9373/170` | `12400/250` | Current layout |
 
 `get_configuration_for_date(file_date)` selects the right config.
 
@@ -483,14 +485,14 @@ Measured noise floor per probe (excluding row 1 outlier):
 | `9373/170` | 0.330 mm | 0.305–0.330 | **~0.32 mm** — stable |
 | `9373/250` | — | 0.600 (row 5) | ⚠ Nov-2025 only — suspiciously high; probe calibration issue? |
 | `9373/340` | 0.075 mm | 0.075–0.315 | **Unreliable — 4× spread across settled runs** |
-| `12545/250` | 0.130 mm | 0.130–0.165 | **~0.14 mm — quietest, most stable** |
-| `12545/170` | — | 0.305 (row 5) | Single Nov-2025 measurement |
-| `12545/340` | — | 0.255 (row 5) | Single Nov-2025 measurement |
+| `12400/250` | 0.130 mm | 0.130–0.165 | **~0.14 mm — quietest, most stable** |
+| `12400/170` | — | 0.305 (row 5) | Single Nov-2025 measurement |
+| `12400/340` | — | 0.255 (row 5) | Single Nov-2025 measurement |
 
 - **Gold standard noise floor**: use row 4 (`wavemakeroff-1hour`) values — tank maximally settled.
 - `9373/340` high variability (0.075–0.315 mm across runs on same day) is unexplained — probe sensitivity or positioning issue.
 - `9373/250` = 0.600 mm in Nov 2025 while `9373/170` ≈ 0.32 mm in March 2026 — same longitudinal distance, factor-of-2 difference. Likely probe-specific calibration difference between the two physical probes used at those times.
-- Detection threshold: **2× probe noise floor** individually. For `12545/250` → ~0.26 mm; for `8804/250` / `9373/170` → ~0.65 mm.
+- Detection threshold: **2× probe noise floor** individually. For `12400/250` → ~0.26 mm; for `8804/250` / `9373/170` → ~0.65 mm.
 - Any amplitude below the probe's own noise floor is indistinguishable from noise — must be flagged, not reported as signal.
 
 ### Wave physics
@@ -507,7 +509,7 @@ Measured noise floor per probe (excluding row 1 outlier):
 - Center probe (`/250`) is the most representative single measurement of the 1D wave field.
 
 ### Wave arrival
-- First stable wave energy arrives at ~12545 mm in approximately **10 seconds** from paddle start (frequency-dependent).
+- First stable wave energy arrives at ~12400 mm in approximately **10 seconds** from paddle start (frequency-dependent).
 - Wavemaker ramp-up (13–20 periods) dominates the pre-stable window — not wave travel time.
 - Anything arriving before ~0.5 s at any probe is a wind-wave or instrument artifact, not a paddle wave.
 

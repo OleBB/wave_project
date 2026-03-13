@@ -163,7 +163,7 @@ dampingplotvariables_all = {
         "legend":     "outside_right",
         "logaritmic": False,
         "peaks":      7,
-        "probes":     ["9373/170", "12545/250", "9373/340", "8804/250"],
+        "probes":     ["9373/170", "12400/250", "9373/340", "8804/250"],
     },
 }
 
@@ -202,7 +202,7 @@ freqplotvariables = {
         "legend":      "inside",
         "logaritmic":  False,
         "peaks":       3,
-        "probes":      ["12545/250", "9373/340"],
+        "probes":      ["12400/250", "9373/340"],
     },
 }
 
@@ -246,14 +246,14 @@ swellplotvariables = {
         "legend":     "inside",
         "logaritmic": False,
         "peaks":      3,
-        "probes":     ["12545/250", "9373/170"],
+        "probes":     ["12400/250", "9373/170"],
     },
 }
 
 plot_swell_scatter(combined_meta, swellplotvariables)
 
 # %% ── wavenumber study ───────────────────────────────────────────────────────
-_probe_positions = ["9373/170", "12545/250", "9373/340", "8804/250"]
+_probe_positions = ["9373/170", "12400/250", "9373/340", "8804/250"]
 wavenumber_cols = [f"Probe {pos} Wavenumber (FFT)" for pos in _probe_positions]
 fft_dimension_cols = [CG.fft_wave_dimension_cols(pos) for pos in _probe_positions]
 meta_wavenumber = combined_meta[["path"] + [c for c in wavenumber_cols if c in combined_meta.columns]].copy()
@@ -330,7 +330,7 @@ _wind_psd_plotvars = {
         "legend":     "inside",
         "logaritmic": False,
         "peaks":      0,
-        "probes":     ["9373/170", "12545/250", "9373/340", "8804/250"],
+        "probes":     ["9373/170", "12400/250", "9373/340", "8804/250"],
     },
 }
 
@@ -348,7 +348,7 @@ if not processed_dfs:
     print(f"Loaded {len(processed_dfs)} runs in {time.perf_counter() - _t0:.1f} s")
 
 # %% ── wind-only — statistics (mean setup + RMS per probe) ───────────────────
-_PROBE_POSITIONS = ["9373/170", "12545/250", "9373/340", "8804/250"]
+_PROBE_POSITIONS = ["9373/170", "12400/250", "9373/340", "8804/250"]
 _stats_rows = []
 
 for _, row_meta in _meta_nowave_all.iterrows():
@@ -370,7 +370,7 @@ for _, row_meta in _meta_nowave_all.iterrows():
 _stats_df = pd.DataFrame(_stats_rows).sort_values("WindCondition")
 print(_stats_df.to_string(index=False))
 
-# %% ── investigate: wind-only growth 9373 → 12545 vs claimed wave growth ─────
+# %% ── investigate: wind-only growth 9373 → 12400 vs claimed wave growth ─────
 import pandas as pd
 
 # 1. The suspicious wave run
@@ -383,8 +383,8 @@ _wave_run = combined_meta[
 print("=== Wave run(s) at 0.65 Hz, 0.1 V, full wind ===")
 cols = ["path", "PanelCondition", "Mooring",
         "Probe 9373/170 Amplitude", "Probe 9373/250 Amplitude",
-        "Probe 9373/340 Amplitude", "Probe 12545/250 Amplitude",
-        "Probe 12545/170 Amplitude", "Probe 12545/340 Amplitude",
+        "Probe 9373/340 Amplitude", "Probe 12400/250 Amplitude",
+        "Probe 12400/170 Amplitude", "Probe 12400/340 Amplitude",
         "in_position", "out_position", "OUT/IN (FFT)"]
 print(_wave_run[[c for c in cols if c in _wave_run.columns]].T.to_string())
 
@@ -410,9 +410,9 @@ print(_stillwater[["path"] + amp_cols].to_string())
 
 # %%
 _wave = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy()
-_wave["ratio_170_vs_340"] = _wave["Probe 12545/170 Amplitude"] / _wave["Probe 12545/340 Amplitude"]
+_wave["ratio_170_vs_340"] = _wave["Probe 12400/170 Amplitude"] / _wave["Probe 12400/340 Amplitude"]
 print(_wave[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WindCondition",
-             "PanelCondition", "Probe 12545/170 Amplitude", "Probe 12545/340 Amplitude",
+             "PanelCondition", "Probe 12400/170 Amplitude", "Probe 12400/340 Amplitude",
              "ratio_170_vs_340"]].sort_values("ratio_170_vs_340", ascending=False).to_string())
 
 # %% ── repl_out helper — tee stdout to repl/<name>.txt ───────────────────────
@@ -518,7 +518,7 @@ from wavescripts.wave_detection import find_first_arrival
 
 _THRESHOLD_FACTOR = 2.0   # detection at 2× noise floor
 _WINDOW_S         = 0.5   # rolling window length [s]
-_PROBE_POSITIONS  = ["8804/250", "9373/170", "9373/340", "12545/250"]  # adjust to your layout
+_PROBE_POSITIONS  = ["8804/250", "9373/170", "9373/340", "12400/250"]  # adjust to your layout
 
 # Noise floor per probe from stillwater summary (mean across runs)
 _noise_floor = _sw_summary["mean"].to_dict()   # {"8804/250": 0.34, ...}

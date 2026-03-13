@@ -122,8 +122,12 @@ def find_wave_range(
         "8804":  [(0.65, 3975), (1.30, 4700), (1.80, 6000)],
         # ~9373 mm from paddle
         "9373":  [(0.65, 4075), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
-        # ~12545 mm from paddle
-        "12545": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
+        # ~11800 mm from paddle (march2026_rearranging config, 4–6 Mar 2026 only)
+        # Values interpolated from 9373 and 12400 at distance fraction 0.802 — eyeball-refine
+        # in RampDetectionBrowser once confirmed.
+        "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)],
+        # ~12400 mm from paddle
+        "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
     }
 
     # Map every probe column name to a distance group
@@ -134,10 +138,11 @@ def find_wave_range(
         "Probe 9373/170":  "9373",
         "Probe 9373/250":  "9373",
         "Probe 9373/340":  "9373",
-        "Probe 12545":     "12545",
-        "Probe 12545/170": "12545",
-        "Probe 12545/250": "12545",
-        "Probe 12545/340": "12545",
+        "Probe 11800/250": "11800",  # march2026_rearranging only
+        "Probe 12400":     "12400",
+        "Probe 12400/170": "12400",
+        "Probe 12400/250": "12400",
+        "Probe 12400/340": "12400",
     }
 
     def _snarvei_start(freq: float, calib: list[tuple[float, int]]) -> int:

@@ -38,7 +38,7 @@ NON_FLOAT_COLUMNS = {
     "path": str,
     "file_date": str,
     "in_position": str,    # e.g. "9373/250" — slash breaks pd.to_numeric
-    "out_position": str,   # e.g. "12545/170" — must stay as string
+    "out_position": str,   # e.g. "12400/170" — must stay as string
     "in_probe": "Int64",   # probe index 1–4, nullable integer
     "out_probe": "Int64",
 }
@@ -129,7 +129,7 @@ class ProbeConfiguration:
     def probe_col_name(self, probe_num: int) -> str:
         """Return the canonical position-based column identifier for a probe.
 
-        Always 'longitudinal_mm/lateral_mm', e.g. '9373/250', '12545/170'.
+        Always 'longitudinal_mm/lateral_mm', e.g. '9373/250', '12400/170'.
         Both dimensions are always included for unambiguous identification
         and consistent column naming across all probe configurations.
         """
@@ -167,8 +167,8 @@ PROBE_CONFIGS = [
         distances_mm={
             1: 18000.0,  # langt bak ein stad
             2: 9373.0,
-            3: 12545.0,  # parallell pair
-            4: 12545.0,  # parallell pair
+            3: 12400.0,  # parallell pair
+            4: 12400.0,  # parallell pair
         },
         lateral_mm={
             1: 250.0,  # ukjent, antar senter
@@ -187,8 +187,8 @@ PROBE_CONFIGS = [
         distances_mm={
             1: 8804.0,   # ein liten plate framfor 2
             2: 9373.0,   # mellom vindauge
-            3: 12545.0,  # parallell pair, mellom neste vindauge
-            4: 12545.0,  # parallell pair
+            3: 12400.0,  # parallell pair, mellom neste vindauge
+            4: 12400.0,  # parallell pair
         },
         lateral_mm={
             1: 170.0,  # same wall side as parallel pair
@@ -206,7 +206,7 @@ PROBE_CONFIGS = [
         valid_until=datetime(2026, 3, 7),
         distances_mm={
             1: 9373.0,   # parallell pair, IN-sida
-            2: 12300.0,  # TODO: måle denna rett
+            2: 11800.0,  # formerly 12300 estimate now corrected
             3: 9373.0,   # parallell pair, IN-sida
             4: 8804.0,
         },
@@ -226,7 +226,7 @@ PROBE_CONFIGS = [
         valid_until=None,
         distances_mm={
             1: 9373.0,   # parallell pair, IN-sida
-            2: 12545.0,  # TODO: sjekke om denna var rett
+            2: 12400.0,  # TODO: sjekke om denna
             3: 9373.0,   # parallell pair, IN-sida
             4: 8804.0,
         },
