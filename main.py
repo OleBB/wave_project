@@ -73,7 +73,7 @@ processvariables = {
         "PanelCondition": None,
     },
     "prosessering": {
-        "total_reset": True,  # True → wipe CSV cache and reload everything
+        "total_reset": False,  # True → wipe CSV cache and reload everything
         "force_recompute": True,  # True → ignore cached meta.json, recompute all
         "debug": True,
         "smoothing_window": 10,

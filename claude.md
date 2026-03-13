@@ -6,6 +6,20 @@
 
 **Status at end of session**: the cache (`waveprocessed/PROCESSED-*/`) still contains **old column names** (`12545`, `12300`). All scripts now use the corrected names (`12400`, `11800`). This mismatch means `combined_meta` lookups return NaN for every amplitude/FFT/PSD column, `out_position` is stale, and virtually all plots produce empty or near-empty output. **This is expected and correct — the fix is one pipeline run.**
 
+#### How to review all changes from this session line by line
+
+Everything from this session is in one git commit. To see the full diff:
+
+    git log --oneline -5                        # confirm commit is there
+    git diff HEAD~1                             # full line-by-line diff of all files
+    git diff HEAD~1 -- wavescripts/wave_detection.py    # single file
+    git diff HEAD~1 -- wavescripts/improved_data_loader.py
+
+The commit message is:
+    "probe distances corrected 12545→12400 12300→11800; _PROBE_GROUP auto-generated from PROBE_CONFIGS; ANALYSIS_PROBES added; cache stale — run main.py before debugging"
+
+Files changed in that commit: `claude.md`, `main_explore_inline.py`, `main_save_figures.py`, `wavescripts/improved_data_loader.py`, `wavescripts/wave_detection.py`. (`main_explore_browser.py` was already correct from the previous commit.)
+
 #### Step 1 — Regenerate cache (do this first, before anything else)
 
 `main.py` is already configured correctly (`force_recompute=True`, `total_reset=False`). Just run it:
