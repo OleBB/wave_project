@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# %%
 """
 Interactive Qt browsers for wave data exploration.
 
@@ -34,10 +35,18 @@ from wavescripts.plotter import gather_ramp_data
 # ── Dataset(s) ────────────────────────────────────────────────────────────────
 # List all PROCESSED-* folders you want to load. Add more for multi-dataset sessions.
 PROCESSED_DIRS = [
-    Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),
     Path("waveprocessed/PROCESSED-20251112-tett6roof"),
     Path("waveprocessed/PROCESSED-20251113-tett6roof"),
+    Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
+    Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
+    Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
 ]
 
 
@@ -61,7 +70,7 @@ freqplotvariables = {
         "PanelCondition": None,
     },
     "plotting": {
-        "probes": ["12545/250", "9373/340"],
+        "probes": ["12400/250", "9373/340"],
         "facet_by": "probe",
         "dual_yaxis": False,
         "show_full_signal": False,

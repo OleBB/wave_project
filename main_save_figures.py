@@ -136,7 +136,7 @@ Subtopics:
   4a. Wind-wave PSD at each probe (broadband, 2–10 Hz dominant)
   4b. Wind-only amplitude vs probe position (SNR context)
   4c. Wind-only amplitude: IN probe (~10 mm) vs OUT probe (~0.9 mm) —
-      panel attenuates wind waves almost completely at 12545 mm
+      panel attenuates wind waves almost completely at 12400 mm
   4d. Lateral coherence: cross-correlate /170 and /340 at same distance
       (coherent = tank-wide fetch; incoherent = local turbulence)
 
@@ -307,7 +307,7 @@ THRESHOLD_FACTOR = 2.0    # 2× stillwater noise floor
 WINDOW_S         = 0.5    # rolling window length [s]
 MIN_ARRIVAL_S    = 0.5    # arrivals below this are wind-wave artefacts
 
-PROBE_POSITIONS = ["8804/250", "9373/170", "9373/340", "12545/250"]
+PROBE_POSITIONS = ["8804/250", "9373/170", "9373/340", "12400/250"]
 
 _sw_mask = (
     combined_meta["WaveFrequencyInput [Hz]"].isna()
