@@ -13,7 +13,7 @@ from scipy.signal import welch
 
 from typing import Dict, List, Tuple, Optional
 
-from wavescripts.constants import AMPLITUDE, MEASUREMENT, SIGNAL
+from wavescripts.constants import AMPLITUDE, MEASUREMENT, SIGNAL, CLIP
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
     ProbeColumns as PC, 
@@ -334,6 +334,18 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg
                 signal = _extract_probe_signal(df, row, pos)
                 if signal is None:
                     continue
+
+                # Fill NaN gaps left by outlier clipping via linear interpolation.
+                # If too many samples are NaN the window is unreliable — skip.
+                nan_mask = np.isnan(signal)
+                if nan_mask.any():
+                    if nan_mask.sum() / len(signal) > CLIP.MAX_NAN_FRACTION:
+                        if debug:
+                            print(f"  FFT skip {pos}: >{CLIP.MAX_NAN_FRACTION*100:.0f}% clipped in wave window")
+                        continue
+                    indices = np.arange(len(signal))
+                    signal = np.interp(indices, indices[~nan_mask], signal[~nan_mask])
+
                 N = len(signal)
 
                 fft_vals = np.fft.fft(signal)

@@ -43,7 +43,7 @@ os.chdir(file_dir)
 # ── Dataset paths ─────────────────────────────────────────────────────────────
 # Add / uncomment folders here as new data arrives.
 dataset_paths = [
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowM-ekte580"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20251110-tett6roof-lowMooring-2"),
