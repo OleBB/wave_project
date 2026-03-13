@@ -67,10 +67,19 @@ import time
 start = time.perf_counter()
 
 PROCESSED_DIRS = [
-    Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),
     Path("waveprocessed/PROCESSED-20251112-tett6roof"),
     Path("waveprocessed/PROCESSED-20251113-tett6roof"),
+    Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
+    Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
+    Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
 ]
 
 combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(

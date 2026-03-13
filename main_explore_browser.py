@@ -25,7 +25,6 @@ import sys
 from pathlib import Path
 import dtale
 
-
 from PyQt5.QtWidgets import QApplication
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
@@ -47,6 +46,7 @@ PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
     Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
 ]
 
 
@@ -80,17 +80,19 @@ freqplotvariables = {
     },
 }
 
+
 # ── Launch ────────────────────────────────────────────────────────────────────
 app = QApplication.instance() or QApplication(sys.argv)
 
+# %% ----- Signal Browser
 browser_signal = SignalBrowserFiltered(
     filtered_fft_dict, filtered_meta, freqplotvariables
 )
 browser_signal.setWindowTitle("Signal Browser — FFT reconstruction")
 browser_signal.show()
-# %% ----- Signal Browser
 
-# %% ---------------------------------
+
+# %% ------------RAMP---------------------
 ramp_df = gather_ramp_data(processed_dfs, combined_meta)
 browser_ramp = RampDetectionBrowser(ramp_df)
 browser_ramp.setWindowTitle("Ramp Detection Browser")

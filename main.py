@@ -54,7 +54,8 @@ dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260305-newProbePos-tett6roof"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260306-newProbePos-tett6roof"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260307-ProbPos4_31_FPV_2-tett6roof"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20260312-ProbPos4_31_FPV_2-tett6roof"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260312-ProbPos4_31_FPV_2-tett6roof"), #typo
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260313-ProbePos4_31_FPV_2-tett6roof"),
 ]
 
 # ── Processing options ────────────────────────────────────────────────────────
@@ -74,8 +75,8 @@ processvariables = {
     },
     "prosessering": {
         "total_reset": False,  # True → wipe CSV cache and reload everything
-        "force_recompute": True,  # True → ignore cached meta.json, recompute all
-        "debug": True,
+        "force_recompute": False,  # True → ignore cached meta.json, recompute all
+        "debug": False,
         "smoothing_window": 10,
         "find_range": True,
         "range_plot": False,
@@ -85,6 +86,7 @@ processvariables = {
 # ── Processing loop ───────────────────────────────────────────────────────────
 prosessering = processvariables.get("prosessering", {})
 total_reset = prosessering.get("total_reset", False)
+force_recompute = prosessering.get("force_recompute", False)
 
 if total_reset:
     input(
@@ -99,9 +101,21 @@ for i, data_path in enumerate(dataset_paths):
     print(f"Processing dataset {i + 1}/{len(dataset_paths)}: {data_path.name}")
     print(f"{'=' * 50}")
     try:
+        _cache_dir = file_dir / "waveprocessed" / f"PROCESSED-{data_path.name}"
+        _already_processed = (
+            (_cache_dir / "processed_dfs.parquet").exists()
+            and (_cache_dir / "fft_spectra.parquet").exists()
+            and (_cache_dir / "psd_spectra.parquet").exists()
+        )
+
+        if _already_processed and not force_recompute and not total_reset:
+            print(f"  ✓ Already processed — skipping (set force_recompute=True to redo)")
+            processed_dirs.append(_cache_dir)
+            continue
+
         dfs, meta = load_or_update(
             data_path,
-            force_recompute=prosessering.get("force_recompute", False),
+            force_recompute=force_recompute,
             total_reset=total_reset,
         )
 
@@ -112,7 +126,6 @@ for i, data_path in enumerate(dataset_paths):
         )
         del dfs
 
-        _cache_dir = file_dir / "waveprocessed" / f"PROCESSED-{data_path.name}"
         save_processed_dfs(processed_dfs, _cache_dir)
         processed_dirs.append(_cache_dir)
         del processed_dfs
