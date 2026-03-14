@@ -568,49 +568,42 @@ _arrival_df = pd.DataFrame(_arrival_rows)
 print(f"Arrival detections: {_arrival_df['arrival_s'].notna().sum()} / {len(_arrival_df)} probe-runs")
 print(_arrival_df.sort_values(["freq_hz", "probe"]).to_string(index=False))
 
-# %% ── first arrival — plot arrival time vs distance ─────────────────────────
-import seaborn as sns
+# %% ── first arrival — stacked subplots, one per frequency ───────────────────
 from wavescripts.plot_utils import WIND_COLOR_MAP as _WCM
-sns.set_style("ticks", {"axes.grid": True})
-_plot_df = _arrival_df.dropna(subset=["arrival_s"])
-g = sns.relplot(
-    data=_plot_df, x="dist_mm", y="arrival_s",
-    hue="wind", col="freq_hz",
-    kind="line", marker="o", dashes=False,
-    errorbar=None, markersize=10, linewidth=0.8,
-    height=3.5, aspect=1.3,
-    palette=_WCM,
-    facet_kws={"sharey": True},
-)
-for ax in g.axes.flat:
-    ax.set_xlabel("Probe distance from paddle [mm]")
-    ax.set_ylabel("First arrival [s]")
-g.figure.suptitle(
-    f"First wave arrival  (threshold = {_THRESHOLD_FACTOR}× noise floor,"
-    f"  window = {_WINDOW_S} s)",
-    y=1.02, fontsize=9,
-)
-plt.tight_layout()
-plt.show()
 
-# %% -- no facet
-sns.set_style("ticks", {"axes.grid": True})
-_plot_df = _arrival_df.dropna(subset=["arrival_s"])
-g = sns.scatterplot(
-    data=_plot_df, x="dist_mm", y="arrival_s",
-    hue="wind", col="freq_hz",
-    kind="line", marker="o", dashes=False,
-    errorbar=None, markersize=10, linewidth=0.8,
-    height=3.5, aspect=1.3,
-    palette=_WCM,
-)
-for ax in g.axes.flat:
-    ax.set_xlabel("Probe distance from paddle [mm]")
+_plot_df  = _arrival_df.dropna(subset=["arrival_s"])
+_freqs    = sorted(_plot_df["freq_hz"].dropna().unique())
+_winds    = ["no", "lowest", "full"]
+
+fig, axes = plt.subplots(len(_freqs), 1, figsize=(7, 2.5 * len(_freqs)), sharey=False)
+if len(_freqs) == 1:
+    axes = [axes]
+
+for ax, freq in zip(axes, _freqs):
+    _sub = _plot_df[_plot_df["freq_hz"] == freq]
+    for wind in _winds:
+        _w = _sub[_sub["wind"] == wind].sort_values("dist_mm")
+        if _w.empty:
+            continue
+        ax.plot(_w["dist_mm"], _w["arrival_s"],
+                marker="o", linewidth=0.8, markersize=7,
+                color=_WCM.get(wind, "gray"), label=wind)
+    # label each probe position with a dashed vertical line + name at top
+    _ref = _sub.sort_values("dist_mm").drop_duplicates("probe")
+    for _, _r in _ref.iterrows():
+        ax.axvline(_r["dist_mm"], color="0.75", linewidth=0.4, linestyle="--", zorder=0)
+        ax.text(_r["dist_mm"], 1.01, _r["probe"],
+                fontsize=7, ha="center", va="bottom", color="0.4",
+                transform=ax.get_xaxis_transform())
+    ax.set_title(f"{freq} Hz", fontsize=9)
     ax.set_ylabel("First arrival [s]")
-g.figure.suptitle(
-    f"First wave arrival  (threshold = {_THRESHOLD_FACTOR}× noise floor,"
-    f"  window = {_WINDOW_S} s)",
-    y=1.02, fontsize=9,
+    ax.grid(True, linewidth=0.4)
+    ax.legend(fontsize=8)
+
+axes[-1].set_xlabel("Probe distance from paddle [mm]")
+fig.suptitle(
+    f"First wave arrival  (threshold={_THRESHOLD_FACTOR}× noise floor, window={_WINDOW_S} s)",
+    fontsize=9, y=1.01,
 )
 plt.tight_layout()
 plt.show()
@@ -671,43 +664,174 @@ else:
     print(f"Solo:     {[c.replace('eta_','') for c in _solo_cols]}")
     print(f"Parallel: {[c.replace('eta_','') for c in _parallel_cols]}")
 
-# %% ── first arrival — single plot, all frequencies, no wind-waves ────────────
-_MIN_ARRIVAL_S = 0.5   # below this = wind-wave false detection, ignore
-_plot_df2 = _arrival_df[_arrival_df["arrival_s"] > _MIN_ARRIVAL_S].copy()
+# %% ── first arrival — no-wind only, all frequencies ─────────────────────────
+_MIN_ARRIVAL_S = 0.5   # below this = instrument/wind transient, ignored
+_plot_df2 = _arrival_df[
+    (_arrival_df["wind"] == "no") & (_arrival_df["arrival_s"] > _MIN_ARRIVAL_S)
+].copy()
 
-_WIND_LS = {"no": "-", "lowest": "--", "full": ":"}  # linestyle by wind
 _freqs_sorted = sorted(_plot_df2["freq_hz"].dropna().unique())
 _freq_colors  = {f: c for f, c in zip(_freqs_sorted,
                   plt.cm.rainbow(np.linspace(0, 1, len(_freqs_sorted))))}
 
-# Average parallel probes (same dist_mm, same run/wind/freq) → mean ± half-range
+# Average parallel probes (same dist_mm, same freq) → mean ± half-range
 _agg = (
     _plot_df2
-    .groupby(["wind", "freq_hz", "dist_mm"])["arrival_s"]
+    .groupby(["freq_hz", "dist_mm"])["arrival_s"]
     .agg(mean="mean", err=lambda x: (x.max() - x.min()) / 2)
     .reset_index()
 )
 
 fig, ax = plt.subplots(figsize=(9, 5))
-for (wind, freq), grp in _agg.groupby(["wind", "freq_hz"]):
+for freq, grp in _agg.groupby("freq_hz"):
     grp_s = grp.sort_values("dist_mm")
     ax.errorbar(grp_s["dist_mm"], grp_s["mean"], yerr=grp_s["err"],
                 marker="o", markersize=8, linewidth=1.2, capsize=4,
-                color=_freq_colors[freq],
-                linestyle=_WIND_LS.get(wind, "-"),
-                label=f"{freq} Hz")
+                color=_freq_colors[freq], label=f"{freq} Hz")
+
+# probe position labels at top
+for _pos in _PROBE_POSITIONS:
+    _d = int(_pos.split("/")[0])
+    ax.axvline(_d, color="0.75", linewidth=0.4, linestyle="--", zorder=0)
+    ax.text(_d, 1.01, _pos, fontsize=7, ha="center", va="bottom",
+            color="0.4", transform=ax.get_xaxis_transform())
 
 ax.set_xlabel("Probe distance from paddle [mm]")
 ax.set_ylabel("First arrival [s]")
-ax.set_title(
-    f"First wave arrival — all frequencies  "
-    f"(threshold {_THRESHOLD_FACTOR}× noise,  arrivals > {_MIN_ARRIVAL_S} s shown)"
-)
+ax.set_title("First wave arrival — no wind, all frequencies")
 _handles, _labels = ax.get_legend_handles_labels()
-ax.legend(_handles[::-1], _labels[::-1], fontsize=8, title="freq / wind")
+ax.legend(_handles[::-1], _labels[::-1], fontsize=8, title="frequency")
 ax.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
+
+_thresh_str = ",  ".join(
+    f"{pos} → {_THRESHOLD_FACTOR * _noise_floor[pos]:.2f} mm"
+    for pos in _PROBE_POSITIONS if pos in _noise_floor
+)
+print(
+    f"Caption: First arrival time at each probe vs. distance from paddle, no-wind runs only. "
+    f"Detection threshold: {_THRESHOLD_FACTOR}× stillwater noise floor "
+    f"({_thresh_str}), "
+    f"rolling window {_WINDOW_S} s. "
+    f"Arrivals ≤ {_MIN_ARRIVAL_S} s excluded as instrument transients. "
+    f"Error bars show half-range across parallel probes at the same longitudinal distance."
+)
+
+# %% ── period-based arrival detection (experimental) ─────────────────────────
+# Instead of a broadband amplitude threshold, slide a window of exactly N periods
+# at the target frequency and compute the FFT amplitude at that frequency.
+# When that narrow-band amplitude first exceeds a threshold, the wave has arrived.
+# This rejects wind-wave energy (wrong frequency) and is probe-noise-independent.
+
+def _find_arrival_periodic(signal, fs, target_freq, threshold_mm, n_periods=3):
+    """
+    Slide a window of n_periods over the signal, compute FFT amplitude at
+    target_freq in each window. Return (idx, t_s) of the first window where
+    amplitude exceeds threshold_mm.  idx points to the window centre.
+    Returns (None, None) if never detected.
+    """
+    win = int(round(n_periods / target_freq * fs))   # samples per N periods
+    half = win // 2
+    sig = np.asarray(signal, dtype=float)
+    # pre-build FFT freq axis and find the target bin once
+    freqs = np.fft.rfftfreq(win, d=1.0 / fs)
+    bin_idx = int(np.argmin(np.abs(freqs - target_freq)))
+
+    for start in range(0, len(sig) - win, half // 2):   # step = half-window
+        chunk = sig[start : start + win]
+        if np.isnan(chunk).mean() > 0.3:               # skip mostly-NaN chunks
+            continue
+        chunk = np.where(np.isnan(chunk), 0.0, chunk)
+        amp = (2.0 / win) * np.abs(np.fft.rfft(chunk)[bin_idx])
+        if amp >= threshold_mm:
+            centre = start + half
+            return centre, centre / fs
+    return None, None
+
+_N_PERIODS     = 3      # window length in wave periods
+_THRESH_FACTOR = 2.0    # × noise floor, same as broadband method
+
+_periodic_rows = []
+for _, _row in combined_meta[
+        combined_meta["WaveFrequencyInput [Hz]"].notna() &
+        (combined_meta["WindCondition"] == "no")
+].iterrows():
+    _df = processed_dfs.get(_row["path"])
+    if _df is None:
+        continue
+    _freq = float(_row["WaveFrequencyInput [Hz]"])
+    for _pos in _PROBE_POSITIONS:
+        _eta_col = f"eta_{_pos}"
+        if _eta_col not in _df.columns:
+            continue
+        _noise = _noise_floor.get(_pos)
+        if _noise is None or _noise <= 0:
+            continue
+        _sig = _df[_eta_col].values
+        _idx, _t_s = _find_arrival_periodic(
+            _sig, _FS, _freq,
+            threshold_mm=_THRESH_FACTOR * _noise,
+            n_periods=_N_PERIODS,
+        )
+        _periodic_rows.append({
+            "run":       _Path(_row["path"]).name,
+            "freq_hz":   _freq,
+            "amp_volt":  _row.get("WaveAmplitudeInput [Volt]"),
+            "probe":     _pos,
+            "dist_mm":   int(_pos.split("/")[0]),
+            "arrival_s": _t_s,
+        })
+
+_periodic_df = pd.DataFrame(_periodic_rows)
+print(f"Period-based detections: {_periodic_df['arrival_s'].notna().sum()} / {len(_periodic_df)}")
+
+# %% ── period-based arrival — plot ────────────────────────────────────────────
+_pagg = (
+    _periodic_df.dropna(subset=["arrival_s"])
+    .groupby(["freq_hz", "dist_mm"])["arrival_s"]
+    .agg(mean="mean", err=lambda x: (x.max() - x.min()) / 2)
+    .reset_index()
+)
+_pfreqs   = sorted(_pagg["freq_hz"].unique())
+_pcolors  = {f: c for f, c in zip(_pfreqs,
+              plt.cm.rainbow(np.linspace(0, 1, len(_pfreqs))))}
+
+fig, ax = plt.subplots(figsize=(9, 5))
+for freq, grp in _pagg.groupby("freq_hz"):
+    grp_s = grp.sort_values("dist_mm")
+    ax.errorbar(grp_s["dist_mm"], grp_s["mean"], yerr=grp_s["err"],
+                marker="o", markersize=8, linewidth=1.2, capsize=4,
+                color=_pcolors[freq], label=f"{freq} Hz")
+
+for _pos in _PROBE_POSITIONS:
+    _d = int(_pos.split("/")[0])
+    ax.axvline(_d, color="0.75", linewidth=0.4, linestyle="--", zorder=0)
+    ax.text(_d, 1.01, _pos, fontsize=7, ha="center", va="bottom",
+            color="0.4", transform=ax.get_xaxis_transform())
+
+ax.set_xlabel("Probe distance from paddle [mm]")
+ax.set_ylabel("First arrival [s]")
+ax.set_title(f"First wave arrival — period-based detection, no wind  "
+             f"(window = {_N_PERIODS} periods)")
+_h, _l = ax.get_legend_handles_labels()
+ax.legend(_h[::-1], _l[::-1], fontsize=8, title="frequency")
+ax.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+_thresh_str2 = ",  ".join(
+    f"{pos} → {_THRESH_FACTOR * _noise_floor[pos]:.2f} mm"
+    for pos in _PROBE_POSITIONS if pos in _noise_floor
+)
+print(
+    f"Caption: First arrival detected by sliding a {_N_PERIODS}-period window and "
+    f"measuring FFT amplitude at the target frequency. "
+    f"Threshold: {_THRESH_FACTOR}× stillwater noise floor per probe "
+    f"({_thresh_str2}). "
+    f"No-wind runs only. "
+    f"Error bars show half-range across parallel probes at the same longitudinal distance."
+)
 
 # %%  ----- push d tale to end
 import dtale
