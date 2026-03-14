@@ -316,14 +316,15 @@ class GlobalColumns:
     WATER_DEPTH = "WaterDepth [mm]"
     EXTRA_SECONDS = "Extra seconds"
     
-    # Computed global metrics (from input frequency)
-    WAVENUMBER = "Wavenumber"
-    WAVELENGTH = "Wavelength"
-    KL = "kL"
-    KA = "ka"
-    KH = "kH"
-    TANH_KH = "tanh(kH)"
-    CELERITY = "Celerity"
+    # Computed global metrics — "Expected" = derived from WaveFrequencyInput (wavemaker setting),
+    # not from measured FFT frequency. Use "Probe {pos} ka (FFT)" etc. for actual measured values.
+    WAVENUMBER = "Expected Wavenumber"
+    WAVELENGTH = "Expected Wavelength"
+    KL = "Expected kL"
+    KA = "Expected ka"
+    KH = "Expected kH"
+    TANH_KH = "Expected tanh(kH)"
+    CELERITY = "Expected Celerity"
     WINDSPEED = "Windspeed"
 
     # "Given" metrics (legacy columns - consider deprecating)
@@ -376,7 +377,8 @@ class ColumnGroups:
     """
     
     # Position-independent columns (these don't depend on probe arrangement)
-    GLOBAL_WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ka", "kH", "tanh(kH)", "Celerity"]
+    # "Expected *" = computed from WaveFrequencyInput; per-probe "(FFT)" columns use measured frequency
+    GLOBAL_WAVE_DIMENSION_COLS = ["Expected Wavelength", "Expected kL", "Expected ka", "Expected kH", "Expected tanh(kH)", "Expected Celerity"]
     PROBE_RATIO_COLS = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)", "OUT/IN (FFT)"]
 
     @staticmethod
