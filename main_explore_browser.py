@@ -81,12 +81,6 @@ freqplotvariables = {
 # ── Launch ────────────────────────────────────────────────────────────────────
 app = QApplication.instance() or QApplication(sys.argv)
 
-# %% ----- Signal Browser
-browser_signal = SignalBrowserFiltered(
-    filtered_fft_dict, filtered_meta, freqplotvariables
-)
-browser_signal.setWindowTitle("Signal Browser — FFT reconstruction")
-browser_signal.show()
 
 
 # %% ------------RAMP---------------------
@@ -95,6 +89,12 @@ browser_ramp = RampDetectionBrowser(ramp_df)
 browser_ramp.setWindowTitle("Ramp Detection Browser")
 browser_ramp.show()
 
+# %% ----- Signal Browser
+browser_signal = SignalBrowserFiltered(
+    filtered_fft_dict, filtered_meta, freqplotvariables
+)
+browser_signal.setWindowTitle("Signal Browser — FFT reconstruction")
+browser_signal.show()
 print("Browsers open. Close all windows to exit.")
 app.exec_()
 

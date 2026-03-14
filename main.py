@@ -75,7 +75,7 @@ processvariables = {
     },
     "prosessering": {
         "total_reset": False,  # True → wipe CSV cache and reload everything
-        "force_recompute": False,  # True → ignore cached meta.json, recompute all
+        "force_recompute": True,  # True → ignore cached meta.json, recompute all
         "debug": False,
         "smoothing_window": 10,
         "find_range": True,

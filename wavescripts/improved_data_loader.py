@@ -454,7 +454,7 @@ def _initialize_metadata_dict(file_path: str, experiment_name: str) -> dict:
         "Wavenumber",
         "Wavelength",
         "kL",
-        "ak",
+        "ka",
         "kH",
         "tanh(kH)",
         "Celerity",

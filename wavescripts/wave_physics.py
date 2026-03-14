@@ -174,12 +174,12 @@ def calculate_wavedimensions(k: pd.Series,
     mask_kL = valid_k & np.isfinite(L_arr)
     kL[mask_kL] = k_arr[mask_kL] * L_arr[mask_kL]
     
-    ak = np.full_like(k_arr, np.nan, dtype=float)
+    ka = np.full_like(k_arr, np.nan, dtype=float)
     if PA_aligned is not None:
         a_arr = PA_aligned.to_numpy(dtype=float) * MEASUREMENT.MM_TO_M   #fra millimeter
-        ak[valid_k] = a_arr[valid_k] * k_arr[valid_k]
+        ka[valid_k] = a_arr[valid_k] * k_arr[valid_k]
     else:
-        print('No probe 2 amplitude - no ak to calculate')
+        print('No probe amplitude - no ka to calculate')
     
     c = np.full_like(k_arr, np.nan, dtype=float)
     c[valid_k] = np.sqrt((g / k_arr[valid_k]) * tanhkh[valid_k])
@@ -190,14 +190,14 @@ def calculate_wavedimensions(k: pd.Series,
     Re[mask_Re] = c[mask_Re] * L_arr[mask_Re] / nu
     
     out = pd.DataFrame(
-        {"Wavelength": wavelength, 
-         "kL": kL, 
-         "ak": ak, 
-         "kH": kH, 
-         "tanh(kH)": tanhkh, 
+        {"Wavelength": wavelength,
+         "kL": kL,
+         "ka": ka,
+         "kH": kH,
+         "tanh(kH)": tanhkh,
          "Celerity": c,
          "Reynoldsnumber (Water)": Re,
-             }, 
+             },
             index=idx
         )
     return out
