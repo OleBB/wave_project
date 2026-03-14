@@ -58,7 +58,10 @@
 | `processor2nd.py` | `parallel_ratio` column via `cfg.parallel_pair()` |
 | `plotter.py` / `plot_browsers.py` | `signal_interp` layer; "Show expected sine" checkbox in `RampDetectionBrowser`; probe filter crash fix for `/`-position strings |
 | `main.py` | Skip-if-already-processed logic: datasets with all 3 output parquets are skipped unless `force_recompute=True` or `total_reset=True`; fixed `ProbePos` typo for dataset 13 |
-| `constants.py` | `CLIP`: added `VEL_BUFFER=2`, `INTERP_MAX_GAP=10` |
+| `constants.py` | `CLIP`: added `VEL_BUFFER=2`, `INTERP_MAX_GAP=10`; `ak` renamed to `ka` throughout (column names, attribute names, lists) |
+| `wave_physics.py` | local variable `ak` → `ka`; output DataFrame key `"ak"` → `"ka"` |
+| `improved_data_loader.py` | `"ak"` → `"ka"` in computed-fields initialisation list |
+| `processor.py` | `f"Probe {pos} ak (FFT)"` → `f"Probe {pos} ka (FFT)"`; dynamic hard cap: `volt × 270` (nowind) / `(volt + 0.05) × 270` (wind) replaces fixed 200 mm |
 | All explore/save scripts | Hardcoded probe strings updated; `ANALYSIS_PROBES` import replacing repeated lists |
 
 ---

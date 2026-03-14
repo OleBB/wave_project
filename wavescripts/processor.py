@@ -666,7 +666,7 @@ def _update_all_metrics(
         wave_dim_cols = [
             f"Probe {pos} Wavelength (FFT)",
             f"Probe {pos} kL (FFT)",
-            f"Probe {pos} ak (FFT)",
+            f"Probe {pos} ka (FFT)",
             f"Probe {pos} tanh(kH) (FFT)",
             f"Probe {pos} Celerity (FFT)",
         ]

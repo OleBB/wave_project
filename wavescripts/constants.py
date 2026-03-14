@@ -283,7 +283,7 @@ class ProbeColumns:
     WAVENUMBER_FFT = "Probe {i} Wavenumber (FFT)"
     WAVELENGTH_FFT = "Probe {i} Wavelength (FFT)"
     KL_FFT = "Probe {i} kL (FFT)"
-    AK_FFT = "Probe {i} ak (FFT)"
+    KA_FFT = "Probe {i} ka (FFT)"
     TANH_KH_FFT = "Probe {i} tanh(kH) (FFT)"
     CELERITY_FFT = "Probe {i} Celerity (FFT)"
     HS_FFT = "Probe {i} Significant Wave Height Hs (FFT)"
@@ -320,20 +320,20 @@ class GlobalColumns:
     WAVENUMBER = "Wavenumber"
     WAVELENGTH = "Wavelength"
     KL = "kL"
-    AK = "ak"
+    KA = "ka"
     KH = "kH"
     TANH_KH = "tanh(kH)"
     CELERITY = "Celerity"
     WINDSPEED = "Windspeed"
-    
+
     # "Given" metrics (legacy columns - consider deprecating)
-    #DE umerka over (de gamle) er jo basert på input-frekvens. 
+    #DE umerka over (de gamle) er jo basert på input-frekvens.
     WAVE_FREQUENCY_GIVEN = "Wavefrequency (given)"
     WAVE_PERIOD_GIVEN = "Waveperiod (given)"
     WAVENUMBER_GIVEN = "Wavenumber (given)"
     WAVELENGTH_GIVEN = "Wavelength (given)"
     KL_GIVEN = "kL (given)"
-    AK_GIVEN = "ak (given)"
+    KA_GIVEN = "ka (given)"
     KH_GIVEN = "kH (given)"
     TANH_KH_GIVEN = "tanh(kH) (given)"
     CELERITY_GIVEN = "Celerity (given)"
@@ -358,14 +358,14 @@ class CalculationResultColumns:
     # Individual column names
     WAVELENGTH = "Wavelength"
     KL = "kL"
-    AK = "ak"
+    KA = "ka"
     KH = "kH"
     TANH_KH = "tanh(kH)"
     CELERITY = "Celerity"
-    
+
     # Pre-built column lists for bulk operations
-    WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ak", "tanh(kH)", "Celerity"]
-    WAVE_DIMENSION_COLS_WITH_KH = ["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]
+    WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ka", "tanh(kH)", "Celerity"]
+    WAVE_DIMENSION_COLS_WITH_KH = ["Wavelength", "kL", "ka", "kH", "tanh(kH)", "Celerity"]
 
 
 class ColumnGroups:
@@ -376,7 +376,7 @@ class ColumnGroups:
     """
     
     # Position-independent columns (these don't depend on probe arrangement)
-    GLOBAL_WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ak", "kH", "tanh(kH)", "Celerity"]
+    GLOBAL_WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ka", "kH", "tanh(kH)", "Celerity"]
     PROBE_RATIO_COLS = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)", "OUT/IN (FFT)"]
 
     @staticmethod
@@ -385,7 +385,7 @@ class ColumnGroups:
         return [
             f"Probe {pos} Wavelength (FFT)",
             f"Probe {pos} kL (FFT)",
-            f"Probe {pos} ak (FFT)",
+            f"Probe {pos} ka (FFT)",
             f"Probe {pos} tanh(kH) (FFT)",
             f"Probe {pos} Celerity (FFT)",
         ]
