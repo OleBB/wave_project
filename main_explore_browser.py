@@ -88,6 +88,7 @@ ramp_df = gather_ramp_data(processed_dfs, combined_meta)
 browser_ramp = RampDetectionBrowser(ramp_df)
 browser_ramp.setWindowTitle("Ramp Detection Browser")
 browser_ramp.show()
+app.exec_()
 
 # %% ----- Signal Browser
 browser_signal = SignalBrowserFiltered(
