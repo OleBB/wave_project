@@ -495,30 +495,68 @@ else:
     print(f"{len(_sw_df)} samples  |  {len(_sw_df)/_FS:.1f} s")
 
 # %% ── stillwater — probe uncertainty statistics ──────────────────────────────
-# "Probe {pos} Amplitude" = (P97.5 - P2.5) / 2 — already in combined_meta for all runs.
-# No need to reload processed_dfs; just filter stillwater rows and pivot.
-_amp_cols = [c for c in _meta_stillwater.columns
-             if c.startswith("Probe ") and c.endswith(" Amplitude")
-             and "FFT" not in c and "PSD" not in c
-             and _meta_stillwater[c].notna().any()]
+# Noise floor = minimum (P97.5-P2.5)/2 over short sliding windows.
+# Window must be SHORT (0.2 s) so that slow tank sloshing (2–10 s period)
+# appears as a flat DC offset within the window and does not contribute to
+# the percentile spread. What remains is pure probe noise: rapid sample-to-
+# sample jitter from electronics and surface tension capillary ripples.
 
-_sw_stats = (
-    _meta_stillwater[["path"] + _amp_cols]
-    .copy()
-    .rename(columns={"path": "run"})
+_SW_WINDOW_S  = 0.2    # window length [s] — shorter than slowest slosh period
+_SW_WINDOW_N  = int(_SW_WINDOW_S * _FS)
+
+_probe_cols = [p for p in ANALYSIS_PROBES if any(
+    f"eta_{p}" in df.columns for df in processed_dfs.values()
+)]
+
+_sw_rows = []
+for _, _row in _meta_stillwater.iterrows():
+    _df = processed_dfs.get(_row["path"])
+    if _df is None:
+        continue
+    _entry = {"run": _Path(_row["path"]).name}
+    for _pos in _probe_cols:
+        _col = f"eta_{_pos}"
+        if _col not in _df.columns:
+            _entry[_pos] = np.nan
+            continue
+        _sig = _df[_col].values
+        # slide window, compute (P97.5-P2.5)/2 in each window
+        _amps = []
+        for _s in range(0, len(_sig) - _SW_WINDOW_N, _SW_WINDOW_N // 2):
+            _chunk = _sig[_s : _s + _SW_WINDOW_N]
+            _chunk = _chunk[~np.isnan(_chunk)]
+            if len(_chunk) < _SW_WINDOW_N // 2:
+                continue
+            _amps.append((np.percentile(_chunk, 97.5) - np.percentile(_chunk, 2.5)) / 2)
+        _entry[_pos] = min(_amps) if _amps else np.nan
+    _sw_rows.append(_entry)
+
+_sw_stats_all = pd.DataFrame(_sw_rows)
+print(f"=== Stillwater probe noise floor — min over {_SW_WINDOW_S}s windows [mm] ===")
+print(_sw_stats_all.to_string(index=False))
+
+# --- flag: hard cap on the windowed minimum (truly broken probe / very bad run) ---
+_STILLWATER_EXCLUDE = ["nestenstille"]         # known bad by name (kept for reference)
+_STILLWATER_AMP_CAP = 0.5                      # mm — flag if windowed min still exceeds this
+
+_name_flag = _sw_stats_all["run"].apply(
+    lambda r: any(kw in r for kw in _STILLWATER_EXCLUDE)
 )
-_sw_stats["run"] = _sw_stats["run"].apply(lambda p: _Path(p).name)
-_sw_stats = _sw_stats.rename(columns={c: c.replace("Probe ", "").replace(" Amplitude", "")
-                                       for c in _amp_cols})
+_amp_flag = _sw_stats_all[_probe_cols].max(axis=1) > _STILLWATER_AMP_CAP
 
-print("=== Stillwater noise amplitude per run [mm] (pipeline definition: (P97.5−P2.5)/2) ===")
+_flagged = _sw_stats_all[_name_flag | _amp_flag]
+if not _flagged.empty:
+    print(f"\n⚠ Flagged (name match or windowed min > {_STILLWATER_AMP_CAP} mm):")
+    print(_flagged.to_string(index=False))
+
+_sw_stats = _sw_stats_all[~(_name_flag | _amp_flag)].copy()
+print(f"\n=== Accepted runs: {len(_sw_stats)} / {len(_sw_stats_all)} ===")
 print(_sw_stats.to_string(index=False))
 
-# Summary across runs
-_probe_cols = [c.replace("Probe ", "").replace(" Amplitude", "") for c in _amp_cols]
+# Noise floor: mean of windowed-minimum across accepted runs
 _sw_summary = _sw_stats[_probe_cols].agg(["mean", "std", "min", "max"]).T
 _sw_summary.index.name = "probe"
-print("\n=== Per-probe summary across all stillwater runs [mm] ===")
+print("\n=== Per-probe noise floor summary [mm] ===")
 print(_sw_summary.round(4).to_string())
 
 # %% ── first wave arrival detection ───────────────────────────────────────────
@@ -833,17 +871,275 @@ print(
     f"Error bars show half-range across parallel probes at the same longitudinal distance."
 )
 
-# %%  ----- push d tale to end
-import dtale
-# med et forsøk på å få mere info på skjermen, med at
-# tittelkolonnen er høyere, så de under kan være bredere
-# dtale.app.initialize(
-#     custom_css="""
-#       .rt-th {
-#         white-space: normal !important;   /* allow wrapping */
-#         word-break: break-word;           /* break long tokens */
-#       }
-#     """
-# )
-dtale.show(combined_meta, host="localhost").open_browser()
-# print(combined_meta.columns.to_list())
+# %% ── pre-arrival zero-upcrossing frequency ───────────────────────────────────
+# For each nowind run × probe: take the signal from t=0 to the period-based
+# arrival. Count zero-upcrossings and compute their mean frequency.
+# Question: are the pre-arrival oscillations the target frequency (just too weak
+# to trigger), a sub-harmonic, or a different mode entirely?
+
+def _upcrossing_freq(signal, fs):
+    """Mean frequency from zero upcrossings. Returns NaN if < 2 crossings."""
+    sig = np.asarray(signal, dtype=float)
+    sig = sig[~np.isnan(sig)]
+    if len(sig) < 4:
+        return np.nan
+    crossings = np.where((sig[:-1] < 0) & (sig[1:] >= 0))[0]
+    if len(crossings) < 2:
+        return np.nan
+    periods_s = np.diff(crossings) / fs
+    return 1.0 / np.mean(periods_s)
+
+_pre_rows = []
+for _, _row in _periodic_df.dropna(subset=["arrival_s"]).iterrows():
+    _run_meta = combined_meta[combined_meta["path"].str.endswith(_row["run"])].iloc[0]
+    _df = processed_dfs.get(_run_meta["path"])
+    if _df is None:
+        continue
+    _eta_col = f"eta_{_row['probe']}"
+    if _eta_col not in _df.columns:
+        continue
+    _arr_idx = int(_row["arrival_s"] * _FS)
+    _pre_sig = _df[_eta_col].values[:_arr_idx]
+    _f_pre = _upcrossing_freq(_pre_sig, _FS)
+    _pre_rows.append({
+        "run":        _row["run"],
+        "freq_hz":    _row["freq_hz"],
+        "probe":      _row["probe"],
+        "dist_mm":    _row["dist_mm"],
+        "arrival_s":  _row["arrival_s"],
+        "pre_freq":   _f_pre,
+        "ratio":      _f_pre / _row["freq_hz"] if np.isfinite(_f_pre) else np.nan,
+    })
+
+_pre_df = pd.DataFrame(_pre_rows)
+print(_pre_df[["freq_hz", "probe", "arrival_s", "pre_freq", "ratio"]]
+      .sort_values(["freq_hz", "probe"])
+      .to_string(index=False, float_format="{:.3f}".format))
+
+# %% ── pre-arrival frequency — plot ratio to target ──────────────────────────
+_probes_sorted = sorted(_pre_df["probe"].dropna().unique())
+
+# mean ± half-range across runs at the same frequency (panel/amp shouldn't matter pre-arrival)
+_pre_agg = (
+    _pre_df.dropna(subset=["ratio"])
+    .groupby(["probe", "freq_hz"])["ratio"]
+    .agg(mean="mean", err=lambda x: (x.max() - x.min()) / 2, n="count")
+    .reset_index()
+)
+
+fig, axes = plt.subplots(2, 2, figsize=(10, 7), sharey=True, sharex=True)
+for ax, pos in zip(axes.flat, _probes_sorted):
+    _sub = _pre_agg[_pre_agg["probe"] == pos]
+    ax.errorbar(_sub["freq_hz"], _sub["mean"], yerr=_sub["err"],
+                marker="o", linewidth=1.0, markersize=7, capsize=4,
+                color="steelblue")
+    # annotate n per point
+    for _, r in _sub.iterrows():
+        ax.text(r["freq_hz"], r["mean"] + r["err"] + 0.02,
+                f"n={int(r['n'])}", fontsize=6, ha="center", color="0.5")
+    ax.axhline(1.0, color="k", linewidth=0.8, linestyle="--")
+    ax.set_title(pos, fontsize=9)
+    ax.set_xlabel("Target frequency [Hz]")
+    ax.set_ylabel("pre-arrival freq / target freq")
+    ax.grid(True, alpha=0.3)
+
+fig.suptitle("Pre-arrival oscillation frequency relative to target wave\n"
+             "(mean ± half-range across runs, no wind)", fontsize=10)
+plt.tight_layout()
+plt.show()
+
+# %% ── tank swell tail — mstop90 runs ────────────────────────────────────────
+# mstopXX naming convention: recording continues XX seconds AFTER the wavemaker stops.
+# Total recording = wave_duration + XX s.
+# Wave stop time = total_duration - XX s  (derived per-run from actual signal length).
+
+import re as _re
+
+def _parse_mstop_tail(path):
+    """Extract the mstopXX tail duration from filename. Returns tail_s or None."""
+    m = _re.search(r"mstop(\d+)", _Path(path).name)
+    return int(m.group(1)) if m else None
+
+_mstop_meta = combined_meta[combined_meta["path"].str.contains("mstop90")]
+print(f"mstop90 runs: {len(_mstop_meta)}")
+print(_mstop_meta[["path", "WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]",
+                    "WindCondition", "PanelCondition"]].to_string(index=False))
+
+# %% ── swell tail — wind-only baseline PSD (same date as mstop90 runs) ────────
+from scipy.signal import welch as _welch
+
+_mstop_date = "2026-03-07"
+_wind_baseline_meta = combined_meta[
+    (combined_meta["file_date"].astype(str).str.startswith(_mstop_date)) &
+    (combined_meta["WindCondition"] == "full") &
+    (combined_meta["WaveFrequencyInput [Hz]"].isna())
+]
+print(f"Wind-only baseline runs ({_mstop_date}): {len(_wind_baseline_meta)}")
+
+_wind_psd_baseline  = {}   # {pos: (freqs, Pxx_mean)}
+_wind_ts_baseline   = {}   # {pos: signal_array}  — one representative run
+for _, _row in _wind_baseline_meta.iterrows():
+    _df = processed_dfs.get(_row["path"])
+    if _df is None:
+        continue
+    for _pos in _probe_cols:
+        _col = f"eta_{_pos}"
+        if _col not in _df.columns:
+            continue
+        _sig = _df[_col].values
+        _f, _p = _welch(np.where(np.isnan(_sig), 0.0, _sig), fs=_FS, nperseg=4096)
+        if _pos not in _wind_psd_baseline:
+            _wind_psd_baseline[_pos] = (_f, _p)
+            _wind_ts_baseline[_pos]  = _sig          # keep first run as reference trace
+        else:
+            _wind_psd_baseline[_pos] = (_f, (_wind_psd_baseline[_pos][1] + _p) / 2)
+
+# %% ── swell tail — combined timeseries + backwards PSD, one probe per row ────
+# Layout: 4 rows (probes ordered by distance) × 2 columns (timeseries | PSD)
+# Timeseries: full recording, wave-stop marker + clearance marker
+# PSD: backwards 2s windows, red→green = early→late in tail
+
+_WIN_S           = 2.0
+_WIN_N           = int(_WIN_S * _FS)
+_NPERSEG         = min(512, _WIN_N)
+_SWELL_BAND      = (0.0, 2.0)
+_SLOSH_THRESHOLD = 3.0    # × wind-only swell energy — tune after inspection
+
+def _swell_ratio(sig, fs, baseline_f, baseline_p, band, nperseg):
+    """Swell-band PSD energy ratio vs wind-only baseline."""
+    sig = np.where(np.isnan(sig), 0.0, sig)
+    f, p = _welch(sig, fs=fs, nperseg=nperseg)
+    mask   = (f >= band[0]) & (f <= band[1])
+    mask_b = (baseline_f >= band[0]) & (baseline_f <= band[1])
+    e_sig  = np.trapezoid(p[mask],         f[mask])         if mask.any()   else 0.0
+    e_base = np.trapezoid(baseline_p[mask_b], baseline_f[mask_b]) if mask_b.any() else 1.0
+    return e_sig / max(e_base, 1e-12)
+
+# probes sorted near→far from paddle
+_probes_by_dist = sorted(_probe_cols, key=lambda p: int(p.split("/")[0]))
+_mstop_sorted   = _mstop_meta.sort_values("WaveFrequencyInput [Hz]").reset_index(drop=True)
+
+# ── pre-compute everything for all runs ──────────────────────────────────────
+_run_data = []   # list of dicts, one per run
+for _, _row in _mstop_sorted.iterrows():
+    _df = processed_dfs.get(_row["path"])
+    if _df is None:
+        continue
+    _tail_s   = _parse_mstop_tail(_row["path"])
+    _total_s  = len(_df) / _FS
+    _stop_idx = int((_total_s - _tail_s) * _FS)
+    _t_full   = np.arange(len(_df)) / _FS
+
+    _entry = {
+        "df":        _df,
+        "t_full":    _t_full,
+        "wave_stop": _total_s - _tail_s,
+        "stop_idx":  _stop_idx,
+        "label":     f"{_row.get('WaveAmplitudeInput [Volt]', '?')}V  "
+                     f"{_row.get('WaveFrequencyInput [Hz]', '?')}Hz  "
+                     f"{_row.get('WindCondition', '?')}wind",
+        "probes":    {},   # {pos: {ratios, t_centres, clearance_s, cmap_arr}}
+    }
+    for pos in _probes_by_dist:
+        _col = f"eta_{pos}"
+        if _col not in _df.columns or pos not in _wind_psd_baseline:
+            continue
+        _tail  = _df[_col].values[_stop_idx:]
+        _bf, _bp = _wind_psd_baseline[pos]
+        _n_wins  = len(_tail) // _WIN_N
+        _ratios, _t_centres = [], []
+        for i in range(_n_wins):
+            _seg = _tail[i * _WIN_N : (i + 1) * _WIN_N]
+            _ratios.append(_swell_ratio(_seg, _FS, _bf, _bp, _SWELL_BAND, _NPERSEG))
+            _t_centres.append((i + 0.5) * _WIN_S)
+        _clearance_s = None
+        for i in range(_n_wins - 1, -1, -1):
+            if _ratios[i] > _SLOSH_THRESHOLD:
+                _clearance_s = _t_centres[i] + _WIN_S / 2
+                break
+        _entry["probes"][pos] = {
+            "tail":        _tail,
+            "ratios":      _ratios,
+            "t_centres":   _t_centres,
+            "clearance_s": _clearance_s,
+            "cmap_arr":    plt.cm.RdYlGn(np.linspace(0.1, 0.9, max(_n_wins, 1))),
+        }
+    _run_data.append(_entry)
+
+# ── one figure per probe, runs as columns ────────────────────────────────────
+n_runs = len(_run_data)
+
+for pos in _probes_by_dist:
+    _dist_mm = int(pos.split("/")[0])
+    _bf, _bp = _wind_psd_baseline.get(pos, (None, None))
+    if _bf is None:
+        continue
+
+    fig, axes = plt.subplots(2, n_runs,
+                             figsize=(5.5 * n_runs, 7),
+                             gridspec_kw={"height_ratios": [2, 1.5]})
+    if n_runs == 1:
+        axes = axes[:, np.newaxis]
+
+    for col_i, rd in enumerate(_run_data):
+        ax_ts  = axes[0, col_i]
+        ax_psd = axes[1, col_i]
+        pd_    = rd["probes"].get(pos)
+
+        ax_ts.set_title(rd["label"], fontsize=8)
+
+        if pd_ is None:
+            ax_ts.set_visible(False)
+            ax_psd.set_visible(False)
+            continue
+
+        _col = f"eta_{pos}"
+
+        # timeseries
+        ax_ts.plot(rd["t_full"], rd["df"][_col], lw=0.5, color="steelblue")
+        # overlay wind-only reference (same length as full recording, or cropped)
+        _wind_ref = _wind_ts_baseline.get(pos)
+        if _wind_ref is not None:
+            _n_ref = min(len(_wind_ref), len(rd["t_full"]))
+            ax_ts.plot(rd["t_full"][:_n_ref], _wind_ref[:_n_ref],
+                       lw=0.4, color="darkorange", alpha=0.5, label="wind-only ref")
+        ax_ts.axvline(rd["wave_stop"], color="red", lw=1.0, linestyle="--",
+                      label=f"stop {rd['wave_stop']:.1f} s")
+        if pd_["clearance_s"] is not None:
+            ax_ts.axvline(rd["wave_stop"] + pd_["clearance_s"],
+                          color="darkgreen", lw=1.2, linestyle="--",
+                          label=f"+{pd_['clearance_s']:.0f} s clear")
+        ax_ts.legend(fontsize=7, loc="upper right")
+        ax_ts.grid(True, alpha=0.3)
+        if col_i == 0:
+            ax_ts.set_ylabel("η [mm]", fontsize=8)
+
+        # PSD cascade
+        _n_wins = len(pd_["t_centres"])
+        _label_every = max(1, _n_wins // 8)
+        for i, (tc, r) in enumerate(zip(pd_["t_centres"], pd_["ratios"])):
+            _seg = pd_["tail"][i * _WIN_N : (i + 1) * _WIN_N]
+            _seg = np.where(np.isnan(_seg), 0.0, _seg)
+            _f, _p = _welch(_seg, fs=_FS, nperseg=_NPERSEG)
+            _lbl = f"{tc:.0f}s ×{r:.1f}" if i % _label_every == 0 else "_nolegend_"
+            ax_psd.semilogy(_f, _p, color=pd_["cmap_arr"][i], lw=0.8, label=_lbl)
+        ax_psd.semilogy(_bf, _bp, color="darkorange", lw=1.5,
+                        linestyle="--", label="wind-only")
+        ax_psd.axvspan(*_SWELL_BAND, color="0.92", zorder=0)
+        ax_psd.set_xlim(0, 6)
+        ax_psd.grid(True, alpha=0.3, which="both")
+        ax_psd.legend(fontsize=6, ncol=1, loc="lower center")
+        _clr = pd_["clearance_s"]
+        ax_psd.set_xlabel("Frequency [Hz]", fontsize=8)
+        ax_psd.set_title(f"{'clear +'+str(int(_clr))+' s' if _clr else 'already clear'}",
+                         fontsize=8, color="darkred" if _clr else "green")
+        if col_i == 0:
+            ax_psd.set_ylabel("PSD [mm²/Hz]", fontsize=8)
+
+    fig.suptitle(
+        f"Probe  {pos}  —  {_dist_mm} mm from paddle\n"
+        f"threshold = {_SLOSH_THRESHOLD}×  |  red→green = early→late in tail",
+        fontsize=10
+    )
+    plt.tight_layout()
+    plt.show()

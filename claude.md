@@ -26,43 +26,115 @@
 
 ## 0. Current investigation (pick up here next session)
 
-### ⚠ New dataset added — needs first-time processing
+### ⚠ New dataset 13 — still needs processing
 
-**Status**: A new dataset `20260313-ProbePos4_31_FPV_2-tett6roof` was added to `dataset_paths` in `main.py`. Two bugs were fixed this session that blocked processing. **Run `main.py` with `total_reset=False, force_recompute=False`** — all 12 existing datasets will be skipped instantly (already processed), only dataset 13 will be processed.
+**Run `main.py` with `total_reset=False, force_recompute=False`** — datasets 1–12 skip instantly, only dataset 13 (`20260313-ProbePos4_31_FPV_2-tett6roof`) runs the full pipeline. Also need `force_recompute=True` afterwards to pick up the `ak`→`ka` rename and dynamic hard cap changes.
 
-**What was fixed this session:**
+---
 
-1. **`total_reset` / `force_recompute` now actually skip processed datasets** (`main.py`)
-   - Previously, these flags only controlled raw CSV loading — the full pipeline (FFT, PSD, stillwater) still ran for *every* dataset every time.
-   - Now: at the top of the loop, if `processed_dfs.parquet` + `fft_spectra.parquet` + `psd_spectra.parquet` all exist and neither flag is set → dataset is skipped with `✓ Already processed` message.
-   - `force_recompute=True` = re-run full pipeline for all datasets (loads from `dfs.parquet`, not CSVs)
-   - `total_reset=True` = wipe everything, reload from CSVs, reprocess all
+### Session summary (2026-03-14) — exploration analysis in `main_explore_inline.py`
 
-2. **Folder name typo for dataset 13** (`main.py`)
-   - `dataset_paths` had `20260313-ProbPos4_31_FPV_2-tett6roof` (missing `e`)
-   - Actual folder on disk: `20260313-ProbePos4_31_FPV_2-tett6roof`
-   - Fixed to match disk.
+#### `ak` → `ka` rename + "Expected *" global wave dimensions
 
-3. **ZeroDivisionError when both stillwater anchors share the same timestamp** (`processor.py`, `ensure_stillwater_columns`)
-   - Dataset `20251110-tett6roof-lowMooring` has two no-wind/no-wave files both timestamped `2025-11-10 11:16:50`, so `t1 - t0 = 0`.
-   - The existing `len(anchor_rows) < 2` guard only checks count, not time distinctness.
-   - Fix: after computing `t0`, `t1`, check `if t0 == t1:` → print warning and fall back to the same flat-value path used for single-anchor case, then `return meta`.
+All `ak` column names and attributes renamed to `ka` throughout:
+- `constants.py`: `GlobalColumns.KA`, `CalculationResultColumns.KA`, `KA_FFT`, all lists updated
+- `wave_physics.py`: local variable + output dict key
+- `improved_data_loader.py`: computed-fields init list
+- `processor.py`: `"Probe {pos} ka (FFT)"` column name
 
-#### Summary of significant code changes (cumulative, condensed)
+Global wave dimensions (computed from `WaveFrequencyInput`, not measured) renamed with `"Expected "` prefix to distinguish from FFT-measured values:
+- `"Wavenumber"` → `"Expected Wavenumber"`, `"Wavelength"` → `"Expected Wavelength"`, etc.
+- `ColumnGroups.GLOBAL_WAVE_DIMENSION_COLS` updated; `filters.py` auto-picks up via `GC.KL` attribute
 
-| File | What changed |
-|------|-------------|
-| `improved_data_loader.py` | Probe distances corrected: `12545`→`12400`, `12300`→`11800` in `PROBE_CONFIGS`; added `ANALYSIS_PROBES` constant; added `ProbeConfiguration.parallel_pair()` |
-| `wave_detection.py` | `_SNARVEI_CALIB` + `_PROBE_GROUP` keys updated to new distances; `_PROBE_GROUP` auto-generated from `PROBE_CONFIGS` (no longer a hardcoded dict) |
-| `processor.py` | `_zero_and_smooth_signals` rewritten: 3-layer outlier removal (hard cap → velocity filter → isolated sample); dynamic `max_interp_gap`; `eta_{pos}_interp` pchip display layer; `samples_clipped_*` / `max_gap_*` columns added to `combined_meta`; `t0==t1` zero-division guard in `ensure_stillwater_columns` |
-| `processor2nd.py` | `parallel_ratio` column via `cfg.parallel_pair()` |
-| `plotter.py` / `plot_browsers.py` | `signal_interp` layer; "Show expected sine" checkbox in `RampDetectionBrowser`; probe filter crash fix for `/`-position strings |
-| `main.py` | Skip-if-already-processed logic: datasets with all 3 output parquets are skipped unless `force_recompute=True` or `total_reset=True`; fixed `ProbePos` typo for dataset 13 |
-| `constants.py` | `CLIP`: added `VEL_BUFFER=2`, `INTERP_MAX_GAP=10`; `ak` renamed to `ka` throughout (column names, attribute names, lists) |
-| `wave_physics.py` | local variable `ak` → `ka`; output DataFrame key `"ak"` → `"ka"` |
-| `improved_data_loader.py` | `"ak"` → `"ka"` in computed-fields initialisation list |
-| `processor.py` | `f"Probe {pos} ak (FFT)"` → `f"Probe {pos} ka (FFT)"`; dynamic hard cap: `volt × 270` (nowind) / `(volt + 0.05) × 270` (wind) replaces fixed 200 mm |
-| All explore/save scripts | Hardcoded probe strings updated; `ANALYSIS_PROBES` import replacing repeated lists |
+#### Dynamic hard cap (`processor.py`)
+
+Replaced fixed `CLIP.WAVE_MM = 200` with:
+- No-wind wave runs: `clip_mm = CLIP.WAVE_CLIP_FACTOR × volt` (`WAVE_CLIP_FACTOR = 270`)
+- Wind wave runs: `clip_mm = WAVE_CLIP_FACTOR × (volt + WIND_BASE_VOLT)` (`WIND_BASE_VOLT = 0.05`)
+- Stillwater / nowave: unchanged (`CLIP.NOWIND_MM`)
+
+#### Wave arrival analysis (`main_explore_inline.py`)
+
+**Threshold-based detection** (`find_first_arrival`, existing):
+- Fullwind runs always show `arrival_s = 0.000` — wind noise already exceeds `2× noise floor` at t=0. Cannot use time-domain threshold crossing to detect wave arrival under wind.
+- Nowind runs: physically coherent arrival times 4–26 s, increasing with frequency (higher freq → shorter wavelength → lower group velocity → later arrival).
+
+**Period-based detection** (`_find_arrival_periodic`, new cell ~L720):
+- Slides a window of exactly `N=3` periods at the target frequency, computes FFT amplitude at that bin
+- Rejects wind-wave energy (wrong frequency) — both wind and no-wind runs now give physical arrivals
+- Nowind arrivals are ~4–7 s later than threshold-based detections (threshold triggers on weak leading edge; period method requires coherent wave energy)
+- `_THRESH_FACTOR = 2.0`, `_N_PERIODS = 3`
+
+**Pre-arrival upcrossing frequency** (`_upcrossing_freq`, new cell ~L760):
+- Takes the signal from `t=0` to the period-based arrival time, counts zero-upcrossings
+- Computes `ratio = pre_arrival_freq / target_freq`
+- Plots as 2×2 grid (one subplot per probe) with mean ± half-range across runs
+- Investigates whether pre-arrival oscillations are the target wave (just below threshold), a sub-harmonic, or a different mode (possible long-wave precursor)
+
+**Physical note — fast long-wave precursor (OPEN)**:
+- Some nowind arrivals are anomalously early (e.g. 1 s at 8804 mm). Max possible surface wave speed in a 580 mm tank is `√(gd) ≈ 2.4 m/s` → min travel time 3.7 s. A 1 s arrival exceeds this limit.
+- Hypothesis: wavemaker soft-start ramp generates a broad-spectrum transient including very long-wave (kd→0) components. Known as "piston transient" or "evanescent modes" in lab flumes.
+- To investigate: plot first 5–10 s of a few nowind runs at 8804/250 across frequencies.
+
+#### Stillwater noise floor — short-window minimum method (new, ~L497)
+
+The `(P97.5−P2.5)/2` amplitude over a full stillwater run conflates two things:
+1. **Residual tank sloshing** — long-period (2–10 s), decays over minutes, makes unsettled runs look noisy
+2. **True probe noise** — rapid sample-to-sample jitter from electronics + capillary ripples, constant regardless of settling
+
+New approach: slide a **0.2 s window** (50 samples — shorter than the slowest slosh period) and take the **minimum window amplitude** across the run. Sloshing appears as a flat DC offset within 0.2 s and contributes nothing to `P97.5−P2.5`. Only probe noise remains.
+
+Additional filters:
+- `_STILLWATER_EXCLUDE = ["nestenstille"]` — name-based exclusion of known unsettled runs
+- `_STILLWATER_AMP_CAP = 0.5 mm` — hard cap on the windowed minimum (flags truly broken probes)
+
+With this method, even the nestenstille run may yield a valid noise floor estimate (its quiet patches are fine).
+
+#### Tank swell tail analysis — mstop90 runs (`main_explore_inline.py` ~L951)
+
+**`mstopXX` naming convention**: recording continues `XX` seconds *after* the wavemaker stops. Total recording = wave duration + XX s. Wave stop time = `total_duration − XX`. `_parse_mstop_tail(path)` reads this from the filename.
+
+**Only mstop90 used** for this analysis — some mstop30 runs are mislabelled (should be mstop0), making their tail duration unreliable.
+
+**Available mstop90 runs** (all from 2026-03-07, fullpanel, fullwind, 1.3 Hz):
+- `amp0100-freq1300-per40` × 2 runs
+- `amp0200-freq1300-per40` × 1 run
+- Total recording: ~120.8 s; wave stop at ~30.8 s; tail = 90 s
+
+**Why lower-frequency runs leave more sloshing**: longer wavelength → excites lower tank resonance modes → more energy stored, slower decay. A 0.65 Hz run is expected to leave dramatically more residual sloshing than a 1.3 Hz run. This is a known dispersion effect — when more runs with different frequencies are available, sort by frequency to compare.
+
+**Backwards PSD stepping** (`_swell_ratio`, `_SLOSH_THRESHOLD`):
+- Tail divided into 2 s windows; stepped backwards from end
+- Each window: Welch PSD compared to wind-only baseline (same date, fullwind-nowave)
+- `_swell_ratio` = integral of swell-band PSD (0–2 Hz) / integral of wind-only baseline in same band
+- When ratio > `_SLOSH_THRESHOLD = 3.0` → sloshing still present
+- Walking backwards, the last window that exceeds threshold = **clearance time**
+- Clearance time shown in subplot title; color scale: red = high sloshing ratio, green = wind-only level
+- **Tune `_SLOSH_THRESHOLD`** — 3.0 is first guess, adjust after inspecting the plots
+
+**What the PSD comparison actually measures**: the sloshing appears as excess energy below 2 Hz relative to the wind-only baseline. The wind-only PSD defines the "noise floor" of the free-surface motion at each frequency. Anything above it in the 0–2 Hz band after the wave stops is residual tank resonance / sloshing.
+
+**Time series overview**: wrapped in `if False:` — re-enable to plot all runs. The overview plots are useful for visual sanity checking the wave-stop marker.
+
+---
+
+### Next session — start here
+
+**0. Process dataset 13** — run `main.py` with `total_reset=False, force_recompute=False`
+
+**A. Tank swell clearance** — run the backwards PSD cells, read off clearance times per probe per run. Tune `_SLOSH_THRESHOLD` until it agrees with visual inspection of the time series. Key question: how many seconds after a 1.3 Hz fullwind run before the tank is ready?
+
+**B. Pre-arrival frequency analysis** — run the period-based + upcrossing cells, inspect the 2×2 ratio plot. Key question: is `ratio ≈ 1` (weak leading edge of target wave) or something lower (precursor mode)?
+
+**C. Finalize wind/probe-uncertainty plots → `main_save_figures.py`**
+- Stillwater noise floor table is now computed with the short-window method — ready to format for thesis
+- Wind PSD plot (~line 314) and probe-uncertainty plot (~line 479) — polish and copy to `main_save_figures.py`
+
+**D. Primary thesis result plots**
+- `damping_vs_freq`: OUT/IN (FFT) vs frequency, split by wind and amplitude
+- `wave_stability` vs frequency/wind
+- `parallel_ratio` vs frequency
+- Panel reflection investigation
 
 ---
 
@@ -106,34 +178,12 @@
 | `processor.py`, `processor2nd.py`, `signal_processing.py` | already data-driven | All use `cfg.probe_col_names()` — zero hardcoded positions |
 | `plotter.py`, `plot_browsers.py` | already data-driven | Discover positions dynamically from data columns / `combined_meta` |
 | `wave_detection.py` `_SNARVEI_CALIB` | acceptable as-is | Calibration table (manually eyeballed values) — keys are distance strings, unavoidably manual |
-| `wave_detection.py` `_PROBE_GROUP` | **should be auto-generated** | Maps `"Probe 12400/250"` to `"12400"` — currently a hardcoded dict that duplicates `PROBE_CONFIGS`; will go stale again on the next distance correction |
+| `wave_detection.py` `_PROBE_GROUP` | ✅ done | Auto-generated from `PROBE_CONFIGS` at module load — no longer a hardcoded dict |
 | `main_explore_inline.py` probe lists | partially reducible | `plotvariables["probes"]` entries are intentional per-plot choices — cannot be fully automated. But the repeated 4-probe `_PROBE_POSITIONS` constant could be a shared import. |
 | `main_explore_browser.py` probe lists | partially reducible | Same as above |
 | `main_save_figures.py` `PROBE_POSITIONS` | partially reducible | Same as above |
 
-**Two concrete improvements to make (not yet implemented):**
-
-**1. Auto-generate `_PROBE_GROUP` in `wave_detection.py`** (highest priority — this is what caused the stale-name bug today)
-
-Replace the hardcoded dict with code that reads `PROBE_CONFIGS` at function entry:
-
-    from wavescripts.improved_data_loader import PROBE_CONFIGS
-    _PROBE_GROUP = {
-        f"Probe {pos}": pos.split("/")[0]
-        for cfg in PROBE_CONFIGS
-        for pos in cfg.probe_col_names().values()
-    }
-
-This auto-populates every `"Probe dist/lat"` -> `"dist"` mapping for all configs ever defined. No manual maintenance needed when distances change. The `_SNARVEI_CALIB` keys still need to match (they use the distance prefix), but that dict is manually eyeballed anyway.
-
-**2. Add `ANALYSIS_PROBES` constant to `improved_data_loader.py`**
-
-The four-probe analysis set (`["9373/170", "12400/250", "9373/340", "8804/250"]`) is repeated verbatim in `main_explore_inline.py`, `main_explore_browser.py`, and `main_save_figures.py`. Define it once:
-
-    # In improved_data_loader.py — standard 4-probe set for the current layout
-    ANALYSIS_PROBES = ["9373/170", "12400/250", "9373/340", "8804/250"]
-
-Then import it in those three scripts. When the probe layout changes, only `improved_data_loader.py` needs updating.
+**Both improvements implemented** — `_PROBE_GROUP` is auto-generated, `ANALYSIS_PROBES` is defined in `improved_data_loader.py` and imported everywhere.
 
 **What stays hardcoded (intentionally):**
 - `plotvariables["probes"]` lists that select a specific subset for a specific plot — these are deliberate editorial choices, not config duplicates
