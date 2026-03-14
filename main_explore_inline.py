@@ -67,16 +67,16 @@ import time
 start = time.perf_counter()
 
 PROCESSED_DIRS = [
-    Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"), # mange kjøringer med -per15
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"), # noen kjøringer med  -per30-
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"), #et par kjøringer med -per15-
-    Path("waveprocessed/PROCESSED-20251112-tett6roof"),
-    Path("waveprocessed/PROCESSED-20251113-tett6roof"),
-    Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
-    Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
-    Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"), # mange kjøringer med -per15
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"), # noen kjøringer med  -per30-
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"), #et par kjøringer med -per15-
+    # Path("waveprocessed/PROCESSED-20251112-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20251113-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
+    # Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
+    # Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
     Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
@@ -107,8 +107,8 @@ amplitudeplotvariables = {
         "chooseFirstUnique": False,
     },
     "filters": {
-        "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   (0.5,1.0),
+        "WaveAmplitudeInput [Volt]": 0.2,
+        "WaveFrequencyInput [Hz]":   (0.5,1.5),
         "WavePeriodInput":           None,
         "WindCondition":             ["full"],
         "TunnelCondition":           None,
@@ -155,7 +155,7 @@ dampingplotvariables_all = {
     "overordnet": {"chooseAll": False, "chooseFirst": False},
     "filters": {
         "WaveAmplitudeInput [Volt]": 0.1,
-        "WaveFrequencyInput [Hz]":   None,
+        "WaveFrequencyInput [Hz]":   (0.0,1.5),
         "WavePeriodInput":           None,
         "WindCondition":             ["no", "full"], #"lowest"
         "TunnelCondition":           None,
@@ -233,13 +233,13 @@ fig, axes = plot_frequency_spectrum(
 # %% ── swell scatter ──────────────────────────────────────────────────────────
 swellplotvariables = {
     "overordnet": {
-        "chooseAll": True,
+        "chooseAll": False,
         "chooseFirst": False,
         "chooseFirstUnique": True,
     },
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],
-        "WaveFrequencyInput [Hz]":   [1.3],
+        "WaveFrequencyInput [Hz]":   None,
         "WavePeriodInput":           None,
         "WindCondition":             ["no", "lowest", "full"],
         "TunnelCondition":           None,
@@ -272,8 +272,8 @@ print(meta_wavenumber.describe())
 
 # %% ── reconstructed signal — single experiment ───────────────────────────────
 # Pick one experiment to inspect its reconstructed time-domain signal.
-single_path = filtrert_frequencies["path"].iloc[0]
-single_meta = filtrert_frequencies.iloc[[0]]
+single_path = filtrert_frequencies["path"].iloc[1]
+single_meta = filtrert_frequencies.iloc[[1]]
 
 fig, ax = plot_reconstructed(
     {single_path: filtered_fft_dict[single_path]}, single_meta, freqplotvariables

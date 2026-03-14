@@ -338,7 +338,17 @@ def _zero_and_smooth_signals(
         else:
             max_interp_gap = CLIP.INTERP_MAX_GAP
 
-        clip_mm = CLIP.NOWIND_MM if is_stillwater else CLIP.WAVE_MM
+        if is_stillwater:
+            clip_mm = CLIP.NOWIND_MM
+        elif is_wave_run:
+            volt = row.get("WaveAmplitudeInput [Volt]")
+            if volt is not None and not pd.isna(float(volt)):
+                wind_extra = CLIP.WIND_BASE_VOLT if wind != "no" else 0.0
+                clip_mm = CLIP.WAVE_CLIP_FACTOR * (float(volt) + wind_extra)
+            else:
+                clip_mm = CLIP.WAVE_MM  # fallback: no voltage info
+        else:
+            clip_mm = CLIP.WAVE_MM  # nowave + wind runs
 
         for i, pos in col_names.items():
             probe_col = f"Probe {pos}"

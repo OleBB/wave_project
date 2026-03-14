@@ -174,7 +174,9 @@ class ClipParams:
     Downstream code (nanpercentile, dropna, interpolation) handles NaN safely.
     """
     NOWIND_MM: float = 5.0    # nowind/stillwater runs: noise floor ~0.3 mm; ±5 mm catches only gross glitches
-    WAVE_MM:   float = 200.0  # wave runs: physical hard cap (tank depth ~580 mm; no real wave can exceed this)
+    WAVE_MM:   float = 200.0  # fallback hard cap when no voltage info available
+    WAVE_CLIP_FACTOR: float = 270.0  # hard cap = factor × amp_volts; 0.1V→27mm, 0.2V→54mm, 0.3V→81mm
+    WIND_BASE_VOLT: float = 0.05     # extra effective voltage for wind runs: adds ~13.5mm to cap
     MAX_NAN_FRACTION: float = 0.05  # if >5% of a signal window is clipped, skip that probe/run for FFT
     DIFF_MM: float = 10.0         # velocity threshold: 10 mm/sample = 2500 mm/s (~4× max physical wave velocity)
     INTERP_MAX_GAP: int = 10      # fallback max gap (nowave/stillwater runs); wave runs use 1/4 wavelength
