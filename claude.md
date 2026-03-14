@@ -116,13 +116,21 @@ With this method, even the nestenstille run may yield a valid noise floor estima
 
 **Time series overview**: wrapped in `if False:` — re-enable to plot all runs. The overview plots are useful for visual sanity checking the wave-stop marker.
 
+#### Tank swell combined timeseries+PSD plot — final polish (2026-03-14 end)
+
+Two fixes applied to the combined timeseries+PSD plot (one figure per probe, mstop90 runs as columns):
+
+1. **PSD legend compacted**: was labelling all ~45 windows (one per 2 s over 90 s tail). Now labels every `max(1, n_wins // 8)` windows → ~8–9 legend entries. All curves still plotted. `loc="lower center"`.
+
+2. **Wind-only timeseries reference overlay**: `_wind_ts_baseline` dict added (first wind-only run per probe, stored alongside `_wind_psd_baseline`). Plotted as a thin semi-transparent orange trace (`lw=0.4, alpha=0.5`) on top of each mstop timeseries. Makes it immediately visible when the decaying tail has returned to wind-only amplitude level — directly supports tuning `_SLOSH_THRESHOLD`.
+
 ---
 
 ### Next session — start here
 
 **0. Process dataset 13** — run `main.py` with `total_reset=False, force_recompute=False`
 
-**A. Tank swell clearance** — run the backwards PSD cells, read off clearance times per probe per run. Tune `_SLOSH_THRESHOLD` until it agrees with visual inspection of the time series. Key question: how many seconds after a 1.3 Hz fullwind run before the tank is ready?
+**A. Tank swell clearance** — run the backwards PSD cells. Now with the wind-only timeseries overlay, visually tune `_SLOSH_THRESHOLD` (currently 3.0) by checking whether the green "clear" marker aligns with where the blue tail signal visually merges into the orange reference. Read off clearance times per probe per run. Key question: how many seconds after a 1.3 Hz fullwind run before the tank is ready?
 
 **B. Pre-arrival frequency analysis** — run the period-based + upcrossing cells, inspect the 2×2 ratio plot. Key question: is `ratio ≈ 1` (weak leading edge of target wave) or something lower (precursor mode)?
 

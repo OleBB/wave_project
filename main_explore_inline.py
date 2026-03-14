@@ -289,11 +289,11 @@ fig, axes = plot_reconstructed(
 """
 #
 #
-# =============================================================================
+# ==========================================================================================================================
 # WIND-ONLY ANALYSIS
 # Runs with no wave input (WaveFrequencyInput NaN) to characterise wind-only
 # surface response. Compare wind conditions against stillwater baseline (no wind).
-# =============================================================================
+# ==========================================================================================================================
 """
 # %% ── wind-only — filter runs ────────────────────────────────────────────────
 from pathlib import Path as _Path
@@ -565,8 +565,8 @@ print(_sw_summary.round(4).to_string())
 # Physics: fast long-wave precursors may arrive well before the _SNARVEI_CALIB start.
 from wavescripts.wave_detection import find_first_arrival
 
-_THRESHOLD_FACTOR = 2.0   # detection at 2× noise floor
-_WINDOW_S         = 0.5   # rolling window length [s]
+_THRESHOLD_FACTOR = 5.0   # detection at 2× noise floor !!todo: EDIT! figure out a good value.
+_WINDOW_S         = 2.5   # rolling window length [s]
 _PROBE_POSITIONS  = ANALYSIS_PROBES
 
 # Noise floor per probe from stillwater summary (mean across runs)
@@ -647,7 +647,7 @@ plt.tight_layout()
 plt.show()
 
 # %% ── wind-only — overview + zoom (solo & parallel probes) ───────────────────
-_wind_row = _meta_wind_only.iloc[0]
+_wind_row = _meta_wind_only.iloc[1]
 _wind_df  = processed_dfs.get(_wind_row["path"])
 
 if _wind_df is None:
@@ -660,7 +660,7 @@ else:
     _zm_slice = slice(_mid - 125, _mid + 125)
 
     # Group eta columns by longitudinal distance
-    _all_eta = sorted([c for c in _wind_df.columns if c.startswith("eta_")])
+    _all_eta = sorted([c for c in _wind_df.columns if c.startswith("eta_") and not c.endswith("_interp")])
     from collections import defaultdict
     _by_dist = defaultdict(list)
     for _col in _all_eta:
@@ -670,33 +670,57 @@ else:
 
     _solo_cols     = [cols[0] for cols in _by_dist.values() if len(cols) == 1]
     _parallel_cols = [col for cols in _by_dist.values() if len(cols) > 1 for col in cols]
+    print(f"eta cols in df:  {_all_eta}")
+    print(f"solo:     {_solo_cols}")
+    print(f"parallel: {_parallel_cols}")
 
-    def _wind_plot(eta_cols, subtitle):
-        _colors = plt.cm.tab10(np.linspace(0, 0.9, max(len(eta_cols), 1)))
-        fig, (ax_ov, ax_zm) = plt.subplots(2, 1, figsize=(14, 6),
-                                            gridspec_kw={"height_ratios": [2, 1]})
-        for col, color in zip(eta_cols, _colors):
-            label = col.replace("eta_", "")
-            ax_ov.plot(_t, _wind_df[col], lw=0.6, label=label, color=color)
-            ax_zm.plot(_t[_zm_slice], _wind_df[col].iloc[_zm_slice],
-                       lw=1.0, label=label, color=color)
-
-        ax_ov.set_xlabel("Time [s]")
-        ax_ov.set_ylabel("η [mm]")
-        ax_ov.set_title(f"Wind-only ({_wind_cond}) — {subtitle} — {_run_name}", fontsize=10)
-        ax_ov.legend(fontsize=8, loc="upper right")
-        ax_ov.grid(True, alpha=0.3)
-
-        ax_zm.set_xlabel("Time [s]")
-        ax_zm.set_ylabel("η [mm]")
-        ax_zm.set_title("Zoom — 1 s window (250 samples)", fontsize=9)
-        ax_zm.grid(True, alpha=0.3)
+    def _wind_plot(eta_cols, subtitle, separate=False):
+        _colors = [plt.cm.tab10(i / 10) for i in range(len(eta_cols))]
+        if separate:
+            n = len(eta_cols)
+            fig, axes = plt.subplots(2, n, figsize=(7 * n, 6),
+                                     gridspec_kw={"height_ratios": [2, 1]},
+                                     sharey="row")
+            if n == 1:
+                axes = axes.reshape(2, 1)
+            for i, (col, color) in enumerate(zip(eta_cols, _colors)):
+                label = col.replace("eta_", "")
+                axes[0, i].plot(_t, _wind_df[col], lw=0.6, color=color)
+                axes[1, i].plot(_t[_zm_slice], _wind_df[col].iloc[_zm_slice], lw=1.0, color=color)
+                axes[0, i].set_title(f"{label}", fontsize=10)
+                axes[0, i].set_xlabel("Time [s]")
+                axes[0, i].set_ylabel("η [mm]")
+                axes[0, i].grid(True, alpha=0.3)
+                axes[1, i].set_xlabel("Time [s]")
+                axes[1, i].set_ylabel("η [mm]")
+                axes[1, i].set_title("Zoom — 1 s window", fontsize=9)
+                axes[1, i].grid(True, alpha=0.3)
+            fig.suptitle(f"Wind-only ({_wind_cond}) — {subtitle} — {_run_name}", fontsize=10)
+        else:
+            fig, (ax_ov, ax_zm) = plt.subplots(2, 1, figsize=(14, 6),
+                                                gridspec_kw={"height_ratios": [2, 1]})
+            for col, color in zip(eta_cols, _colors):
+                label = col.replace("eta_", "")
+                ax_ov.plot(_t, _wind_df[col], lw=0.6, label=label, color=color)
+                ax_zm.plot(_t[_zm_slice], _wind_df[col].iloc[_zm_slice],
+                           lw=1.0, label=label, color=color)
+            ax_ov.set_xlabel("Time [s]")
+            ax_ov.set_ylabel("η [mm]")
+            ax_ov.set_title(f"Wind-only ({_wind_cond}) — {subtitle} — {_run_name}", fontsize=10)
+            ax_ov.legend(fontsize=8, loc="upper right")
+            ax_ov.grid(True, alpha=0.3)
+            ax_zm.set_xlabel("Time [s]")
+            ax_zm.set_ylabel("η [mm]")
+            ax_zm.set_title("Zoom — 1 s window (250 samples)", fontsize=9)
+            ax_zm.grid(True, alpha=0.3)
 
         plt.tight_layout()
         plt.show()
 
-    _wind_plot(_solo_cols,     "solo probes")
-    _wind_plot(_parallel_cols, "parallel probes")
+    if _solo_cols:
+        _wind_plot(_solo_cols,     "solo probes", separate=True)
+    if _parallel_cols:
+        _wind_plot(_parallel_cols, "parallel probes")
 
     print(f"{len(_wind_df)} samples  |  {len(_wind_df)/_FS:.1f} s  |  wind: {_wind_cond}")
     print(f"Solo:     {[c.replace('eta_','') for c in _solo_cols]}")
@@ -1143,3 +1167,6 @@ for pos in _probes_by_dist:
     )
     plt.tight_layout()
     plt.show()
+#TODO: is the wind noise centered at the same baseline in these plots?
+# TODO: does wind "increase" the baseline? does it move water backwards in the tank?
+#todo: should we remove any obvious outliers from this plot?
