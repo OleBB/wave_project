@@ -421,9 +421,9 @@ print(_stillwater[["path"] + amp_cols].to_string())
 
 # %%
 _wave = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy()
-_wave["ratio_170_vs_340"] = _wave["Probe 12400/170 Amplitude"] / _wave["Probe 12400/340 Amplitude"]
+_wave["ratio_170_vs_340"] = _wave["Probe 9373/170 Amplitude"] / _wave["Probe 9373/340 Amplitude"]
 print(_wave[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WindCondition",
-             "PanelCondition", "Probe 12400/170 Amplitude", "Probe 12400/340 Amplitude",
+             "PanelCondition", "Probe 9373/170 Amplitude", "Probe 9373/340 Amplitude",
              "ratio_170_vs_340"]].sort_values("ratio_170_vs_340", ascending=False).to_string())
 
 # %% ── repl_out helper — tee stdout to repl/<name>.txt ───────────────────────
@@ -456,7 +456,7 @@ with repl_out("filnavn.txt"):
 
 # %% ── stillwater — overview + zoom ──────────────────────────────────────────
 import matplotlib.pyplot as plt
-_sw_row = _meta_stillwater.iloc[0]
+_sw_row = _meta_stillwater.iloc[2]
 _sw_df  = processed_dfs.get(_sw_row["path"])
 
 if _sw_df is None:
