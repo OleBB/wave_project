@@ -110,12 +110,12 @@ amplitudeplotvariables = {
         "chooseFirstUnique": False,
     },
     "filters": {
-        "WaveAmplitudeInput [Volt]": 0.2,
+        "WaveAmplitudeInput [Volt]": None,
         "WaveFrequencyInput [Hz]":   (0.5,1.5),
         "WavePeriodInput":           None,
         "WindCondition":             ["full"],
         "TunnelCondition":           None,
-        "Mooring":                   "low",
+        "Mooring":                   None,
         "PanelCondition":            None, #"no", #"["reverse", "full"],
     },
     "plotting": {
@@ -138,11 +138,11 @@ dampingplotvariables = {
     "overordnet": {"chooseAll": False, "chooseFirst": False, "chooseFirstUnique": False},
     "filters": {
         "WaveAmplitudeInput [Volt]": (0.1,0.3),
-        "WaveFrequencyInput [Hz]":   None,
+        "WaveFrequencyInput [Hz]":   (0.1,1.8),
         "WavePeriodInput":           None,
         "WindCondition":             None,
         "TunnelCondition":           None,
-        "PanelCondition":            "reverse",#"full"],
+        "PanelCondition":            None, #"reverse",#"full"],
     },
     "plotting": {"figsize": None, "separate": True, "overlay": False, "annotate": True, "single_run_rel_error": 0.10},
 }

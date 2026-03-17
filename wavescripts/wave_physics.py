@@ -16,7 +16,7 @@ from scipy.optimize import newton
 
 from typing import Dict, List, Tuple
 
-from wavescripts.constants import PHYSICS, WAVENUMBER, MEASUREMENT
+from wavescripts.constants import PHYSICS, WAVENUMBER, MEASUREMENT, PANEL_LENGTHS
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
     ProbeColumns as PC, 
@@ -129,17 +129,14 @@ def calculate_windspeed(windcond: pd.Series) -> pd.Series:
     return wc.map(speed_map)
 
 
-def calculate_wavedimensions(k: pd.Series, 
-                             H: pd.Series, 
+def calculate_wavedimensions(k: pd.Series,
+                             H: pd.Series,
                              PC: pd.Series,
                              amp: pd.Series,
+                             windspeed: pd.Series = None,
+                             freq: pd.Series = None,
                              ) -> pd.DataFrame:
-    panel_length_map = {
-            "purple": 1.048,
-            "yellow": 1.572,
-            "full": 2.62,
-            "reverse": 2.62,
-        }
+    panel_length_map = {k: v for k, v in PANEL_LENGTHS.items()}  # from constants
     
     #mens jeg jobber: PC er panelCondition, P2A er probe 2 amplitude
     # Align (inner) on indices to keep only rows present in both k and H
@@ -189,6 +186,38 @@ def calculate_wavedimensions(k: pd.Series,
     mask_Re = valid_k & np.isfinite(c) & np.isfinite(L_arr)
     Re[mask_Re] = c[mask_Re] * L_arr[mask_Re] / nu
     
+    # ── Froude number: Fr = c / sqrt(g * L_panel) ────────────────────
+    Fr = np.full_like(k_arr, np.nan, dtype=float)
+    Fr[mask_kL] = c[mask_kL] / np.sqrt(g * L_arr[mask_kL])
+
+    # ── Wind/celerity ratio: U_wind / c ──────────────────────────────
+    U_c = np.full_like(k_arr, np.nan, dtype=float)
+    if windspeed is not None:
+        U_arr = windspeed.reindex(idx).to_numpy(dtype=float)
+        mask_Uc = valid_k & np.isfinite(c) & np.isfinite(U_arr) & (c > 0)
+        U_c[mask_Uc] = U_arr[mask_Uc] / c[mask_Uc]
+
+    # ── Pierson-Moskowitz ratio: f / f_PM ────────────────────────────
+    # f_PM = g / (2π × 1.026 × U_wind)  — the PM spectrum peak frequency.
+    # Ratio > 1: paddle above PM peak; < 1: paddle below PM peak.
+    # Undefined (NaN) for no-wind runs (U=0).
+    f_pm_ratio = np.full_like(k_arr, np.nan, dtype=float)
+    if windspeed is not None and freq is not None:
+        U_pm  = windspeed.reindex(idx).to_numpy(dtype=float)
+        f_arr = freq.reindex(idx).to_numpy(dtype=float)
+        mask_pm = np.isfinite(U_pm) & (U_pm > 0) & np.isfinite(f_arr)
+        f_PM = np.full_like(k_arr, np.nan, dtype=float)
+        f_PM[mask_pm] = g / (2 * np.pi * 1.026 * U_pm[mask_pm])
+        f_pm_ratio[mask_pm] = f_arr[mask_pm] / f_PM[mask_pm]
+
+    # ── Ursell number: Ur = (2a) * λ² / d³ ──────────────────────────
+    # Low Ur (<1): linear waves valid. High Ur (>26): nonlinear / shallow effects.
+    Ursell = np.full_like(k_arr, np.nan, dtype=float)
+    if PA_aligned is not None:
+        a_arr_m = PA_aligned.to_numpy(dtype=float) * MEASUREMENT.MM_TO_M
+        mask_Ur = valid_k & np.isfinite(a_arr_m) & np.isfinite(Hm) & (Hm > 0) & np.isfinite(wavelength)
+        Ursell[mask_Ur] = (2 * a_arr_m[mask_Ur] * wavelength[mask_Ur] ** 2) / (Hm[mask_Ur] ** 3)
+
     out = pd.DataFrame(
         {"Wavelength": wavelength,
          "kL": kL,
@@ -197,6 +226,10 @@ def calculate_wavedimensions(k: pd.Series,
          "tanh(kH)": tanhkh,
          "Celerity": c,
          "Reynoldsnumber (Water)": Re,
+         "Froude": Fr,
+         "Wind/Celerity": U_c,
+         "f/f_PM": f_pm_ratio,
+         "Ursell": Ursell,
              },
             index=idx
         )

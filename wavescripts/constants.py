@@ -43,10 +43,10 @@ PHYSICS = PhysicalConstants()
 class MeasurementConstants:
     """Hardware and sampling parameters."""
     SAMPLING_RATE: float = 250.0  # Hz (samples per second)
-    STILLWATER_SAMPLES: int = 250 # Dette brukes av data_loader til å hente stilltilstand fra en no-wind-run. 
+    STILLWATER_SAMPLES: int = 250 # Dette brukes av data_loader til å hente stilltilstand fra en no-wind-run.
     NUM_PROBES: int = 4
     PROBE_NAMES: tuple = ("Probe 1", "Probe 2", "Probe 3", "Probe 4")
-    
+
     # Unit conversions
     MM_TO_M: float = 0.001
     M_TO_MM: float = 1000.0
@@ -61,17 +61,17 @@ MEASUREMENT = MeasurementConstants()
 @dataclass
 class SignalProcessingParams:
     """Parameters for smoothing, filtering, and baseline detection."""
-    
+
     # Baseline detection
     BASELINE_DURATION_SEC: float = 2.0  # seconds of data to use for baseline
     BASELINE_SIGMA_FACTOR: float = 1.0  # how many std devs above baseline = signal start
-    
+
     # Smoothing windows (samples)
     DEFAULT_SMOOTHING_WINDOW: int = 1
     SMOOTHING_FULL_WIND: int = 15
     SMOOTHING_LOW_WIND: int = 10
     SMOOTHING_NO_WIND: int = 1
-    
+
     # FFT/PSD parameters
     PSD_FREQUENCY_RESOLUTION: float = 0.125  # Hz per step in PSD
     FFT_FREQUENCY_WINDOW: float = 0.5  # Hz window around target frequency
@@ -87,17 +87,17 @@ SIGNAL = SignalProcessingParams()
 @dataclass
 class RampDetectionParams:
     """Parameters for detecting wave ramp-up phase."""
-    
+
     # Peak detection
     MIN_PEAK_DISTANCE_FACTOR: float = 0.9  # minimum distance = this * samples_per_period
     PEAK_PROMINENCE_SIGMA: float = 3.0  # peak must be this many std devs above baseline
-    
+
     # Ramp-up detection
     MIN_RAMP_PEAKS: int = 5  # minimum peaks in ramp-up
     MAX_RAMP_PEAKS: int = 15  # maximum peaks to search
     MAX_DIPS_ALLOWED: int = 2  # allow this many decreases in amplitude during ramp
     MIN_GROWTH_FACTOR: float = 1.015  # ramp end amplitude must be this * start amplitude
-    
+
     # Period trimming (for selecting stable region)
     SKIP_PERIODS_FALLBACK: int = 17  # if ramp detection fails, skip this many periods
     KEEP_PERIODS_DEFAULT: int = 5  # default number of periods to analyze
@@ -115,12 +115,12 @@ RAMP = RampDetectionParams()
 @dataclass
 class ManualDetectionPoints:
     """Manually calibrated detection points for specific test cases."""
-    
+
     # 1.3 Hz wave parameters
     FREQ_1_3_HZ_PROBE1_START: int = 4500
     FREQ_1_3_HZ_PROBE2_OFFSET: int = 100  # from probe 1
     FREQ_1_3_HZ_PROBE3_OFFSET: int = 1700  # from probe 2
-    
+
     # 0.65 Hz wave parameters
     FREQ_0_65_HZ_PROBE1_START: int = 3950
     FREQ_0_65_HZ_PROBE2_OFFSET: int = 50  # from probe 1
@@ -157,7 +157,7 @@ WIND_SPEEDS: Dict[str, float] = {
 @dataclass
 class AmplitudeParams:
     """Parameters for extracting wave amplitude from signals."""
-    
+
     # Percentile-based method
     UPPER_PERCENTILE: float = 99.5
     LOWER_PERCENTILE: float = 0.5
@@ -192,11 +192,11 @@ CLIP = ClipParams()
 @dataclass
 class WavenumberParams:
     """Parameters for solving dispersion relation via Brent's method."""
-    
+
     # Initial bracket multipliers for root finding
     DEEP_WATER_BRACKET_FACTOR: float = 0.1  # k_initial * this for lower bound
     SHALLOW_WATER_BRACKET_FACTOR: float = 10.0  # k_initial * this for upper bound
-    
+
     # Bracket expansion factors if initial bracket fails
     BRACKET_EXPAND_LOWER: float = 0.5  # divide lower bound by this
     BRACKET_EXPAND_UPPER: float = 2.0  # multiply upper bound by this
@@ -254,28 +254,33 @@ def get_panel_length(panel_condition: str) -> float:
 
 class ProbeColumns:
     """Column name templates for probe-specific data.
-    
+
     Use .format(i=probe_number) to get the actual column name.
     Example: ProbeColumns.AMPLITUDE.format(i=1) → "Probe 1 Amplitude"
     """
-    
+
     # Physical setup
     MM_FROM_PADDLE = "Probe {i} mm from paddle"
     STILLWATER = "Stillwater Probe {i}"
-    
+
     # Computed analysis ranges
     START = "Computed Probe {i} start"
     END = "Computed Probe {i} end"
-    
+
     # Basic amplitude (from percentile method)
+    # TODO - rename - give descriptive name
     AMPLITUDE = "Probe {i} Amplitude"
-    
+
     # PSD-derived metrics
     AMPLITUDE_PSD = "Probe {i} Amplitude (PSD)"
     SWELL_AMPLITUDE_PSD = "Probe {i} Swell Amplitude (PSD)"
     WIND_AMPLITUDE_PSD = "Probe {i} Wind Amplitude (PSD)"
     TOTAL_AMPLITUDE_PSD = "Probe {i} Total Amplitude (PSD)"
-    
+
+    # Signal quality metrics
+    WAVE_STABILITY = "Probe {i} wave_stability"
+    PERIOD_CV      = "Probe {i} period_amplitude_cv"
+
     # FFT-derived metrics
     AMPLITUDE_FFT = "Probe {i} Amplitude (FFT)"
     FREQUENCY_FFT = "Probe {i} Frequency (FFT)"
@@ -288,34 +293,38 @@ class ProbeColumns:
     CELERITY_FFT = "Probe {i} Celerity (FFT)"
     HS_FFT = "Probe {i} Significant Wave Height Hs (FFT)"
     HM0_FFT = "Probe {i} Significant Wave Height Hm0 (FFT)"
+    FROUDE_FFT      = "Probe {i} Froude (FFT)"
+    WIND_CELERITY_FFT = "Probe {i} Wind/Celerity (FFT)"
+    F_PM_RATIO_FFT  = "Probe {i} f/f_PM (FFT)"
+    URSELL_FFT      = "Probe {i} Ursell (FFT)"
 
 
 class GlobalColumns:
     """Non-probe-specific column names."""
-    
+
     # Identifiers
     PATH = "path"
     EXPERIMENT_FOLDER = "experiment_folder"
     FILE_DATE = "file_date"
     RUN_NUMBER = "Run number"
     PROCESSED_FOLDER = "PROCESSED_folder"
-    
+
     # Experimental conditions
     WIND_CONDITION = "WindCondition"
     TUNNEL_CONDITION = "TunnelCondition"
     PANEL_CONDITION = "PanelCondition"
     MOORING = "Mooring"
-    
+
     #Grouping conditions
     PANEL_CONDITION_GROUPED = "PanelConditionGrouped"
-    
+
     # Input parameters
     WAVE_AMPLITUDE_INPUT = "WaveAmplitudeInput [Volt]"
     WAVE_FREQUENCY_INPUT = "WaveFrequencyInput [Hz]"
     WAVE_PERIOD_INPUT = "WavePeriodInput"
     WATER_DEPTH = "WaterDepth [mm]"
     EXTRA_SECONDS = "Extra seconds"
-    
+
     # Computed global metrics — "Expected" = derived from WaveFrequencyInput (wavemaker setting),
     # not from measured FFT frequency. Use "Probe {pos} ka (FFT)" etc. for actual measured values.
     WAVENUMBER = "Expected Wavenumber"
@@ -325,6 +334,10 @@ class GlobalColumns:
     KH = "Expected kH"
     TANH_KH = "Expected tanh(kH)"
     CELERITY = "Expected Celerity"
+    FROUDE          = "Expected Froude"
+    WIND_CELERITY   = "Expected Wind/Celerity"
+    F_PM_RATIO      = "Expected f/f_PM"
+    URSELL          = "Expected Ursell"
     WINDSPEED = "Windspeed"
 
     # "Given" metrics (legacy columns - consider deprecating)
@@ -340,7 +353,7 @@ class GlobalColumns:
     CELERITY_GIVEN = "Celerity (given)"
     HS_GIVEN = "Significant Wave Height Hs (given)"
     HM0_GIVEN = "Significant Wave Height Hm0 (given)"
-    
+
     # Probe ratios (adjacent pairs — always computed)
     P2_P1_FFT = "P2/P1 (FFT)"
     P3_P2_FFT = "P3/P2 (FFT)"
@@ -351,11 +364,11 @@ class GlobalColumns:
 
 class CalculationResultColumns:
     """Column names returned by calculation functions.
-    
+
     These are the keys in DataFrames returned by functions like
     calculate_wavedimensions() and need to be mapped to metadata columns.
     """
-    
+
     # Individual column names
     WAVELENGTH = "Wavelength"
     KL = "kL"
@@ -363,19 +376,24 @@ class CalculationResultColumns:
     KH = "kH"
     TANH_KH = "tanh(kH)"
     CELERITY = "Celerity"
+    FROUDE = "Froude"
+    WIND_CELERITY = "Wind/Celerity"
+    F_PM_RATIO = "f/f_PM"
+    URSELL = "Ursell"
 
     # Pre-built column lists for bulk operations
     WAVE_DIMENSION_COLS = ["Wavelength", "kL", "ka", "tanh(kH)", "Celerity"]
     WAVE_DIMENSION_COLS_WITH_KH = ["Wavelength", "kL", "ka", "kH", "tanh(kH)", "Celerity"]
+    PHYSICS_COLS = ["Froude", "Wind/Celerity", "f/f_PM", "Ursell"]
 
 
 class ColumnGroups:
     """Pre-computed column name lists for bulk operations.
-    
+
     These are computed once at module load time for performance.
     Use these instead of calling helper functions repeatedly.
     """
-    
+
     # Position-independent columns (these don't depend on probe arrangement)
     # "Expected *" = computed from WaveFrequencyInput; per-probe "(FFT)" columns use measured frequency
     GLOBAL_WAVE_DIMENSION_COLS = ["Expected Wavelength", "Expected kL", "Expected ka", "Expected kH", "Expected tanh(kH)", "Expected Celerity"]
@@ -435,14 +453,14 @@ class ColumnGroups:
 
 def get_probe_column(probe_num: int, column_template: str) -> str:
     """Get a specific probe's column name from a template.
-    
+
     Args:
         probe_num: Probe number (1-4)
         column_template: Template string with {i} placeholder
-        
+
     Returns:
         Formatted column name
-        
+
     Example:
         >>> get_probe_column(2, ProbeColumns.AMPLITUDE_FFT)
         'Probe 2 Amplitude (FFT)'
@@ -454,12 +472,12 @@ def get_probe_column(probe_num: int, column_template: str) -> str:
 
 def validate_columns_exist(df, required_columns: list[str], context: str = "") -> None:
     """Validate that all required columns exist in a DataFrame.
-    
+
     Args:
         df: DataFrame to check
         required_columns: List of column names that must exist
         context: Description of where this check is happening (for error message)
-        
+
     Raises:
         ValueError: If any required columns are missing
     """
@@ -498,14 +516,14 @@ def validate_column_constants():
 #     signal: SignalProcessingParams
 #     ramp: RampDetectionParams
 #     amplitude: AmplitudeParams
-# 
+#
 # # Conservative profile (stricter detection)
 # CONSERVATIVE = ConfigProfile(
 #     signal=SignalProcessingParams(BASELINE_SIGMA_FACTOR=2.0),
 #     ramp=RampDetectionParams(MIN_RAMP_PEAKS=7, MIN_GROWTH_FACTOR=1.05),
 #     amplitude=AmplitudeParams(UPPER_PERCENTILE=98.0, LOWER_PERCENTILE=2.0),
 # )
-# 
+#
 # # Aggressive profile (more permissive)
 # AGGRESSIVE = ConfigProfile(
 #     signal=SignalProcessingParams(BASELINE_SIGMA_FACTOR=0.5),
@@ -532,32 +550,32 @@ if __name__ == "__main__":
     print("=== PHYSICAL CONSTANTS ===")
     print(f"Gravity: {PHYSICS.GRAVITY} m/s²")
     print(f"Surface tension: {PHYSICS.WATER_SURFACE_TENSION} N/m")
-    
+
     print("\n=== MEASUREMENT SYSTEM ===")
     print(f"Sampling rate: {MEASUREMENT.SAMPLING_RATE} Hz")
     print(f"Number of probes: {MEASUREMENT.NUM_PROBES}")
-    
+
     print("\n=== SIGNAL PROCESSING ===")
     print(f"Baseline duration: {SIGNAL.BASELINE_DURATION_SEC} sec")
     print(f"Baseline threshold: {SIGNAL.BASELINE_SIGMA_FACTOR} σ")
     print(f"PSD resolution: {SIGNAL.PSD_FREQUENCY_RESOLUTION} Hz")
-    
+
     print("\n=== RAMP DETECTION ===")
     print(f"Ramp peaks: {RAMP.MIN_RAMP_PEAKS}-{RAMP.MAX_RAMP_PEAKS}")
     print(f"Min growth factor: {RAMP.MIN_GROWTH_FACTOR}")
-    
+
     print("\n=== WIND SPEEDS ===")
     for condition, speed in WIND_SPEEDS.items():
         print(f"{condition:10s}: {speed} m/s")
-    
+
     print("\n=== PANEL LENGTHS ===")
     for condition, length in PANEL_LENGTHS.items():
         print(f"{condition:10s}: {length} m")
-    
+
     print("\n=== COLUMN NAMES ===")
     print(f"Number of probes: {len(ColumnGroups.BASIC_AMPLITUDE_COLS)}")
     print(f"Sample amplitude column: {ProbeColumns.AMPLITUDE.format(i=1)}")
     print(f"FFT amplitude columns: {ColumnGroups.FFT_AMPLITUDE_COLS}")
     print(f"Global columns sample: {GlobalColumns.PATH}, {GlobalColumns.WATER_DEPTH}")
-    
+
     validate_constants()

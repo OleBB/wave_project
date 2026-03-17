@@ -60,10 +60,22 @@ os.chdir(file_dir)
 
 # ── Dataset(s) ────────────────────────────────────────────────────────────────
 PROCESSED_DIRS = [
+    # Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"), # mange kjøringer med -per15
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"), # noen kjøringer med  -per30-
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"), #et par kjøringer med -per15-
+    # Path("waveprocessed/PROCESSED-20251112-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20251113-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
+    # Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
+    # Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
     Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20251112-tett6roof"),
-    Path("waveprocessed/PROCESSED-20251113-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
 ]
 
 # ── Load from cache ───────────────────────────────────────────────────────────

@@ -499,8 +499,8 @@ def run_find_wave_ranges(
                 else:
                     period_cv = np.nan
 
-                meta_sel.loc[idx, f"wave_stability {pos}"] = wave_stability
-                meta_sel.loc[idx, f"period_cv {pos}"]      = period_cv
+                meta_sel.loc[idx, f"Probe {pos} wave_stability"] = wave_stability
+                meta_sel.loc[idx, f"Probe {pos} period_amplitude_cv"] = period_cv
 
         if debug and start:
             print(f'start: {start}, end: {end}, debug: {debug_info}')
@@ -542,6 +542,9 @@ def _update_all_metrics(
     # SECTION 2: DERIVED CALCULATIONS using the assigned values
     # ============================================================================
 
+    # Windspeed needed by calculate_wavedimensions (Wind/Celerity, f/f_PM)
+    meta_indexed[GC.WINDSPEED] = calculate_windspeed(meta_indexed[GC.WIND_CONDITION])
+
     for i, pos in col_names.items():
         freq_col = f"Probe {pos} Frequency (FFT)"
         k_col    = f"Probe {pos} Wavenumber (FFT)"
@@ -556,7 +559,9 @@ def _update_all_metrics(
             k=meta_indexed[k_col],
             H=meta_indexed[GC.WATER_DEPTH],
             PC=meta_indexed[GC.PANEL_CONDITION],
-            amp=meta_indexed[amp_col]
+            amp=meta_indexed[amp_col],
+            windspeed=meta_indexed[GC.WINDSPEED],
+            freq=meta_indexed[freq_col],
         )
 
         wave_dim_cols = [
@@ -567,6 +572,14 @@ def _update_all_metrics(
             f"Probe {pos} Celerity (FFT)",
         ]
         meta_indexed[wave_dim_cols] = res[RC.WAVE_DIMENSION_COLS]
+
+        physics_cols = [
+            f"Probe {pos} Froude (FFT)",
+            f"Probe {pos} Wind/Celerity (FFT)",
+            f"Probe {pos} f/f_PM (FFT)",
+            f"Probe {pos} Ursell (FFT)",
+        ]
+        meta_indexed[physics_cols] = res[RC.PHYSICS_COLS]
 
     # Global wave dimensions — "input-based ka"
     # k is solved from WaveFrequencyInput [Hz] (wavemaker setting, not measured).
@@ -583,12 +596,12 @@ def _update_all_metrics(
         k=meta_indexed[GC.WAVENUMBER],
         H=meta_indexed[GC.WATER_DEPTH],
         PC=meta_indexed[GC.PANEL_CONDITION],
-        amp=meta_indexed[f"Probe {in_pos} Amplitude"]
+        amp=meta_indexed[f"Probe {in_pos} Amplitude"],
+        windspeed=meta_indexed[GC.WINDSPEED],
+        freq=meta_indexed[GC.WAVE_FREQUENCY_INPUT],
     )
     meta_indexed[CG.GLOBAL_WAVE_DIMENSION_COLS] = global_res[RC.WAVE_DIMENSION_COLS_WITH_KH]
-
-    # Windspeed
-    meta_indexed[GC.WINDSPEED] = calculate_windspeed(meta_indexed[GC.WIND_CONDITION])
+    meta_indexed[[GC.FROUDE, GC.WIND_CELERITY, GC.F_PM_RATIO, GC.URSELL]] = global_res[RC.PHYSICS_COLS]
 
     # Stillwater columns are already per-row values set by ensure_stillwater_columns
 

@@ -16,6 +16,7 @@ After processing, use:
 """
 
 # %%
+import argparse
 import gc
 import os
 import sys
@@ -61,6 +62,13 @@ dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
 ]
 
+# ── CLI overrides ─────────────────────────────────────────────────────────────
+_cli = argparse.ArgumentParser(add_help=False)
+_cli.add_argument("--total-reset",     action="store_true")
+_cli.add_argument("--force-recompute", action="store_true")
+_cli.add_argument("--debug",           action="store_true")
+_args, _ = _cli.parse_known_args()
+
 # ── Processing options ────────────────────────────────────────────────────────
 processvariables = {
     "overordnet": {
@@ -73,13 +81,13 @@ processvariables = {
         "WavePeriodInput": None,
         "WindCondition": None,
         "TunnelCondition": None,
-        "Mooring": "low",
+        "Mooring": None,  # was "low" — now "above_50" / "above_200" / "below_90"
         "PanelCondition": None,
     },
     "prosessering": {
-        "total_reset": False,  # True → wipe CSV cache and reload everything
-        "force_recompute": False,  # True → ignore cached meta.json, recompute all
-        "debug": False,
+        "total_reset":     _args.total_reset     or False,
+        "force_recompute": _args.force_recompute or False,
+        "debug":           _args.debug           or False,
         "smoothing_window": 10,
         "find_range": True,
         "range_plot": False,

@@ -13,8 +13,8 @@ from wavescripts.improved_data_loader import update_processed_metadata, get_conf
 from typing import Mapping, Any, Optional, Sequence, Dict, Tuple, Iterable
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
-    ProbeColumns as PC, 
-    GlobalColumns as GC, 
+    ProbeColumns as PC,
+    GlobalColumns as GC,
     ColumnGroups as CG,
     CalculationResultColumns as RC
 )
@@ -263,8 +263,41 @@ def _update_more_metrics(
                 )
         out_in = out_in.replace([np.inf, -np.inf], np.nan)
         meta_indexed[GC.OUT_IN_FFT]   = out_in
-        meta_indexed["in_position"]   = in_pos_ser   # physical position string, e.g. "9373/170"
-        meta_indexed["out_position"]  = out_pos_ser  # physical position string, e.g. "12545"
+        meta_indexed["in_position"]   = in_pos_ser
+        meta_indexed["out_position"]  = out_pos_ser
+
+        # ── Generic IN / OUT columns ─────────────────────────────────
+        # Copy position-specific columns into probe-agnostic names so
+        # downstream code doesn't need to know which probe was IN/OUT.
+        _GENERIC_SUFFIXES = [
+            "Amplitude (FFT)",
+            "WavePeriod (FFT)",
+            "Wavenumber (FFT)",
+            "Wavelength (FFT)",
+            "ka (FFT)",
+            "Celerity (FFT)",
+            "Significant Wave Height Hm0 (FFT)",
+            "Froude (FFT)",
+            "Wind/Celerity (FFT)",
+            "f/f_PM (FFT)",
+            "Ursell (FFT)",
+            "wave_stability",
+            "period_amplitude_cv",
+        ]
+        for suffix in _GENERIC_SUFFIXES:
+            in_vals  = pd.Series(index=meta_indexed.index, dtype=float)
+            out_vals = pd.Series(index=meta_indexed.index, dtype=float)
+            for (in_p, out_p), idx in meta_indexed.groupby(["in_probe", "out_probe"]).groups.items():
+                in_pos  = col_names[int(in_p)]
+                out_pos = col_names[int(out_p)]
+                src_in  = f"Probe {in_pos} {suffix}"
+                src_out = f"Probe {out_pos} {suffix}"
+                if src_in in meta_indexed.columns:
+                    in_vals.loc[idx]  = meta_indexed.loc[idx, src_in]
+                if src_out in meta_indexed.columns:
+                    out_vals.loc[idx] = meta_indexed.loc[idx, src_out]
+            meta_indexed[f"IN {suffix}"]  = in_vals
+            meta_indexed[f"OUT {suffix}"] = out_vals
 
     # ── Parallel probe ratio ─────────────────────────────────────────
     # parallel_ratio = wall-side amplitude / far-side amplitude
@@ -303,9 +336,9 @@ def _update_more_metrics(
 #         meta_sel: pd.DataFrame
 #         ) -> pd.DataFrame():
 #     meta_indexed = meta_sel.set_index("path")
-    
+
 #     meta_indexed = meta_sel.set_index("path").copy()
-    
+
 #     # ==========================================================
 #     #  plz help below
 #     # ==========================================================
@@ -318,15 +351,15 @@ def _update_more_metrics(
 #     mdf_indexed = mdf.set_index("path") # set index to join back on "path"
 #     ratios_by_path = sub_df.set_index("path")[["P2/P1", "P3/P2", "P4/P3"]]
 #     mdf_indexed[["P2/P1", "P3/P2", "P4/P3"]] = ratios_by_path
-#     mdf = mdf_indexed.reset_index() #reset index 
-        
+#     mdf = mdf_indexed.reset_index() #reset index
+
 #     band_amplitudes = compute_amplitude_by_band(psd_dict)
-    
-    
-    
-    
+
+
+
+
 #     return meta_indexed.reset_index
-    
+
 
 # %% kjøres
 from wavescripts.processor import _set_output_folder
@@ -335,9 +368,9 @@ def process_processed_data(
         fft_dict: dict,
         meta_sel: pd.DataFrame,
         meta_full: pd.DataFrame, #trenger kanskje ikke denne, men _set_output_folder vil ha den.
-        processvariables: dict 
+        processvariables: dict
 ) -> pd.DataFrame:
-    """ 
+    """
     Forklaring:
         nu kjører vi funksjoner som krever en df som allerede har verdier for
         alle probene
@@ -351,11 +384,11 @@ def process_processed_data(
     force_recompute =prosessering.get("force_recompute", False)
     if debug:
         print("kjører process_processed_data fra processsor2nd.py")
-    
+
     meta_sel = _update_more_metrics(psd_dict, fft_dict, meta_sel)
 
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)
     """VIKTIG - denne oppdaterer .JSON-filen"""
     update_processed_metadata(meta_sel, force_recompute=force_recompute)
-    
+
     return meta_sel
