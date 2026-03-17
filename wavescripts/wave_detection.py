@@ -141,16 +141,17 @@ def find_wave_range(
     }
 
     def _snarvei_start(freq: float, calib: list[tuple[float, int]]) -> int:
-        """Linear interp/extrap of start sample from calibration points."""
-        fs = [p[0] for p in calib]
-        ss = [p[1] for p in calib]
+        """Polynomial interp (deg 2) of start sample; linear extrap beyond calibrated range."""
+        fs = np.array([p[0] for p in calib])
+        ss = np.array([p[1] for p in calib], dtype=float)
+        deg = min(2, len(calib) - 1)
+        poly  = np.poly1d(np.polyfit(fs, ss, deg))
+        dpoly = poly.deriv()
         if freq <= fs[0]:
-            slope = (ss[1] - ss[0]) / (fs[1] - fs[0])
-            return int(round(ss[0] + slope * (freq - fs[0])))
+            return int(round(float(poly(fs[0])) + float(dpoly(fs[0])) * (freq - fs[0])))
         if freq >= fs[-1]:
-            slope = (ss[-1] - ss[-2]) / (fs[-1] - fs[-2])
-            return int(round(ss[-1] + slope * (freq - fs[-1])))
-        return int(round(float(np.interp(freq, fs, ss))))
+            return int(round(float(poly(fs[-1])) + float(dpoly(fs[-1])) * (freq - fs[-1])))
+        return int(round(float(poly(freq))))
 
     good_start_idx   = None
     good_end_idx     = None
@@ -158,11 +159,12 @@ def find_wave_range(
 
     _group = _PROBE_GROUP.get(data_col)
     if _group is not None and _group in _SNARVEI_CALIB:
-        good_start_idx = _snarvei_start(importertfrekvens, _SNARVEI_CALIB[_group])
-        good_end_idx   = good_start_idx + int(keep_idx)
+        good_start_idx  = _snarvei_start(importertfrekvens, _SNARVEI_CALIB[_group])
+        good_start_idx += samples_per_period   # skip first period (still in ramp transition)
+        good_end_idx    = good_start_idx + int(keep_idx)
         if debug:
             print(f"[snarvei] {data_col} (group={_group}): f={importertfrekvens:.3f} Hz → "
-                  f"good_start={good_start_idx}")
+                  f"good_start={good_start_idx} (+1 period={samples_per_period})")
 
     """
     # PHYSICS-BASED SNARVEI (too early in practice – kept for reference / future use)

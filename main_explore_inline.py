@@ -80,6 +80,9 @@ PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
 ]
 
 combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(

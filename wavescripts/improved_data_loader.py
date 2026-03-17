@@ -332,7 +332,7 @@ class MooringConfiguration:
     name: str
     valid_from: datetime
     valid_until: Optional[datetime]
-    mooring_type: str  # "high" or "low"
+    mooring_type: str  # e.g. "above_50", "below_90"
     notes: str = ""
 
 
@@ -341,15 +341,22 @@ MOORING_CONFIGS = [
         name="initial_high_mooring",
         valid_from=datetime(2025, 1, 1),
         valid_until=datetime(2025, 11, 6),
-        mooring_type="high",
-        notes="tidlig forsøk high mooring setup",
+        mooring_type="above_200",
+        notes="tidlig forsøk high mooring setup — høyde omtrent = 200 millimeter over vannet (mmov)",
     ),
     MooringConfiguration(
         name="low_mooring",
         valid_from=datetime(2025, 11, 6),
         valid_until=None,
-        mooring_type="low",
-        notes="Switched to low mooring on Nov 6 - høyde omtrent = x millimeter over vannet mmov ",
+        mooring_type="above_50",
+        notes="Switched to low mooring on Nov 6 - høyde omtrent = 50 millimeter over vannet (mmov) ",
+    ),
+    MooringConfiguration(
+        name="below_9_mooring",
+        valid_from=datetime(2026, 3, 17),   # folder keyword "under9Mooring" is primary signal;
+        valid_until=None,                    # this date-based entry is fallback for future runs
+        mooring_type="below_90",
+        notes="Flytta mooring under vann 16 mars ~13:00 — høyde omtrent = 90 millimeter under vannet (mmuv)",
     ),
 ]
 
@@ -410,13 +417,16 @@ def extract_metadata_from_filename(
             for probe_num in range(1, 5):
                 metadata[f"Probe {probe_num} mm from paddle"] = None
 
-        # Mooring type (uses configuration system)
-        metadata["Mooring"] = get_mooring_type(file_date)
+        # Mooring type: folder keyword takes priority (handles same-day changes);
+        # fall back to date-based config when no keyword is present.
+        if not _extract_mooring_condition(metadata, filename):
+            metadata["Mooring"] = get_mooring_type(file_date)
     else:
         # No date available - set to None
         for probe_num in range(1, 5):
             metadata[f"Probe {probe_num} mm from paddle"] = None
-        metadata["Mooring"] = "unknown"
+        if not _extract_mooring_condition(metadata, filename):
+            metadata["Mooring"] = "unknown"
 
     return metadata
 
@@ -527,6 +537,24 @@ def _extract_panel_condition(metadata: dict, filename: str):
     panel_match = re.search(r"([A-Za-z]+)panel", filename)
     if panel_match:
         metadata["PanelCondition"] = panel_match.group(1)
+
+
+def _extract_mooring_condition(metadata: dict, filename: str) -> bool:
+    """Extract mooring type from folder/filename keyword. Returns True if found.
+
+    Takes priority over date-based config — handles same-day changes (e.g. 13:00
+    switch on 2026-03-16) where the folder name is the only reliable signal.
+    """
+    if re.search(r"[Uu]nder\d+[Mm]ooring", filename):
+        metadata["Mooring"] = "below_90"
+        return True
+    if re.search(r"[Ll]ow[Mm]ooring", filename):
+        metadata["Mooring"] = "above_50"
+        return True
+    if re.search(r"[Hh]igh[Mm]ooring", filename):
+        metadata["Mooring"] = "above_200"
+        return True
+    return False
 
 
 def _extract_wave_parameters(metadata: dict, filename: str):

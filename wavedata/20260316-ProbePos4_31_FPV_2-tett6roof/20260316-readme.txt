@@ -1,0 +1,13 @@
+
+
+probe 1 står jo veldig skeivt... i to retninger. Kanskje derfor den ikke leser så bra på amp0200-freq1600..
+
+kjørte amp0100-freq1600 først, og det er jo veldig stille med en gang etterpå.
+
+aha.. mooringen min treffer vannet og sender sidelengs bølge rett mot proben.
+
+mooring length til nå har vært 20 cm. 
+
+i dag, 1245 justerer jeg den. 
+
+målte probene, de er jo på 17 og 34! perfekt. trodde de var litt feilplassert pga takplatens slisse er for alu-stanga. 
