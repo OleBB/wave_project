@@ -26,18 +26,25 @@
 
 ## 0. Current investigation (pick up here next session)
 
-### Next session — start here (2026-03-17)
+### Next session — start here (2026-03-17, end of session)
 
-**Run `python main.py --force-recompute`** to regenerate all cache with:
-- New mooring values (`above_200` / `above_50` / `below_90`)
-- New physics columns (`Froude`, `Wind/Celerity`, `f/f_PM`, `Ursell`)
-- Renamed columns (`period_amplitude_cv`, `Probe {pos} wave_stability`)
-- Generic `IN`/`OUT` columns from `processor2nd.py`
+**Run `python main.py --force-recompute`** to regenerate all cache with all changes from this session:
+- New `Probe {pos} Significant Wave Height Hs` and `Hm0` columns
+- Improved stillwater fit (weighted linear regression over all no-wind runs)
+- `IN/OUT Significant Wave Height Hm0/Hs` generic columns
 
 After reprocessing, verify in `wavetable-clean`:
-- No `Probe 1/2/3/4 *` columns remain (stale cache from old pipeline)
-- `IN Amplitude (FFT)`, `IN ka (FFT)`, `IN Froude (FFT)` etc. are populated
-- `Mooring` column shows `above_50` / `above_200` / `below_90`
+- `Probe 9373/170 Significant Wave Height Hs` and `Hm0` are non-NaN for wave runs
+- Hm0 ≈ 2.83 × `Probe {pos} Amplitude` for clean no-wind sine runs (Hm0 = 4×std = 2√2×A for pure sine)
+- Stillwater fit diagnostics print per-probe: `start X.XXX mm, end X.XXX mm (drift ±X.XXX mm)`
+- No `Probe 1/2/3/4 *` columns remain
+
+**Useful diagnostic:** `plot_stillwater_fit` in `plot_quicklook.py` — call from REPL:
+```python
+from wavescripts.plot_quicklook import plot_stillwater_fit
+plot_stillwater_fit(processed_dfs, combined_meta, cfg, date="2026-03-07")
+```
+Requires `processed_dfs` loaded with `load_processed=True`. X-axis = file modification time (real clock time). Pass `date="YYYY-MM-DD"` to restrict to one folder-day.
 
 **⚠ TODO — short vs long run comparison**
 Some runs are ~40 periods, others ~240 periods. Need to check whether run length affects:
@@ -45,6 +52,75 @@ Some runs are ~40 periods, others ~240 periods. Need to check whether run length
 - FFT amplitude (more periods → narrower FFT bin → less spectral leakage)
 - OUT/IN ratio stability (does it converge with more periods?)
 Approach: plot `wave_stability` and `OUT/IN (FFT)` vs `WavePeriodInput` for same frequency/wind/panel conditions.
+
+---
+
+### Session summary (2026-03-17, continued) — Hs/Hm0, stillwater fit, load_spectra flag
+
+#### `load_spectra=False` flag (`wavescripts/improved_data_loader.py`)
+
+`load_analysis_data` now accepts `load_spectra=False` to skip all FFT/PSD parquet reads. Saves ~10 s for tools that only need `combined_meta`. Both `wavetables/dtale_meta.py` and `wavetables/dtale_clean.py` pass this flag — `wavetable` now loads in ~1–2 s instead of ~12 s.
+
+#### Significant wave heights Hs and Hm0 (`processor.py`, `processor2nd.py`, `constants.py`)
+
+Two new per-probe columns computed in `run_find_wave_ranges` (alongside `wave_stability`):
+
+| Column | Formula | Notes |
+|--------|---------|-------|
+| `Probe {pos} Significant Wave Height Hm0` | `4 × std(sig)` in stable window | DC-invariant; includes wind-wave energy under fullwind |
+| `Probe {pos} Significant Wave Height Hs` | mean of top-1/3 peak-to-trough wave heights (zero-crossing) | Uses existing `wave_upcrossings`; also wind-inclusive |
+
+Both use the raw `Probe {pos}` signal (unzeroed) — this is correct:
+- `std` is DC-invariant (zeroing has no effect on Hm0)
+- `np.ptp` per cycle is DC-invariant (zeroing has no effect on Hs)
+- Zeroing would add stillwater calibration error for zero physical benefit
+
+**Why not FFT-isolated?** Both metrics are time-domain total-field quantities, consistently wind-inclusive. FFT amplitude at paddle frequency already covers the "paddle-wave only" case. These are complementary, not redundant.
+
+For pure sine: Hm0 ≈ 2.83 × amplitude, Hs ≈ 2 × amplitude (= peak-to-trough = 2A).
+
+- `constants.py`: `HS_FFT`/`HM0_FFT` renamed to `HS`/`HM0` (dropped stale `(FFT)` suffix)
+- `processor2nd.py` `_GENERIC_SUFFIXES`: replaced `"Significant Wave Height Hm0 (FFT)"` with `"Significant Wave Height Hm0"` and `"Significant Wave Height Hs"` → creates `IN/OUT Significant Wave Height Hm0/Hs` columns
+
+#### Stillwater fit overhaul (`processor.py` — `ensure_stillwater_columns`)
+
+**Before:** two-point linear interpolation between first and last no-wind/no-wave run only. Intermediate runs used only as "control check" — no effect on output.
+
+**After:** weighted linear regression over ALL no-wind runs in the folder:
+- No-wind + no-wave runs → full-run median, weight = 5 (high confidence)
+- No-wind + wave runs → first 2 s median (pre-wave window), weight = 1
+- `np.polyfit(..., w=weights, deg=1)` — one fit per probe
+- Two-pass outlier rejection: residual > `_OUTLIER_MM = 1.0 mm` → print warning, drop point, refit
+- Prints per-run residuals and session drift (`start X.XXX → end X.XXX mm, drift ±X mm`)
+
+**Physical motivation:** water level drifts slowly across a session (evaporation, wind setup). Using only two endpoints is fragile if either is noisy. Linear regression over many points is robust. Stokes wave setup biases the mean of the wave signal upward — the stillwater calibration from dedicated no-wave runs is more physically correct than using the wave signal's own mean as the zero-crossing reference.
+
+**`ensure_stillwater_columns` defensive guards added:**
+- Raises immediately if `dfs` is empty (clear message to reload with `load_processed=True`)
+- Filters `meta` to cfg date range at the top — safe to call with `combined_meta` (all dates); only rows matching the cfg's `valid_from`/`valid_until` are used. This is a pipeline guard too, not just REPL convenience.
+
+#### `plot_stillwater_fit` (`wavescripts/plot_quicklook.py`)
+
+Standalone diagnostic plot — **not in `processor.py`** (processor has no plot code). Lives in `plot_quicklook.py` alongside other exploratory functions.
+
+- One subplot per probe; blue circles = nowave full-run medians, orange triangles = pre-wave snippets, black line = polyfit recomputed from the visible scatter points
+- X-axis = **file modification time** (`os.path.getmtime`) — actual clock time of day, not `file_date` which is day-precision only
+- `date="YYYY-MM-DD"` parameter filters to a single folder-day (required when passing `combined_meta` to avoid mixing multiple datasets)
+- Requires `processed_dfs` loaded (`load_processed=True`) for scatter points
+- **Wind color bands** (`axvspan`): red = full wind, orange = lowest wind — shaded across the spans between consecutive runs where wind was on. Immediately shows how much of the day had wind running.
+- **Polyfit extends across full x-axis** (including wind spans): fit line covers `[min(all mtimes), max(all mtimes)]`, not just the range of the scatter points — prevents the line appearing as a short stub in the middle of the plot
+- **`STILLWATER_EXCLUDE`** tuple in `constants.py`: filenames listed here are plotted as red ✕ but excluded from the fit. Currently empty `()`. Use for genuine DC-bias faults only, not sloshing runs.
+
+**Decision: "nestenstille" NOT in `STILLWATER_EXCLUDE`** — the median of a sloshing signal correctly tracks the mid-level (= true water surface DC level). Sloshing amplitude is irrelevant for DC estimation. The run is valid for the stillwater fit.
+
+#### `STILLWATER` constants (`constants.py`)
+
+New `StillwaterParams` dataclass alongside `CLIP`:
+```python
+STILLWATER.PRE_WAVE_S  = 1.0   # pre-wave window for wave runs [s]
+STILLWATER.OUTLIER_MM  = 1.0   # outlier rejection threshold [mm]
+```
+Weights (5:1 nowave:wave) are implementation details, kept local in `processor.py`.
 
 ---
 

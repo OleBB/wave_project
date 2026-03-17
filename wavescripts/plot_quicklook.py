@@ -204,6 +204,155 @@ def plot_all_markers() -> None:
     plt.show()
 
 
+def plot_stillwater_fit(dfs: dict, meta: "pd.DataFrame", cfg,
+                        date: str | None = None) -> None:
+    """Diagnostic plot of the stillwater drift fit for one folder / cfg.
+
+    X-axis is run index (sequential order) because file_date has day precision
+    only — no time-of-day is stored in metadata.
+
+    Parameters
+    ----------
+    dfs   : processed_dfs dict (must be loaded with load_processed=True)
+    meta  : combined_meta or single-folder meta
+    cfg   : ProbeConfiguration for the date of interest
+    date  : optional "YYYY-MM-DD" string to restrict to a single day,
+            e.g. date="2026-03-07". Without this, all days in cfg range
+            are shown together.
+
+    Shows per-probe subplots with:
+      - Blue circles    : no-wave runs (full-run median, high weight)
+      - Orange triangles: wave runs (first PRE_WAVE_S seconds, low weight)
+      - Black line      : fitted drift (Stillwater Probe {pos} from meta)
+    """
+    import os
+    import matplotlib.dates as mdates
+    from datetime import datetime as _dt
+    from pathlib import Path as _Path
+    from wavescripts.constants import MEASUREMENT, STILLWATER, STILLWATER_EXCLUDE, GlobalColumns as _GC
+
+    _PRE_WAVE_N = int(STILLWATER.PRE_WAVE_S * MEASUREMENT.SAMPLING_RATE)
+
+    # Restrict to cfg date range
+    meta_t = pd.to_datetime(meta["file_date"])
+    in_range = meta_t >= pd.Timestamp(cfg.valid_from)
+    if cfg.valid_until is not None:
+        in_range &= meta_t < pd.Timestamp(cfg.valid_until)
+    # Optionally narrow to a single day
+    if date is not None:
+        in_range &= meta_t.dt.strftime("%Y-%m-%d") == date
+    meta = meta[in_range].copy().reset_index(drop=True)
+    if meta.empty:
+        print(f"No rows match cfg '{cfg.name}'" + (f" date={date}" if date else "") + ".")
+        return
+
+    wind_str = meta[_GC.WIND_CONDITION].astype(str).str.strip().str.lower()
+    nowind   = wind_str.isin(["no", "", "nan", "none"])
+    nowave   = meta[_GC.WAVE_FREQUENCY_INPUT].isna() | meta["path"].astype(str).str.lower().str.contains("nowave")
+
+    nowind_rows = meta[nowind].assign(
+        _is_nowave=nowave.reindex(meta[nowind].index).fillna(False),
+        _mtime=meta[nowind]["path"].apply(
+            lambda p: _dt.fromtimestamp(os.path.getmtime(p)) if os.path.exists(p) else None
+        ),
+    ).reset_index(drop=True)
+
+    col_names = cfg.probe_col_names()
+    n = len(col_names)
+    fig, axes = plt.subplots(1, n, figsize=(4 * n, 3.5), sharey=False)
+    if n == 1:
+        axes = [axes]
+
+    folder_name = _Path(meta["path"].iloc[0]).parent.name
+    title = f"Stillwater drift — {folder_name}" + (f"  [{date}]" if date else "")
+
+    # Build wind timeline: sort all runs by mtime, shade spans where wind != "no"
+    all_mtimes = meta["path"].apply(
+        lambda p: _dt.fromtimestamp(os.path.getmtime(p)) if os.path.exists(p) else None
+    )
+    wind_timeline = pd.DataFrame({
+        "mtime": all_mtimes,
+        "wind":  meta[_GC.WIND_CONDITION].astype(str).str.strip().str.lower(),
+    }).dropna(subset=["mtime"]).sort_values("mtime").reset_index(drop=True)
+    # Append a sentinel row so the last span has an end
+    if not wind_timeline.empty:
+        sentinel = wind_timeline.iloc[[-1]].copy()
+        sentinel["mtime"] = wind_timeline["mtime"].iloc[-1] + pd.Timedelta(minutes=5)
+        wind_timeline = pd.concat([wind_timeline, sentinel], ignore_index=True)
+
+    _wind_colors = {"full": ("#d62728", 0.15), "lowest": ("#ff7f0e", 0.12)}
+
+    for ax, (i, pos) in zip(axes, col_names.items()):
+        probe_col = f"Probe {pos}"
+
+        # Wind bands — shade spans between consecutive runs where wind != "no"
+        for j in range(len(wind_timeline) - 1):
+            wc = wind_timeline.loc[j, "wind"]
+            if wc in _wind_colors:
+                color, alpha = _wind_colors[wc]
+                ax.axvspan(wind_timeline.loc[j, "mtime"],
+                           wind_timeline.loc[j + 1, "mtime"],
+                           color=color, alpha=alpha, linewidth=0,
+                           label=f"wind: {wc}")
+
+        # Collect data points for scatter AND for recomputing the poly fit
+        pts_x, pts_v, pts_w = [], [], []
+
+        for _, row in nowind_rows.iterrows():
+            df_run = dfs.get(row["path"])
+            if df_run is None or probe_col not in df_run.columns:
+                continue
+            n_samp = None if row["_is_nowave"] else _PRE_WAVE_N
+            src = df_run[probe_col].iloc[:n_samp] if n_samp else df_run[probe_col]
+            v = float(pd.to_numeric(src, errors="coerce").dropna().median())
+            x = row["_mtime"]
+            if x is None:
+                continue
+            fname = _Path(row["path"]).name
+            excluded = any(kw in fname for kw in STILLWATER_EXCLUDE)
+            if excluded:
+                ax.plot(x, v, "x", color="red", ms=8, mew=2, zorder=4,
+                        label="excluded")
+            elif row["_is_nowave"]:
+                ax.plot(x, v, "o", color="steelblue", ms=7, zorder=3,
+                        label="nowave (full run)")
+                pts_x.append(x.timestamp()); pts_v.append(v); pts_w.append(5)
+            else:
+                ax.plot(x, v, "^", color="darkorange", ms=6, zorder=3,
+                        label=f"wave (pre-{STILLWATER.PRE_WAVE_S:.0f}s)")
+                pts_x.append(x.timestamp()); pts_v.append(v); pts_w.append(1)
+
+        # Smooth poly fit curve through the non-excluded data points
+        if len(pts_x) >= 2:
+            ts = np.array(pts_x)
+            t0 = ts[0]
+            coeffs = np.polyfit(ts - t0, pts_v, deg=1, w=np.array(pts_w, dtype=float))
+            # Extend curve across the full axis range (wind bands may push x beyond data pts)
+            all_ts = [t.timestamp() for t in wind_timeline["mtime"] if t is not None]
+            t_lo = min(all_ts + list(ts))
+            t_hi = max(all_ts + list(ts))
+            t_smooth = np.linspace(t_lo, t_hi, 200)
+            v_smooth = np.polyval(coeffs, t_smooth - t0)
+            ax.plot([_dt.fromtimestamp(t) for t in t_smooth], v_smooth,
+                    "-", color="black", lw=1.5, zorder=2, label="poly fit")
+
+        ax.set_title(pos, fontsize=9)
+        ax.set_xlabel("time of day")
+        ax.set_ylabel("level [mm]")
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+        ax.tick_params(axis="x", labelrotation=30)
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    seen = {}
+    for h, l in zip(handles, labels):
+        seen.setdefault(l, h)
+    axes[0].legend(seen.values(), seen.keys(), fontsize=7)
+
+    fig.suptitle(title, fontsize=10)
+    fig.tight_layout()
+    plt.show()
+
+
 def plot_rgb() -> None:
     """Visual comparison of wind condition colour palettes."""
     palettes = {

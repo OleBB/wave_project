@@ -186,6 +186,33 @@ CLIP = ClipParams()
 
 
 # =============================================================================
+# STILLWATER LEVEL FITTING
+# =============================================================================
+
+@dataclass(frozen=True)
+class StillwaterParams:
+    """Tuning parameters for the weighted linear stillwater drift fit.
+
+    The fit uses all no-wind runs in a folder to estimate how the still-water
+    level changes over a session (evaporation, wind setup).
+    """
+    PRE_WAVE_S:  float = 1.0   # seconds of pre-wave signal used from wave runs [s]
+    OUTLIER_MM:  float = 1.0   # residual threshold for outlier rejection [mm]
+
+STILLWATER = StillwaterParams()
+
+# Filenames containing any of these substrings are excluded from the stillwater
+# drift fit — the file is kept on disk for reference but not used as a calibration
+# point.  Add entries here rather than deleting files.
+#
+# NOTE: sloshing runs (e.g. "nestenstille") are NOT excluded — the median of a
+# sloshing signal is the mid-level, which is the true water surface regardless
+# of oscillation amplitude.  Only exclude runs with a genuine DC bias (e.g.
+# probe out of water, equipment fault).
+STILLWATER_EXCLUDE: tuple[str, ...] = ()
+
+
+# =============================================================================
 # WAVENUMBER CALCULATION (DISPERSION RELATION)
 # =============================================================================
 

@@ -298,7 +298,40 @@ fig, axes = plot_reconstructed(
 # surface response. Compare wind conditions against stillwater baseline (no wind).
 # ==========================================================================================================================
 """
-# %% ── wind-only — filter runs ────────────────────────────────────────────────
+# %%  see the stillwater leve.
+
+import importlib
+import wavescripts.plot_quicklook as pql
+importlib.reload(pql)
+from wavescripts.plot_quicklook import plot_stillwater_fit
+plot_stillwater_fit(processed_dfs, combined_meta, cfg)
+from wavescripts.improved_data_loader import load_processed_dfs
+from pathlib import Path
+PROCESSED_DIRS = sorted(Path("waveprocessed").glob("PROCESSED-*"))
+processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+
+
+
+
+
+
+# %%
+import importlib
+import wavescripts.constants as _c
+importlib.reload(_c)
+import wavescripts.plot_quicklook as pql
+importlib.reload(pql)
+from wavescripts.plot_quicklook import plot_stillwater_fit
+plot_stillwater_fit(processed_dfs, combined_meta, cfg, date="2026-03-07")
+
+
+
+
+
+
+
+# %%
+#%% ── wind-only — filter runs ────────────────────────────────────────────────
 from pathlib import Path as _Path
 import matplotlib.pyplot as plt
 from scipy.signal import welch as _welch

@@ -18,10 +18,10 @@ from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_f
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
 from scipy.interpolate import PchipInterpolator
-from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, get_smoothing_window
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, STILLWATER, STILLWATER_EXCLUDE, get_smoothing_window
 from wavescripts.constants import (
-    ProbeColumns as PC, 
-    GlobalColumns as GC, 
+    ProbeColumns as PC,
+    GlobalColumns as GC,
     ColumnGroups as CG,
     CalculationResultColumns as RC
 )
@@ -78,13 +78,25 @@ def ensure_stillwater_columns(
 
     Safe to call multiple times — skips if per-row values already exist.
     """
-    _PRE_WAVE_S  = 2.0   # seconds of pre-wave signal to use from wave runs
-    _PRE_WAVE_N  = int(_PRE_WAVE_S * MEASUREMENT.SAMPLING_RATE)
-    _W_NOWAVE    = 5     # weight for full no-wave runs
-    _W_WAVE      = 1     # weight for 2-s pre-wave snippets
-    _OUTLIER_MM  = 1.0   # residual threshold for outlier rejection [mm]
+    _PRE_WAVE_N  = int(STILLWATER.PRE_WAVE_S * MEASUREMENT.SAMPLING_RATE)
+    _W_NOWAVE    = 5     # weight for full no-wave runs (relative; ratio matters, not absolute value)
+    _W_WAVE      = 1     # weight for pre-wave snippets
 
-    meta = meta.copy()  # defragment before any column additions
+    if not dfs:
+        raise ValueError(
+            "processed_dfs is empty — reload with load_processed=True before calling ensure_stillwater_columns."
+        )
+
+    # When called with combined_meta (all dates), restrict to rows that belong
+    # to this cfg's date range so probe column names match.
+    meta = meta.copy()
+    meta_t = pd.to_datetime(meta["file_date"])
+    in_range = meta_t >= pd.Timestamp(cfg.valid_from)
+    if cfg.valid_until is not None:
+        in_range &= meta_t < pd.Timestamp(cfg.valid_until)
+    meta = meta[in_range].reset_index(drop=True)
+    if meta.empty:
+        raise ValueError(f"No rows in meta match cfg '{cfg.name}' date range.")
 
     probe_positions = list(cfg.probe_col_names().values())
     probe_cols = [f"Stillwater Probe {pos}" for pos in probe_positions]
@@ -114,14 +126,18 @@ def ensure_stillwater_columns(
     ).sort_values("_t").reset_index(drop=True)
 
     # ── per-probe weighted linear fit ────────────────────────────────────────
-    new_cols   = {}   # probe col → Series of fitted values for all meta rows
-    noise_updates = {}  # path → {col: std}
+    new_cols      = {}   # probe col → Series of fitted values for all meta rows
+    noise_updates = {}   # path → {col: std}
 
     for i, pos in col_names.items():
         probe_col = f"Probe {pos}"
         pts_t, pts_v, pts_w, pts_label = [], [], [], []
 
         for _, row in nowind_rows.iterrows():
+            fname = Path(row["path"]).name
+            if any(kw in fname for kw in STILLWATER_EXCLUDE):
+                print(f"  ⚠ Skipping excluded run: {fname}")
+                continue
             df_run = dfs.get(row["path"])
             if df_run is None:
                 continue
@@ -132,7 +148,7 @@ def ensure_stillwater_columns(
             pts_t.append(row["_t"].timestamp())
             pts_v.append(v)
             pts_w.append(_W_NOWAVE if row["_is_nowave"] else _W_WAVE)
-            pts_label.append(Path(row["path"]).name)
+            pts_label.append(fname)
 
         if not pts_t:
             raise ValueError(f"No data points for Probe {pos}")
@@ -148,10 +164,10 @@ def ensure_stillwater_columns(
         else:
             coeffs = np.polyfit(ts_rel, vs, deg=1, w=ws)
             residuals = np.abs(vs - np.polyval(coeffs, ts_rel))
-            outlier_mask = residuals > _OUTLIER_MM
+            outlier_mask = residuals > STILLWATER.OUTLIER_MM
             if outlier_mask.any() and (~outlier_mask).sum() >= 2:
                 for lbl, res in zip(pts_label, residuals):
-                    if res > _OUTLIER_MM:
+                    if res > STILLWATER.OUTLIER_MM:
                         print(f"  ⚠ Probe {pos}: outlier rejected — {lbl}  (residual {res:+.3f} mm)")
                 coeffs = np.polyfit(ts_rel[~outlier_mask], vs[~outlier_mask], deg=1,
                                     w=ws[~outlier_mask])
@@ -173,7 +189,7 @@ def ensure_stillwater_columns(
         # Control: print residuals for all data points
         fit_vals = np.polyval(coeffs, ts_rel)
         for lbl, actual, fitted, w in zip(pts_label, vs, fit_vals, ws):
-            tag = " [nowave]" if w == _W_NOWAVE else " [pre-wave 2s]"
+            tag = " [nowave]" if w == _W_NOWAVE else f" [pre-wave {STILLWATER.PRE_WAVE_S:.0f}s]"
             print(f"    {lbl}: actual={actual:.3f}  fit={fitted:.3f}  Δ={actual-fitted:+.3f} mm{tag}")
 
         # Noise std for no-wave runs
@@ -617,11 +633,11 @@ def _set_output_folder(
         else:
             raw_folder = Path(meta_full["path"].iloc[0]).parent.name
             folder = f"PROCESSED-{raw_folder}"
-        
+
         meta_sel["PROCESSED_folder"] = folder
         if debug:
             print(f"Set PROCESSED_folder = {folder}")
-    
+
     return meta_sel
 
 
@@ -629,13 +645,13 @@ def process_selected_data(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
     meta_full: pd.DataFrame,
-    processvariables: dict, 
+    processvariables: dict,
 ) -> tuple[dict[str, pd.DataFrame], pd.DataFrame, dict]:
     """
     1. Zeroes all selected runs using the shared stillwater levels.
     2. Adds eta_1..eta_4 (zeroed signal) and moving average.
     3. Find wave range (optional)
-    4. Regner PSD og FFT med tilhørende 
+    4. Regner PSD og FFT med tilhørende
     5. Oppdaterer meta
     """
     fs = MEASUREMENT.SAMPLING_RATE
@@ -666,11 +682,11 @@ def process_selected_data(
         for pos, stats in probe_stats.items():
             meta_sel.loc[mask, f"samples_clipped_{pos}"] = stats["samples_clipped"]
             meta_sel.loc[mask, f"max_gap_{pos}"] = stats["max_gap"]
-    
+
     # 3. Optional: find wave ranges
     if find_range:
         meta_sel = run_find_wave_ranges(processed_dfs, meta_sel, cfg, win, range_plot, debug)
-    
+
     # 4. a - Compute PSDs and amplitudes from PSD (wave runs only)
     psd_dict, amplitudes_psd_df = compute_psd_with_amplitudes(processed_dfs, meta_sel, cfg, fs=fs, debug=debug)
 
@@ -692,5 +708,5 @@ def process_selected_data(
 
     if debug:
         print(f"\nProcessing complete! {len(processed_dfs)} files zeroed and ready.")
-    
+
     return processed_dfs, meta_sel, psd_dict, fft_dict
