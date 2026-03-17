@@ -1160,8 +1160,9 @@ def load_analysis_data(*processed_dirs: Path, **kwargs):
     )
     from wavescripts.constants import MEASUREMENT
 
-    # Separate keyword arg from positional dirs
+    # Separate keyword args from positional dirs
     load_processed: bool = kwargs.pop("load_processed", False)
+    load_spectra:   bool = kwargs.pop("load_spectra",   True)
     if kwargs:
         raise TypeError(f"Unexpected keyword arguments: {list(kwargs)}")
 
@@ -1172,6 +1173,8 @@ def load_analysis_data(*processed_dirs: Path, **kwargs):
         meta = load_meta_json(processed_dir)
         proc_dfs = load_processed_dfs(processed_dir) if load_processed else {}
         if meta.empty:
+            return meta, proc_dfs, {}, {}
+        if not load_spectra:
             return meta, proc_dfs, {}, {}
         cached_fft, cached_psd = load_spectra_dicts(processed_dir)
         if cached_fft and cached_psd:

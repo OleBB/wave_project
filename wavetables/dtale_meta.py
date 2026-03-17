@@ -28,7 +28,7 @@ PROCESSED_DIRS = sorted(Path("waveprocessed").glob("PROCESSED-*"))
 print("Loading combined_meta …")
 t0 = time.perf_counter()
 
-combined_meta, _, _, _ = load_analysis_data(*PROCESSED_DIRS, load_processed=False)
+combined_meta, _, _, _ = load_analysis_data(*PROCESSED_DIRS, load_processed=False, load_spectra=False)
 
 dt = time.perf_counter() - t0
 print(f"  {len(combined_meta)} rows · {len(combined_meta.columns)} columns · {dt:.1f} s")

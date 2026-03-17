@@ -26,6 +26,28 @@
 
 ## 0. Current investigation (pick up here next session)
 
+### Next session — start here (2026-03-17)
+
+**Run `python main.py --force-recompute`** to regenerate all cache with:
+- New mooring values (`above_200` / `above_50` / `below_90`)
+- New physics columns (`Froude`, `Wind/Celerity`, `f/f_PM`, `Ursell`)
+- Renamed columns (`period_amplitude_cv`, `Probe {pos} wave_stability`)
+- Generic `IN`/`OUT` columns from `processor2nd.py`
+
+After reprocessing, verify in `wavetable-clean`:
+- No `Probe 1/2/3/4 *` columns remain (stale cache from old pipeline)
+- `IN Amplitude (FFT)`, `IN ka (FFT)`, `IN Froude (FFT)` etc. are populated
+- `Mooring` column shows `above_50` / `above_200` / `below_90`
+
+**⚠ TODO — short vs long run comparison**
+Some runs are ~40 periods, others ~240 periods. Need to check whether run length affects:
+- `wave_stability` / `period_amplitude_cv` (longer run = more averaging = different CV?)
+- FFT amplitude (more periods → narrower FFT bin → less spectral leakage)
+- OUT/IN ratio stability (does it converge with more periods?)
+Approach: plot `wave_stability` and `OUT/IN (FFT)` vs `WavePeriodInput` for same frequency/wind/panel conditions.
+
+---
+
 ### Session summary (2026-03-17) — mooring, wave detection, new physics columns, pipeline improvements
 
 #### CLI overrides for `main.py`
@@ -70,13 +92,15 @@ Four new dimensionless numbers added to pipeline, computed per probe (FFT-measur
 #### `wavetables/` folder created
 
 - `dtale_meta.py` moved to `wavetables/dtale_meta.py`
-- New `wavetables/dtale_clean.py` — drops all probe-position columns (regex `\d{4,5}/\d{3}`), shows only experiment metadata + generic IN/OUT columns
+- New `wavetables/dtale_clean.py` — drops columns by these rules:
+  - `\d{4,5}/\d{3}` — probe-position columns (`9373/170` etc.)
+  - `^Probe \d+ ` — old number-style columns (`Probe 1/2/3/4`); stale cache, gone after `--force-recompute`
+  - `mm from (paddle|wall)` — probe distance setup columns
+  - `^Extra seconds$`
 - Shell aliases updated in `~/.zshrc`:
   - `wavetable` → `wavetables/dtale_meta.py` (full table)
   - `wavetable-clean` → `wavetables/dtale_clean.py` (no per-probe columns)
 - Both scripts auto-discover `waveprocessed/PROCESSED-*` dirs — no hardcoded list
-
-#### Mooring config overhaul (`wavescripts/improved_data_loader.py`)
 
 #### Mooring config overhaul (`wavescripts/improved_data_loader.py`)
 

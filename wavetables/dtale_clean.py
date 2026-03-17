@@ -28,18 +28,25 @@ PROCESSED_DIRS = sorted(Path("waveprocessed").glob("PROCESSED-*"))
 print("Loading combined_meta …")
 t0 = time.perf_counter()
 
-combined_meta, _, _, _ = load_analysis_data(*PROCESSED_DIRS, load_processed=False)
+combined_meta, _, _, _ = load_analysis_data(*PROCESSED_DIRS, load_processed=False, load_spectra=False)
 
 dt = time.perf_counter() - t0
 print(f"  {len(combined_meta)} rows · {len(combined_meta.columns)} columns · {dt:.1f} s")
 
-# ── drop all probe-position-specific columns ──────────────────────────────────
-# Matches any column containing a position string like "9373/170" or "12400/250"
+# ── drop unwanted columns ─────────────────────────────────────────────────────
 import re
-_pos_pattern = re.compile(r"\d{4,5}/\d{3}")
-drop_cols = [c for c in combined_meta.columns if _pos_pattern.search(c)]
+_rules = [
+    (re.compile(r"\d{4,5}/\d{3}"),        "probe-position (9373/170 etc.)"),
+    (re.compile(r"^Probe \d+ "),           "old probe-number (Probe 1/2/3/4)"),
+    (re.compile(r"mm from (paddle|wall)"), "probe distances"),
+    (re.compile(r"^Extra seconds$"),       "extra seconds"),
+]
+drop_cols = [
+    c for c in combined_meta.columns
+    if any(pat.search(c) for pat, _ in _rules)
+]
 clean = combined_meta.drop(columns=drop_cols)
-print(f"  dropped {len(drop_cols)} probe-position columns → {len(clean.columns)} remaining")
+print(f"  dropped {len(drop_cols)} columns → {len(clean.columns)} remaining")
 
 # ── open dtale ────────────────────────────────────────────────────────────────
 d = dtale.show(clean, host="localhost")

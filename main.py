@@ -98,6 +98,7 @@ processvariables = {
 prosessering = processvariables.get("prosessering", {})
 total_reset = prosessering.get("total_reset", False)
 force_recompute = prosessering.get("force_recompute", False)
+print("force_recompute ER ....", force_recompute)
 
 if total_reset:
     input(
