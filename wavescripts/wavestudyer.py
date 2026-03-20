@@ -6,8 +6,12 @@ Created on Sat Nov 22 22:01:11 2025
 @author: ole
 """
 
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
+
+from wavescripts.improved_data_loader import get_configuration_for_date
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, correlate
 from pathlib import Path
@@ -292,7 +296,8 @@ def _safe_round_ratio(a, b):
 
 def wind_damping_analysis(meta_df):
     """
-    printer analyse av dempning (P3/P2) vs windCondition.
+    printer analyse av dempning (OUT/IN) vs windCondition.
+    IN/OUT probe er bestemt av ProbeConfiguration for kvar dato.
     Returnerer ein DataRamme med resultater.
     """
     results = []
@@ -302,10 +307,18 @@ def wind_damping_analysis(meta_df):
     wind_groups = {"full": [], "no": [], "lowest": [], "other": []}
 
     for idx, row in meta_sel.iterrows():
-        #metarows = meta_sel[meta_sel["path"] == path]
-
         wind = str(row.get("WindCondition", "")).lower().strip()
         wind = wind if wind in ["full", "no", "lowest"] else "other"
+
+        # look up which probes are IN/OUT for this row's date
+        in_probe, out_probe = 2, 3  # fallback defaults
+        date_str = row.get("file_date")
+        if date_str:
+            try:
+                cfg = get_configuration_for_date(datetime.fromisoformat(str(date_str)))
+                in_probe, out_probe = cfg.in_probe, cfg.out_probe
+            except (ValueError, KeyError):
+                pass
 
         # extract amplitudes as scalars
         P1 = _to_scalar_numeric(row.get("Probe 1 Amplitude"))
@@ -313,43 +326,44 @@ def wind_damping_analysis(meta_df):
         P3 = _to_scalar_numeric(row.get("Probe 3 Amplitude"))
         P4 = _to_scalar_numeric(row.get("Probe 4 Amplitude"))
 
-        # compute ratios 
+        probe_vals = {1: P1, 2: P2, 3: P3, 4: P4}
+        P_in = probe_vals.get(in_probe)
+        P_out = probe_vals.get(out_probe)
+
+        # compute ratios
+        ratio_out_in = _safe_round_ratio(P_out, P_in)
         P2toP1 = _safe_round_ratio(P2, P1)
-        P3toP2 = _safe_round_ratio(P3, P2)
         P4toP3 = _safe_round_ratio(P4, P3)
-        
-        noWaveRun =  _to_scalar_numeric(row.get("WaveAmplitudeInput [Volt]"))
-        if pd.isna(noWaveRun): 
-            #print("NO WAVEINPUT")
+
+        noWaveRun = _to_scalar_numeric(row.get("WaveAmplitudeInput [Volt]"))
+        if pd.isna(noWaveRun):
             continue
-        
+
         # verdict rules (guard against NaN comparisons)
         verdict = []
         if P2toP1 is np.nan or P2toP1 is None:
-            verdict.append("P2/P1?")   # cannot evaluate
+            verdict.append("P2/P1?")   # sanity check, not the main ratio
         else:
             if not (0.8 <= P2toP1 <= 1.3):
                 verdict.append("?")
 
-        if P3toP2 is not np.nan and P3toP2 is not None:
-            if P3toP2 > 1.1:
+        if ratio_out_in is not np.nan and ratio_out_in is not None:
+            if ratio_out_in > 1.1:
                 verdict.append("Amplification!")
-            wind_groups[wind].append(P3toP2)
-        else:
-            # keep consistent grouping even if NaN: do not append
-            pass
+            wind_groups[wind].append(ratio_out_in)
 
         if P4toP3 is not np.nan and P4toP3 is not None:
             if abs(P4toP3 - 1) > 0.15:
                 verdict.append("P3≠P4")
 
-        wind_label = {"full":"full", "no":"no", "lowest":"lowest", "other":"??"}.get(wind, wind.upper())
+        wind_label = {"full": "full", "no": "no", "lowest": "lowest", "other": "??"}.get(wind, wind.upper())
 
         results.append({
             "path": row["path"],
             "WindCondition": wind_label,
             "Probe 1 Amplitude": P1, "Probe 2 Amplitude": P2, "Probe 3 Amplitude": P3, "Probe 4 Amplitude": P4,
-            "P2/P1": P2toP1, "P3/P2": P3toP2, "P4/P3": P4toP3
+            "in_probe": in_probe, "out_probe": out_probe,
+            "OUT/IN": ratio_out_in, "P2/P1": P2toP1, "P4/P3": P4toP3,
         })
 
     # SUMMARY BY WIND CONDITION
@@ -360,7 +374,7 @@ def wind_damping_analysis(meta_df):
         if ratios:
             mean_ratio = np.mean(ratios)
             std_ratio = np.std(ratios)
-            print(f"{w.upper():<8} → P3/P2 = {mean_ratio:.3f} ± {std_ratio:.3f}  (n={len(ratios)} runs)")
+            print(f"{w.upper():<8} → OUT/IN = {mean_ratio:.3f} ± {std_ratio:.3f}  (n={len(ratios)} runs)")
         else:
             print(f"{w.upper():<8} → no valid runs")
 

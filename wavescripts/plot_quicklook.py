@@ -20,42 +20,30 @@ DEVELOPER TOOLS         plot_all_markers, plot_rgb
 
 from __future__ import annotations
 
-import copy
-import sys
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
-
-import plotly.express as px
-
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QListWidget,
-    QVBoxLayout, QWidget, QLabel,
-)
+# seaborn and plotly imported lazily inside the functions that need them
 
 from wavescripts.constants import GlobalColumns as GC
 from wavescripts.plot_utils import WIND_COLOR_MAP, MARKERS
-from wavescripts.plotter import plot_reconstructed
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SEABORN EXPLORATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def explore_damping_vs_freq(df: pd.DataFrame,
-                             plotvariables: dict) -> None:
-    """
-    Seaborn facet: P3/P2 vs frequency, one column per amplitude.
-    Exploration only — not saveable as individual thesis panels.
-    Use plot_damping_freq() for thesis output.
-    """
+def explore_damping_vs_freq_old(df: pd.DataFrame,
+                                plotvariables: dict) -> None:
+    """Old version — kept for reference. Use explore_damping_vs_freq instead."""
+    import seaborn as sns
     x = GC.WAVE_FREQUENCY_INPUT
+    if df.empty:
+        print("explore_damping_vs_freq_old: no data to plot (empty dataframe)")
+        return
     g = sns.relplot(
         data=df.sort_values(x),
-        x=x, y="mean_P3P2",
+        x=x, y="mean_out_in",
         hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
         style=GC.PANEL_CONDITION_GROUPED, style_order=["no", "all"],
         col=GC.WAVE_AMPLITUDE_INPUT,
@@ -67,367 +55,104 @@ def explore_damping_vs_freq(df: pd.DataFrame,
                                df.groupby(GC.WAVE_AMPLITUDE_INPUT)):
         for (wind, panel), gsub in sub.groupby(
                 [GC.WIND_CONDITION, GC.PANEL_CONDITION_GROUPED]):
-            ax.errorbar(gsub[x], gsub["mean_P3P2"], yerr=gsub["std_P3P2"],
+            ax.errorbar(gsub[x], gsub["mean_out_in"], yerr=gsub["std_out_in"],
                         fmt="none", capsize=3, alpha=0.5)
     sns.move_legend(g, "lower center",
                     bbox_to_anchor=(0.5, 1), ncol=3,
                     title=None, frameon=False)
-    g.figure.suptitle("Damping P3/P2 vs Frequency  [quicklook]",
+    g.figure.suptitle("Damping OUT/IN vs Frequency  [quicklook — old]",
                        y=1.04, fontsize=11)
     plt.tight_layout()
     plt.show()
+
+
+def _effective_yerr(gsub: pd.DataFrame, fallback_rel: float) -> pd.Series:
+    """Effective error bar: std for multi-run groups, fallback % for single runs.
+
+    fallback_rel: relative uncertainty for single-run groups (e.g. 0.10 = ±10%).
+    Shown with dashed errorbar style so single-run uncertainty is visually distinct.
+    """
+    yerr = gsub["std_out_in"].copy()
+    single = yerr.isna() & gsub["n_runs"].eq(1) if "n_runs" in gsub.columns else yerr.isna()
+    yerr[single] = gsub.loc[single, "mean_out_in"] * fallback_rel
+    return yerr
+
+
+def _explore_damping(
+    df: pd.DataFrame,
+    plotvariables: dict,
+    x_col: str,
+    facet_col: str,
+    title: str,
+) -> None:
+    """Shared implementation for explore_damping_vs_freq and explore_damping_vs_amp."""
+    import seaborn as sns
+    plotting = plotvariables.get("plotting", {})
+    fallback_rel = plotting.get("single_run_rel_error", 0.10)
+    if df.empty:
+        print(f"{title}: no data to plot (empty dataframe)")
+        return
+    sns.set_style("ticks", {"axes.grid": True})
+    g = sns.relplot(
+        data=df.sort_values(x_col),
+        x=x_col, y="mean_out_in",
+        hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
+        style=GC.PANEL_CONDITION_GROUPED, style_order=["no", "all"],
+        col=facet_col,
+        kind="line", marker=True,
+        facet_kws={"sharex": True, "sharey": True},
+        height=3.0, aspect=1.2, errorbar=None,
+    )
+    for ax, (_, sub) in zip(g.axes.flat, df.groupby(facet_col)):
+        for (wind, panel), gsub in sub.groupby(
+                [GC.WIND_CONDITION, GC.PANEL_CONDITION_GROUPED]):
+            yerr = _effective_yerr(gsub, fallback_rel)
+            # multi-run: solid caps; single-run fallback: dashed/lighter
+            is_fallback = gsub["std_out_in"].isna() if "std_out_in" in gsub.columns else pd.Series(False, index=gsub.index)
+            ax.errorbar(gsub[x_col], gsub["mean_out_in"], yerr=yerr,
+                        fmt="none", capsize=3, alpha=0.5)
+            # mark single-run points with an open circle overlay
+            sr = gsub[is_fallback]
+            if not sr.empty:
+                color = WIND_COLOR_MAP.get(wind, "gray")
+                ax.scatter(sr[x_col], sr["mean_out_in"],
+                           s=60, facecolors="none", edgecolors=color,
+                           linewidths=1.2, zorder=5)
+    sns.move_legend(g, "lower center",
+                    bbox_to_anchor=(0.5, 1), ncol=3,
+                    title=None, frameon=False)
+    g.figure.suptitle(f"{title}  [quicklook]", y=1.04, fontsize=11)
+    plt.tight_layout()
+    plt.show()
+
+
+def explore_damping_vs_freq(df: pd.DataFrame,
+                             plotvariables: dict) -> None:
+    """
+    Seaborn facet: OUT/IN vs frequency, one column per amplitude.
+    Single-run groups get a fallback error bar (±single_run_rel_error, default 10%)
+    shown with an open-circle marker overlay.
+    """
+    _explore_damping(df, plotvariables,
+                     x_col=GC.WAVE_FREQUENCY_INPUT,
+                     facet_col=GC.WAVE_AMPLITUDE_INPUT,
+                     title="Damping OUT/IN vs Frequency")
 
 
 def explore_damping_vs_amp(df: pd.DataFrame,
                             plotvariables: dict) -> None:
     """
-    Seaborn facet: P3/P2 vs amplitude, one column per frequency.
-    Exploration only — use plot_damping_freq() for thesis output.
+    Seaborn facet: OUT/IN vs amplitude, one column per frequency.
+    Single-run groups get a fallback error bar (±single_run_rel_error, default 10%)
+    shown with an open-circle marker overlay.
     """
-    x = GC.WAVE_AMPLITUDE_INPUT
-    sns.set_style("ticks", {"axes.grid": True})
-    g = sns.relplot(
-        data=df.sort_values(x),
-        x=x, y="mean_P3P2",
-        hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
-        style=GC.PANEL_CONDITION_GROUPED, style_order=["no", "all"],
-        col=GC.WAVE_FREQUENCY_INPUT,
-        kind="line", marker=True,
-        facet_kws={"sharex": True, "sharey": True},
-        height=3.0, aspect=1.2, errorbar=None,
-    )
-    for ax, (freq, sub) in zip(g.axes.flat,
-                                df.groupby(GC.WAVE_FREQUENCY_INPUT)):
-        for (wind, panel), gsub in sub.groupby(
-                [GC.WIND_CONDITION, GC.PANEL_CONDITION_GROUPED]):
-            ax.errorbar(gsub[x], gsub["mean_P3P2"], yerr=gsub["std_P3P2"],
-                        fmt="none", capsize=3, alpha=0.5)
-    sns.move_legend(g, "lower center",
-                    bbox_to_anchor=(0.5, 1), ncol=3,
-                    title=None, frameon=False)
-    g.figure.suptitle("Damping P3/P2 vs Amplitude  [quicklook]",
-                       y=1.04, fontsize=11)
-    plt.tight_layout()
-    plt.show()
+    _explore_damping(df, plotvariables,
+                     x_col=GC.WAVE_AMPLITUDE_INPUT,
+                     facet_col=GC.WAVE_FREQUENCY_INPUT,
+                     title="Damping OUT/IN vs Amplitude")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# INTERACTIVE BROWSERS (Qt)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-class SignalBrowserFiltered(QMainWindow):
-    """
-    Qt browser for reconstructed signal inspection.
-    Select experiments from a filterable list; click to plot via plot_reconstructed().
-
-    Usage
-    -----
-    app = QApplication.instance() or QApplication(sys.argv)
-    browser = SignalBrowserFiltered(filtered_fft_dict, filtered_meta, freqplotvariables)
-    browser.show()
-    """
-
-    def __init__(self, fft_dict: dict, meta_df: pd.DataFrame, plotvars: dict):
-        super().__init__()
-        self.fft_dict = fft_dict
-        self.meta_df  = meta_df
-        self.plotvars = copy.deepcopy(plotvars)
-        self.setWindowTitle("Signal Browser")
-        self.setGeometry(100, 100, 550, 900)
-
-        from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QCheckBox,
-                                      QGroupBox, QGridLayout, QSlider)
-        from PyQt5.QtCore import Qt
-
-        central = QWidget()
-        self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
-
-        # ── Filters ───────────────────────────────────────────────────────────
-        filter_box    = QGroupBox("Data Filters")
-        filter_layout = QGridLayout()
-
-        self.wind_filter  = QComboBox()
-        self.panel_filter = QComboBox()
-        self.freq_filter  = QComboBox()
-        self.amp_filter   = QComboBox()
-
-        self.wind_filter.addItems(
-            ["All wind"] + sorted(meta_df["WindCondition"].dropna().unique().tolist()))
-        self.panel_filter.addItems(
-            ["All panel"] + sorted(meta_df["PanelCondition"].dropna().unique().tolist()))
-        self.freq_filter.addItems(
-            ["All freq"] + [str(f) for f in
-                            sorted(meta_df["WaveFrequencyInput [Hz]"].dropna().unique())])
-        self.amp_filter.addItems(
-            ["All amp"] + [str(a) for a in
-                           sorted(meta_df["WaveAmplitudeInput [Volt]"].dropna().unique())])
-
-        filter_layout.addWidget(QLabel("Wind:"),   0, 0); filter_layout.addWidget(self.wind_filter,  0, 1)
-        filter_layout.addWidget(QLabel("Panel:"),  0, 2); filter_layout.addWidget(self.panel_filter, 0, 3)
-        filter_layout.addWidget(QLabel("Freq:"),   1, 0); filter_layout.addWidget(self.freq_filter,  1, 1)
-        filter_layout.addWidget(QLabel("Amp:"),    1, 2); filter_layout.addWidget(self.amp_filter,   1, 3)
-        filter_box.setLayout(filter_layout)
-        layout.addWidget(filter_box)
-
-        # ── Plot options ──────────────────────────────────────────────────────
-        plot_box    = QGroupBox("Plot Options")
-        plot_layout = QGridLayout()
-
-        plot_layout.addWidget(QLabel("Probes:"), 0, 0)
-        probe_row = QHBoxLayout()
-        self.probe_checks = {}
-        current_probes = self.plotvars.get("plotting", {}).get("probes", [2, 3])
-        for p in [1, 2, 3, 4]:
-            cb = QCheckBox(f"P{p}")
-            cb.setChecked(p in current_probes)
-            self.probe_checks[p] = cb
-            probe_row.addWidget(cb)
-        probe_widget = QWidget()
-        probe_widget.setLayout(probe_row)
-        plot_layout.addWidget(probe_widget, 0, 1, 1, 3)
-
-        self.dual_yaxis_check = QCheckBox("Dual Y-axis")
-        self.dual_yaxis_check.setChecked(
-            self.plotvars.get("plotting", {}).get("dual_yaxis", True))
-        plot_layout.addWidget(self.dual_yaxis_check, 1, 0, 1, 2)
-
-        self.full_signal_check = QCheckBox("Show Full Signal")
-        self.full_signal_check.setChecked(
-            self.plotvars.get("plotting", {}).get("show_full_signal", False))
-        plot_layout.addWidget(self.full_signal_check, 1, 2, 1, 2)
-
-        self.facet_probe_check = QCheckBox("Facet by Probe")
-        self.facet_probe_check.setChecked(
-            self.plotvars.get("plotting", {}).get("facet_by") == "probe")
-        plot_layout.addWidget(self.facet_probe_check, 2, 0, 1, 2)
-
-        self.amp_stats_check = QCheckBox("Show Amplitude Stats")
-        self.amp_stats_check.setChecked(
-            self.plotvars.get("plotting", {}).get("show_amplitude_stats", True))
-        plot_layout.addWidget(self.amp_stats_check, 2, 2, 1, 2)
-
-        plot_layout.addWidget(QLabel("Linewidth:"), 3, 0)
-        self.lw_slider = QSlider(Qt.Horizontal)
-        self.lw_slider.setMinimum(1); self.lw_slider.setMaximum(30)
-        self.lw_slider.setValue(
-            int(self.plotvars.get("plotting", {}).get("linewidth", 1.0) * 10))
-        self.lw_label = QLabel(f"{self.lw_slider.value() / 10:.1f}")
-        self.lw_slider.valueChanged.connect(
-            lambda v: self.lw_label.setText(f"{v/10:.1f}"))
-        plot_layout.addWidget(self.lw_slider, 3, 1, 1, 2)
-        plot_layout.addWidget(self.lw_label, 3, 3)
-
-        plot_box.setLayout(plot_layout)
-        layout.addWidget(plot_box)
-
-        # ── List ──────────────────────────────────────────────────────────────
-        self.count_label = QLabel()
-        layout.addWidget(self.count_label)
-        self.list_widget = QListWidget()
-        self.list_widget.currentRowChanged.connect(self.on_select)
-        layout.addWidget(self.list_widget)
-
-        for w in [self.wind_filter, self.panel_filter,
-                  self.freq_filter, self.amp_filter]:
-            w.currentTextChanged.connect(self.update_list)
-        self.update_list()
-
-    def get_selected_probes(self):
-        return [p for p, cb in self.probe_checks.items() if cb.isChecked()]
-
-    def update_list(self):
-        df = self.meta_df.copy()
-        wind  = self.wind_filter.currentText()
-        panel = self.panel_filter.currentText()
-        freq  = self.freq_filter.currentText()
-        amp   = self.amp_filter.currentText()
-        if wind  != "All wind":  df = df[df["WindCondition"] == wind]
-        if panel != "All panel": df = df[df["PanelCondition"] == panel]
-        if freq  != "All freq":  df = df[df["WaveFrequencyInput [Hz]"] == float(freq)]
-        if amp   != "All amp":   df = df[df["WaveAmplitudeInput [Volt]"] == float(amp)]
-        df = df[df["path"].isin(self.fft_dict.keys())]
-
-        self.list_widget.clear()
-        self.current_paths = []
-        for _, row in df.iterrows():
-            path = row["path"]
-            self.list_widget.addItem(
-                f"{str(row.get('WindCondition','?')):8s} | "
-                f"{str(row.get('PanelCondition','?')):8s} | "
-                f"{row.get('WaveFrequencyInput [Hz]','?')} Hz | "
-                f"{row.get('WaveAmplitudeInput [Volt]','?')} V | "
-                f"{Path(path).stem[-30:]}"
-            )
-            self.current_paths.append(path)
-        self.count_label.setText(f"Showing {len(self.current_paths)} experiments")
-
-    def on_select(self, row_idx):
-        if row_idx < 0 or row_idx >= len(self.current_paths):
-            return
-        path        = self.current_paths[row_idx]
-        single_meta = self.meta_df[self.meta_df["path"] == path]
-        if single_meta.empty:
-            return
-
-        plotvars = copy.deepcopy(self.plotvars)
-        p = plotvars.setdefault("plotting", {})
-        p["probes"]               = self.get_selected_probes()
-        p["dual_yaxis"]           = self.dual_yaxis_check.isChecked()
-        p["show_full_signal"]     = self.full_signal_check.isChecked()
-        p["facet_by"]             = "probe" if self.facet_probe_check.isChecked() else None
-        p["show_amplitude_stats"] = self.amp_stats_check.isChecked()
-        p["linewidth"]            = self.lw_slider.value() / 10
-        p["grid"]                 = True
-        p["show_plot"]            = True
-        p["save_plot"]            = False   # browser never saves
-
-        plt.close("all")
-        plot_reconstructed({path: self.fft_dict[path]}, single_meta, plotvars)
-
-
-class RampDetectionBrowser(QMainWindow):
-    """
-    Qt browser for stepping through ramp detection results.
-    Feed it the output of gather_ramp_data().
-
-    Usage
-    -----
-    ramp_df = gather_ramp_data(combined_processed_dfs, combined_meta_sel)
-    app = QApplication.instance() or QApplication(sys.argv)
-    browser = RampDetectionBrowser(ramp_df)
-    browser.show()
-    """
-
-    def __init__(self, ramp_df: pd.DataFrame):
-        super().__init__()
-        self.ramp_df = ramp_df
-        self.setWindowTitle("Ramp Detection Browser")
-        self.setGeometry(100, 100, 600, 900)
-
-        from PyQt5.QtWidgets import (QComboBox, QGroupBox,
-                                      QGridLayout, QDoubleSpinBox)
-
-        central = QWidget()
-        self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
-
-        # ── Filters ───────────────────────────────────────────────────────────
-        filter_box    = QGroupBox("Data Filters")
-        filter_layout = QGridLayout()
-
-        self.wind_filter  = QComboBox()
-        self.wind_filter.addItems(
-            ["All wind"] + sorted(ramp_df[GC.WIND_CONDITION].dropna().unique().tolist()))
-        self.panel_filter = QComboBox()
-        self.panel_filter.addItems(
-            ["All panel"] + sorted(ramp_df[GC.PANEL_CONDITION].dropna().unique().tolist()))
-        self.freq_filter = QComboBox()
-        self.freq_filter.addItems(
-            ["All freq"] + [str(f) for f in
-                            sorted(ramp_df[GC.WAVE_FREQUENCY_INPUT].dropna().unique())])
-        self.amp_filter = QComboBox()
-        self.amp_filter.addItems(
-            ["All amp"] + [str(a) for a in
-                           sorted(ramp_df[GC.WAVE_AMPLITUDE_INPUT].dropna().unique())])
-        self.probe_filter = QComboBox()
-        self.probe_filter.addItems(
-            ["All probes"] + [f"Probe {p}" for p in sorted(ramp_df["probe"].unique())])
-        self.probe_filter.setCurrentText("Probe 2")
-
-        for row_i, (lbl, widget) in enumerate([
-            ("Wind:", self.wind_filter), ("Panel:", self.panel_filter),
-            ("Freq:", self.freq_filter), ("Amp:",   self.amp_filter),
-            ("Probe:", self.probe_filter),
-        ]):
-            filter_layout.addWidget(QLabel(lbl),  row_i // 2, (row_i % 2) * 2)
-            filter_layout.addWidget(widget,        row_i // 2, (row_i % 2) * 2 + 1)
-
-        filter_box.setLayout(filter_layout)
-        layout.addWidget(filter_box)
-
-        # ── Zoom ──────────────────────────────────────────────────────────────
-        plot_box    = QGroupBox("Plot Options")
-        plot_layout = QGridLayout()
-        plot_layout.addWidget(QLabel("Zoom margin [mm]:"), 0, 0)
-        self.zoom_spin = QDoubleSpinBox()
-        self.zoom_spin.setRange(1.0, 500.0)
-        self.zoom_spin.setValue(30.0)
-        self.zoom_spin.setSingleStep(5.0)
-        plot_layout.addWidget(self.zoom_spin, 0, 1)
-        plot_box.setLayout(plot_layout)
-        layout.addWidget(plot_box)
-
-        # ── List ──────────────────────────────────────────────────────────────
-        self.count_label = QLabel()
-        layout.addWidget(self.count_label)
-        self.list_widget = QListWidget()
-        self.list_widget.currentRowChanged.connect(self.on_select)
-        layout.addWidget(self.list_widget)
-
-        for w in [self.wind_filter, self.panel_filter,
-                  self.freq_filter, self.amp_filter, self.probe_filter]:
-            w.currentTextChanged.connect(self.update_list)
-        self.update_list()
-
-    def update_list(self):
-        df = self.ramp_df.copy()
-        wind  = self.wind_filter.currentText()
-        panel = self.panel_filter.currentText()
-        freq  = self.freq_filter.currentText()
-        amp   = self.amp_filter.currentText()
-        probe = self.probe_filter.currentText()
-        if wind  != "All wind":   df = df[df[GC.WIND_CONDITION] == wind]
-        if panel != "All panel":  df = df[df[GC.PANEL_CONDITION] == panel]
-        if freq  != "All freq":   df = df[df[GC.WAVE_FREQUENCY_INPUT] == float(freq)]
-        if amp   != "All amp":    df = df[df[GC.WAVE_AMPLITUDE_INPUT] == float(amp)]
-        if probe != "All probes": df = df[df["probe"] == int(probe.split()[-1])]
-
-        self.list_widget.clear()
-        self.current_rows = []
-        for _, row in df.iterrows():
-            self.list_widget.addItem(
-                f"P{row['probe']} | "
-                f"{str(row[GC.WIND_CONDITION]):8s} | "
-                f"{str(row[GC.PANEL_CONDITION]):8s} | "
-                f"{row[GC.WAVE_FREQUENCY_INPUT]:.2f} Hz | "
-                f"{row[GC.WAVE_AMPLITUDE_INPUT]:.1f} V | "
-                f"{row['experiment'][-35:]}"
-            )
-            self.current_rows.append(row)
-        self.count_label.setText(f"Showing {len(self.current_rows)} rows")
-
-    def on_select(self, row_idx):
-        if row_idx < 0 or row_idx >= len(self.current_rows):
-            return
-        from wavescripts.plotter import plot_ramp_detection
-        row  = self.current_rows[row_idx]
-        zoom = self.zoom_spin.value()
-
-        dummy_dates = pd.to_datetime(row["time_ms"], unit="ms")
-        df_plot = pd.DataFrame({"Date": dummy_dates, row["data_col"]: row["raw"]})
-
-        plt.close("all")
-        fig, ax = plot_ramp_detection(
-            df=df_plot,
-            meta_sel=pd.Series({
-                GC.PATH:               row[GC.PATH],
-                GC.WIND_CONDITION:     row[GC.WIND_CONDITION],
-                GC.PANEL_CONDITION:    row[GC.PANEL_CONDITION],
-                GC.WAVE_FREQUENCY_INPUT: row[GC.WAVE_FREQUENCY_INPUT],
-                GC.WAVE_AMPLITUDE_INPUT: row[GC.WAVE_AMPLITUDE_INPUT],
-            }),
-            data_col=row["data_col"],
-            signal=row["signal"],
-            baseline_mean=row["baseline_mean"],
-            threshold=row["threshold"],
-            first_motion_idx=row["first_motion_idx"],
-            good_start_idx=row["good_start_idx"],
-            good_range=row["good_range"],
-            good_end_idx=row["good_end_idx"],
-        )
-        ax.set_ylim(row["baseline_mean"] - zoom, row["baseline_mean"] + zoom)
-        plt.show()
+# Qt browser classes moved to plot_browsers.py — import from there directly.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -437,13 +162,16 @@ class RampDetectionBrowser(QMainWindow):
 def save_interactive_plot(df: pd.DataFrame,
                            filename: str = "damping_analysis.html") -> None:
     """Save an interactive Plotly HTML for sharing / exploring in a browser."""
+    import plotly.express as px
+    # Only pass error_y if there are actual non-NaN std values (plotly can't handle all-NaN)
+    has_std = "std_out_in" in df.columns and df["std_out_in"].notna().any()
     fig = px.line(
         df,
         x="WaveFrequencyInput [Hz]",
-        y="mean_P3P2",
+        y="mean_out_in",
         color=GC.WIND_CONDITION,
         color_discrete_map=WIND_COLOR_MAP,
-        error_y="std_P3P2",
+        error_y="std_out_in" if has_std else None,
         hover_data=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
         title="Interactive Damping Analysis",
         markers=True,
@@ -473,6 +201,155 @@ def plot_all_markers() -> None:
     ax.axis("off")
     ax.set_title("Matplotlib Marker Styles", fontsize=16, fontweight="bold", pad=20)
     plt.tight_layout()
+    plt.show()
+
+
+def plot_stillwater_fit(dfs: dict, meta: "pd.DataFrame", cfg,
+                        date: str | None = None) -> None:
+    """Diagnostic plot of the stillwater drift fit for one folder / cfg.
+
+    X-axis is run index (sequential order) because file_date has day precision
+    only — no time-of-day is stored in metadata.
+
+    Parameters
+    ----------
+    dfs   : processed_dfs dict (must be loaded with load_processed=True)
+    meta  : combined_meta or single-folder meta
+    cfg   : ProbeConfiguration for the date of interest
+    date  : optional "YYYY-MM-DD" string to restrict to a single day,
+            e.g. date="2026-03-07". Without this, all days in cfg range
+            are shown together.
+
+    Shows per-probe subplots with:
+      - Blue circles    : no-wave runs (full-run median, high weight)
+      - Orange triangles: wave runs (first PRE_WAVE_S seconds, low weight)
+      - Black line      : fitted drift (Stillwater Probe {pos} from meta)
+    """
+    import os
+    import matplotlib.dates as mdates
+    from datetime import datetime as _dt
+    from pathlib import Path as _Path
+    from wavescripts.constants import MEASUREMENT, STILLWATER, STILLWATER_EXCLUDE, GlobalColumns as _GC
+
+    _PRE_WAVE_N = int(STILLWATER.PRE_WAVE_S * MEASUREMENT.SAMPLING_RATE)
+
+    # Restrict to cfg date range
+    meta_t = pd.to_datetime(meta["file_date"])
+    in_range = meta_t >= pd.Timestamp(cfg.valid_from)
+    if cfg.valid_until is not None:
+        in_range &= meta_t < pd.Timestamp(cfg.valid_until)
+    # Optionally narrow to a single day
+    if date is not None:
+        in_range &= meta_t.dt.strftime("%Y-%m-%d") == date
+    meta = meta[in_range].copy().reset_index(drop=True)
+    if meta.empty:
+        print(f"No rows match cfg '{cfg.name}'" + (f" date={date}" if date else "") + ".")
+        return
+
+    wind_str = meta[_GC.WIND_CONDITION].astype(str).str.strip().str.lower()
+    nowind   = wind_str.isin(["no", "", "nan", "none"])
+    nowave   = meta[_GC.WAVE_FREQUENCY_INPUT].isna() | meta["path"].astype(str).str.lower().str.contains("nowave")
+
+    nowind_rows = meta[nowind].assign(
+        _is_nowave=nowave.reindex(meta[nowind].index).fillna(False),
+        _mtime=meta[nowind]["path"].apply(
+            lambda p: _dt.fromtimestamp(os.path.getmtime(p)) if os.path.exists(p) else None
+        ),
+    ).reset_index(drop=True)
+
+    col_names = cfg.probe_col_names()
+    n = len(col_names)
+    fig, axes = plt.subplots(1, n, figsize=(4 * n, 3.5), sharey=False)
+    if n == 1:
+        axes = [axes]
+
+    folder_name = _Path(meta["path"].iloc[0]).parent.name
+    title = f"Stillwater drift — {folder_name}" + (f"  [{date}]" if date else "")
+
+    # Build wind timeline: sort all runs by mtime, shade spans where wind != "no"
+    all_mtimes = meta["path"].apply(
+        lambda p: _dt.fromtimestamp(os.path.getmtime(p)) if os.path.exists(p) else None
+    )
+    wind_timeline = pd.DataFrame({
+        "mtime": all_mtimes,
+        "wind":  meta[_GC.WIND_CONDITION].astype(str).str.strip().str.lower(),
+    }).dropna(subset=["mtime"]).sort_values("mtime").reset_index(drop=True)
+    # Append a sentinel row so the last span has an end
+    if not wind_timeline.empty:
+        sentinel = wind_timeline.iloc[[-1]].copy()
+        sentinel["mtime"] = wind_timeline["mtime"].iloc[-1] + pd.Timedelta(minutes=5)
+        wind_timeline = pd.concat([wind_timeline, sentinel], ignore_index=True)
+
+    _wind_colors = {"full": ("#d62728", 0.15), "lowest": ("#ff7f0e", 0.12)}
+
+    for ax, (i, pos) in zip(axes, col_names.items()):
+        probe_col = f"Probe {pos}"
+
+        # Wind bands — shade spans between consecutive runs where wind != "no"
+        for j in range(len(wind_timeline) - 1):
+            wc = wind_timeline.loc[j, "wind"]
+            if wc in _wind_colors:
+                color, alpha = _wind_colors[wc]
+                ax.axvspan(wind_timeline.loc[j, "mtime"],
+                           wind_timeline.loc[j + 1, "mtime"],
+                           color=color, alpha=alpha, linewidth=0,
+                           label=f"wind: {wc}")
+
+        # Collect data points for scatter AND for recomputing the poly fit
+        pts_x, pts_v, pts_w = [], [], []
+
+        for _, row in nowind_rows.iterrows():
+            df_run = dfs.get(row["path"])
+            if df_run is None or probe_col not in df_run.columns:
+                continue
+            n_samp = None if row["_is_nowave"] else _PRE_WAVE_N
+            src = df_run[probe_col].iloc[:n_samp] if n_samp else df_run[probe_col]
+            v = float(pd.to_numeric(src, errors="coerce").dropna().median())
+            x = row["_mtime"]
+            if x is None:
+                continue
+            fname = _Path(row["path"]).name
+            excluded = any(kw in fname for kw in STILLWATER_EXCLUDE)
+            if excluded:
+                ax.plot(x, v, "x", color="red", ms=8, mew=2, zorder=4,
+                        label="excluded")
+            elif row["_is_nowave"]:
+                ax.plot(x, v, "o", color="steelblue", ms=7, zorder=3,
+                        label="nowave (full run)")
+                pts_x.append(x.timestamp()); pts_v.append(v); pts_w.append(5)
+            else:
+                ax.plot(x, v, "^", color="darkorange", ms=6, zorder=3,
+                        label=f"wave (pre-{STILLWATER.PRE_WAVE_S:.0f}s)")
+                pts_x.append(x.timestamp()); pts_v.append(v); pts_w.append(1)
+
+        # Smooth poly fit curve through the non-excluded data points
+        if len(pts_x) >= 2:
+            ts = np.array(pts_x)
+            t0 = ts[0]
+            coeffs = np.polyfit(ts - t0, pts_v, deg=1, w=np.array(pts_w, dtype=float))
+            # Extend curve across the full axis range (wind bands may push x beyond data pts)
+            all_ts = [t.timestamp() for t in wind_timeline["mtime"] if t is not None]
+            t_lo = min(all_ts + list(ts))
+            t_hi = max(all_ts + list(ts))
+            t_smooth = np.linspace(t_lo, t_hi, 200)
+            v_smooth = np.polyval(coeffs, t_smooth - t0)
+            ax.plot([_dt.fromtimestamp(t) for t in t_smooth], v_smooth,
+                    "-", color="black", lw=1.5, zorder=2, label="poly fit")
+
+        ax.set_title(pos, fontsize=9)
+        ax.set_xlabel("time of day")
+        ax.set_ylabel("level [mm]")
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+        ax.tick_params(axis="x", labelrotation=30)
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    seen = {}
+    for h, l in zip(handles, labels):
+        seen.setdefault(l, h)
+    axes[0].legend(seen.values(), seen.keys(), fontsize=7)
+
+    fig.suptitle(title, fontsize=10)
+    fig.tight_layout()
     plt.show()
 
 

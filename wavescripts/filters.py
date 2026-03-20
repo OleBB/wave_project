@@ -181,11 +181,21 @@ def filter_for_damping(
     pd.DataFrame
         A filtered copy (``df.copy()``) so the original data stays untouched.
     """
+    overordnet = criteria.get("overordnet", {})
+    filters = criteria.get("filters", criteria)
+
+    if overordnet.get("chooseAll", False):
+        return df.copy()
+    if overordnet.get("chooseFirst", False):
+        return df.iloc[[0]].copy()
+
     out = df.copy()
 
-    for col, val in criteria.items():
+    for col, val in filters.items():
         if val is None:
             continue                # nothing to do for this column
+        if col not in out.columns:
+            continue                # skip keys that aren't DataFrame columns
         if isinstance(val, (list, tuple, set)):
             # treat a 2‑tuple specially: low‑high range
             if len(val) == 2 and not isinstance(val, list):
@@ -298,11 +308,23 @@ def apply_experimental_filters(
     n_original = len(out)
     print(f"\n--- Starting Filter Process ({n_original} rows) ---")
 
-    # 2. Sequential Filtering
+    # 2a. Filename keyword exclusion
+    exclude_keywords = filters.get("exclude_run_keywords")
+    if exclude_keywords:
+        before = len(out)
+        mask = out["path"].apply(
+            lambda p: not any(kw in str(p) for kw in exclude_keywords)
+        )
+        out = out[mask]
+        print(f"  [✓] exclude_run_keywords {list(exclude_keywords)} kept {len(out)} rows (removed {before - len(out)})")
+
+    # 2b. Sequential column filtering
     for col, val in filters.items():
+        if col == "exclude_run_keywords":
+            continue  # handled above
         if val is None:
             continue
-            
+
         if col not in out.columns:
             print(f"  [!] Skip: Column '{col}' not found in DataFrame.")
             continue
@@ -633,91 +655,153 @@ def filter_dataframe(
 
 def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Aggregates P3/P2 (and optional probe amplitudes) by:
+    Aggregates OUT/IN ratio (and optional probe amplitudes) by:
       - WaveAmplitudeInput [Volt]
       - Frequency (to be replaced with kL later?)
       - PanelConditionGrouped (full|reverse -> all; no stays no)
       - WindCondition
-      
+
     Returns:
         tuple: (stats, wide) where stats is the aggregated DataFrame
                and wide is the pivoted version
     """
     cmdf = combined_meta_df.copy()
-    
+
     print(f"Input dataframe shape: {cmdf.shape}")
     print(f"Unique PanelCondition values: {cmdf[GC.PANEL_CONDITION].unique().tolist()}")
     print(f"Unique WindCondition values: {cmdf[GC.WIND_CONDITION].unique().tolist()}")
-    
-    # Define required columns using constants
-    columns = [
+
+    # ─── Recompute OUT/IN from FFT probe amplitudes ──────────────────────────
+    # FFT amplitude at the paddle frequency isolates the paddle wave from wind
+    # waves. Time-domain (percentile) amplitude includes wind-wave energy, which
+    # inflates the IN probe amplitude under full-wind conditions and makes OUT/IN
+    # meaningless for damping analysis. Use "Probe {pos} Amplitude (FFT)" always.
+    _have_positions = (
+        "in_position" in cmdf.columns
+        and "out_position" in cmdf.columns
+        and cmdf["in_position"].notna().any()
+    )
+    if _have_positions:
+        _fft_amp_cols = {
+            c for c in cmdf.columns
+            if c.startswith("Probe ") and c.endswith(" Amplitude (FFT)")
+        }
+        def _row_out_in(row):
+            in_pos  = row.get("in_position")
+            out_pos = row.get("out_position")
+            if pd.isna(in_pos) or pd.isna(out_pos):
+                return np.nan
+            in_col  = f"Probe {in_pos} Amplitude (FFT)"
+            out_col = f"Probe {out_pos} Amplitude (FFT)"
+            if in_col not in _fft_amp_cols or out_col not in _fft_amp_cols:
+                return np.nan
+            in_amp  = row.get(in_col,  np.nan)
+            out_amp = row.get(out_col, np.nan)
+            if pd.isna(in_amp) or pd.isna(out_amp) or in_amp == 0:
+                return np.nan
+            return out_amp / in_amp
+        recomputed = cmdf.apply(_row_out_in, axis=1)
+        n_valid = recomputed.notna().sum()
+        if n_valid > 0:
+            cmdf[GC.OUT_IN_FFT] = recomputed
+            print(f"   Recomputed OUT/IN from FFT probe amplitudes ({n_valid} valid rows)")
+        else:
+            # Fallback: FFT amplitude columns didn't match in_position strings —
+            # print diagnostic and keep the cached OUT/IN (FFT) values
+            sample_in  = cmdf["in_position"].dropna().iloc[0] if cmdf["in_position"].notna().any() else "N/A"
+            print(f"   WARNING: OUT/IN recompute yielded 0 valid rows — keeping cached values")
+            print(f"   Sample in_position: '{sample_in}' | FFT amp cols: {sorted(_fft_amp_cols)[:4]}")
+
+    # Detect position-based FFT amplitude columns dynamically (skip all-null columns)
+    fft_amp_cols = [
+        c for c in cmdf.columns
+        if c.startswith("Probe ") and c.endswith(" Amplitude (FFT)") and cmdf[c].notna().any()
+    ]
+
+    # Define required columns
+    base_columns = [
         GC.PATH,
         GC.WIND_CONDITION,
         GC.PANEL_CONDITION,
         GC.WAVE_AMPLITUDE_INPUT,
         GC.WAVE_FREQUENCY_INPUT,
-        *CG.FFT_AMPLITUDE_COLS,  # Probe 1-4 Amplitude (FFT)
         GC.KL,
-        GC.P2_P1_FFT,
-        GC.P3_P2_FFT,
-        GC.P4_P3_FFT,
+        GC.OUT_IN_FFT,
     ]
-    
+    # Include Mooring if present (mooring tension affects wave propagation)
+    if "Mooring" in cmdf.columns:
+        base_columns.append("Mooring")
+    # Include physical probe position columns if present (added by processor2nd)
+    for _pos_col in ("in_position", "out_position"):
+        if _pos_col in cmdf.columns:
+            base_columns.append(_pos_col)
+    columns = base_columns + fft_amp_cols
+
     # Quick safety check
     missing_cols = [c for c in columns if c not in cmdf.columns]
     if missing_cols:
         print(f"WARNING: Missing columns: {missing_cols}")
-    
+        columns = [c for c in columns if c in cmdf.columns]
+
     rmdf = cmdf[columns].copy()
-    
+
     # ─── Panel grouping step ───
     PANEL_CONDITION_GROUPED = "PanelConditionGrouped"  # Temporary column name
     rmdf[PANEL_CONDITION_GROUPED] = rmdf[GC.PANEL_CONDITION].replace({
         "full": "all",
         "reverse": "all"
     })
-    
+
     print("\nAfter PanelCondition grouping:")
     print(rmdf[PANEL_CONDITION_GROUPED].value_counts().to_string())
-    
-    # Define grouping keys using constants
+
+    # Define grouping keys — include physical in/out probe positions so runs from
+    # different probe configurations are never averaged together.
     grouping_keys = [
         GC.WAVE_AMPLITUDE_INPUT,
         GC.WAVE_FREQUENCY_INPUT,
         PANEL_CONDITION_GROUPED,
         GC.WIND_CONDITION,
     ]
-    
+    # Mooring tension is an experimental variable — keep separate groups
+    if "Mooring" in rmdf.columns and rmdf["Mooring"].notna().any():
+        grouping_keys.append("Mooring")
+    for _pos_col in ("in_position", "out_position"):
+        if _pos_col in rmdf.columns and rmdf[_pos_col].notna().any():
+            grouping_keys.append(_pos_col)
+
     # Very useful: see how many unique combinations exist before aggregation
     n_combinations = rmdf[grouping_keys].drop_duplicates().shape[0]
     print(f"\nNumber of unique grouping combinations: {n_combinations}")
-    
+
     # Optional: see distribution of groups
-    group_sizes = rmdf.groupby(grouping_keys).size()
+    group_sizes = rmdf.groupby(grouping_keys, dropna=False).size()
     print("\nGroup sizes (number of rows per group):")
     print(group_sizes.describe())
-    
+
     # ─── The aggregation ───
+    agg_dict = {
+        "mean_out_in":  (GC.OUT_IN_FFT, "mean"),
+        "std_out_in":   (GC.OUT_IN_FFT, "std"),
+        "n_runs":       (GC.PATH, "nunique"),
+        "paths":        (GC.PATH, lambda s: pd.unique(s).tolist()),
+        "mean_kL":      (GC.KL, "mean"),
+    }
+    # Add mean amplitude per probe (position-based, discovered dynamically)
+    for col in fft_amp_cols:
+        pos = col.replace("Probe ", "").replace(" Amplitude (FFT)", "")
+        agg_dict[f"mean_A_{pos}"] = (col, "mean")
+
     stats = (
-        rmdf.groupby(grouping_keys)
-            .agg(
-                mean_P3P2=(GC.P3_P2_FFT, "mean"),
-                std_P3P2=(GC.P3_P2_FFT, "std"),
-                n_runs=(GC.PATH, "nunique"),
-                paths=(GC.PATH, lambda s: pd.unique(s).tolist()),
-                mean_A_Probe1=(PC.AMPLITUDE_FFT.format(i=1), "mean"),
-                mean_A_Probe2=(PC.AMPLITUDE_FFT.format(i=2), "mean"),
-                mean_A_Probe3=(PC.AMPLITUDE_FFT.format(i=3), "mean"),
-                mean_A_Probe4=(PC.AMPLITUDE_FFT.format(i=4), "mean"),
-                mean_kL=(GC.KL, "mean"),
-            )
+        rmdf.groupby(grouping_keys, dropna=False)
+            .agg(**agg_dict)
             .reset_index()
     )
-    
+
     print(f"\nAfter aggregation — stats dataframe shape: {stats.shape}")
     print(f"Number of groups after aggregation: {len(stats)}")
     print("Columns in stats:", stats.columns.tolist())
-    
+
     # Very informative: how many groups have low number of runs
     low_n = stats[stats["n_runs"] <= 2]
     if not low_n.empty:
@@ -729,12 +813,12 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
             GC.WIND_CONDITION,
             "n_runs"
         ]])
-    
+
     # ─── Pivot ───
     wide = stats.pivot_table(
         index=[GC.WAVE_AMPLITUDE_INPUT, PANEL_CONDITION_GROUPED],
         columns=GC.WIND_CONDITION,
-        values=["mean_P3P2", "std_P3P2"]
+        values=["mean_out_in", "std_out_in"]
     )
     
     wide.columns = ["_".join(map(str, col)).strip() for col in wide.columns]
@@ -807,7 +891,7 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
 
 def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Aggregates damping-related metrics (mainly P3/P2 ratio + probe amplitudes)
+    Aggregates damping-related metrics (mainly OUT/IN ratio + probe amplitudes)
     grouped by:
       - WaveAmplitudeInput [Volt]
       - WaveFrequencyInput [Hz]  (can later switch to kL)
@@ -823,23 +907,30 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
     print(f"Unique {GC.PANEL_CONDITION}: {cmdf[GC.PANEL_CONDITION].unique().tolist()}")
     print(f"Unique {GC.WIND_CONDITION}: {cmdf[GC.WIND_CONDITION].unique().tolist()}")
 
-    # ─── Select relevant columns using constants ───
-    columns = [
+    # Detect position-based FFT amplitude columns dynamically (skip all-null columns)
+    fft_amp_cols = [
+        c for c in cmdf.columns
+        if c.startswith("Probe ") and c.endswith(" Amplitude (FFT)") and cmdf[c].notna().any()
+    ]
+
+    # ─── Select relevant columns ───
+    base_columns = [
         GC.PATH,
         GC.WIND_CONDITION,
         GC.PANEL_CONDITION,
         GC.WAVE_AMPLITUDE_INPUT,
         GC.WAVE_FREQUENCY_INPUT,
-        *CG.FFT_AMPLITUDE_COLS,           # Probe 1–4 FFT amplitudes
         GC.KL,
-        GC.P2_P1_FFT,
-        GC.P3_P2_FFT,
-        GC.P4_P3_FFT,
+        GC.OUT_IN_FFT,
     ]
+    if "Mooring" in cmdf.columns:
+        base_columns.append("Mooring")
+    columns = base_columns + fft_amp_cols
 
     missing_cols = [c for c in columns if c not in cmdf.columns]
     if missing_cols:
         print(f"WARNING: Missing columns: {missing_cols}")
+        columns = [c for c in columns if c in cmdf.columns]
 
     rmdf = cmdf[columns].copy()
 
@@ -860,6 +951,8 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
         PANEL_CONDITION_GROUPED,
         GC.WIND_CONDITION,
     ]
+    if "Mooring" in rmdf.columns and rmdf["Mooring"].notna().any():
+        grouping_keys.append("Mooring")
 
     # Diagnostic: data coverage
     n_combinations = rmdf[grouping_keys].drop_duplicates().shape[0]
@@ -871,24 +964,16 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
 
     # ─── Aggregation ───
     agg_dict = {
-        "mean_P3P2":    (GC.P3_P2_FFT, "mean"),
-        "std_P3P2":     (GC.P3_P2_FFT, "std"),
+        "mean_out_in":  (GC.OUT_IN_FFT, "mean"),
+        "std_out_in":   (GC.OUT_IN_FFT, "std"),
         "n_runs":       (GC.PATH, "nunique"),
         "paths":        (GC.PATH, lambda s: pd.unique(s).tolist()),
         "mean_kL":      (GC.KL, "mean"),
-        # Probe amplitudes
-        "mean_A_Probe1": (PC.AMPLITUDE_FFT.format(i=1), "mean"),
-        "mean_A_Probe2": (PC.AMPLITUDE_FFT.format(i=2), "mean"),
-        "mean_A_Probe3": (PC.AMPLITUDE_FFT.format(i=3), "mean"),
-        "mean_A_Probe4": (PC.AMPLITUDE_FFT.format(i=4), "mean"),
     }
-
-    # Optional additions (uncomment if needed):
-    # "mean_P2P1":    (GC.P2_P1_FFT, "mean"),
-    # "mean_P4P3":    (GC.P4_P3_FFT, "mean"),
-    # "median_P3P2":  (GC.P3_P2_FFT, "median"),
-    # "min_P3P2":     (GC.P3_P2_FFT, "min"),
-    # "max_P3P2":     (GC.P3_P2_FFT, "max"),
+    # Add mean amplitude per probe (position-based, discovered dynamically)
+    for col in fft_amp_cols:
+        pos = col.replace("Probe ", "").replace(" Amplitude (FFT)", "")
+        agg_dict[f"mean_A_{pos}"] = (col, "mean")
 
     stats = (
         rmdf.groupby(grouping_keys)

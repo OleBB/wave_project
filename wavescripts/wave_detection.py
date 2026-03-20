@@ -13,7 +13,7 @@ Created on Fri Jan 30 09:44:49 2026
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from wavescripts.improved_data_loader import update_processed_metadata
+from wavescripts.improved_data_loader import update_processed_metadata, PROBE_CONFIGS
 from scipy.signal import find_peaks
 from scipy.signal import welch
 from scipy.optimize import brentq
@@ -32,9 +32,10 @@ from wavescripts.constants import (
 
 
 def find_wave_range(
-    df: pd.DataFrame, 
+    df: pd.DataFrame,
     meta_row: pd.DataFrame,  # metadata for selected files
     data_col: str,
+    probe_num: int,           # physical probe number (1-4) for stillwater lookup
     detect_win: int,
     range_plot: bool = False,
     debug: bool = False,
@@ -95,7 +96,7 @@ def find_wave_range(
         return good_start_idx, good_end_idx, debug_info
         
     samples_per_period = int(round(Fs / importertfrekvens))
-    probe_num_int = int(data_col.split()[-1])   # 1–4, extracted once for reuse below
+    probe_num_int = probe_num  # physical probe number for stillwater lookup
 
     # ─────── velge antall perioder ─────── 
     input_periods = (meta_row["WavePeriodInput"])
@@ -105,32 +106,65 @@ def find_wave_range(
     good_range = keep_idx
 
     # ==========================================================
-    #  1.b  Snarvei: calibrated per-probe anchors, linearly interpolated in frequency
+    #  1.b  Snarvei: calibrated per-probe anchors, interpolated across frequency
     # ==========================================================
-    # Two verified calibration points per probe (eyeballed, well-verified).
-    # Calibrated at: P1=8800mm, P2=9500mm, P3/P4=12450mm from paddle.
-    # For other frequencies (0.7–1.6 Hz), values are linearly interpolated/extrapolated.
-    # If probes are moved significantly from these positions, update _SNARVEI.
-    _SNARVEI = {                              # (f1,  s1,   f2,   s2)
-        "Probe 1": (0.65, 5104, 1.3, 4700),  # 0.65 Hz: +3 periods (3×385=1154) from 3950
-        "Probe 2": (0.65, 5154, 1.3, 4800),  # 0.65 Hz: +3 periods from 4000
-        "Probe 3": (0.65, 5654, 1.3, 6500),  # 0.65 Hz: +3 periods from 4500
-        "Probe 4": (0.65, 5654, 1.3, 6500),  # 0.65 Hz: +3 periods from 4500
+    # Calibration points: eyeballed good-start sample indices at specific frequencies.
+    # All laterals at the same longitudinal distance share the same arrival timing.
+    # Add more points by eyeballing the RampDetectionBrowser — more points = better fit.
+    #
+    # Format: list of (freq_hz, start_sample) sorted by frequency.
+    # Interpolation: linear between calibrated points; linear extrapolation beyond range.
+    # Samples at 250 Hz (ms / 4).
+    #
+    # TODO: re-eyeball and add more calibration points, especially for intermediate freqs.
+    _SNARVEI_CALIB = {
+        # ~8800 mm from paddle
+        "8804":  [(0.65, 3975), (1.30, 4700), (1.80, 6000)],
+        # ~9373 mm from paddle
+        "9373":  [(0.65, 4075), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
+        # ~11800 mm from paddle (march2026_rearranging config, 4–6 Mar 2026 only)
+        # Values interpolated from 9373 and 12400 at distance fraction 0.802 — eyeball-refine
+        # in RampDetectionBrowser once confirmed.
+        "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)],
+        # ~12400 mm from paddle
+        "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
     }
+
+    # Map every probe column name to a distance group — auto-generated from PROBE_CONFIGS
+    # so this never goes stale when distances are corrected in improved_data_loader.py.
+    # Keys are "Probe dist/lat" strings; values are the distance prefix used as
+    # the _SNARVEI_CALIB key (e.g. "Probe 12400/250" → "12400").
+    _PROBE_GROUP = {
+        f"Probe {pos}": pos.split("/")[0]
+        for cfg in PROBE_CONFIGS
+        for pos in cfg.probe_col_names().values()
+    }
+
+    def _snarvei_start(freq: float, calib: list[tuple[float, int]]) -> int:
+        """Polynomial interp (deg 2) of start sample; linear extrap beyond calibrated range."""
+        fs = np.array([p[0] for p in calib])
+        ss = np.array([p[1] for p in calib], dtype=float)
+        deg = min(2, len(calib) - 1)
+        poly  = np.poly1d(np.polyfit(fs, ss, deg))
+        dpoly = poly.deriv()
+        if freq <= fs[0]:
+            return int(round(float(poly(fs[0])) + float(dpoly(fs[0])) * (freq - fs[0])))
+        if freq >= fs[-1]:
+            return int(round(float(poly(fs[-1])) + float(dpoly(fs[-1])) * (freq - fs[-1])))
+        return int(round(float(poly(freq))))
 
     good_start_idx   = None
     good_end_idx     = None
     wave_upcrossings = None
 
-    if data_col in _SNARVEI:
-        f1, s1, f2, s2 = _SNARVEI[data_col]
-        slope          = (s2 - s1) / (f2 - f1)
-        intercept      = s1 - slope * f1
-        good_start_idx = int(round(intercept + slope * importertfrekvens))
-        good_end_idx   = good_start_idx + int(keep_idx)
+    _group = _PROBE_GROUP.get(data_col)
+    if _group is not None and _group in _SNARVEI_CALIB:
+        good_start_idx  = _snarvei_start(importertfrekvens, _SNARVEI_CALIB[_group])
+        good_start_idx += samples_per_period   # skip first period (still in ramp transition)
+        good_end_idx    = good_start_idx + int(keep_idx)
         if debug:
-            print(f"[snarvei] {data_col}: f={importertfrekvens:.3f} Hz → "
-                  f"good_start={good_start_idx}")
+            print(f"[snarvei] {data_col} (group={_group}): f={importertfrekvens:.3f} Hz → "
+                  f"good_start={good_start_idx} (+1 period={samples_per_period})")
 
     """
     # PHYSICS-BASED SNARVEI (too early in practice – kept for reference / future use)
@@ -168,14 +202,16 @@ def find_wave_range(
     # Both endpoints are snapped to the nearest stillwater upcrossing independently.
     # This is robust for windy signals – no chain-walking required.
 
-    stillwater_col   = PC.STILLWATER.format(i=probe_num_int)
-    stillwater_level = float(
-        meta_row[stillwater_col] if isinstance(meta_row, pd.Series)
-        else meta_row[stillwater_col].iloc[0]
-    )
+    # Use per-run DC mean of the first 2 s as the upcrossing threshold.
+    # The global stillwater can differ from the run-local DC level by 0.1–0.2 mm,
+    # which is enough to delay the first upcrossing by several seconds when waves are
+    # small (e.g. ramp-up phase of nowind runs). The local baseline is always centred
+    # on the actual signal, so the first upcrossing is found reliably.
+    _baseline_n    = int(2 * Fs)
+    upcross_level  = float(np.mean(signal_smooth[:_baseline_n]))
 
     # All zero-upcrossings in the full smoothed signal
-    above_still     = signal_smooth > stillwater_level
+    above_still     = signal_smooth > upcross_level
     all_upcrossings = np.where((~above_still[:-1]) & above_still[1:])[0] + 1
 
     n_periods_target = max(5, int(keep_periods))
@@ -549,3 +585,42 @@ def find_wave_range(
     }
 
     return good_start_idx, good_end_idx, debug_info
+
+
+def find_first_arrival(
+    signal: np.ndarray,
+    noise_floor_mm: float,
+    fs: float = 250.0,
+    threshold_factor: float = 2.0,
+    window_s: float = 0.5,
+) -> tuple[int | None, float | None]:
+    """Detect the first sample where wave energy exceeds the stillwater noise floor.
+
+    Uses a rolling (P97.5 - P2.5) / 2 amplitude in a short sliding window —
+    the same definition as the pipeline amplitude — and finds the first window
+    whose amplitude exceeds threshold_factor * noise_floor_mm.
+
+    Args:
+        signal:            1-D array of probe elevation [mm], already zeroed.
+        noise_floor_mm:    Stillwater noise amplitude for this probe [mm]
+                           (mean of 'Probe {pos} Amplitude' across stillwater runs).
+        fs:                Sampling rate [Hz]. Default 250.
+        threshold_factor:  Detection threshold = threshold_factor × noise_floor.
+                           2.0 means "twice the stillwater noise". Default 2.0.
+        window_s:          Rolling window length [s]. Default 0.5 s (125 samples).
+
+    Returns:
+        (arrival_idx, arrival_s): sample index and time [s] of first detection,
+        or (None, None) if signal never exceeds the threshold.
+    """
+    threshold = threshold_factor * noise_floor_mm
+    win = max(1, int(round(window_s * fs)))
+    n = len(signal)
+
+    for i in range(0, n - win + 1):
+        chunk = signal[i : i + win]
+        amp = (np.nanpercentile(chunk, 97.5) - np.nanpercentile(chunk, 2.5)) / 2.0
+        if amp >= threshold:
+            return i, i / fs
+
+    return None, None

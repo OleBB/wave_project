@@ -7,13 +7,14 @@ Created on Fri Dec 19 10:37:28 2025
 """
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
-from wavescripts.improved_data_loader import update_processed_metadata
+from wavescripts.improved_data_loader import update_processed_metadata, get_configuration_for_date
 from typing import Mapping, Any, Optional, Sequence, Dict, Tuple, Iterable
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
-    ProbeColumns as PC, 
-    GlobalColumns as GC, 
+    ProbeColumns as PC,
+    GlobalColumns as GC,
     ColumnGroups as CG,
     CalculationResultColumns as RC
 )
@@ -125,59 +126,37 @@ def compute_amplitude_by_band(
                 print(f"  Frequency resolution Δf: {freq_res:.6f} Hz")
 
         # ------------------------------------------------------------------
-        # Loop over the requested probes
+        # Loop over available Pxx columns (position-based: "Pxx 9373/170" etc.)
         # ------------------------------------------------------------------
-        for i in probes:
-            col = f"Pxx {i}"
-            if col not in df.columns:
-                if verbose:
-                    print(f"  Probe {i}: column '{col}' missing → skipped")
-                continue
+        pxx_cols = [c for c in df.columns if c.startswith("Pxx ")]
 
-            # ----------------------------------------------------------------
-            # Loop over the frequency bands
-            # ----------------------------------------------------------------
+        for col in pxx_cols:
+            pos = col[4:]  # strip "Pxx " → "9373/170", "12545", etc.
+
             for band_name, (f_low, f_high) in freq_bands.items():
-                # Build a mask for the current band
                 mask = (df.index >= f_low) & (df.index <= f_high)
                 n_points = int(mask.sum())
 
-                # ------------------------------------------------------------
-                #  Empty‑band handling (kept from version 2)
-                # ------------------------------------------------------------
                 if n_points == 0:
-                    amplitude = 0.0
-                    if verbose:
-                        print(
-                            f"  Probe {i} – {band_name}: "
-                            f"NO DATA POINTS in [{f_low}, {f_high}] Hz → amplitude=0"
-                        )
-                    row[f"Probe {i} {band_name} Amplitude (PSD)"] = amplitude
+                    row[f"Probe {pos} {band_name} Amplitude (PSD)"] = 0.0
                     continue
 
-                # ------------------------------------------------------------
-                #  Compute variance → amplitude
-                # ------------------------------------------------------------
                 if integration == "sum":
-                    # Simple rectangular integration: Δf * Σ PSD
                     variance = df.loc[mask, col].sum() * freq_res
-                else:  # "trapz"
-                    # Use the true frequency axis for trapezoidal integration.
+                else:
                     freqs = df.index.to_numpy(dtype=float)[mask]
                     psd_vals = df.loc[mask, col].to_numpy(dtype=float)
                     variance = np.trapezoid(psd_vals, x=freqs)
 
-                # Standard deviation and peak‑to‑trough amplitude
-                std_dev = np.sqrt(variance)
-                amplitude = 2.0 * std_dev
+                amplitude = 2.0 * np.sqrt(variance)
 
-                if verbose and i == probes[0]:  # print once per band, first probe
+                if verbose:
                     print(
-                        f"  Probe {i} – {band_name} [{f_low}-{f_high}] Hz: "
-                        f"{n_points} points, variance={variance:.6e}, amplitude={amplitude:.4f}"
+                        f"  Probe {pos} – {band_name} [{f_low}-{f_high}] Hz: "
+                        f"{n_points} pts, amplitude={amplitude:.4f}"
                     )
 
-                row[f"Probe {i} {band_name} Amplitude (PSD)"] = amplitude
+                row[f"Probe {pos} {band_name} Amplitude (PSD)"] = amplitude
 
         rows.append(row)
 
@@ -261,39 +240,76 @@ def _update_more_metrics(
     # Start from a clean indexed copy
     meta_indexed = meta_sel.set_index("path").copy()
 
-    # ── Probe amplitude ratios ───────────────────────────────────────
-    amp_cols = [
-        "Probe 1 Amplitude (FFT)",
-        "Probe 2 Amplitude (FFT)",
-        "Probe 3 Amplitude (FFT)",
-        "Probe 4 Amplitude (FFT)",
-    ]
+    # Derive cfg once from the folder date
+    file_date = datetime.fromisoformat(str(meta_indexed["file_date"].iloc[0]))
+    cfg = get_configuration_for_date(file_date)
+    col_names = cfg.probe_col_names()  # {1: "9373/170", 2: "12545", ...}
 
-    # Only proceed if we have the needed columns
-    missing = [col for col in amp_cols if col not in meta_indexed.columns]
-    if missing:
-        print(f"Warning: missing amplitude columns for ratios: {missing}")
-        # or raise ValueError(...) if you prefer to fail loudly
+    # Compute OUT/IN (FFT): read in_probe/out_probe directly from table columns
+    if "in_probe" in meta_indexed.columns and "out_probe" in meta_indexed.columns:
+        out_in      = pd.Series(index=meta_indexed.index, dtype=float)
+        in_pos_ser  = pd.Series(index=meta_indexed.index, dtype=object)
+        out_pos_ser = pd.Series(index=meta_indexed.index, dtype=object)
+        for (in_p, out_p), idx in meta_indexed.groupby(["in_probe", "out_probe"]).groups.items():
+            in_pos  = col_names[int(in_p)]
+            out_pos = col_names[int(out_p)]
+            in_col  = f"Probe {in_pos} Amplitude (FFT)"
+            out_col = f"Probe {out_pos} Amplitude (FFT)"
+            in_pos_ser.loc[idx]  = in_pos
+            out_pos_ser.loc[idx] = out_pos
+            if in_col in meta_indexed.columns and out_col in meta_indexed.columns:
+                out_in.loc[idx] = (
+                    meta_indexed.loc[idx, out_col] / meta_indexed.loc[idx, in_col]
+                )
+        out_in = out_in.replace([np.inf, -np.inf], np.nan)
+        meta_indexed[GC.OUT_IN_FFT]   = out_in
+        meta_indexed["in_position"]   = in_pos_ser
+        meta_indexed["out_position"]  = out_pos_ser
 
-    # Compute ratios directly (vectorized)
-    ratios = pd.DataFrame(index=meta_indexed.index)
+        # ── Generic IN / OUT columns ─────────────────────────────────
+        # Copy position-specific columns into probe-agnostic names so
+        # downstream code doesn't need to know which probe was IN/OUT.
+        _GENERIC_SUFFIXES = [
+            "Amplitude (FFT)",
+            "WavePeriod (FFT)",
+            "Wavenumber (FFT)",
+            "Wavelength (FFT)",
+            "ka (FFT)",
+            "Celerity (FFT)",
+            "Significant Wave Height Hm0",
+            "Significant Wave Height Hs",
+            "Froude (FFT)",
+            "Wind/Celerity (FFT)",
+            "f/f_PM (FFT)",
+            "Ursell (FFT)",
+            "wave_stability",
+            "period_amplitude_cv",
+        ]
+        for suffix in _GENERIC_SUFFIXES:
+            in_vals  = pd.Series(index=meta_indexed.index, dtype=float)
+            out_vals = pd.Series(index=meta_indexed.index, dtype=float)
+            for (in_p, out_p), idx in meta_indexed.groupby(["in_probe", "out_probe"]).groups.items():
+                in_pos  = col_names[int(in_p)]
+                out_pos = col_names[int(out_p)]
+                src_in  = f"Probe {in_pos} {suffix}"
+                src_out = f"Probe {out_pos} {suffix}"
+                if src_in in meta_indexed.columns:
+                    in_vals.loc[idx]  = meta_indexed.loc[idx, src_in]
+                if src_out in meta_indexed.columns:
+                    out_vals.loc[idx] = meta_indexed.loc[idx, src_out]
+            meta_indexed[f"IN {suffix}"]  = in_vals
+            meta_indexed[f"OUT {suffix}"] = out_vals
 
-    ratios["P2/P1 (FFT)"] = (
-        meta_indexed["Probe 2 Amplitude (FFT)"] / meta_indexed["Probe 1 Amplitude (FFT)"]
-    )
-    ratios["P3/P2 (FFT)"] = (
-        meta_indexed["Probe 3 Amplitude (FFT)"] / meta_indexed["Probe 2 Amplitude (FFT)"]
-    )
-    ratios["P4/P3 (FFT)"] = (
-        meta_indexed["Probe 4 Amplitude (FFT)"] / meta_indexed["Probe 3 Amplitude (FFT)"]
-    )
-
-    # Replace inf/-inf with NaN (e.g. division by zero)
-    ratios = ratios.replace([np.inf, -np.inf], np.nan)
-
-    # Assign / overwrite the ratio columns
-    ratio_cols = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]
-    meta_indexed[ratio_cols] = ratios[ratio_cols]
+    # ── Parallel probe ratio ─────────────────────────────────────────
+    # parallel_ratio = wall-side amplitude / far-side amplitude
+    parallel = cfg.parallel_pair()
+    if parallel:
+        pos_wall, pos_far = parallel
+        col_wall = f"Probe {pos_wall} Amplitude"
+        col_far  = f"Probe {pos_far} Amplitude"
+        if col_wall in meta_indexed.columns and col_far in meta_indexed.columns:
+            ratio = meta_indexed[col_wall] / meta_indexed[col_far]
+            meta_indexed["parallel_ratio"] = ratio.replace([np.inf, -np.inf], np.nan)
 
     # ── Band amplitudes ──────────────────────────────────────────────
     # Assuming compute_amplitude_by_band returns a DataFrame with "path" column
@@ -321,9 +337,9 @@ def _update_more_metrics(
 #         meta_sel: pd.DataFrame
 #         ) -> pd.DataFrame():
 #     meta_indexed = meta_sel.set_index("path")
-    
+
 #     meta_indexed = meta_sel.set_index("path").copy()
-    
+
 #     # ==========================================================
 #     #  plz help below
 #     # ==========================================================
@@ -336,15 +352,15 @@ def _update_more_metrics(
 #     mdf_indexed = mdf.set_index("path") # set index to join back on "path"
 #     ratios_by_path = sub_df.set_index("path")[["P2/P1", "P3/P2", "P4/P3"]]
 #     mdf_indexed[["P2/P1", "P3/P2", "P4/P3"]] = ratios_by_path
-#     mdf = mdf_indexed.reset_index() #reset index 
-        
+#     mdf = mdf_indexed.reset_index() #reset index
+
 #     band_amplitudes = compute_amplitude_by_band(psd_dict)
-    
-    
-    
-    
+
+
+
+
 #     return meta_indexed.reset_index
-    
+
 
 # %% kjøres
 from wavescripts.processor import _set_output_folder
@@ -353,9 +369,9 @@ def process_processed_data(
         fft_dict: dict,
         meta_sel: pd.DataFrame,
         meta_full: pd.DataFrame, #trenger kanskje ikke denne, men _set_output_folder vil ha den.
-        processvariables: dict 
+        processvariables: dict
 ) -> pd.DataFrame:
-    """ 
+    """
     Forklaring:
         nu kjører vi funksjoner som krever en df som allerede har verdier for
         alle probene
@@ -369,11 +385,11 @@ def process_processed_data(
     force_recompute =prosessering.get("force_recompute", False)
     if debug:
         print("kjører process_processed_data fra processsor2nd.py")
-    
+
     meta_sel = _update_more_metrics(psd_dict, fft_dict, meta_sel)
 
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)
     """VIKTIG - denne oppdaterer .JSON-filen"""
     update_processed_metadata(meta_sel, force_recompute=force_recompute)
-    
+
     return meta_sel

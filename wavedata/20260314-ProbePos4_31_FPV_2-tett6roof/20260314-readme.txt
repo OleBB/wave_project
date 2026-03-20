@@ -1,0 +1,11 @@
+full wind amp0300-freq1900, semi-brytende bølger før panelet. 
+
+hadde på "generate waves". Satte på "Save data" også kl 15:30, eller etter amp0300-freq1500.  
+
+ble visst en ekstra kjøring på amp0200-freq1800. fulgte ikke helt med. burde lage rask kode som sjekker starten på neste kjøring, om den er identisk.. eller alle filene som er like store, om de er identiske..
+
+artig kjøring: "fullpanel-fromMaxWinToZeroWin"
+og motsatt: "fullpanel-fromZeroWinToMaxWin". 
+
+ah. igjen, et panel har løsnet. denne gangen det fremste gule panelet. 
+det fikk ligge laust de siste 3 ish kjøringene. 

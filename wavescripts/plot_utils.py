@@ -257,12 +257,15 @@ def _fmt_freq(val) -> str:
 
 
 def _fmt_probes(val) -> str:
-    """[2,3] → '2og3'  |  2 → '2'  |  None → 'allprobes'"""
+    """['9373/170','12545/250'] → '9373-170og12545-250'  |  None → 'allprobes'"""
     if val is None:
         return "allprobes"
+    def _fmt_one(p):
+        s = str(p).replace("/", "-")
+        return s
     if isinstance(val, (list, tuple)):
-        return "og".join(str(int(p)) for p in val)
-    return str(int(val))
+        return "og".join(_fmt_one(p) for p in val)
+    return _fmt_one(val)
 
 
 def build_filename(plot_type: str, meta: dict) -> str:
@@ -308,13 +311,15 @@ def build_fig_meta(plotvariables: dict,
     f = plotvariables.get("filters", {})
     p = plotvariables.get("plotting", {})
     meta = {
-        "chapter":   chapter,
-        "panel":     f.get("PanelCondition"),
-        "wind":      f.get("WindCondition"),
-        "amplitude": f.get("WaveAmplitudeInput [Volt]"),
-        "frequency": f.get("WaveFrequencyInput [Hz]"),
-        "probes":    p.get("probes"),
-        "figsize":   p.get("figsize"),
+        "chapter":     chapter,
+        "panel":       f.get("PanelCondition"),
+        "wind":        f.get("WindCondition"),
+        "amplitude":   f.get("WaveAmplitudeInput [Volt]"),
+        "frequency":   f.get("WaveFrequencyInput [Hz]"),
+        "probes":      p.get("probes"),
+        "figsize":     p.get("figsize"),
+        "caption":     p.get("caption"),
+        "figure_name": p.get("figure_name"),
     }
     if extra:
         meta.update(extra)
@@ -363,7 +368,7 @@ def _build_subfigure_block(filename: str, label_suffix: str,
 
 
 def write_figure_stub(meta: dict, plot_type: str,
-                      panel_filenames: Optional[list[str]] = None,
+                      subfig_filenames: Optional[list[str]] = None,
                       force: bool = False) -> None:
     """
     Write a LaTeX figure stub to TEXFIGU_DIR.
@@ -377,11 +382,11 @@ def write_figure_stub(meta: dict, plot_type: str,
         From build_fig_meta(). Used for filename and immutable comment block.
     plot_type : str
         e.g. 'timeseries', 'psd', 'damping_freq', 'swell_scatter'
-    panel_filenames : list[str], optional
-        Filenames (no extension) of individual panel PDFs.
+    subfig_filenames : list[str], optional
+        Filenames (no extension) of individual subfigure PDFs.
         1 file  → single \\includegraphics
         2+ files → \\subfigure layout (arrange freely in Texifier)
-        None → single panel using build_filename(plot_type, meta)
+        None → single figure using build_filename(plot_type, meta)
     force : bool
         Overwrite existing stub — WIPES caption edits.
         Tip: commit to git first.
@@ -396,7 +401,7 @@ def write_figure_stub(meta: dict, plot_type: str,
 
     # ── Immutable comment block ───────────────────────────────────────────────
     known_keys = {"chapter", "panel", "wind", "amplitude", "frequency",
-                  "probes", "figsize", "script"}
+                  "probes", "figsize", "script", "caption", "figure_name"}
 
     def _line(key, val):
         if isinstance(val, list):
@@ -420,39 +425,55 @@ def write_figure_stub(meta: dict, plot_type: str,
         if k not in known_keys and v is not None:
             comment_lines.append(_line(k, v))
 
-    panels = panel_filenames or [stub_filename]
+    subfig_files = subfig_filenames or [stub_filename]
     comment_lines += [
         "%",
-        "% PANELS AVAILABLE:",
-        *[f"%   FIGURES/{pf}.pdf" for pf in panels],
+        "% SUBFIGURES AVAILABLE:",
+        *[f"%   FIGURES/{pf}.pdf" for pf in subfig_files],
         "% " + "=" * 60,
         "",
     ]
 
-    # ── Figure body ───────────────────────────────────────────────────────────
-    if len(panels) == 1:
-        body = (
-            "\\begin{figure}[htbp]\n"
-            "  \\centering\n"
-            f"  \\includegraphics[width=0.9\\linewidth]{{FIGURES/{panels[0]}.pdf}}\n"
+    # ── Caption and label ─────────────────────────────────────────────────────
+    _caption_text = meta.get("caption")
+    if _caption_text:
+        # First sentence → short caption for List of Figures
+        _short = _caption_text.split(".")[0].strip()
+        _caption_block = (
+            f"  \\caption[{_short}]{{\n"
+            f"    {_caption_text}\n"
+            "  }\n"
+        )
+    else:
+        _caption_block = (
             "  \\caption[Short caption for LOF]{\n"
             "    % TODO: write caption\n"
             "  }\n"
-            f"  \\label{{fig:TODO_{panels[0][-25:]}}}\n"
+        )
+
+    _figure_name = meta.get("figure_name") or stub_filename
+    _label = f"fig:{_figure_name}"
+
+    # ── Figure body ───────────────────────────────────────────────────────────
+    if len(subfig_files) == 1:
+        body = (
+            "\\begin{figure}[htbp]\n"
+            "  \\centering\n"
+            f"  \\includegraphics[width=0.9\\linewidth]{{FIGURES/{subfig_files[0]}.pdf}}\n"
+            + _caption_block
+            + f"  \\label{{{_label}}}\n"
             "\\end{figure}\n"
         )
     else:
         subfigs = []
-        for i, pf in enumerate(panels):
+        for i, pf in enumerate(subfig_files):
             subfigs.append(_build_subfigure_block(pf, _label_probe(pf, i)))
         body = (
             "\\begin{figure}[htbp]\n"
             "  \\centering\n"
             + "\n  \\hfill\n".join(subfigs) + "\n"
-            "  \\caption[Short caption for LOF]{\n"
-            "    % TODO: write caption\n"
-            "  }\n"
-            f"  \\label{{fig:TODO_{stub_filename[-30:]}}}\n"
+            + _caption_block
+            + f"  \\label{{{_label}}}\n"
             "\\end{figure}\n"
         )
 
@@ -460,18 +481,66 @@ def write_figure_stub(meta: dict, plot_type: str,
     print(f"  Stub created: {tex_path.name}")
 
 
+def resolve_caption(plotting: dict, default_template: str, slots: dict,
+                    fn_name: str = "plot") -> str:
+    """
+    Resolve a caption template with computed data slots.
+
+    Every plotter function calls this once, after computing its summary
+    statistics. It:
+      1. Picks the user-supplied ``plotting["caption"]`` template, or falls
+         back to *default_template*.
+      2. Formats the template with *slots* (raises KeyError on unknown slot
+         so typos surface immediately).
+      3. Prints the available slots and copies the one-line result to the
+         macOS clipboard (silent no-op on other platforms).
+      4. Returns the formatted caption string (multi-line, as written).
+
+    Parameters
+    ----------
+    plotting : dict
+        The ``plotvariables["plotting"]`` sub-dict.
+    default_template : str
+        A format-string used when the user has not supplied ``"caption"``.
+        All ``{slot}`` names must exist in *slots*.
+    slots : dict
+        Computed values available for substitution, e.g.
+        ``{"n_runs": 14, "window_ms": 200.0}``.
+        **Do not** include private keys (leading underscore) here — they
+        are for internal use only and are not printed.
+    fn_name : str
+        Name shown in the terminal prefix, e.g. ``"plot_probe_noise_floor"``.
+
+    Returns
+    -------
+    str
+        Formatted caption (may contain LaTeX commands and newlines).
+    """
+    template = plotting.get("caption", default_template)
+    caption  = template.format(**slots)
+    oneline  = " ".join(caption.split())
+
+    public_slots = {k: v for k, v in slots.items() if not k.startswith("_")}
+    print(f"\n[{fn_name}] caption slots: {public_slots}")
+    try:
+        import subprocess
+        subprocess.run(["pbcopy"], input=oneline.encode(), check=True)
+        print(f"[{fn_name}] caption copied to clipboard — just Cmd+V.")
+    except Exception:
+        pass
+    print(f'[{fn_name}] formatted caption:\n  "{oneline}"\n')
+    return caption
+
+
 def save_and_stub(fig: plt.Figure,
                   meta: dict,
                   plot_type: str,
-                  panel_filenames: Optional[list[str]] = None,
-                  save_pdf: bool = True,
-                  save_pgf: bool = True,
+                  subfig_filenames: Optional[list[str]] = None,
                   force_stub: bool = False) -> None:
     """
     Save figure files and write the LaTeX stub in one call.
 
-    This is the single function every plotter function calls at the end
-    when save_plot=True.
+    Always saves both PDF (fast LaTeX build) and PGF (final quality).
 
     Parameters
     ----------
@@ -480,10 +549,9 @@ def save_and_stub(fig: plt.Figure,
         From build_fig_meta().
     plot_type : str
         e.g. 'timeseries', 'psd', 'damping_freq', 'swell_scatter'
-    panel_filenames : list[str], optional
-        When the stub should reference multiple separate panel PDFs.
+    subfig_filenames : list[str], optional
+        When the stub should reference multiple separate subfigure PDFs.
         None → stub references only the single figure being saved now.
-    save_pdf, save_pgf : bool
     force_stub : bool
         Overwrite existing stub (wipes caption edits — commit to git first).
 
@@ -495,7 +563,7 @@ def save_and_stub(fig: plt.Figure,
         save_and_stub(fig, meta, plot_type="timeseries")
     """
     filename = build_filename(plot_type, meta)
-    _save_figure(fig, filename, save_pdf=save_pdf, save_pgf=save_pgf)
+    _save_figure(fig, filename, save_pdf=True, save_pgf=True)
     write_figure_stub(meta, plot_type,
-                      panel_filenames=panel_filenames,
+                      subfig_filenames=subfig_filenames,
                       force=force_stub)
