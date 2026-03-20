@@ -62,7 +62,6 @@ def explore_damping_vs_freq_old(df: pd.DataFrame,
                     title=None, frameon=False)
     g.figure.suptitle("Damping OUT/IN vs Frequency  [quicklook — old]",
                        y=1.04, fontsize=11)
-    plt.tight_layout()
     plt.show()
 
 
@@ -122,7 +121,6 @@ def _explore_damping(
                     bbox_to_anchor=(0.5, 1), ncol=3,
                     title=None, frameon=False)
     g.figure.suptitle(f"{title}  [quicklook]", y=1.04, fontsize=11)
-    plt.tight_layout()
     plt.show()
 
 
@@ -200,7 +198,6 @@ def plot_all_markers() -> None:
     ax.set_ylim(-n_rows * 2, 1)
     ax.axis("off")
     ax.set_title("Matplotlib Marker Styles", fontsize=16, fontweight="bold", pad=20)
-    plt.tight_layout()
     plt.show()
 
 
@@ -349,7 +346,6 @@ def plot_stillwater_fit(dfs: dict, meta: "pd.DataFrame", cfg,
     axes[0].legend(seen.values(), seen.keys(), fontsize=7)
 
     fig.suptitle(title, fontsize=10)
-    fig.tight_layout()
     plt.show()
 
 
@@ -375,7 +371,6 @@ def plot_rgb() -> None:
     plt.xlabel("X-axis")
     plt.grid(True, axis="x", alpha=0.3)
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=9)
-    plt.tight_layout()
     plt.show()
 
 

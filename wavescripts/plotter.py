@@ -149,7 +149,6 @@ def plot_all_probes(
     ax.grid(True, which="minor", linestyle=":", linewidth=0.5, color="gray")
     ax.minorticks_on()
     apply_legend(ax, plotvariables)
-    fig.tight_layout()
 
     if save_plot:
         meta = build_fig_meta(
@@ -252,7 +251,15 @@ def _make_damping_freq_fig(
     ax.set_title(f"{panel} panel  |  {amp:.2f} V", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(title="wind", fontsize=8, title_fontsize=8)
-    fig.tight_layout()
+    # ── SUBFIGURE SIZING RULE ─────────────────────────────────────────────────
+    # Always use fixed subplots_adjust for any _make_*_fig helper that produces
+    # a series of subfigures. NEVER use tight_layout() here — it adjusts margins
+    # per content (legend size, tick label width, title length), so each saved
+    # file gets different internal proportions even at the same figsize. That
+    # breaks downstream LaTeX faceting where all subfigures must align.
+    # Tune these values once for the plot type, then keep them identical across
+    # every subfigure in the series.
+    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
     return fig
 
 
@@ -278,6 +285,33 @@ def plot_damping_freq(
 
     panel_conditions = sorted(stats_df[GC.PANEL_CONDITION_GROUPED].unique())
     amplitudes       = sorted(stats_df[GC.WAVE_AMPLITUDE_INPUT].unique())
+    wind_conditions  = sorted(stats_df[GC.WIND_CONDITION].unique())
+    n_runs           = int(stats_df["n_runs"].sum()) if "n_runs" in stats_df.columns else len(stats_df)
+
+    # Allow caption at plotvariables top level (string) as a convenience
+    _top_caption = plotvariables.get("caption")
+    if isinstance(_top_caption, str) and "caption" not in plotting:
+        plotting = {**plotting, "caption": _top_caption}
+
+    _caption_slots = {
+        "n_runs":      n_runs,
+        "n_panels":    len(panel_conditions),
+        "panels":      ", ".join(panel_conditions),
+        "n_amps":      len(amplitudes),
+        "amps":        ", ".join(f"{a:.2f}\\,V" for a in amplitudes),
+        "n_wind":      len(wind_conditions),
+        "wind_conds":  ", ".join(wind_conditions),
+    }
+    _default_caption = (
+        "Damping ratio OUT/IN (FFT amplitude at paddle frequency) versus "
+        "wave frequency, for {panels} panel condition(s). "
+        "Colour encodes wind condition ({wind_conds}); "
+        "each line shows one amplitude ({amps}). "
+        "Errorbars: standard deviation across repeated runs. "
+        "Dashed line: ratio = 1 (no damping)."
+    )
+    _caption = resolve_caption(plotting, _default_caption, _caption_slots,
+                               fn_name="plot_damping_freq")
 
     if show_plot:
         for panel in panel_conditions:
@@ -288,106 +322,143 @@ def plot_damping_freq(
     if save_plot:
         subfig_filenames = []
         meta_base = build_fig_meta(
-            plotvariables,
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_freq"},
         )
-        figure_name = plotting.get("figure_name") or build_filename("damping_freq", meta_base)
-        i = 1
+        figure_name    = plotting.get("figure_name") or build_filename("damping_freq", meta_base)
+        subfig_captions = []
         for panel in panel_conditions:
             for amp in amplitudes:
                 fig_s = _make_damping_freq_fig(stats_df, panel, amp, figsize=figsize)
-                fname = f"{figure_name}_{i}"
+                amp_tag = f"{int(round(amp * 100)):02d}V"
+                fname = f"{figure_name}_{panel}_{amp_tag}"
                 _save_figure(fig_s, fname, save_pgf=True)
                 subfig_filenames.append(fname)
+                subfig_captions.append(f"{panel.capitalize()} panel, ${amp:.2f}$\\,V")
                 plt.close(fig_s)
-                i += 1
 
         stub_meta = {**meta_base, "panel": panel_conditions, "amplitude": amplitudes, "wind": "allwind"}
         write_figure_stub(stub_meta, "damping_freq", subfig_filenames=subfig_filenames,
+                          subfig_captions=subfig_captions,
                           force=plotting.get("force_stub", False))
+
+
+def _make_damping_scatter_fig(
+    stats_df: pd.DataFrame, panel: str, figsize: tuple = (5, 4)
+) -> plt.Figure:
+    """
+    Single axes: OUT/IN vs frequency for one panel condition.
+    Colour = wind condition. Marker size = amplitude. No internal faceting.
+    """
+    import seaborn as sns
+    subset = stats_df[stats_df[GC.PANEL_CONDITION_GROUPED] == panel]
+    fig, ax = plt.subplots(figsize=figsize)
+
+    sns.scatterplot(
+        data=subset.sort_values(GC.WAVE_FREQUENCY_INPUT),
+        x=GC.WAVE_FREQUENCY_INPUT, y="mean_out_in",
+        hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
+        size=GC.WAVE_AMPLITUDE_INPUT, sizes=(40, 160),
+        alpha=0.80, ax=ax, legend="auto",
+    )
+
+    if "std_out_in" in subset.columns:
+        for wind, grp in subset.groupby(GC.WIND_CONDITION):
+            ax.errorbar(
+                grp[GC.WAVE_FREQUENCY_INPUT], grp["mean_out_in"],
+                yerr=grp["std_out_in"],
+                fmt="none", ecolor=WIND_COLOR_MAP.get(wind, "gray"),
+                elinewidth=1, capsize=3, alpha=0.4, zorder=1,
+            )
+
+    ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
+    ax.set_xlabel("Frequency [Hz]", fontsize=9)
+    ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
+    ax.set_title(f"{panel} panel", fontsize=9)
+    ax.legend(title="wind / amp", fontsize=7, title_fontsize=7)
+    ax.grid(True, alpha=0.3)
+    # Fixed margins — see subfigure sizing rule in _make_damping_freq_fig
+    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
+    return fig
 
 
 def plot_damping_scatter(
     stats_df: pd.DataFrame,
     plotvariables: Optional[dict] = None,
-    show_errorbars: bool = True,
-    size_by_amplitude: bool = False,
     chapter: str = "05",
 ) -> None:
     """
-    Single scatter: OUT/IN ratio for all conditions, coloured by wind.
+    OUT/IN scatter vs frequency, one figure per panel condition.
+    Colour = wind. Size = amplitude. No internal faceting — LaTeX arranges subfigures.
+
+    show_plot → one window per panel (REPL verification)
+    save_plot → one PDF/PGF per panel + .tex stub
+
     Input: output from damping_all_amplitude_grouper()
     """
     if plotvariables is None:
         plotvariables = {"plotting": {"show_plot": True, "save_plot": False}}
 
-    plotting = plotvariables.get("plotting", {})
+    plotting  = plotvariables.get("plotting", {})
     show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
+    figsize   = plotting.get("figsize", (5, 4))
 
-    import seaborn as sns
-    sns.set_style("ticks", {"axes.grid": True})
-    fig, ax = plt.subplots(figsize=plotting.get("figsize") or (10, 6))
-    plot_data = stats_df.sort_values(GC.WAVE_FREQUENCY_INPUT)
+    panel_conditions = sorted(stats_df[GC.PANEL_CONDITION_GROUPED].unique())
+    amplitudes       = sorted(stats_df[GC.WAVE_AMPLITUDE_INPUT].unique())
+    wind_conditions  = sorted(stats_df[GC.WIND_CONDITION].unique())
+    n_runs           = int(stats_df["n_runs"].sum()) if "n_runs" in stats_df.columns else len(stats_df)
 
-    scatter_kwargs = dict(
-        data=plot_data,
-        x=GC.WAVE_FREQUENCY_INPUT,
-        y="mean_out_in",
-        hue=GC.WIND_CONDITION,
-        palette=WIND_COLOR_MAP,
-        style=GC.PANEL_CONDITION_GROUPED,
-        style_order=["no", "all"],
-        alpha=0.75,
-        ax=ax,
-        legend="auto",
+    # Allow caption at plotvariables top level (string) as a convenience
+    _top_caption = plotvariables.get("caption")
+    if isinstance(_top_caption, str) and "caption" not in plotting:
+        plotting = {**plotting, "caption": _top_caption}
+
+    _caption_slots = {
+        "n_runs":     n_runs,
+        "n_panels":   len(panel_conditions),
+        "panels":     ", ".join(panel_conditions),
+        "n_wind":     len(wind_conditions),
+        "wind_conds": ", ".join(wind_conditions),
+        "n_amps":     len(amplitudes),
+        "amps":       ", ".join(f"{a:.2f}\\,V" for a in amplitudes),
+    }
+    _default_caption = (
+        "OUT/IN damping ratio versus wave frequency, all amplitudes combined. "
+        "{panels} panel condition(s); colour = wind condition ({wind_conds}); "
+        "marker size = wave amplitude ({amps}). "
+        "Errorbars: standard deviation across runs."
     )
-    if size_by_amplitude:
-        scatter_kwargs["size"] = GC.WAVE_AMPLITUDE_INPUT
-        scatter_kwargs["sizes"] = (50, 200)
+    _caption = resolve_caption(plotting, _default_caption, _caption_slots,
+                               fn_name="plot_damping_scatter")
 
-    sns.scatterplot(**scatter_kwargs)
-
-    if show_errorbars and "std_out_in" in plot_data.columns:
-        for wind in plot_data[GC.WIND_CONDITION].unique():
-            wd = plot_data[plot_data[GC.WIND_CONDITION] == wind]
-            ax.errorbar(
-                wd[GC.WAVE_FREQUENCY_INPUT],
-                wd["mean_out_in"],
-                yerr=wd["std_out_in"],
-                fmt="none",
-                ecolor=WIND_COLOR_MAP.get(wind, "gray"),
-                elinewidth=1,
-                capsize=3,
-                alpha=0.4,
-                zorder=1,
-            )
-
-    ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
-    ax.set_xlabel("Frequency [Hz]", fontsize=11)
-    ax.set_ylabel("OUT/IN  (mean ± std)", fontsize=11)
-    ax.set_title("Damping Ratio: All Conditions", fontsize=12, fontweight="bold")
-    ax.legend(loc="best", framealpha=0.9, fontsize=9)
-    plt.tight_layout()
+    if show_plot:
+        for panel in panel_conditions:
+            fig = _make_damping_scatter_fig(stats_df, panel, figsize=figsize)
+            plt.show()
 
     if save_plot:
-        meta = build_fig_meta(
-            plotvariables,
+        subfig_filenames = []
+        meta_base = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_scatter"},
         )
-        save_and_stub(
-            fig,
-            meta,
-            plot_type="damping_scatter",
-            save_pgf=True,
-        )
+        figure_name     = plotting.get("figure_name") or build_filename("damping_scatter", meta_base)
+        subfig_captions = []
+        for panel in panel_conditions:
+            fig_s = _make_damping_scatter_fig(stats_df, panel, figsize=figsize)
+            fname = f"{figure_name}_{panel}"
+            _save_figure(fig_s, fname, save_pgf=True)
+            subfig_filenames.append(fname)
+            subfig_captions.append(f"{panel.capitalize()} panel")
+            plt.close(fig_s)
 
-    if show_plot:
-        plt.show()
-    else:
-        plt.close(fig)
+        stub_meta = {**meta_base, "panel": panel_conditions, "wind": "allwind"}
+        write_figure_stub(stub_meta, "damping_scatter", subfig_filenames=subfig_filenames,
+                          subfig_captions=subfig_captions,
+                          force=plotting.get("force_stub", False))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -644,7 +715,6 @@ def plot_swell_scatter(
         fig.suptitle(
             "IN vs OUT — Swell / Wind / Total", fontsize=12, fontweight="bold", y=1.01
         )
-        plt.tight_layout()
         plt.show()
 
     if save_plot:
@@ -668,7 +738,6 @@ def plot_swell_scatter(
             )
             ax_s.set_xlabel(f"Probe {in_pos} IN amplitude [mm]", fontsize=9)
             ax_s.set_ylabel(f"Probe {out_pos} OUT amplitude [mm]", fontsize=9)
-            fig_s.tight_layout()
 
             band_meta = {**meta_base, "band": band_name.lower()}
             fname = build_filename(f"swell_{band_name.lower()}", band_meta)
@@ -832,9 +901,11 @@ def plot_frequency_spectrum(
         apply_legend(ax, plotvariables)
 
     axes[-1].set_xlabel(col_prefix, fontsize=fontsize)
-    plt.tight_layout()
 
     # ── caption ──────────────────────────────────────────────────────────────
+    _top_caption = plotvariables.get("caption")
+    if isinstance(_top_caption, str) and "caption" not in plotting:
+        plotting = {**plotting, "caption": _top_caption}
     _wind_conds = sorted(meta_df["WindCondition"].dropna().unique().tolist())
     _panel_conds = sorted(meta_df["PanelCondition"].dropna().unique().tolist())
     _caption_slots = {
@@ -954,7 +1025,6 @@ def plot_frequency_spectrum(
                     ax_s.grid(which="major", linestyle="--", alpha=0.6)
                     ax_s.grid(which="minor", linestyle="-.", alpha=0.3)
                 apply_legend(ax_s, plotvariables)
-                fig_s.tight_layout()
 
                 # Per-panel meta — override probe for filename
                 panel_meta = {**meta_base}
@@ -1153,7 +1223,6 @@ def plot_reconstructed(
         fontweight="bold",
         y=0.995,
     )
-    plt.tight_layout()
 
     if save_plot:
         meta = build_fig_meta(
@@ -1412,7 +1481,6 @@ def plot_ramp_detection(
     ax.set_ylabel("Water level [mm]")
     ax.grid(True, alpha=0.1)
     ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
-    fig.tight_layout()
     return fig, ax
 
 
@@ -1485,6 +1553,10 @@ def plot_probe_noise_floor(
     show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
     figure_name = plotting.get("figure_name", "ch04_probe_noise_floor")
+    # Allow caption at plotvariables top level (string) as a convenience
+    _top_caption = plotvariables.get("caption")
+    if isinstance(_top_caption, str) and "caption" not in plotting:
+        plotting = {**plotting, "caption": _top_caption}
 
     # --- select stillwater runs ---
     is_stillwater = (
@@ -1571,7 +1643,6 @@ def plot_probe_noise_floor(
         fontsize=10,
     )
     ax.grid(True, axis="y", alpha=0.3)
-    fig.tight_layout()
 
     if show_plot:
         plt.show()
@@ -1652,6 +1723,10 @@ def plot_parallel_ratio(
     show_plot   = plotting.get("show_plot",   False)
     save_plot   = plotting.get("save_plot",   False)
     figure_name = plotting.get("figure_name", "ch04_parallel_ratio")
+    # Allow caption at plotvariables top level (string) as a convenience
+    _top_caption = plotvariables.get("caption")
+    if isinstance(_top_caption, str) and "caption" not in plotting:
+        plotting = {**plotting, "caption": _top_caption}
 
     # --- filter to wave runs with a valid parallel_ratio ---
     df = apply_experimental_filters(combined_meta, plotvariables)
@@ -1695,7 +1770,6 @@ def plot_parallel_ratio(
     axes[0][0].set_ylabel("Parallel ratio (wall / far)")
     axes[0][0].legend(title="Wind", fontsize=8)
     fig.suptitle("Lateral symmetry — parallel probe ratio", fontsize=11)
-    fig.tight_layout()
 
     if show_plot:
         plt.show()

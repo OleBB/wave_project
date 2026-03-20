@@ -156,10 +156,17 @@ _pv_noise_floor = {
         "save_plot": False,           # set True when figure is ready for thesis
         "figure_name": "ch04_probe_noise_floor",
         "force_stub": True,
+        "caption": (
+            "Probe noise floor estimated as the minimum windowed "
+            r"(P$_{97.5}$--P$_{2.5}$)/2 amplitude over 200\,ms "
+            "sliding windows of 14 stillwater recordings "
+            r"(1 run(s) excluded — name keyword or windowed minimum above 0.5\,mm). "
+            "Short windows suppress slow tank sloshing so only electronic "
+            "jitter and capillary ripples remain. "
+            "Error bars: standard deviation across runs. "
+            "White dots: individual run values."
+        ),
     },
-    "caption": {
-        "PROBE noise floor estimated as the minimum windowed (P$_{97.5}$--P$_{2.5}$)/2 amplitude over 200\,ms sliding windows of 14 stillwater recordings (1 run(s) excluded — name keyword or windowed minimum above 0.5\,mm). Short windows suppress slow tank sloshing so only electronic jitter and capillary ripples remain. Error bars: standard deviation across runs. White dots: individual run values."
-    }
 }
 
 start = time.perf_counter()
@@ -222,10 +229,16 @@ _pv_parallel_ratio = {
         "save_plot": True,           # set True when figure is ready for thesis
         "figure_name": "ch04_parallel_ratio",
         "force_stub": True,
+        "caption": (
+            "Ratio of wall-side to far-side probe amplitude at the same longitudinal "
+            "distance, for {n_runs} wave runs across {n_panels} panel condition(s) "
+            "({panel_conditions}). "
+            "A ratio of 1 indicates lateral symmetry. "
+            "Deviations indicate wall reflections or wind-driven lateral asymmetry. "
+            r"Error bars: standard deviation across runs at the same frequency. "
+            "Dashed line: ratio = 1."
+        ),
     },
-    "caption": {
-        "Ratio of wall-side to far-side probe amplitude at the same longitudinal distance, for 154 wave runs across 1 panel configurations. A ratio of 1 indicates lateral symmetry. Deviations indicate wall reflections or wind-driven lateral asymmetry. Error bars: standard deviation across runs at the same frequency. Dashed line: ratio = 1."
-    }
 }
 start = time.perf_counter()
 _fig_pr = plot_parallel_ratio(combined_meta, _pv_parallel_ratio)
@@ -466,7 +479,6 @@ if _pv_wave_stability["plotting"]["show_plot"] and not _stab_df.empty:
     axes[0].set_ylabel("wave_stability")
     axes[-1].legend(title="wind", fontsize=8)
     fig.suptitle("Wavetrain stability vs frequency  (full panel)", fontsize=10)
-    plt.tight_layout()
     plt.show()
 # TODO: promote to plot_wave_stability() in plotter.py when layout is finalised
 
@@ -493,24 +505,14 @@ _pv_lateral_nowind = {
         "save_plot":   False,
         "figure_name": "ch04_lateral_nowind",
         "force_stub":  False,
-    },
-    "caption": {
-        "Wall-side to far-side amplitude ratio at matched longitudinal distance, "
-        "no-wind runs only. A ratio of 1 indicates the paddle wave is laterally "
-        "uniform. Dashed line: ratio = 1."
+        "caption": (
+            "Wall-side to far-side amplitude ratio at matched longitudinal distance, "
+            "no-wind runs only. A ratio of 1 indicates the paddle wave is laterally "
+            r"uniform. Dashed line: ratio = 1."
+        ),
     },
 }
 # _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)  # TODO: uncomment
-
-# =============================================================================
-# =============================================================================
-# =============================================================================
-# =============================================================================
-# =============================================================================
-# =============================================================================
-# =============================================================================
-# =============================================================================
-# =============================================================================
 
 # =============================================================================
 # CHAPTER 05 — RESULTS
@@ -547,12 +549,19 @@ _pv_damping_freq = {
     "plotting": {
         "show_plot":  True,
         "save_plot":  True,          # set True when figure is ready for thesis
-        "force_stub": False,
+        "force_stub": True,
         "figure_name": "ch05_damping_freq",
         "figsize":    (7, 3),
         "annotate":   True,
         "legend":     "outside_right",
         "probes":     ANALYSIS_PROBES,
+        "caption": (
+            "Damping ratio OUT/IN (FFT amplitude at paddle frequency) versus wave frequency. "
+            "Colour encodes wind condition ({wind_conds}); "
+            "each line shows one amplitude ({amps}). "
+            "Errorbars: standard deviation across repeated runs. "
+            "Dashed line: ratio = 1 (no damping)."
+        ),
     },
 }
 
@@ -578,18 +587,19 @@ Figures:
 _pv_damping_scatter = {
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   None,
+        "WaveFrequencyInput [Hz]":   (0.1, 1.8),
         "WindCondition":             None,
         "PanelCondition":            None,
+        # "run_category":            "standard",   # re-enable after --force-recompute
     },
     "plotting": {
         "show_plot":   True,
-        "save_plot":   False,         # set True when figure is ready for thesis
+        "save_plot":   True,         # set True when figure is ready for thesis
         "figure_name": "ch05_damping_scatter",
-        "figsize":     (7, 5),
-        "legend":      "inside",
-    },
-}
+        "force_stub":  True,
+        "figsize":     (5, 4),
+        "caption": "UT/INN damping ratio versus wave frequency, all amplitudes combined. all panel condition(s); colour = wind condition (full, no); marker size = wave amplitude (0.10\,V, 0.20\,V, 0.30\,V, 0.60\,V). Errorbars: standard deviation across runs."
+}}
 
 _scatter_meta   = _aef(combined_meta, _pv_damping_scatter)
 _scatter_grouped = damping_all_amplitude_grouper(_scatter_meta)

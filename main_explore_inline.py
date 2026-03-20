@@ -527,7 +527,6 @@ else:
     ax_zm.set_title("Zoom — 25 samples", fontsize=9)
     ax_zm.grid(True, alpha=0.3)
 
-    plt.tight_layout()
     plt.show()
     print(f"{len(_sw_df)} samples  |  {len(_sw_df)/_FS:.1f} s")
 
@@ -680,7 +679,6 @@ fig.suptitle(
     f"First wave arrival  (threshold={_THRESHOLD_FACTOR}× noise floor, window={_WINDOW_S} s)",
     fontsize=9, y=1.01,
 )
-plt.tight_layout()
 plt.show()
 
 # %% ── wind-only — overview + zoom (solo & parallel probes) ───────────────────
@@ -751,7 +749,6 @@ else:
             ax_zm.set_title("Zoom — 1 s window (250 samples)", fontsize=9)
             ax_zm.grid(True, alpha=0.3)
 
-        plt.tight_layout()
         plt.show()
 
     if _solo_cols:
@@ -801,7 +798,6 @@ ax.set_title("First wave arrival — no wind, all frequencies")
 _handles, _labels = ax.get_legend_handles_labels()
 ax.legend(_handles[::-1], _labels[::-1], fontsize=8, title="frequency")
 ax.grid(True, alpha=0.3)
-plt.tight_layout()
 plt.show()
 
 _thresh_str = ",  ".join(
@@ -916,7 +912,6 @@ ax.set_title(f"First wave arrival — period-based detection, no wind  "
 _h, _l = ax.get_legend_handles_labels()
 ax.legend(_h[::-1], _l[::-1], fontsize=8, title="frequency")
 ax.grid(True, alpha=0.3)
-plt.tight_layout()
 plt.show()
 
 _thresh_str2 = ",  ".join(
@@ -1006,7 +1001,6 @@ for ax, pos in zip(axes.flat, _probes_sorted):
 
 fig.suptitle("Pre-arrival oscillation frequency relative to target wave\n"
              "(mean ± half-range across runs, no wind)", fontsize=10)
-plt.tight_layout()
 plt.show()
 
 # %% ── tank swell tail — mstop90 runs ────────────────────────────────────────
@@ -1202,7 +1196,6 @@ for pos in _probes_by_dist:
         f"threshold = {_SLOSH_THRESHOLD}×  |  red→green = early→late in tail",
         fontsize=10
     )
-    plt.tight_layout()
     plt.show()
 #TODO: is the wind noise centered at the same baseline in these plots?
 # TODO: does wind "increase" the baseline? does it move water backwards in the tank?

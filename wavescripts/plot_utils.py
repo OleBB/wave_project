@@ -356,12 +356,13 @@ def _label_probe(filename: str, fallback_idx: int) -> str:
 
 
 def _build_subfigure_block(filename: str, label_suffix: str,
-                            width: str = "0.48") -> str:
+                            width: str = "0.48",
+                            subcaption: str = "TODO") -> str:
     return (
         f"  \\begin{{subfigure}}[b]{{{width}\\linewidth}}\n"
         f"    \\centering\n"
         f"    \\includegraphics[width=\\linewidth]{{FIGURES/{filename}.pdf}}\n"
-        f"    \\caption{{TODO}}\n"
+        f"    \\caption{{{subcaption}}}\n"
         f"    \\label{{fig:TODO_{label_suffix}}}\n"
         f"  \\end{{subfigure}}"
     )
@@ -369,6 +370,7 @@ def _build_subfigure_block(filename: str, label_suffix: str,
 
 def write_figure_stub(meta: dict, plot_type: str,
                       subfig_filenames: Optional[list[str]] = None,
+                      subfig_captions: Optional[list[str]] = None,
                       force: bool = False) -> None:
     """
     Write a LaTeX figure stub to TEXFIGU_DIR.
@@ -467,7 +469,10 @@ def write_figure_stub(meta: dict, plot_type: str,
     else:
         subfigs = []
         for i, pf in enumerate(subfig_files):
-            subfigs.append(_build_subfigure_block(pf, _label_probe(pf, i)))
+            subcap = (subfig_captions[i] if subfig_captions and i < len(subfig_captions)
+                      else "TODO")
+            subfigs.append(_build_subfigure_block(pf, _label_probe(pf, i),
+                                                  subcaption=subcap))
         body = (
             "\\begin{figure}[htbp]\n"
             "  \\centering\n"
