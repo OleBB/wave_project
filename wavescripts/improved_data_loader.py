@@ -50,11 +50,10 @@ NON_FLOAT_COLUMNS = {
 _CATEGORY_KEYWORDS: Dict[str, List[str]] = {
     "diagnostic": [
         "nestenstille",
-        "mstop",
         "frommax",       # e.g. FromMaxWinToNoWin
-        "midday",
-        "startofday",
-        "endofday",
+        # "midday",
+        # "startofday",
+        # "endofday",
     ],
     "nowave_control": [
         "nowave",
@@ -68,7 +67,7 @@ _CATEGORY_KEYWORDS: Dict[str, List[str]] = {
 
 def _assign_run_category(path: str) -> str:
     """Return 'diagnostic', 'nowave_control', or 'standard' based on filename keywords."""
-    lower = path.lower()
+    lower = Path(path).name.lower()   # filename only — folder names must not bleed in
     for category, keywords in _CATEGORY_KEYWORDS.items():
         if any(kw in lower for kw in keywords):
             return category
@@ -592,7 +591,15 @@ def _extract_mooring_condition(metadata: dict, filename: str) -> bool:
 
 
 def _extract_wave_parameters(metadata: dict, filename: str):
-    """Extract wave parameters from filename."""
+    """Extract wave parameters from filename.
+
+    nowave overrides any amp/freq tags — a file named nowave-amp0100-freq1300
+    has no paddle wave regardless of what the tags say.
+    """
+    _nowave_kws = _CATEGORY_KEYWORDS["nowave_control"]
+    if any(kw in filename.lower() for kw in _nowave_kws):
+        return   # no paddle wave — leave WaveFrequencyInput / WaveAmplitudeInput as None
+
     if m := re.search(r"-amp([A-Za-z0-9]+)-", filename):
         metadata["WaveAmplitudeInput [Volt]"] = int(m.group(1)) / 1000
 

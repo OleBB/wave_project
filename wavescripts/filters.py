@@ -21,11 +21,11 @@ from wavescripts.constants import (
 # column_map = {
 #     "amp":   "WaveAmplitudeInput [Volt]",
 #     "freq":  "WaveFrequencyInput [Hz]",
-#     "per":   "WavePeriodInput",               # 
-#     "wind":  "WindCondition",                 # 
-#     "tunnel":"TunnelCondition",               # 
+#     "per":   "WavePeriodInput",               #
+#     "wind":  "WindCondition",                 #
+#     "tunnel":"TunnelCondition",               #
 #     "mooring":"Mooring",
-#     "panel": "PanelCondition" 
+#     "panel": "PanelCondition"
 # }
 
 def filter_chosen_files(meta, processvariables):
@@ -42,9 +42,9 @@ def filter_chosen_files(meta, processvariables):
     overordnet = processvariables.get("overordnet", {})
     chooseAll = overordnet.get("chooseAll", False)
     chooseFirst = overordnet.get("chooseFirst", False)
-    
+
     filter_variables = processvariables.get("filters", {})
-    
+
 
     # === Førstemann til mølla! This one overrides === #
     if chooseAll:
@@ -58,7 +58,7 @@ def filter_chosen_files(meta, processvariables):
     filter_values = processvariables.get("filters", {})
     """Use .get(..., default) when the key may be absent and you want a
     safe fallback (common for config-like dicts).
-    Use [] when the key must exist and its absence 
+    Use [] when the key must exist and its absence
     should be treated as a bug (so you want an immediate KeyError).
     """
 
@@ -85,7 +85,7 @@ def filter_chosen_files(meta, processvariables):
     print(f'Found {number_of} files:')
     pd.set_option("display.max_colwidth", 200)
     print(df_sel["path"])
-    
+
     return df_sel
 # %%
 
@@ -97,11 +97,11 @@ def filter_for_amplitude_plot(meta_df: pd.DataFrame, amplotvars: dict) -> pd.Dat
 
     df = meta_df.copy()
     n_original = len(df)
-    
+
     if chooseAll:
         print("No filtering — chooseAll = True")
         return df.copy()
-    
+
     if chooseFirst:
         print("Selected only first row — chooseFirst = True")
         return df.iloc[[0]].copy()
@@ -109,18 +109,18 @@ def filter_for_amplitude_plot(meta_df: pd.DataFrame, amplotvars: dict) -> pd.Dat
     filters = amplotvars.get("filters", {})
     mask = pd.Series(True, index=df.index)
     print("Starting with full dataset:", n_original, "rows")
-    
+
     for key, value in filters.items():
         if value is None:
             continue
-            
+
         col_name = filters.get("filters", key) # column_map.get(key, key)
         if col_name not in df.columns:
             print(f"  ✗ Column '{col_name}' not found → skipping {key}")
             continue
 
         before = mask.sum()
-        
+
         if isinstance(value, (list, tuple, set, np.ndarray)):
             if "all" in [v.lower() if isinstance(v,str) else v for v in value]:
                 print(f"  ✓ {key}: 'all' in list → no filter applied")
@@ -136,13 +136,13 @@ def filter_for_amplitude_plot(meta_df: pd.DataFrame, amplotvars: dict) -> pd.Dat
                 continue
             mask &= df[col_name] == value
             applied = f"== {value!r}"
-        
+
         after = mask.sum()
         removed = before - after
         print(f"  ✓ {key}: {applied}  → kept {after} rows (removed {removed})")
 
     filtered_df = df[mask].copy()
-    
+
     print(f"Final result: {len(filtered_df)} rows (removed {n_original - len(filtered_df)})")
     return filtered_df
 
@@ -217,7 +217,7 @@ def filter_for_frequencyspectrum(
 ) -> pd.DataFrame:
     """
     Return a *view* of ``df`` that respects the key/value pairs in ``criteria``.
-    
+
     Parameters
     ----------
     df : pd.DataFrame
@@ -226,17 +226,17 @@ def filter_for_frequencyspectrum(
         Can be either:
         - A simple dict with column filters
         - A nested dict with "overordnet" and "filters" keys
-        
+
         If nested:
         - "overordnet": {"chooseAll": bool} - if True, skip all filtering
         - "filters": dict of column filters
-        
+
     Returns
     -------
     pd.DataFrame
         A filtered copy (``df.copy()``) so the original data stays untouched.
     """
-    
+
     # Check if criteria has nested structure with "filters"
     if "filters" in criteria:
         # Check for override in "overordnet"
@@ -247,13 +247,13 @@ def filter_for_frequencyspectrum(
                 return df.copy()
             elif overordnet.get("chooseFirst", False):
                 return df.iloc[[0]].copy()
-        
+
         # Use the "filters" sub-dictionary
         actual_criteria = criteria["filters"]
     else:
         # Direct criteria dictionary
         actual_criteria = criteria
-    
+
     out = df.copy()
     for col, val in actual_criteria.items():
         if val is None:
@@ -268,7 +268,7 @@ def filter_for_frequencyspectrum(
         else:
             # scalar equality
             out = out[out[col] == val]
-        
+
     if "overordnet" in criteria:
         overordnet = criteria["overordnet"]
         if overordnet.get("chooseFirstUnique", False):
@@ -279,7 +279,7 @@ def filter_for_frequencyspectrum(
                 if col in out.columns and actual_criteria[col] is not None
                 ]
             if cols_to_compare:
-                out = out.drop_duplicates(subset=cols_to_compare, keep="first")            
+                out = out.drop_duplicates(subset=cols_to_compare, keep="first")
     return out
 # %%gemins forsøk på forbedring
 
@@ -288,18 +288,18 @@ import pandas as pd
 import numpy as np
 
 def apply_experimental_filters(
-    df: pd.DataFrame, 
+    df: pd.DataFrame,
     criteria_dict: Mapping[str, Any]
 ) -> pd.DataFrame:
-    
+
     overordnet = criteria_dict.get("overordnet", {})
     filters = criteria_dict.get("filters", criteria_dict)
-    
+
     # 1. Handle Global Overrides
     if overordnet.get("chooseAll", False):
         print(">> Manual Override: [chooseAll] is True. Returning full dataset.")
         return df.copy()
-    
+
     if overordnet.get("chooseFirst", False):
         print(">> Manual Override: [chooseFirst] is True. Returning index 0.")
         return df.iloc[[0]].copy()
@@ -328,9 +328,9 @@ def apply_experimental_filters(
         if col not in out.columns:
             print(f"  [!] Skip: Column '{col}' not found in DataFrame.")
             continue
-        
+
         before = len(out)
-        
+
         # Logic for 'all' bypass
         if val == "all" or (isinstance(val, list) and "all" in [v.lower() if isinstance(v, str) else v for v in val]):
             print(f"  [~] {col}: Set to 'all' -> No filter applied.")
@@ -494,14 +494,14 @@ def filter_dataframe(
 #     """
 #     Aggregates P3/P2 (and optional probe amplitudes) by:
 #       - WaveAmplitudeInput [Volt]
-#       - Frekvens, men byttes med kL senere(?) 
+#       - Frekvens, men byttes med kL senere(?)
 #       - PanelConditionGrouped (full|reverse -> all; no stays no)
 #       - WindCondition
 
 #     Returns mean/std for P3/P2 (extendable with more metrics).
 #     """
 #     cmdf = combined_meta_df.copy()
-    
+
 #     columns = ["path", "WindCondition", "PanelCondition",
 #         "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
 #         "Probe 1 Amplitude (FFT)", "Probe 2 Amplitude (FFT)", "Probe 3 Amplitude (FFT)", "Probe 4 Amplitude (FFT)",
@@ -535,14 +535,14 @@ def filter_dataframe(
 #             )
 #             .reset_index()
 #     )
-    
+
 #     wide = stats.pivot_table(index=["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"],
-#                              columns ="WindCondition", 
+#                              columns ="WindCondition",
 #                              values = ["mean_P3P2", "std_P3P2"])
 #     #optionally flatten the columns
 #     wide.columns = ["_".join(map(str,col)).strip() for col in wide.columns]
 #     wide = wide.reset_index()
-    
+
 # #     wide = stats.explode("paths").rename(columns={"paths": "path"})
 # # # Optional: set a MultiIndex including path
 # # wide = wide.set_index(["WaveAmplitudeInput [Volt]", "kL", "PanelConditionGrouped", "WindCondition", "path"])
@@ -557,45 +557,45 @@ def filter_dataframe(
 #     Returns mean/std for P3/P2 (extendable with more metrics).
 #     """
 #     cmdf = combined_meta_df.copy()
-    
+
 #     print(f"Input dataframe shape: {cmdf.shape}")
 #     print(f"Unique PanelCondition values: {cmdf['PanelCondition'].unique().tolist()}")
 #     print(f"Unique WindCondition values: {cmdf['WindCondition'].unique().tolist()}")
-    
+
 #     columns = [
 #         "path", "WindCondition", "PanelCondition",
 #         "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
-#         "Probe 1 Amplitude (FFT)", "Probe 2 Amplitude (FFT)", 
+#         "Probe 1 Amplitude (FFT)", "Probe 2 Amplitude (FFT)",
 #         "Probe 3 Amplitude (FFT)", "Probe 4 Amplitude (FFT)",
 #         "kL", "P2/P1", "P3/P2", "P4/P3"
 #     ]
-    
+
 #     # Quick safety check
 #     missing_cols = [c for c in columns if c not in cmdf.columns]
 #     if missing_cols:
 #         print(f"WARNING: Missing columns: {missing_cols}")
-    
+
 #     rmdf = cmdf[columns].copy()
-    
+
 #     # ─── Panel grouping step ───
 #     rmdf["PanelConditionGrouped"] = rmdf["PanelCondition"].replace({"full": "all", "reverse": "all"})
-    
+
 #     print("\nAfter PanelCondition grouping:")
 #     print(rmdf["PanelConditionGrouped"].value_counts().to_string())
 #     # or more detailed:
 #     # print(rmdf.groupby("PanelCondition")["PanelConditionGrouped"].value_counts())
-    
+
 #     grouping_keys = [
 #         "WaveAmplitudeInput [Volt]",
 #         "WaveFrequencyInput [Hz]",
 #         "PanelConditionGrouped",
 #         "WindCondition",
 #     ]
-    
+
 #     # Very useful: see how many unique combinations exist before aggregation
 #     n_combinations = rmdf[grouping_keys].drop_duplicates().shape[0]
 #     print(f"\nNumber of unique grouping combinations: {n_combinations}")
-    
+
 #     # Optional: see distribution of groups
 #     group_sizes = rmdf.groupby(grouping_keys).size()
 #     print("\nGroup sizes (number of rows per group):")
@@ -603,7 +603,7 @@ def filter_dataframe(
 #     # if you want extremes:
 #     # print("Largest groups:\n", group_sizes.nlargest(5))
 #     # print("Smallest groups:\n", group_sizes.nsmallest(5))
-    
+
 #     # ─── The aggregation ───
 #     stats = (
 #         rmdf.groupby(grouping_keys)
@@ -620,35 +620,35 @@ def filter_dataframe(
 #             )
 #             .reset_index()
 #     )
-    
+
 #     print(f"\nAfter aggregation — stats dataframe shape: {stats.shape}")
 #     print(f"Number of groups after aggregation: {len(stats)}")
 #     print("Columns in stats:", stats.columns.tolist())
-    
+
 #     # Very informative: how many groups have low number of runs
 #     low_n = stats[stats["n_runs"] <= 2]
 #     if not low_n.empty:
 #         print(f"\nWARNING: {len(low_n)} groups have ≤ 2 runs:")
-#         print(low_n[["WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]", 
+#         print(low_n[["WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
 #                      "PanelConditionGrouped", "WindCondition", "n_runs"]])
-    
+
 #     # ─── Pivot ───
 #     wide = stats.pivot_table(
 #         index=["WaveAmplitudeInput [Volt]", "PanelConditionGrouped"],
 #         columns="WindCondition",
 #         values=["mean_P3P2", "std_P3P2"]
 #     )
-    
+
 #     wide.columns = ["_".join(map(str, col)).strip() for col in wide.columns]
 #     wide = wide.reset_index()
-    
+
 #     print(f"\nWide (pivoted) shape: {wide.shape}")
 #     print("Wide columns:", wide.columns.tolist())
-    
+
 #     # Optional: quick look at the result
 #     print("\nFirst few rows of wide format:")
 #     print(wide.head().to_string(index=False))
-    
+
 #     return stats, wide
 
 
@@ -820,17 +820,17 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
         columns=GC.WIND_CONDITION,
         values=["mean_out_in", "std_out_in"]
     )
-    
+
     wide.columns = ["_".join(map(str, col)).strip() for col in wide.columns]
     wide = wide.reset_index()
-    
+
     print(f"\nWide (pivoted) shape: {wide.shape}")
     print("Wide columns:", wide.columns.tolist())
-    
+
     # Optional: quick look at the result
     print("\nFirst few rows of wide format:")
     print(wide.head().to_string(index=False))
-    
+
     return stats, wide
 
 
@@ -838,14 +838,14 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
 #     """
 #     Aggregates P3/P2 (and optional probe amplitudes) by:
 #       - WaveAmplitudeInput [Volt]
-#       - Frekvens, men byttes med kL senere(?) 
+#       - Frekvens, men byttes med kL senere(?)
 #       - PanelConditionGrouped (full|reverse -> all; no stays no)
 #       - WindCondition
 
 #     Returns mean/std for P3/P2 (extendable with more metrics).
 #     """
 #     cmdf = combined_meta_df.copy()
-    
+
 #     columns = ["path", "WindCondition", "PanelCondition",
 #         "WaveAmplitudeInput [Volt]", "WaveFrequencyInput [Hz]",
 #         "Probe 1 Amplitude", "Probe 2 Amplitude", "Probe 3 Amplitude", "Probe 4 Amplitude",
@@ -876,11 +876,11 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
 #                 mean_A_Probe4=("Probe 4 Amplitude", "mean"),
 #                 mean_Wavenumber=("Wavenumber", "mean"),
 #                 mean_kL=("kL", "mean")
-                
+
 #             )
 #             .reset_index()
 #     )
-    
+
 #     return stats
 
 
@@ -994,20 +994,6 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
             PANEL_CONDITION_GROUPED,
             GC.WIND_CONDITION,
             "n_runs"
-        ]].to_string(index=False))
+        ]].to_string(index=True))
 
     return stats
-    
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -26,10 +26,12 @@ OUTPUT KEYS (measured results):
 
 # %% ── dev: reload modules (run this cell after editing wavescripts/) ─────────
 import importlib, wavescripts.plotter as _pm, wavescripts.filters as _fm
-importlib.reload(_pm); importlib.reload(_fm)
+
 from wavescripts.plotter import (plot_probe_noise_floor, plot_parallel_ratio,
                                   plot_frequency_spectrum)
 from wavescripts.filters import apply_experimental_filters as _aef
+
+importlib.reload(_pm); importlib.reload(_fm);
 
 
 # %% ----------- Velkommen ----------------------------
@@ -193,8 +195,7 @@ Figures:
 """
 # TODO
 
-# %%
-import time
+
 # %%
 """
 ── CH04 § 3 — Probe placement: longitudinal and lateral effects ─────────────
@@ -266,7 +267,7 @@ _pv_wind_psd = {
         "show_plot":     True,
         "save_plot":     True,          # set True when ready
         "figure_name":   "ch04_wind_psd",
-        "force_stub":    False,
+        "force_stub":    True,
         "figsize":       (11, 4 * 4),
         "linewidth":     1.0,
         "facet_by":      "probe",
@@ -279,7 +280,7 @@ _pv_wind_psd = {
         "legend":        "inside",
 
         "caption": (
-            "Power spectral density of the free surface at each wave gauge "
+            "POWER spectral density (PSD) of the free surface at each wave gauge "
             "during wind-only runs (no paddle waves). "
             "All {n_runs} nowave runs overlaid; colour encodes wind condition. "
             "Stillwater runs (no wind) shown as baseline. "
@@ -301,6 +302,8 @@ _fig_wind_psd, _ = plot_frequency_spectrum(
 end = time.perf_counter()
 print(f"Wind PSD plot took {end - start:.4f} s")
 
+
+
 # %%
 """
 ── CH04 § 4-2 — Wind wave-reflection from panel ─────────────────────────────────────────
@@ -312,6 +315,60 @@ Data: combined_psd_dict (nowave entries), nowave+fullwind rows of combined_meta.
 Figures:
   - Plot:
 """
+
+# %%
+"""
+── CH04 § 4-3 — FFT spectrum: paddle frequency peak ────────────────────────
+Goal: show what the FFT looks like for a wave run — narrow peak at the paddle
+frequency, wind condition overlaid. Motivates using FFT amplitude (not
+time-domain) for OUT/IN. One representative frequency (e.g. 1.3 Hz).
+
+Data: combined_fft_dict, wave runs.
+
+Figures:
+  - plot_frequency_spectrum with data_type="fft", facet_by="probe"
+"""
+
+_pv_fft_wave = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": 0.2,
+        "WaveFrequencyInput [Hz]":   1.3,
+        "WindCondition":             None,
+        "PanelCondition":            "full",
+        "run_category":              "standard",
+    },
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   False,          # set True when figure is ready for thesis
+        "figure_name": "ch04_fft_wave",
+        "force_stub":  False,
+        "figsize":     (11, 4 * 4),
+        "linewidth":   0.8,
+        "facet_by":    "probe",
+        "probes":      ANALYSIS_PROBES,
+        "xlim":        (0, 5),
+        "logaritmic":  False,
+        "peaks":       3,
+        "max_points":  500,
+        "grid":        True,
+        "legend":      "inside",
+        "caption": (
+            "FFT amplitude spectrum of the free surface during wave runs "
+            "(paddle frequency 1.3\\,Hz, amplitude 0.2\\,V, full panel). "
+            "Each panel shows one probe; colour encodes wind condition. "
+            "The narrow paddle-frequency peak is the target signal used "
+            "for OUT/IN ratio computation."
+        ),
+    },
+}
+
+_fft_wave_meta = _aef(combined_meta, _pv_fft_wave)
+_fft_wave_paths = set(_fft_wave_meta["path"])
+_fft_wave_dict  = {k: v for k, v in combined_fft_dict.items() if k in _fft_wave_paths}
+
+_fig_fft_wave, _ = plot_frequency_spectrum(
+    _fft_wave_dict, _fft_wave_meta, _pv_fft_wave, data_type="fft", chapter="04"
+)
 
 # %%
 """
@@ -362,7 +419,7 @@ _pv_wave_stability = {
         "WaveFrequencyInput [Hz]":   None,
         "WindCondition":             None,
         "PanelCondition":            "full",
-        "run_category":              "standard",
+        # "run_category": "standard",   # re-enable after --force-recompute
     },
     "plotting": {
         "show_plot":   True,
@@ -372,7 +429,46 @@ _pv_wave_stability = {
         "probes":      ANALYSIS_PROBES,
     },
 }
-# TODO: add plot_wave_stability() to plotter.py (reads wave_stability {pos} from combined_meta)
+
+_stab_sel = _aef(combined_meta, _pv_wave_stability)
+_stab_rows = []
+for pos in ANALYSIS_PROBES:
+    col = f"Probe {pos} wave_stability"
+    cv_col = f"Probe {pos} period_amplitude_cv"
+    if col not in _stab_sel.columns:
+        continue
+    for _, row in _stab_sel.iterrows():
+        _stab_rows.append({
+            "probe":          pos,
+            "freq":           row["WaveFrequencyInput [Hz]"],
+            "wind":           row["WindCondition"],
+            "amplitude":      row["WaveAmplitudeInput [Volt]"],
+            "wave_stability": row[col],
+            "period_cv":      row.get(cv_col, np.nan),
+        })
+_stab_df = pd.DataFrame(_stab_rows).dropna(subset=["wave_stability"])
+
+if _pv_wave_stability["plotting"]["show_plot"] and not _stab_df.empty:
+    apply_thesis_style()
+    fig, axes = plt.subplots(1, len(ANALYSIS_PROBES),
+                             figsize=_pv_wave_stability["plotting"]["figsize"],
+                             sharey=True)
+    for ax, pos in zip(axes, ANALYSIS_PROBES):
+        sub = _stab_df[_stab_df["probe"] == pos]
+        for wind, grp in sub.groupby("wind"):
+            grp_agg = grp.groupby("freq")["wave_stability"].agg(["mean", "std"]).reset_index()
+            ax.errorbar(grp_agg["freq"], grp_agg["mean"], yerr=grp_agg["std"],
+                        label=wind, color=WIND_COLOR_MAP.get(wind),
+                        marker="o", markersize=5, linewidth=1.2, capsize=3)
+        ax.axhline(0.85, color="gray", linestyle="--", linewidth=0.8, alpha=0.6)
+        ax.set_title(pos, fontsize=9)
+        ax.set_xlabel("Frequency [Hz]")
+    axes[0].set_ylabel("wave_stability")
+    axes[-1].legend(title="wind", fontsize=8)
+    fig.suptitle("Wavetrain stability vs frequency  (full panel)", fontsize=10)
+    plt.tight_layout()
+    plt.show()
+# TODO: promote to plot_wave_stability() in plotter.py when layout is finalised
 
 # %%
 """
@@ -406,6 +502,15 @@ _pv_lateral_nowind = {
 }
 # _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)  # TODO: uncomment
 
+# =============================================================================
+# =============================================================================
+# =============================================================================
+# =============================================================================
+# =============================================================================
+# =============================================================================
+# =============================================================================
+# =============================================================================
+# =============================================================================
 
 # =============================================================================
 # CHAPTER 05 — RESULTS
@@ -434,14 +539,15 @@ Figures:
 
 _pv_damping_freq = {
     "filters": {
-        "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   None,
+        "WaveAmplitudeInput [Volt]": (0.1,0.3),
+        "WaveFrequencyInput [Hz]":   (0.1,1.7),
         "WindCondition":             None,
         "PanelCondition":            None,
     },
     "plotting": {
         "show_plot":  True,
-        "save_plot":  False,          # set True when figure is ready for thesis
+        "save_plot":  True,          # set True when figure is ready for thesis
+        "force_stub": False,
         "figure_name": "ch05_damping_freq",
         "figsize":    (7, 3),
         "annotate":   True,
@@ -450,7 +556,8 @@ _pv_damping_freq = {
     },
 }
 
-_damping_grouped = damping_all_amplitude_grouper(combined_meta)
+_damping_meta   = _aef(combined_meta, _pv_damping_freq)
+_damping_grouped = damping_all_amplitude_grouper(_damping_meta)
 plot_damping_freq(_damping_grouped, _pv_damping_freq)
 
 # %%
@@ -484,7 +591,9 @@ _pv_damping_scatter = {
     },
 }
 
-plot_damping_scatter(_damping_grouped, _pv_damping_scatter)
+_scatter_meta   = _aef(combined_meta, _pv_damping_scatter)
+_scatter_grouped = damping_all_amplitude_grouper(_scatter_meta)
+plot_damping_scatter(_scatter_grouped, _pv_damping_scatter)
 
 # %%
 """

@@ -392,7 +392,7 @@ def write_figure_stub(meta: dict, plot_type: str,
         Tip: commit to git first.
     """
     TEXFIGU_DIR.mkdir(parents=True, exist_ok=True)
-    stub_filename = build_filename(plot_type, meta)
+    stub_filename = meta.get("figure_name") or build_filename(plot_type, meta)
     tex_path      = TEXFIGU_DIR / f"{stub_filename}.tex"
 
     if tex_path.exists() and not force:

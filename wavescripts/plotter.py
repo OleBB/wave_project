@@ -226,56 +226,64 @@ def _draw_damping_freq_ax(
     ax.legend(title="Amplitude", fontsize=7, title_fontsize=7)
 
 
+def _make_damping_freq_fig(
+    stats_df: pd.DataFrame, panel: str, amp: float, figsize: tuple = (5, 4)
+) -> plt.Figure:
+    """
+    Single axes: OUT/IN vs frequency for one (panel, amplitude) combination.
+    Colour = wind condition. No internal faceting — LaTeX arranges subfigures.
+    """
+    subset = stats_df[
+        (stats_df[GC.PANEL_CONDITION_GROUPED] == panel) &
+        (stats_df[GC.WAVE_AMPLITUDE_INPUT] == amp)
+    ]
+    fig, ax = plt.subplots(figsize=figsize)
+    for wind, grp in subset.groupby(GC.WIND_CONDITION):
+        grp = grp.sort_values(GC.WAVE_FREQUENCY_INPUT)
+        ax.errorbar(
+            grp[GC.WAVE_FREQUENCY_INPUT], grp["mean_out_in"],
+            yerr=grp["std_out_in"],
+            label=wind, color=WIND_COLOR_MAP.get(wind),
+            marker="o", markersize=5, linewidth=1.4, capsize=3,
+        )
+    ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
+    ax.set_xlabel("Frequency [Hz]", fontsize=9)
+    ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
+    ax.set_title(f"{panel} panel  |  {amp:.2f} V", fontsize=9)
+    ax.grid(True, alpha=0.3)
+    ax.legend(title="wind", fontsize=8, title_fontsize=8)
+    fig.tight_layout()
+    return fig
+
+
 def plot_damping_freq(
     stats_df: pd.DataFrame, plotvariables: dict, chapter: str = "05"
 ) -> None:
     """
     Damping ratio OUT/IN vs frequency.
 
-    show_plot → full panel×wind grid in one figure
-    save_plot → one PDF/PGF per (panel, wind) cell + one .tex stub
+    One figure per (panel_condition × amplitude) — no internal faceting.
+    Faceting is done in LaTeX via the texfigu stub.
+    Colour = wind condition.
 
-    The same _draw_damping_freq_ax() draws both, so what you see
-    in exploration is exactly what gets saved.
+    show_plot → one window per subfigure (REPL verification)
+    save_plot → one PDF/PGF per subfigure + one .tex stub listing all
 
     Input: output from damping_all_amplitude_grouper()
     """
     plotting = plotvariables.get("plotting", {})
     show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
+    figsize   = plotting.get("figsize", (5, 4))
 
     panel_conditions = sorted(stats_df[GC.PANEL_CONDITION_GROUPED].unique())
-    wind_conditions = sorted(stats_df[GC.WIND_CONDITION].unique())
-    n_rows, n_cols = len(panel_conditions), len(wind_conditions)
+    amplitudes       = sorted(stats_df[GC.WAVE_AMPLITUDE_INPUT].unique())
 
     if show_plot:
-        import seaborn as sns
-        from wavescripts.plot_utils import WIND_COLOR_MAP
-        sns.set_style("ticks", {"axes.grid": True})
-        g = sns.relplot(
-            data=stats_df.sort_values(GC.WAVE_FREQUENCY_INPUT),
-            x=GC.WAVE_FREQUENCY_INPUT, y="mean_out_in",
-            hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
-            style=GC.PANEL_CONDITION_GROUPED,
-            col=GC.WAVE_AMPLITUDE_INPUT,
-            kind="line", marker=True,
-            facet_kws={"sharex": True, "sharey": True},
-            height=3.5, aspect=1.4, errorbar=None,
-        )
-        for ax in g.axes.flat:
-            ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
-        for ax, (amp, sub) in zip(
-            g.axes.flat,
-            stats_df.groupby(GC.WAVE_AMPLITUDE_INPUT),
-        ):
-            for (wind, panel), gsub in sub.groupby([GC.WIND_CONDITION, GC.PANEL_CONDITION_GROUPED]):
-                gsub = gsub.sort_values(GC.WAVE_FREQUENCY_INPUT)
-                ax.errorbar(gsub[GC.WAVE_FREQUENCY_INPUT], gsub["mean_out_in"],
-                            yerr=gsub["std_out_in"], fmt="none", capsize=3, alpha=0.5)
-        g.figure.suptitle("Damping Ratio OUT/IN vs Frequency  [quicklook]",
-                           y=1.02, fontsize=11)
-        plt.tight_layout()
-        plt.show()
+        for panel in panel_conditions:
+            for amp in amplitudes:
+                fig = _make_damping_freq_fig(stats_df, panel, amp, figsize=figsize)
+                plt.show()
 
     if save_plot:
         subfig_filenames = []
@@ -284,21 +292,20 @@ def plot_damping_freq(
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_freq"},
         )
-
+        figure_name = plotting.get("figure_name") or build_filename("damping_freq", meta_base)
+        i = 1
         for panel in panel_conditions:
-            for wind in wind_conditions:
-                fig_s, ax_s = plt.subplots(figsize=(5.0, 3.8))
-                _draw_damping_freq_ax(ax_s, stats_df, panel, wind)
-                fig_s.tight_layout()
-
-                panel_meta = {**meta_base, "panel": panel, "wind": wind}
-                fname = build_filename("damping_freq", panel_meta)
+            for amp in amplitudes:
+                fig_s = _make_damping_freq_fig(stats_df, panel, amp, figsize=figsize)
+                fname = f"{figure_name}_{i}"
                 _save_figure(fig_s, fname, save_pgf=True)
                 subfig_filenames.append(fname)
                 plt.close(fig_s)
+                i += 1
 
-        stub_meta = {**meta_base, "panel": panel_conditions, "wind": wind_conditions}
-        write_figure_stub(stub_meta, "damping_freq", subfig_filenames=subfig_filenames)
+        stub_meta = {**meta_base, "panel": panel_conditions, "amplitude": amplitudes, "wind": "allwind"}
+        write_figure_stub(stub_meta, "damping_freq", subfig_filenames=subfig_filenames,
+                          force=plotting.get("force_stub", False))
 
 
 def plot_damping_scatter(
@@ -870,6 +877,7 @@ def plot_frequency_spectrum(
                 meta_base,
                 plot_type=f"spectrum_{data_type}",
                 save_pgf=True,
+                force_stub=plotting.get("force_stub", False),
             )
         else:
             # Save one figure per facet panel
@@ -959,7 +967,8 @@ def plot_frequency_spectrum(
 
             # One stub with all panels as subfigures
             write_figure_stub(
-                meta_base, f"spectrum_{data_type}", subfig_filenames=subfig_filenames
+                meta_base, f"spectrum_{data_type}", subfig_filenames=subfig_filenames,
+                force=plotting.get("force_stub", False),
             )
 
     if show_plot:
