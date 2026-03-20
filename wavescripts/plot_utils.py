@@ -311,13 +311,15 @@ def build_fig_meta(plotvariables: dict,
     f = plotvariables.get("filters", {})
     p = plotvariables.get("plotting", {})
     meta = {
-        "chapter":   chapter,
-        "panel":     f.get("PanelCondition"),
-        "wind":      f.get("WindCondition"),
-        "amplitude": f.get("WaveAmplitudeInput [Volt]"),
-        "frequency": f.get("WaveFrequencyInput [Hz]"),
-        "probes":    p.get("probes"),
-        "figsize":   p.get("figsize"),
+        "chapter":     chapter,
+        "panel":       f.get("PanelCondition"),
+        "wind":        f.get("WindCondition"),
+        "amplitude":   f.get("WaveAmplitudeInput [Volt]"),
+        "frequency":   f.get("WaveFrequencyInput [Hz]"),
+        "probes":      p.get("probes"),
+        "figsize":     p.get("figsize"),
+        "caption":     p.get("caption"),
+        "figure_name": p.get("figure_name"),
     }
     if extra:
         meta.update(extra)
@@ -399,7 +401,7 @@ def write_figure_stub(meta: dict, plot_type: str,
 
     # ── Immutable comment block ───────────────────────────────────────────────
     known_keys = {"chapter", "panel", "wind", "amplitude", "frequency",
-                  "probes", "figsize", "script"}
+                  "probes", "figsize", "script", "caption", "figure_name"}
 
     def _line(key, val):
         if isinstance(val, list):
@@ -432,16 +434,34 @@ def write_figure_stub(meta: dict, plot_type: str,
         "",
     ]
 
+    # ── Caption and label ─────────────────────────────────────────────────────
+    _caption_text = meta.get("caption")
+    if _caption_text:
+        # First sentence → short caption for List of Figures
+        _short = _caption_text.split(".")[0].strip()
+        _caption_block = (
+            f"  \\caption[{_short}]{{\n"
+            f"    {_caption_text}\n"
+            "  }\n"
+        )
+    else:
+        _caption_block = (
+            "  \\caption[Short caption for LOF]{\n"
+            "    % TODO: write caption\n"
+            "  }\n"
+        )
+
+    _figure_name = meta.get("figure_name") or stub_filename
+    _label = f"fig:{_figure_name}"
+
     # ── Figure body ───────────────────────────────────────────────────────────
     if len(panels) == 1:
         body = (
             "\\begin{figure}[htbp]\n"
             "  \\centering\n"
             f"  \\includegraphics[width=0.9\\linewidth]{{FIGURES/{panels[0]}.pdf}}\n"
-            "  \\caption[Short caption for LOF]{\n"
-            "    % TODO: write caption\n"
-            "  }\n"
-            f"  \\label{{fig:TODO_{panels[0][-25:]}}}\n"
+            + _caption_block
+            + f"  \\label{{{_label}}}\n"
             "\\end{figure}\n"
         )
     else:
@@ -452,10 +472,8 @@ def write_figure_stub(meta: dict, plot_type: str,
             "\\begin{figure}[htbp]\n"
             "  \\centering\n"
             + "\n  \\hfill\n".join(subfigs) + "\n"
-            "  \\caption[Short caption for LOF]{\n"
-            "    % TODO: write caption\n"
-            "  }\n"
-            f"  \\label{{fig:TODO_{stub_filename[-30:]}}}\n"
+            + _caption_block
+            + f"  \\label{{{_label}}}\n"
             "\\end{figure}\n"
         )
 

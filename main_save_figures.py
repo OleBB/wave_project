@@ -46,10 +46,12 @@ from wavescripts.plotter import (
     plot_damping_freq,
     plot_damping_scatter,
     plot_frequency_spectrum,
+    plot_parallel_ratio,
+    plot_probe_noise_floor,
     plot_swell_scatter,
 )
 from wavescripts.wave_detection import find_first_arrival
-
+# %%
 FS = MEASUREMENT.SAMPLING_RATE
 
 try:
@@ -84,28 +86,80 @@ combined_meta, _, combined_fft_dict, combined_psd_dict = load_analysis_data(
     *PROCESSED_DIRS
 )
 
-# processed_dfs is heavy (~75 MB). Uncomment only when a section below needs it.
-# processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+# processed_dfs is heavy (~75 MB). Loaded when needed by sections below.
+processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
 
 
 # =============================================================================
 # CHAPTER 04 — METHODOLOGY
 # =============================================================================
-
+# %%
+print("hello")
 # %%
 """
 ── CH04 § 1 — Probe uncertainty / noise floor ───────────────────────────────
 Goal: show that each probe has a measurable noise floor and that it is stable
-across stillwater runs. Defines the detection threshold (2× noise floor).
+across stillwater runs. Defines the detection threshold ((2?)× noise floor).
 
-Data: stillwater runs (WindCondition == "no", WaveFrequencyInput NaN).
+Data: stillwater runs (WindCondition == "no", WaveFrequencyInput NaN or regex:nowwave).
 Already in combined_meta as "Probe {pos} Amplitude" for those rows.
 
 Figures/tables:
   - Table: noise floor per probe (mean ± std across stillwater runs) [mm]
   - Plot:  stillwater amplitude bar chart or box plot, one bar per probe
 """
-# TODO: promote from main_explore_inline.py cell ~479 when finalised
+import importlib
+import wavescripts.plotter as _plotter_mod
+importlib.reload(_plotter_mod)
+from wavescripts.plotter import plot_probe_noise_floor
+
+"""
+PRINTOUT:
+    [plot_probe_noise_floor] caption slots: {'window_ms': 200.0, 'n_runs': 14, 'n_flagged': 1, 'amp_cap_mm': 0.5}
+    [plot_probe_noise_floor] formatted caption:
+      "Probe noise floor estimated as the minimum windowed (P$_{97.5}$--P$_{2.5}$)/2 amplitude over 200\,ms sliding windows of 14 st
+    illwater recordings (1 run(s) excluded — name keyword or windowed minimum above 0.5\,mm). Short windows suppress slow tank slosh
+    ing so only electronic jitter and capillary ripples remain. Error bars: standard deviation across runs. White dots: individual r
+    un values."
+    === Probe noise floor summary [mm] ===
+                 mean     std  min     max
+    probe
+    9373/170   0.0285  0.0159  0.0  0.0400
+    12400/250  0.0314  0.0174  0.0  0.0489
+    9373/340   0.0251  0.0195  0.0  0.0400
+    8804/250   0.0258  0.0174  0.0  0.0450
+
+"""
+
+_pv_noise_floor = {
+    "filters": {},
+    "plotting": {
+        "show_plot": False,
+        "save_plot": False,           # set True when figure is ready for thesis
+        "figure_name": "ch04_probe_noise_floor",
+        "force_stub": True,
+    },
+    "caption": {
+        "PROBE noise floor estimated as the minimum windowed (P$_{97.5}$--P$_{2.5}$)/2 amplitude over 200\,ms sliding windows of 14 stillwater recordings (1 run(s) excluded — name keyword or windowed minimum above 0.5\,mm). Short windows suppress slow tank sloshing so only electronic jitter and capillary ripples remain. Error bars: standard deviation across runs. White dots: individual run values."
+    }
+}
+import time
+start = time.perf_counter()
+_fig_nf, _noise_summary = plot_probe_noise_floor(
+    combined_meta,
+    processed_dfs,
+    probe_positions=ANALYSIS_PROBES,
+    plotvariables=_pv_noise_floor,
+)
+print("\n=== Probe noise floor summary [mm] ===")
+print(_noise_summary.round(4).to_string())
+end = time.perf_counter()
+print(f"probe uncertainty-plot took {end - start:.4f} s")
+
+
+
+
+
 
 # %%
 """
@@ -118,7 +172,7 @@ low-frequency PSD content in eta_* columns over time.
 
 Figures:
   - Plot:  PSD of eta at the OUT probe vs time-after-wave (semi-log, low freqs)
-  - Note:  wind-only runs show near-immediate settling — physical explanation
+  - Note:  wind-only runs show near-immediate settling(return to wind-wave spectrum) — physical explanation
            (wind chops suppress long-wave coherence in the tank).
 """
 # TODO
@@ -129,18 +183,27 @@ Figures:
 Goal: show what parallel probes tell us — lateral uniformity without wind,
 lateral asymmetry with wind. Also: why the longitudinal positions were chosen.
 
-Data: combined_meta, parallel_ratio column, no-wind wave runs.
+Data: combined_meta, parallel_ratio column, no-wind wave runs. But,
+the probes placed downstream are to be trusted more, because no interference from mooring and panel.
 
 Figures:
   - Plot:  parallel_ratio vs frequency, coloured by WindCondition
   - Plot:  parallel_ratio vs frequency, coloured by PanelCondition (reflection)
   - Table: parallel_ratio summary (mean, std) by wind/panel group
 """
-# TODO
+_pv_parallel_ratio = {
+    "filters": {},
+    "plotting": {
+        "show_plot": True,
+        "save_plot": False,           # set True when figure is ready for thesis
+        "figure_name": "ch04_parallel_ratio",
+    },
+}
+_fig_pr = plot_parallel_ratio(combined_meta, _pv_parallel_ratio)
 
 # %%
 """
-── CH04 § 4 — Wind characterisation ─────────────────────────────────────────
+── CH04 § 4-1 — Wind characterisation ─────────────────────────────────────────
 Goal: characterise what the wind does to the water surface — spectrum, spatial
 extent, interaction with the panel.
 
@@ -162,6 +225,18 @@ Figures:
 # TODO: promote from main_explore_inline.py wind section when finalised
 _nowave_paths   = set(combined_meta[combined_meta["WaveFrequencyInput [Hz]"].isna()]["path"])
 _wind_psd_dict  = {k: v for k, v in combined_psd_dict.items() if k in _nowave_paths}
+
+# %%
+"""
+── CH04 § 4-2 — Wind wave-reflection from panel ─────────────────────────────────────────
+Goal: find out the reflection — spectrum, spatial
+extent, interaction with the panel.
+
+Data: combined_psd_dict (nowave entries), nowave+fullwind rows of combined_meta.
+
+Figures:
+  - Plot:
+"""
 
 # %%
 """

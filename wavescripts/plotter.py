@@ -58,6 +58,7 @@ from wavescripts.plot_utils import (
     _save_figure,
     _top_k_indices,
     apply_legend,
+    apply_thesis_style,
     build_fig_meta,
     build_filename,
     draw_anchored_text,
@@ -1379,3 +1380,330 @@ def plot_ramp_detection(
     ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
     fig.tight_layout()
     return fig, ax
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PROBE NOISE FLOOR
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def plot_probe_noise_floor(
+    combined_meta: pd.DataFrame,
+    processed_dfs: dict,
+    probe_positions: list[str],
+    plotvariables: dict,
+    *,
+    window_s: float = 0.2,
+    exclude_keywords: tuple[str, ...] = ("nestenstille",),
+    amp_cap_mm: float = 0.5,
+    chapter: str = "04",
+) -> tuple[plt.Figure, pd.DataFrame]:
+    """
+    Compute and plot the stillwater probe noise floor.
+
+    Noise floor = minimum windowed (P97.5-P2.5)/2 amplitude across short
+    sliding windows of length *window_s* seconds. The short window ensures
+    slow tank sloshing (2-10 s period) appears as a DC offset inside the
+    window and does not inflate the percentile spread. What remains is pure
+    probe noise (electronics jitter + capillary ripples).
+
+    Parameters
+    ----------
+    combined_meta   : full metadata DataFrame (all runs)
+    processed_dfs   : dict {path: DataFrame} with eta_{pos} columns
+    probe_positions : list of position strings, e.g. ["8804/250", "9373/170"]
+    plotvariables   : dict with keys
+        "filters"  — unused here (stillwater is selected automatically)
+        "plotting" — {
+            "show_plot": bool,
+            "save_plot": bool,
+            "figure_name": str,
+            "caption": str  (optional) — template string for the LaTeX caption.
+                Omit to use the built-in default (which is also printed to
+                terminal so you can copy-edit it). Supports named slots:
+                  {window_ms}   window length [ms]
+                  {n_runs}      accepted stillwater runs
+                  {n_flagged}   excluded runs
+                  {amp_cap_mm}  amplitude cap threshold [mm]
+                Example:
+                  "caption": (
+                      "Noise floor of each wave gauge over {n_runs} "
+                      "stillwater recordings ({window_ms:.0f}\\,ms window)."
+                  )
+        }
+    window_s        : sliding window length in seconds (default 0.2 s)
+    exclude_keywords: run filenames containing any of these are flagged/excluded
+    amp_cap_mm      : runs whose windowed-min exceeds this [mm] are also flagged
+    chapter         : thesis chapter string for save_and_stub (default "04")
+
+    Returns
+    -------
+    fig : matplotlib Figure
+    summary : DataFrame  — per-probe mean/std/min/max noise floor [mm],
+              index = probe position string
+    """
+    from wavescripts.constants import MEASUREMENT
+
+    fs = MEASUREMENT.SAMPLING_RATE
+    window_n = int(window_s * fs)
+
+    plotting = plotvariables.get("plotting", {})
+    show_plot = plotting.get("show_plot", True)
+    save_plot = plotting.get("save_plot", False)
+    figure_name = plotting.get("figure_name", "ch04_probe_noise_floor")
+
+    # --- select stillwater runs ---
+    is_stillwater = (
+        combined_meta["WindCondition"].eq("no")
+        & combined_meta["WaveFrequencyInput [Hz]"].isna()
+    )
+    meta_sw = combined_meta[is_stillwater].copy()
+
+    # --- compute windowed-minimum noise floor per run × probe ---
+    rows = []
+    for _, row in meta_sw.iterrows():
+        df = processed_dfs.get(row["path"])
+        if df is None:
+            continue
+        entry = {"run": Path(str(row["path"])).name}
+        for pos in probe_positions:
+            col = f"eta_{pos}"
+            if col not in df.columns:
+                entry[pos] = np.nan
+                continue
+            sig = df[col].values
+            step = max(1, window_n // 2)
+            from numpy.lib.stride_tricks import sliding_window_view
+            windows = sliding_window_view(sig, window_n)[::step]  # (n_wins, window_n)
+            # drop windows with too many NaNs
+            valid = np.sum(~np.isnan(windows), axis=1) >= window_n // 2
+            windows = windows[valid]
+            if windows.size == 0:
+                entry[pos] = np.nan
+                continue
+            p_hi = np.nanpercentile(windows, 97.5, axis=1)
+            p_lo = np.nanpercentile(windows, 2.5,  axis=1)
+            entry[pos] = float(np.nanmin((p_hi - p_lo) / 2))
+        rows.append(entry)
+
+    if not rows:
+        raise ValueError(
+            "No stillwater runs found in processed_dfs. "
+            "Load with load_processed=True first."
+        )
+
+    sw_all = pd.DataFrame(rows)
+
+    # --- flag and exclude bad runs ---
+    probe_cols_present = [p for p in probe_positions if p in sw_all.columns]
+    name_flag = sw_all["run"].apply(
+        lambda r: any(kw in r for kw in exclude_keywords)
+    )
+    amp_flag = sw_all[probe_cols_present].max(axis=1) > amp_cap_mm
+    bad = name_flag | amp_flag
+    sw_clean = sw_all[~bad].copy()
+
+    # --- summary statistics ---
+    summary = sw_clean[probe_cols_present].agg(["mean", "std", "min", "max"]).T
+    summary.index.name = "probe"
+
+    # --- plot ---
+    apply_thesis_style()
+    fig, ax = plt.subplots(figsize=(max(4, len(probe_cols_present) * 1.1), 4))
+
+    x = np.arange(len(probe_cols_present))
+    means = summary["mean"].values
+    stds = summary["std"].fillna(0).values
+
+    ax.bar(x, means, yerr=stds, capsize=4, color="steelblue", alpha=0.85,
+           error_kw={"elinewidth": 1.2, "ecolor": "navy"})
+
+    # overlay individual run dots
+    for i, pos in enumerate(probe_cols_present):
+        vals = sw_clean[pos].dropna().values
+        ax.scatter(
+            np.full(len(vals), i),
+            vals,
+            s=20, color="white", edgecolors="navy", linewidths=0.8, zorder=3
+        )
+
+    ax.axhline(0, color="black", linewidth=0.5)
+    ax.set_xticks(x)
+    ax.set_xticklabels(probe_cols_present, rotation=30, ha="right", fontsize=9)
+    ax.set_ylabel("Noise floor [mm]")
+    ax.set_title(
+        f"Probe noise floor — min windowed amplitude ({window_s*1000:.0f} ms window)\n"
+        f"n={len(sw_clean)} stillwater runs accepted, {bad.sum()} flagged",
+        fontsize=10,
+    )
+    ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout()
+
+    if show_plot:
+        plt.show()
+
+    # --- caption resolution (Option B) ---
+    # Values available as {slot} in any user-supplied caption template:
+    #   {window_ms}   — window length in milliseconds (float)
+    #   {n_runs}      — number of accepted stillwater runs (int)
+    #   {n_flagged}   — number of flagged/excluded runs (int)
+    #   {amp_cap_mm}  — amplitude cap used for flagging (float)
+    _caption_slots = {
+        "window_ms": window_s * 1e3,
+        "n_runs": len(sw_clean),
+        "n_flagged": int(bad.sum()),
+        "amp_cap_mm": amp_cap_mm,
+    }
+    _default_caption = (
+        "Probe noise floor estimated as the minimum windowed "
+        "(P$_{{97.5}}$--P$_{{2.5}}$)/2 amplitude over {window_ms:.0f}\\,ms "
+        "sliding windows of {n_runs} stillwater recordings "
+        "({n_flagged} run(s) excluded — name keyword or windowed minimum "
+        "above {amp_cap_mm}\\,mm). "
+        "Short windows suppress slow tank sloshing so only electronic "
+        "jitter and capillary ripples remain. "
+        "Error bars: standard deviation across runs. "
+        "White dots: individual run values."
+    )
+    _caption_template = plotting.get("caption", _default_caption)
+    _caption = _caption_template.format(**_caption_slots)
+
+    # Always print slots and copy the formatted caption to clipboard.
+    # Collapse internal whitespace/newlines first.
+    _caption_oneline = " ".join(_caption.split())
+    print(f"\n[plot_probe_noise_floor] caption slots: {_caption_slots}")
+    try:
+        import subprocess
+        subprocess.run(["pbcopy"], input=_caption_oneline.encode(), check=True)
+        print("[plot_probe_noise_floor] caption copied to clipboard — just Cmd+V.")
+        print(f'[plot_probe_noise_floor] formatted caption:\n  "{_caption_oneline}"\n')
+    except Exception:
+        print(f'[plot_probe_noise_floor] caption:\n  "{_caption_oneline}"')
+
+    if save_plot:
+        _pv_for_meta = {"filters": {}, "plotting": {"figure_name": figure_name, "caption": _caption}}
+        meta = build_fig_meta(_pv_for_meta, chapter=chapter)
+        save_and_stub(fig, meta, plot_type="probe_noise_floor")
+
+    return fig, summary
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PARALLEL RATIO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def plot_parallel_ratio(
+    combined_meta: pd.DataFrame,
+    plotvariables: dict,
+    *,
+    chapter: str = "04",
+) -> plt.Figure:
+    """
+    Plot parallel_ratio (wall-side / far-side amplitude) vs wave frequency,
+    coloured by WindCondition, one subplot per PanelCondition.
+
+    parallel_ratio ≈ 1  →  lateral symmetry
+    parallel_ratio > 1  →  wall-side probe sees larger amplitude
+    parallel_ratio < 1  →  far-side probe sees larger amplitude
+
+    Parameters
+    ----------
+    combined_meta : full metadata DataFrame
+    plotvariables : dict with keys
+        "filters"  — optional pre-filter dict (passed to apply_experimental_filters)
+        "plotting" — {
+            "show_plot":   bool,
+            "save_plot":   bool,
+            "figure_name": str,
+            "caption":     str  (optional template, slots: {n_runs}, {n_panels})
+        }
+    chapter : thesis chapter string for save_and_stub (default "04")
+
+    Caption slots
+    -------------
+    {n_runs}    total wave runs included
+    {n_panels}  number of PanelCondition subplots
+    """
+    from wavescripts.filters import apply_experimental_filters
+
+    plotting = plotvariables.get("plotting", {})
+    show_plot  = plotting.get("show_plot",   True)
+    save_plot  = plotting.get("save_plot",   False)
+    figure_name = plotting.get("figure_name", "ch04_parallel_ratio")
+
+    # --- filter to wave runs with a valid parallel_ratio ---
+    df = apply_experimental_filters(combined_meta, plotvariables)
+    df = df[df["WaveFrequencyInput [Hz]"].notna() & df["parallel_ratio"].notna()].copy()
+
+    panel_vals = sorted(df["PanelCondition"].dropna().unique())
+    n_panels = len(panel_vals)
+    if n_panels == 0:
+        raise ValueError("No rows with valid parallel_ratio after filtering.")
+
+    apply_thesis_style()
+    fig, axes = plt.subplots(
+        1, n_panels,
+        figsize=(4 * n_panels, 4),
+        sharey=True,
+        squeeze=False,
+    )
+
+    wind_order = ["no", "lowest", "full"]
+
+    for ax, panel in zip(axes[0], panel_vals):
+        sub = df[df["PanelCondition"] == panel]
+        for wind in wind_order:
+            grp = sub[sub["WindCondition"] == wind]
+            if grp.empty:
+                continue
+            color = WIND_COLOR_MAP.get(wind, "gray")
+            # mean ± std per frequency
+            stats = grp.groupby("WaveFrequencyInput [Hz]")["parallel_ratio"].agg(["mean", "std", "count"])
+            ax.errorbar(
+                stats.index, stats["mean"],
+                yerr=stats["std"].fillna(0),
+                fmt="o-", capsize=3, lw=1.4, ms=5,
+                color=color, label=wind,
+            )
+        ax.axhline(1.0, color="black", lw=0.8, ls="--", alpha=0.5)
+        ax.set_title(f"panel: {panel}", fontsize=10)
+        ax.set_xlabel("Frequency [Hz]")
+        ax.grid(True, alpha=0.3)
+
+    axes[0][0].set_ylabel("Parallel ratio (wall / far)")
+    axes[0][0].legend(title="Wind", fontsize=8)
+    fig.suptitle("Lateral symmetry — parallel probe ratio", fontsize=11)
+    fig.tight_layout()
+
+    if show_plot:
+        plt.show()
+
+    # --- caption ---
+    _caption_slots = {"n_runs": len(df), "n_panels": n_panels}
+    _default_caption = (
+        "Ratio of wall-side to far-side probe amplitude at the same longitudinal "
+        "distance, for {n_runs} wave runs across {n_panels} panel configurations. "
+        "A ratio of 1 indicates lateral symmetry. "
+        "Deviations indicate wall reflections or wind-driven lateral asymmetry. "
+        "Error bars: standard deviation across runs at the same frequency. "
+        "Dashed line: ratio = 1."
+    )
+    _caption_template = plotting.get("caption", _default_caption)
+    _caption = _caption_template.format(**_caption_slots)
+
+    _caption_oneline = " ".join(_caption.split())
+    print(f"\n[plot_parallel_ratio] caption slots: {_caption_slots}")
+    try:
+        import subprocess
+        subprocess.run(["pbcopy"], input=_caption_oneline.encode(), check=True)
+        print("[plot_parallel_ratio] caption copied to clipboard — just Cmd+V.")
+    except Exception:
+        print(f'[plot_parallel_ratio] caption:\n  "{_caption_oneline}"')
+
+    if save_plot:
+        _pv_for_meta = {"filters": {}, "plotting": {"figure_name": figure_name, "caption": _caption}}
+        meta = build_fig_meta(_pv_for_meta, chapter=chapter)
+        save_and_stub(fig, meta, plot_type="parallel_ratio")
+
+    return fig
