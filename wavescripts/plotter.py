@@ -63,6 +63,7 @@ from wavescripts.plot_utils import (
     build_filename,
     draw_anchored_text,
     make_label,
+    resolve_caption,
     save_and_stub,
     write_figure_stub,
 )
@@ -81,7 +82,7 @@ def plot_all_probes(
     One line per experimental run, coloured by wind, styled by panel.
     """
     plotting = plotvariables.get("plotting", {})
-    show_plot = plotting.get("show_plot", True)
+    show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
 
     # Collect all non-null amplitude columns across the combined meta
@@ -240,7 +241,7 @@ def plot_damping_freq(
     Input: output from damping_all_amplitude_grouper()
     """
     plotting = plotvariables.get("plotting", {})
-    show_plot = plotting.get("show_plot", True)
+    show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
 
     panel_conditions = sorted(stats_df[GC.PANEL_CONDITION_GROUPED].unique())
@@ -277,7 +278,7 @@ def plot_damping_freq(
         plt.show()
 
     if save_plot:
-        panel_filenames = []
+        subfig_filenames = []
         meta_base = build_fig_meta(
             plotvariables,
             chapter=chapter,
@@ -292,12 +293,12 @@ def plot_damping_freq(
 
                 panel_meta = {**meta_base, "panel": panel, "wind": wind}
                 fname = build_filename("damping_freq", panel_meta)
-                _save_figure(fig_s, fname, save_pgf=plotting.get("save_pgf", True))
-                panel_filenames.append(fname)
+                _save_figure(fig_s, fname, save_pgf=True)
+                subfig_filenames.append(fname)
                 plt.close(fig_s)
 
         stub_meta = {**meta_base, "panel": panel_conditions, "wind": wind_conditions}
-        write_figure_stub(stub_meta, "damping_freq", panel_filenames=panel_filenames)
+        write_figure_stub(stub_meta, "damping_freq", subfig_filenames=subfig_filenames)
 
 
 def plot_damping_scatter(
@@ -315,7 +316,7 @@ def plot_damping_scatter(
         plotvariables = {"plotting": {"show_plot": True, "save_plot": False}}
 
     plotting = plotvariables.get("plotting", {})
-    show_plot = plotting.get("show_plot", True)
+    show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
 
     import seaborn as sns
@@ -373,7 +374,7 @@ def plot_damping_scatter(
             fig,
             meta,
             plot_type="damping_scatter",
-            save_pgf=plotting.get("save_pgf", True),
+            save_pgf=True,
         )
 
     if show_plot:
@@ -571,7 +572,7 @@ def plot_swell_scatter(
     Input: combined_meta_sel (filtering applied internally)
     """
     plotting = plotvariables.get("plotting", {})
-    show_plot = plotting.get("show_plot", True)
+    show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
 
     print("\n" + "=" * 50)
@@ -640,7 +641,7 @@ def plot_swell_scatter(
         plt.show()
 
     if save_plot:
-        panel_filenames = []
+        subfig_filenames = []
         meta_base = build_fig_meta(
             plotvariables,
             chapter=chapter,
@@ -664,11 +665,11 @@ def plot_swell_scatter(
 
             band_meta = {**meta_base, "band": band_name.lower()}
             fname = build_filename(f"swell_{band_name.lower()}", band_meta)
-            _save_figure(fig_s, fname, save_pgf=plotting.get("save_pgf", True))
-            panel_filenames.append(fname)
+            _save_figure(fig_s, fname, save_pgf=True)
+            subfig_filenames.append(fname)
             plt.close(fig_s)
 
-        write_figure_stub(meta_base, "swell_scatter", panel_filenames=panel_filenames)
+        write_figure_stub(meta_base, "swell_scatter", subfig_filenames=subfig_filenames)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -689,7 +690,7 @@ def plot_frequency_spectrum(
     Returns (fig, axes).
     """
     plotting = plotvariables.get("plotting", {})
-    show_plot = plotting.get("show_plot", True)
+    show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
 
     facet_by = plotting.get("facet_by", None)
@@ -826,17 +827,41 @@ def plot_frequency_spectrum(
     axes[-1].set_xlabel(col_prefix, fontsize=fontsize)
     plt.tight_layout()
 
+    # ── caption ──────────────────────────────────────────────────────────────
+    _wind_conds = sorted(meta_df["WindCondition"].dropna().unique().tolist())
+    _panel_conds = sorted(meta_df["PanelCondition"].dropna().unique().tolist())
+    _caption_slots = {
+        "n_runs":        len(meta_df),
+        "n_wind":        int(meta_df["WindCondition"].isin(["full", "lowest"]).sum()),
+        "n_stillwater":  int((meta_df["WindCondition"] == "no").sum()),
+        "wind_conds":    ", ".join(_wind_conds) if _wind_conds else "none",
+        "panel_conds":   ", ".join(_panel_conds) if _panel_conds else "none",
+        "probes":        ", ".join(str(p) for p in probes),
+        "xlim_lo":       xlim[0],
+        "xlim_hi":       xlim[1],
+        "data_type":     data_type.upper(),
+    }
+    _default_caption = (
+        "{data_type} of the free surface at each wave gauge "
+        "({n_runs} runs: {n_wind} wind, {n_stillwater} stillwater). "
+        "Wind conditions: {wind_conds}. "
+        "Frequency range shown: {xlim_lo}--{xlim_hi}\\,Hz."
+    )
+    _caption = resolve_caption(
+        plotting, _default_caption, _caption_slots,
+        fn_name="plot_frequency_spectrum",
+    )
+
     if save_plot:
         meta_base = build_fig_meta(
-            plotvariables,
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={
                 "script": "plotter.py::plot_frequency_spectrum",
                 "data_type": data_type,
             },
         )
-        save_separate = plotting.get("save_separate", False)
-        print(f"save_separate is {save_separate}")
+        save_separate = plotting.get("save_separate", True)
 
         if not save_separate:
             # Current behaviour — save the whole faceted figure as one file
@@ -844,11 +869,11 @@ def plot_frequency_spectrum(
                 fig,
                 meta_base,
                 plot_type=f"spectrum_{data_type}",
-                save_pgf=plotting.get("save_pgf", True),
+                save_pgf=True,
             )
         else:
             # Save one figure per facet panel
-            panel_filenames = []
+            subfig_filenames = []
 
             for group, facet_label in zip(facet_groups, facet_labels):
                 fig_s, ax_s = plt.subplots(
@@ -928,13 +953,13 @@ def plot_frequency_spectrum(
                 if facet_by == "probe":
                     panel_meta["probes"] = group
                 fname = build_filename(f"spectrum_{data_type}", panel_meta)
-                _save_figure(fig_s, fname, save_pgf=plotting.get("save_pgf", True))
-                panel_filenames.append(fname)
+                _save_figure(fig_s, fname, save_pgf=True)
+                subfig_filenames.append(fname)
                 plt.close(fig_s)
 
             # One stub with all panels as subfigures
             write_figure_stub(
-                meta_base, f"spectrum_{data_type}", panel_filenames=panel_filenames
+                meta_base, f"spectrum_{data_type}", subfig_filenames=subfig_filenames
             )
 
     if show_plot:
@@ -963,7 +988,7 @@ def plot_reconstructed(
     """
     meta_df = filtrert_frequencies.copy()
     plotting = freqplotvariables.get("plotting", {})
-    show_plot = plotting.get("show_plot", True)
+    show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
 
     probes = plotting.get("probes", [])
@@ -1131,7 +1156,7 @@ def plot_reconstructed(
             fig,
             meta,
             plot_type="reconstructed",
-            save_pgf=plotting.get("save_pgf", True),
+            save_pgf=True,
         )
 
     if show_plot:
@@ -1448,7 +1473,7 @@ def plot_probe_noise_floor(
     window_n = int(window_s * fs)
 
     plotting = plotvariables.get("plotting", {})
-    show_plot = plotting.get("show_plot", True)
+    show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
     figure_name = plotting.get("figure_name", "ch04_probe_noise_floor")
 
@@ -1542,15 +1567,10 @@ def plot_probe_noise_floor(
     if show_plot:
         plt.show()
 
-    # --- caption resolution (Option B) ---
-    # Values available as {slot} in any user-supplied caption template:
-    #   {window_ms}   — window length in milliseconds (float)
-    #   {n_runs}      — number of accepted stillwater runs (int)
-    #   {n_flagged}   — number of flagged/excluded runs (int)
-    #   {amp_cap_mm}  — amplitude cap used for flagging (float)
+    # ── caption ──────────────────────────────────────────────────────────────
     _caption_slots = {
         "window_ms": window_s * 1e3,
-        "n_runs": len(sw_clean),
+        "n_runs":    len(sw_clean),
         "n_flagged": int(bad.sum()),
         "amp_cap_mm": amp_cap_mm,
     }
@@ -1565,24 +1585,16 @@ def plot_probe_noise_floor(
         "Error bars: standard deviation across runs. "
         "White dots: individual run values."
     )
-    _caption_template = plotting.get("caption", _default_caption)
-    _caption = _caption_template.format(**_caption_slots)
-
-    # Always print slots and copy the formatted caption to clipboard.
-    # Collapse internal whitespace/newlines first.
-    _caption_oneline = " ".join(_caption.split())
-    print(f"\n[plot_probe_noise_floor] caption slots: {_caption_slots}")
-    try:
-        import subprocess
-        subprocess.run(["pbcopy"], input=_caption_oneline.encode(), check=True)
-        print("[plot_probe_noise_floor] caption copied to clipboard — just Cmd+V.")
-        print(f'[plot_probe_noise_floor] formatted caption:\n  "{_caption_oneline}"\n')
-    except Exception:
-        print(f'[plot_probe_noise_floor] caption:\n  "{_caption_oneline}"')
+    _caption = resolve_caption(
+        plotting, _default_caption, _caption_slots,
+        fn_name="plot_probe_noise_floor",
+    )
 
     if save_plot:
-        _pv_for_meta = {"filters": {}, "plotting": {"figure_name": figure_name, "caption": _caption}}
-        meta = build_fig_meta(_pv_for_meta, chapter=chapter)
+        meta = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
+            chapter=chapter,
+        )
         save_and_stub(fig, meta, plot_type="probe_noise_floor")
 
     return fig, summary
@@ -1628,8 +1640,8 @@ def plot_parallel_ratio(
     from wavescripts.filters import apply_experimental_filters
 
     plotting = plotvariables.get("plotting", {})
-    show_plot  = plotting.get("show_plot",   True)
-    save_plot  = plotting.get("save_plot",   False)
+    show_plot   = plotting.get("show_plot",   False)
+    save_plot   = plotting.get("save_plot",   False)
     figure_name = plotting.get("figure_name", "ch04_parallel_ratio")
 
     # --- filter to wave runs with a valid parallel_ratio ---
@@ -1679,31 +1691,31 @@ def plot_parallel_ratio(
     if show_plot:
         plt.show()
 
-    # --- caption ---
-    _caption_slots = {"n_runs": len(df), "n_panels": n_panels}
+    # ── caption ──────────────────────────────────────────────────────────────
+    _caption_slots = {
+        "n_runs":   len(df),
+        "n_panels": n_panels,
+        "panel_conditions": ", ".join(str(p) for p in panel_vals),
+    }
     _default_caption = (
         "Ratio of wall-side to far-side probe amplitude at the same longitudinal "
-        "distance, for {n_runs} wave runs across {n_panels} panel configurations. "
+        "distance, for {n_runs} wave runs across {n_panels} panel "
+        "condition(s) ({panel_conditions}). "
         "A ratio of 1 indicates lateral symmetry. "
         "Deviations indicate wall reflections or wind-driven lateral asymmetry. "
         "Error bars: standard deviation across runs at the same frequency. "
         "Dashed line: ratio = 1."
     )
-    _caption_template = plotting.get("caption", _default_caption)
-    _caption = _caption_template.format(**_caption_slots)
-
-    _caption_oneline = " ".join(_caption.split())
-    print(f"\n[plot_parallel_ratio] caption slots: {_caption_slots}")
-    try:
-        import subprocess
-        subprocess.run(["pbcopy"], input=_caption_oneline.encode(), check=True)
-        print("[plot_parallel_ratio] caption copied to clipboard — just Cmd+V.")
-    except Exception:
-        print(f'[plot_parallel_ratio] caption:\n  "{_caption_oneline}"')
+    _caption = resolve_caption(
+        plotting, _default_caption, _caption_slots,
+        fn_name="plot_parallel_ratio",
+    )
 
     if save_plot:
-        _pv_for_meta = {"filters": {}, "plotting": {"figure_name": figure_name, "caption": _caption}}
-        meta = build_fig_meta(_pv_for_meta, chapter=chapter)
+        meta = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
+            chapter=chapter,
+        )
         save_and_stub(fig, meta, plot_type="parallel_ratio")
 
     return fig

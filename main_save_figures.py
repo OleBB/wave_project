@@ -28,6 +28,8 @@ OUTPUT KEYS (measured results):
 import os
 from pathlib import Path
 
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -86,6 +88,7 @@ combined_meta, _, combined_fft_dict, combined_psd_dict = load_analysis_data(
     *PROCESSED_DIRS
 )
 
+# %%
 # processed_dfs is heavy (~75 MB). Loaded when needed by sections below.
 processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
 
@@ -94,7 +97,7 @@ processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
 # CHAPTER 04 — METHODOLOGY
 # =============================================================================
 # %%
-print("hello")
+
 # %%
 """
 ── CH04 § 1 — Probe uncertainty / noise floor ───────────────────────────────
@@ -107,11 +110,10 @@ Already in combined_meta as "Probe {pos} Amplitude" for those rows.
 Figures/tables:
   - Table: noise floor per probe (mean ± std across stillwater runs) [mm]
   - Plot:  stillwater amplitude bar chart or box plot, one bar per probe
+
+Mine notater:
 """
-import importlib
-import wavescripts.plotter as _plotter_mod
-importlib.reload(_plotter_mod)
-from wavescripts.plotter import plot_probe_noise_floor
+
 
 """
 PRINTOUT:
@@ -131,6 +133,11 @@ PRINTOUT:
 
 """
 
+# import importlib
+# import wavescripts.plotter as _plotter_mod
+# importlib.reload(_plotter_mod)
+# from wavescripts.plotter import plot_probe_noise_floor
+
 _pv_noise_floor = {
     "filters": {},
     "plotting": {
@@ -143,7 +150,7 @@ _pv_noise_floor = {
         "PROBE noise floor estimated as the minimum windowed (P$_{97.5}$--P$_{2.5}$)/2 amplitude over 200\,ms sliding windows of 14 stillwater recordings (1 run(s) excluded — name keyword or windowed minimum above 0.5\,mm). Short windows suppress slow tank sloshing so only electronic jitter and capillary ripples remain. Error bars: standard deviation across runs. White dots: individual run values."
     }
 }
-import time
+
 start = time.perf_counter()
 _fig_nf, _noise_summary = plot_probe_noise_floor(
     combined_meta,
@@ -178,6 +185,8 @@ Figures:
 # TODO
 
 # %%
+import time
+# %%
 """
 ── CH04 § 3 — Probe placement: longitudinal and lateral effects ─────────────
 Goal: show what parallel probes tell us — lateral uniformity without wind,
@@ -191,15 +200,27 @@ Figures:
   - Plot:  parallel_ratio vs frequency, coloured by PanelCondition (reflection)
   - Table: parallel_ratio summary (mean, std) by wind/panel group
 """
+
+""" PRINTOUT
+Ratio of wall-side to far-side probe amplitude at the same longitudinal distance, for 154 wave runs across 1 panel configurations. A ratio of 1 indicates lateral symmetry. Deviations indicate wall reflections or wind-driven lateral asymmetry. Error bars: standard deviation across runs at the same frequency. Dashed line: ratio = 1.
+"""
+
 _pv_parallel_ratio = {
     "filters": {},
     "plotting": {
         "show_plot": True,
-        "save_plot": False,           # set True when figure is ready for thesis
+        "save_plot": True,           # set True when figure is ready for thesis
         "figure_name": "ch04_parallel_ratio",
+        "force_stub": True,
     },
+    "caption": {
+        "Ratio of wall-side to far-side probe amplitude at the same longitudinal distance, for 154 wave runs across 1 panel configurations. A ratio of 1 indicates lateral symmetry. Deviations indicate wall reflections or wind-driven lateral asymmetry. Error bars: standard deviation across runs at the same frequency. Dashed line: ratio = 1."
+    }
 }
+start = time.perf_counter()
 _fig_pr = plot_parallel_ratio(combined_meta, _pv_parallel_ratio)
+end = time.perf_counter()
+print(f"Lateral symmetry of plot_parallel_ratio {end-start:.4f} seconds")
 
 # %%
 """
@@ -222,9 +243,54 @@ Figures:
   - Plot:  wind-only amplitude vs longitudinal distance, bar per probe
   - Plot:  cross-correlation coefficient /170 vs /340 for fullwind runs
 """
-# TODO: promote from main_explore_inline.py wind section when finalised
-_nowave_paths   = set(combined_meta[combined_meta["WaveFrequencyInput [Hz]"].isna()]["path"])
-_wind_psd_dict  = {k: v for k, v in combined_psd_dict.items() if k in _nowave_paths}
+from wavescripts.filters import apply_experimental_filters as _aef
+
+_pv_wind_psd = {
+    "filters": {
+        "WaveFrequencyInput [Hz]": None,
+        "WindCondition":           None,
+        "PanelCondition":          None,
+        # exclude diagnostic/experimental runs by filename keyword
+        "exclude_run_keywords": ["nestenstille", "mstop"],
+    },
+    "plotting": {
+        "show_plot":     True,
+        "save_plot":     True,          # set True when ready
+        "figure_name":   "ch04_wind_psd",
+        "force_stub":    False,
+        "figsize":       (11, 4 * 4),
+        "linewidth":     1.0,
+        "facet_by":      "probe",
+        "probes":        ANALYSIS_PROBES,
+        "xlim":          (0, 5),
+        "logaritmic":    False,
+        "peaks":         0,
+        "max_points":    500,
+        "grid":          True,
+        "legend":        "inside",
+
+        "caption": (
+            "Power spectral density of the free surface at each wave gauge "
+            "during wind-only runs (no paddle waves). "
+            "All {n_runs} nowave runs overlaid; colour encodes wind condition. "
+            "Stillwater runs (no wind) shown as baseline. "
+            "Wind energy is concentrated above 2\\,Hz — "
+            "the paddle frequency range (0.65--1.9\\,Hz) is unaffected."
+        ),
+    },
+}
+
+_meta_nowave_all = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].isna()].copy()
+_meta_nowave     = _aef(_meta_nowave_all, _pv_wind_psd)
+_nowave_paths    = set(_meta_nowave["path"])
+_wind_psd_dict   = {k: v for k, v in combined_psd_dict.items() if k in _nowave_paths}
+
+start = time.perf_counter()
+_fig_wind_psd, _ = plot_frequency_spectrum(
+    _wind_psd_dict, _meta_nowave, _pv_wind_psd, data_type="psd", chapter="04"
+)
+end = time.perf_counter()
+print(f"Wind PSD plot took {end - start:.4f} s")
 
 # %%
 """

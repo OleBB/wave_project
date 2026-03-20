@@ -308,11 +308,23 @@ def apply_experimental_filters(
     n_original = len(out)
     print(f"\n--- Starting Filter Process ({n_original} rows) ---")
 
-    # 2. Sequential Filtering
+    # 2a. Filename keyword exclusion
+    exclude_keywords = filters.get("exclude_run_keywords")
+    if exclude_keywords:
+        before = len(out)
+        mask = out["path"].apply(
+            lambda p: not any(kw in str(p) for kw in exclude_keywords)
+        )
+        out = out[mask]
+        print(f"  [✓] exclude_run_keywords {list(exclude_keywords)} kept {len(out)} rows (removed {before - len(out)})")
+
+    # 2b. Sequential column filtering
     for col, val in filters.items():
+        if col == "exclude_run_keywords":
+            continue  # handled above
         if val is None:
             continue
-            
+
         if col not in out.columns:
             print(f"  [!] Skip: Column '{col}' not found in DataFrame.")
             continue
