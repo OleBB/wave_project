@@ -16,7 +16,16 @@ Browsers launched:
     RampDetectionBrowser   — inspect ramp detection results for all runs
 """
 
-# %%
+
+# %% ── dev: reload modules (run this cell after editing wavescripts/) ─────────
+import importlib
+import wavescripts.plot_browsers as _pb
+importlib.reload(_pb)
+from wavescripts.plot_browsers import SignalBrowserFiltered, RampDetectionBrowser
+
+
+
+# %% ------------ Velkommen ---------------------
 # Must be set before any matplotlib / wavescripts imports
 import matplotlib
 matplotlib.use("Qt5Agg")
@@ -47,6 +56,10 @@ PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
 ]
 
 # ── Load from cache (fast — no reprocessing) ──────────────────────────────────

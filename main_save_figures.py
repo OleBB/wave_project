@@ -24,7 +24,15 @@ OUTPUT KEYS (measured results):
                                   (not pre-calculated; measured from the actual wave)
 """
 
-# %%
+# %% ── dev: reload modules (run this cell after editing wavescripts/) ─────────
+import importlib, wavescripts.plotter as _pm, wavescripts.filters as _fm
+importlib.reload(_pm); importlib.reload(_fm)
+from wavescripts.plotter import (plot_probe_noise_floor, plot_parallel_ratio,
+                                  plot_frequency_spectrum)
+from wavescripts.filters import apply_experimental_filters as _aef
+
+
+# %% ----------- Velkommen ----------------------------
 import os
 from pathlib import Path
 
@@ -80,6 +88,7 @@ PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
 ]
 
 # ── Load from cache ───────────────────────────────────────────────────────────

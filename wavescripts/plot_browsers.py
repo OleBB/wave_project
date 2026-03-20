@@ -14,6 +14,9 @@ SignalBrowserFiltered   — step through FFT signal reconstruction run by run
 RampDetectionBrowser    — inspect ramp detection results for all runs
 """
 
+
+
+
 from __future__ import annotations
 
 import copy
@@ -80,6 +83,7 @@ class SignalBrowserFiltered(QMainWindow):
         self.panel_filter = QComboBox()
         self.freq_filter  = QComboBox()
         self.amp_filter   = QComboBox()
+        self.per_filter   = QComboBox()
 
         self.wind_filter.addItems(
             ["All wind"] + sorted(meta_df["WindCondition"].dropna().unique().tolist()))
@@ -91,11 +95,15 @@ class SignalBrowserFiltered(QMainWindow):
         self.amp_filter.addItems(
             ["All amp"] + [str(a) for a in
                            sorted(meta_df["WaveAmplitudeInput [Volt]"].dropna().unique())])
+        self.per_filter.addItems(
+            ["All per"] + [str(a) for a in
+                           sorted(meta_df["WavePeriodInput"].dropna().unique())])
 
-        filter_layout.addWidget(QLabel("Wind:"),   0, 0); filter_layout.addWidget(self.wind_filter,  0, 1)
-        filter_layout.addWidget(QLabel("Panel:"),  0, 2); filter_layout.addWidget(self.panel_filter, 0, 3)
-        filter_layout.addWidget(QLabel("Freq:"),   1, 0); filter_layout.addWidget(self.freq_filter,  1, 1)
-        filter_layout.addWidget(QLabel("Amp:"),    1, 2); filter_layout.addWidget(self.amp_filter,   1, 3)
+        filter_layout.addWidget(QLabel("WindConditions:"),   0, 0); filter_layout.addWidget(self.wind_filter,  0, 1)
+        filter_layout.addWidget(QLabel("PanelConditions:"),  0, 2); filter_layout.addWidget(self.panel_filter, 0, 3)
+        filter_layout.addWidget(QLabel("Frequencies:"),   1, 0); filter_layout.addWidget(self.freq_filter,  1, 1)
+        filter_layout.addWidget(QLabel("Amplitudes:"),    1, 2); filter_layout.addWidget(self.amp_filter,   1, 3)
+        filter_layout.addWidget(QLabel("Periods:"),    2, 0); filter_layout.addWidget(self.per_filter,   2, 1)
         filter_box.setLayout(filter_layout)
         layout.addWidget(filter_box)
 
@@ -164,7 +172,7 @@ class SignalBrowserFiltered(QMainWindow):
         layout.addWidget(self.list_widget)
 
         for w in [self.wind_filter, self.panel_filter,
-                  self.freq_filter, self.amp_filter]:
+                  self.freq_filter, self.amp_filter, self.per_filter]:
             w.currentTextChanged.connect(self.update_list)
         self.update_list()
 
@@ -177,10 +185,12 @@ class SignalBrowserFiltered(QMainWindow):
         panel = self.panel_filter.currentText()
         freq  = self.freq_filter.currentText()
         amp   = self.amp_filter.currentText()
+        per   = self.per_filter.currentText()
         if wind  != "All wind":  df = df[df["WindCondition"] == wind]
         if panel != "All panel": df = df[df["PanelCondition"] == panel]
         if freq  != "All freq":  df = df[df["WaveFrequencyInput [Hz]"] == float(freq)]
         if amp   != "All amp":   df = df[df["WaveAmplitudeInput [Volt]"] == float(amp)]
+        if per   != "All per":   df = df[df["WavePeriodInput"] == float(per)]
         df = df[df["path"].isin(self.fft_dict.keys())]
 
         self.list_widget.clear()
@@ -192,6 +202,7 @@ class SignalBrowserFiltered(QMainWindow):
                 f"{str(row.get('PanelCondition','?')):8s} | "
                 f"{row.get('WaveFrequencyInput [Hz]','?')} Hz | "
                 f"{row.get('WaveAmplitudeInput [Volt]','?')} V | "
+                f"{row.get('WavePeriodInput','?')} s | "
                 f"{Path(path).stem[-30:]}"
             )
             self.current_paths.append(path)

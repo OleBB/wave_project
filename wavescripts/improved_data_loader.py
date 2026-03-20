@@ -41,7 +41,38 @@ NON_FLOAT_COLUMNS = {
     "out_position": str,   # e.g. "12400/170" — must stay as string
     "in_probe": "Int64",   # probe index 1–4, nullable integer
     "out_probe": "Int64",
+    "run_category": str,   # "standard" | "nowave_control" | "diagnostic"
 }
+
+# ── Run category classification ───────────────────────────────────────────────
+# Keywords matched against the full file path (case-insensitive).
+# First matching category wins; "standard" is the fallback.
+_CATEGORY_KEYWORDS: Dict[str, List[str]] = {
+    "diagnostic": [
+        "nestenstille",
+        "mstop",
+        "frommax",       # e.g. FromMaxWinToNoWin
+        "midday",
+        "startofday",
+        "endofday",
+    ],
+    "nowave_control": [
+        "nowave",
+        "ulsonly",
+        "nopaddel",
+        "nopaddle",
+        "stillwater",
+    ],
+}
+
+
+def _assign_run_category(path: str) -> str:
+    """Return 'diagnostic', 'nowave_control', or 'standard' based on filename keywords."""
+    lower = path.lower()
+    for category, keywords in _CATEGORY_KEYWORDS.items():
+        if any(kw in lower for kw in keywords):
+            return category
+    return "standard"
 
 # Stale probe-number ratio columns — removed at load time
 _STALE_RATIO_COLS = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]
@@ -49,6 +80,7 @@ _STALE_RATIO_COLS = ["P2/P1 (FFT)", "P3/P2 (FFT)", "P4/P3 (FFT)"]
 # Preferred order for info columns (non-probe) at the front of combined_meta
 _META_INFO_COLS = [
     "path", "file_date", "experiment_folder",
+    "run_category",
     "WindCondition", "TunnelCondition", "PanelCondition", "Mooring",
     "Run number",
     "WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WavePeriodInput",
@@ -98,8 +130,10 @@ def _sort_meta_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_dtypes(meta_df: pd.DataFrame) -> pd.DataFrame:
-    """Everything is float64 except NON_FLOAT_COLUMNS."""
+    """Everything is float64 except NON_FLOAT_COLUMNS. Also assigns run_category."""
     meta_df = meta_df.copy()
+    if "path" in meta_df.columns:
+        meta_df["run_category"] = meta_df["path"].apply(_assign_run_category)
     for col in meta_df.columns:
         if col in NON_FLOAT_COLUMNS:
             meta_df[col] = meta_df[col].astype(NON_FLOAT_COLUMNS[col])

@@ -177,7 +177,7 @@ def ensure_stillwater_columns(
         if meta_t.dt.tz is not None:
             meta_t = meta_t.dt.tz_localize(None)
         t_arr = meta_t.map(lambda t: t.timestamp()) - t_origin
-        new_cols[f"Stillwater Probe {pos}"] = np.polyval(coeffs, t_arr).values
+        new_cols[f"Stillwater Probe {pos}"] = np.polyval(coeffs, t_arr)
 
         # Print fit summary
         fit_at_start = np.polyval(coeffs, 0)

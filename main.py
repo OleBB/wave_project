@@ -60,6 +60,7 @@ dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260314-ProbePos4_31_FPV_2-tett6roof"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260316-ProbePos4_31_FPV_2-tett6roof"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
 ]
 
 # ── CLI overrides ─────────────────────────────────────────────────────────────
