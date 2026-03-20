@@ -355,7 +355,24 @@ Figures:
   - Plot:  period_cv vs frequency, same layout
   - Note:  this motivates use of FFT amplitude (not time-domain) for OUT/IN
 """
-# TODO
+
+_pv_wave_stability = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": None,
+        "WaveFrequencyInput [Hz]":   None,
+        "WindCondition":             None,
+        "PanelCondition":            "full",
+        "run_category":              "standard",
+    },
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   False,         # set True when figure is ready for thesis
+        "figure_name": "ch04_wave_stability",
+        "figsize":     (10, 4),
+        "probes":      ANALYSIS_PROBES,
+    },
+}
+# TODO: add plot_wave_stability() to plotter.py (reads wave_stability {pos} from combined_meta)
 
 # %%
 """
@@ -370,7 +387,24 @@ Figures:
   - Plot:  parallel_ratio vs frequency, fullwind runs (asymmetry visible?)
   - Table: mean parallel_ratio ± std by (WindCondition, frequency)
 """
-# TODO
+
+# Lateral equality uses the same plot_parallel_ratio function (already defined in §3),
+# but filtered to a single wind condition at a time for the per-wind breakdown.
+_pv_lateral_nowind = {
+    "filters": {"WindCondition": "no", "run_category": "standard"},
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   False,
+        "figure_name": "ch04_lateral_nowind",
+        "force_stub":  False,
+    },
+    "caption": {
+        "Wall-side to far-side amplitude ratio at matched longitudinal distance, "
+        "no-wind runs only. A ratio of 1 indicates the paddle wave is laterally "
+        "uniform. Dashed line: ratio = 1."
+    },
+}
+# _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)  # TODO: uncomment
 
 
 # =============================================================================
@@ -391,16 +425,33 @@ facets:  PanelCondition  ×  WaveAmplitudeInput [Volt]
 Key question: does wind change the damping? If yes: how much, and at which
 frequencies?
 
-Data: combined_meta → damping_grouper → plot_damping_freq.
+Data: combined_meta → damping_all_amplitude_grouper → plot_damping_freq.
 
 Figures:
   - plot_damping_freq: OUT/IN vs freq, errorbars (std or ±10% for n=1)
   - Same plot with ka on x-axis (requires wavenumber column)
 """
-# TODO: uncomment and configure when ready
-# from wavescripts.filters import damping_grouper
-# grouped, wide = damping_grouper(combined_meta)
-# plot_damping_freq(grouped, ...)
+
+_pv_damping_freq = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": None,
+        "WaveFrequencyInput [Hz]":   None,
+        "WindCondition":             None,
+        "PanelCondition":            None,
+    },
+    "plotting": {
+        "show_plot":  True,
+        "save_plot":  False,          # set True when figure is ready for thesis
+        "figure_name": "ch05_damping_freq",
+        "figsize":    (7, 3),
+        "annotate":   True,
+        "legend":     "outside_right",
+        "probes":     ANALYSIS_PROBES,
+    },
+}
+
+_damping_grouped = damping_all_amplitude_grouper(combined_meta)
+plot_damping_freq(_damping_grouped, _pv_damping_freq)
 
 # %%
 """
@@ -416,7 +467,24 @@ facets:  PanelCondition  ×  WindCondition
 Figures:
   - plot_damping_scatter or similar
 """
-# TODO
+
+_pv_damping_scatter = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": None,
+        "WaveFrequencyInput [Hz]":   None,
+        "WindCondition":             None,
+        "PanelCondition":            None,
+    },
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   False,         # set True when figure is ready for thesis
+        "figure_name": "ch05_damping_scatter",
+        "figsize":     (7, 5),
+        "legend":      "inside",
+    },
+}
+
+plot_damping_scatter(_damping_grouped, _pv_damping_scatter)
 
 # %%
 """
@@ -432,7 +500,28 @@ Figures:
   - Plot:  delta-OUT/IN (full wind minus no wind) vs frequency
   - Table: OUT/IN summary — (frequency × panel) with wind as columns
 """
-# TODO
+
+# _damping_grouped already computed in §1.
+# TODO: add plot_damping_wind_delta() to plotter.py (pivot no/full wind, plot difference)
+#
+# Interim: the §1 plot already shows all three wind conditions on the same axes —
+# the "wind effect" is readable directly from that figure. The delta plot is a
+# cleaner standalone for the thesis.
+_pv_damping_wind_effect = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": 0.2,   # focus on higher-SNR amplitude
+        "WindCondition":             ["no", "full"],
+        "PanelCondition":            "full",
+        "run_category":              "standard",
+    },
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   False,
+        "figure_name": "ch05_damping_wind_effect",
+        "figsize":     (7, 4),
+    },
+}
+# TODO: implement delta plot
 
 # %%
 """

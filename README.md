@@ -147,7 +147,7 @@ dependencies:
   - pyarrow
   - tabulate
   - spyder-unittest
-prefix: /opt/anaconda3/envs/draumeriket
+prefix: /opt/anaconda3/envs/draumkvedet 
 
   
 # gitignore - notebooks

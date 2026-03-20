@@ -26,32 +26,56 @@
 
 ## 0. Current investigation (pick up here next session)
 
-### Next session — start here (2026-03-17, end of session)
+### Next session — start here (2026-03-20, end of session)
 
-**Run `python main.py --force-recompute`** to regenerate all cache with all changes from this session:
-- New `Probe {pos} Significant Wave Height Hs` and `Hm0` columns
-- Improved stillwater fit (weighted linear regression over all no-wind runs)
-- `IN/OUT Significant Wave Height Hm0/Hs` generic columns
+**State**: `exp/probepos` merged to `main` and pushed. Working tree clean.
 
-After reprocessing, verify in `wavetable-clean`:
-- `Probe 9373/170 Significant Wave Height Hs` and `Hm0` are non-NaN for wave runs
-- Hm0 ≈ 2.83 × `Probe {pos} Amplitude` for clean no-wind sine runs (Hm0 = 4×std = 2√2×A for pure sine)
-- Stillwater fit diagnostics print per-probe: `start X.XXX mm, end X.XXX mm (drift ±X.XXX mm)`
-- No `Probe 1/2/3/4 *` columns remain
+**Force-recompute is still needed** — run `python main.py --force-recompute` to pick up:
+- `run_category` column (new, derived from filename keywords in `apply_dtypes`)
+- Bug fix: `np.polyval().values` removed in `processor.py:180`
+- After recompute: verify `combined_meta["run_category"].value_counts()` shows sensible split
 
-**Useful diagnostic:** `plot_stillwater_fit` in `plot_quicklook.py` — call from REPL:
+#### Primary current task: `main_save_figures.py` — promote explore plots to publication
+
+The workflow is: find a working plot in `main_explore_inline.py` → copy `plotvariables` + call to `main_save_figures.py` → set `save_plot: True` → run. See §18 for the full chain.
+
+**CH04 status:**
+| Section | Status | Notes |
+|---------|--------|-------|
+| §1 probe noise floor | ✅ function exists, caption works | `plot_probe_noise_floor` in `plotter.py` |
+| §2 stillwater timing | ⬜ TODO | needs `processed_dfs` |
+| §3 parallel ratio | ✅ function exists, caption works | `plot_parallel_ratio` in `plotter.py` |
+| §4-1 wind PSD | ✅ wired up | `plot_frequency_spectrum`, data filtered via `run_category` |
+| §5–§8 | ⬜ TODO | signal overview, ramp detection, autocorrelation |
+
+**Caption system (Option B)** — every plotter function now uses `resolve_caption()` from `plot_utils.py`:
+- Add `"caption": "...{slot}..."` inside `plotvariables["plotting"]`
+- Available slots printed to terminal + copied to clipboard on every run
+- If no caption supplied: default template is used and also copied — paste it back and edit
+- `save_plot: True` writes PDF + PGF + TEXFIGU stub automatically
+
+**`run_category` filter** — use in any `plotvariables["filters"]` dict:
+- `"run_category": "standard"` — main experimental wave runs only
+- `"run_category": "nowave_control"` — nowave / ULSonly / stillwater runs
+- `"run_category": "diagnostic"` — nestenstille / mstop / purpose-specific runs
+- For spectral plots (which don't call `apply_experimental_filters`): apply `_aef` inline before building the psd/fft dict, then pass filtered meta to the plot function
+
+**Module reload pattern** (run after editing any wavescripts/ file, without restarting kernel):
 ```python
-from wavescripts.plot_quicklook import plot_stillwater_fit
-plot_stillwater_fit(processed_dfs, combined_meta, cfg, date="2026-03-07")
+import importlib, wavescripts.plotter as _pm, wavescripts.filters as _fm
+importlib.reload(_pm); importlib.reload(_fm)
+from wavescripts.plotter import plot_probe_noise_floor, plot_parallel_ratio, plot_frequency_spectrum
+from wavescripts.filters import apply_experimental_filters as _aef
 ```
-Requires `processed_dfs` loaded with `load_processed=True`. X-axis = file modification time (real clock time). Pass `date="YYYY-MM-DD"` to restrict to one folder-day.
+For `plot_browsers.py`: close any open Qt windows first, then reload.
 
-**⚠ TODO — short vs long run comparison**
-Some runs are ~40 periods, others ~240 periods. Need to check whether run length affects:
-- `wave_stability` / `period_amplitude_cv` (longer run = more averaging = different CV?)
-- FFT amplitude (more periods → narrower FFT bin → less spectral leakage)
-- OUT/IN ratio stability (does it converge with more periods?)
-Approach: plot `wave_stability` and `OUT/IN (FFT)` vs `WavePeriodInput` for same frequency/wind/panel conditions.
+**Next lightweight plots to promote** (all use `combined_meta` or already-loaded dicts — fast):
+- `damping_vs_freq` (Ch05 primary result) — uses `explore_damping_vs_freq` / `plot_damping_freq`
+- `wave_stability` vs frequency/wind — companion to damping plot
+- `parallel_ratio` already done — just need to set `save_plot: True`
+
+**⚠ Remaining plotter functions not yet migrated to `resolve_caption`:**
+`plot_damping_freq`, `plot_swell_scatter`, `plot_all_probes` — still have old inline caption logic. Migrate when touching those functions.
 
 ---
 
