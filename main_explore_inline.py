@@ -819,33 +819,65 @@ print(
 # When that narrow-band amplitude first exceeds a threshold, the wave has arrived.
 # This rejects wind-wave energy (wrong frequency) and is probe-noise-independent.
 
-def _find_arrival_periodic(signal, fs, target_freq, threshold_mm, n_periods=3):
+def _find_arrival_upcross(signal, fs, target_freq, threshold_mm,
+                           min_period_factor=0.25, max_period_factor=4.0):
     """
-    Slide a window of n_periods over the signal, compute FFT amplitude at
-    target_freq in each window. Return (idx, t_s) of the first window where
-    amplitude exceeds threshold_mm.  idx points to the window centre.
-    Returns (None, None) if never detected.
-    """
-    win = int(round(n_periods / target_freq * fs))   # samples per N periods
-    half = win // 2
-    sig = np.asarray(signal, dtype=float)
-    # pre-build FFT freq axis and find the target bin once
-    freqs = np.fft.rfftfreq(win, d=1.0 / fs)
-    bin_idx = int(np.argmin(np.abs(freqs - target_freq)))
+    Detect first wave arrival using zero-upcrossing cycle analysis.
 
-    for start in range(0, len(sig) - win, half // 2):   # step = half-window
-        chunk = sig[start : start + win]
-        if np.isnan(chunk).mean() > 0.3:               # skip mostly-NaN chunks
-            continue
-        chunk = np.where(np.isnan(chunk), 0.0, chunk)
-        amp = (2.0 / win) * np.abs(np.fft.rfft(chunk)[bin_idx])
+    Does NOT look for the target frequency specifically. Instead it finds
+    all zero-upcrossings, measures each cycle's period and peak-to-trough
+    amplitude, and returns the first cycle whose amplitude exceeds
+    threshold_mm and whose period is plausible (between min and max factor
+    × target period).
+
+    This captures the ramp buildup naturally: the first few cycles often
+    have longer/varying periods at low amplitude, then amplitude grows as
+    the wave train develops. The first cycle above threshold is the arrival.
+
+    Parameters
+    ----------
+    signal           : 1-D array, already zeroed (eta_ column)
+    fs               : sampling rate [Hz]
+    target_freq      : nominal wave frequency [Hz], used only to set the
+                       plausible period window (not for FFT)
+    threshold_mm     : amplitude [mm] above which a cycle counts as arrived
+    min_period_factor: reject cycles shorter than this × (1/target_freq).
+                       Filters out noise crossings. Default 0.25.
+    max_period_factor: reject cycles longer than this × (1/target_freq).
+                       Filters out slow sloshing. Default 4.0.
+
+    Returns
+    -------
+    (idx, t_s) : sample index and time [s] of the START of the first
+                 detected cycle. (None, None) if never detected.
+    """
+    sig = np.where(np.isnan(signal), 0.0, np.asarray(signal, dtype=float))
+    target_period_s   = 1.0 / target_freq
+    min_cycle_samples = int(min_period_factor * target_period_s * fs)
+    max_cycle_samples = int(max_period_factor * target_period_s * fs)
+
+    # zero-upcrossings: sample where sig goes from negative to non-negative
+    crossings = np.where((sig[:-1] < 0) & (sig[1:] >= 0))[0]
+
+    for i in range(len(crossings) - 1):
+        c0 = crossings[i]
+        c1 = crossings[i + 1]
+        cycle_len = c1 - c0
+
+        if cycle_len < min_cycle_samples or cycle_len > max_cycle_samples:
+            continue   # noise crossing or slow slosh — skip
+
+        chunk = sig[c0:c1]
+        amp   = chunk.max() - chunk.min()   # peak-to-trough
+
         if amp >= threshold_mm:
-            centre = start + half
-            return centre, centre / fs
+            return int(c0), c0 / fs
+
     return None, None
 
-_N_PERIODS     = 3      # window length in wave periods
-_THRESH_FACTOR = 2.0    # × noise floor, same as broadband method
+_THRESH_FACTOR      = 2.0   # × noise floor
+_MIN_PERIOD_FACTOR  = 0.25  # reject crossings shorter than 25% of target period (noise)
+_MAX_PERIOD_FACTOR  = 4.0   # reject crossings longer than 4× target period (sloshing)
 
 _periodic_rows = []
 for _, _row in combined_meta[
@@ -864,10 +896,11 @@ for _, _row in combined_meta[
         if _noise is None or _noise <= 0:
             continue
         _sig = _df[_eta_col].values
-        _idx, _t_s = _find_arrival_periodic(
+        _idx, _t_s = _find_arrival_upcross(
             _sig, _FS, _freq,
             threshold_mm=_THRESH_FACTOR * _noise,
-            n_periods=_N_PERIODS,
+            min_period_factor=_MIN_PERIOD_FACTOR,
+            max_period_factor=_MAX_PERIOD_FACTOR,
         )
         _periodic_rows.append({
             "run":       _Path(_row["path"]).name,
