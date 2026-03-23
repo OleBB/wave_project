@@ -28,7 +28,8 @@ OUTPUT KEYS (measured results):
 import importlib, wavescripts.plotter as _pm, wavescripts.filters as _fm
 
 from wavescripts.plotter import (plot_probe_noise_floor, plot_parallel_ratio,
-                                  plot_frequency_spectrum)
+                                  plot_frequency_spectrum, plot_wave_stability,
+                                  plot_damping_freq, plot_damping_scatter)
 from wavescripts.filters import apply_experimental_filters as _aef
 
 importlib.reload(_pm); importlib.reload(_fm);
@@ -61,6 +62,7 @@ from wavescripts.plotter import (
     plot_parallel_ratio,
     plot_probe_noise_floor,
     plot_swell_scatter,
+    plot_wave_stability,
 )
 from wavescripts.wave_detection import find_first_arrival
 # %%
@@ -438,49 +440,15 @@ _pv_wave_stability = {
         "show_plot":   True,
         "save_plot":   False,         # set True when figure is ready for thesis
         "figure_name": "ch04_wave_stability",
-        "figsize":     (10, 4),
+        "force_stub":  False,
+        "figsize":     (10, 3.5),
         "probes":      ANALYSIS_PROBES,
+        # caption printed to terminal on first run — paste the one-liner here:
+        # "caption": "...",
     },
 }
 
-_stab_sel = _aef(combined_meta, _pv_wave_stability)
-_stab_rows = []
-for pos in ANALYSIS_PROBES:
-    col = f"Probe {pos} wave_stability"
-    cv_col = f"Probe {pos} period_amplitude_cv"
-    if col not in _stab_sel.columns:
-        continue
-    for _, row in _stab_sel.iterrows():
-        _stab_rows.append({
-            "probe":          pos,
-            "freq":           row["WaveFrequencyInput [Hz]"],
-            "wind":           row["WindCondition"],
-            "amplitude":      row["WaveAmplitudeInput [Volt]"],
-            "wave_stability": row[col],
-            "period_cv":      row.get(cv_col, np.nan),
-        })
-_stab_df = pd.DataFrame(_stab_rows).dropna(subset=["wave_stability"])
-
-if _pv_wave_stability["plotting"]["show_plot"] and not _stab_df.empty:
-    apply_thesis_style()
-    fig, axes = plt.subplots(1, len(ANALYSIS_PROBES),
-                             figsize=_pv_wave_stability["plotting"]["figsize"],
-                             sharey=True)
-    for ax, pos in zip(axes, ANALYSIS_PROBES):
-        sub = _stab_df[_stab_df["probe"] == pos]
-        for wind, grp in sub.groupby("wind"):
-            grp_agg = grp.groupby("freq")["wave_stability"].agg(["mean", "std"]).reset_index()
-            ax.errorbar(grp_agg["freq"], grp_agg["mean"], yerr=grp_agg["std"],
-                        label=wind, color=WIND_COLOR_MAP.get(wind),
-                        marker="o", markersize=5, linewidth=1.2, capsize=3)
-        ax.axhline(0.85, color="gray", linestyle="--", linewidth=0.8, alpha=0.6)
-        ax.set_title(pos, fontsize=9)
-        ax.set_xlabel("Frequency [Hz]")
-    axes[0].set_ylabel("wave_stability")
-    axes[-1].legend(title="wind", fontsize=8)
-    fig.suptitle("Wavetrain stability vs frequency  (full panel)", fontsize=10)
-    plt.show()
-# TODO: promote to plot_wave_stability() in plotter.py when layout is finalised
+_fig_stab = plot_wave_stability(combined_meta, ANALYSIS_PROBES, _pv_wave_stability)
 
 # %%
 """
@@ -512,7 +480,7 @@ _pv_lateral_nowind = {
         ),
     },
 }
-# _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)  # TODO: uncomment
+_fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)
 
 # =============================================================================
 # CHAPTER 05 — RESULTS
@@ -631,16 +599,20 @@ _pv_damping_wind_effect = {
         "WaveAmplitudeInput [Volt]": 0.2,   # focus on higher-SNR amplitude
         "WindCondition":             ["no", "full"],
         "PanelCondition":            "full",
-        "run_category":              "standard",
+        # "run_category": "standard",   # re-enable after --force-recompute
     },
     "plotting": {
-        "show_plot":   True,
+        "show_plot":   False,
         "save_plot":   False,
         "figure_name": "ch05_damping_wind_effect",
+        "force_stub":  False,
         "figsize":     (7, 4),
+        # caption printed on first run — paste the one-liner here:
+        # "caption": "...",
     },
 }
-# TODO: implement delta plot
+# TODO: implement plot_damping_wind_delta() in plotter.py
+# (pivot no/full wind, plot OUT/IN(fullwind) - OUT/IN(nowind) vs frequency)
 
 # %%
 """

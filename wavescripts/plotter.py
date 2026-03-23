@@ -18,6 +18,7 @@ Sections
   FREQUENCY SPECTRUM          plot_frequency_spectrum
   RECONSTRUCTED SIGNAL        plot_reconstructed, plot_reconstructed_rms
   RAMP DETECTION              gather_ramp_data, plot_ramp_detection
+  WAVE STABILITY              plot_wave_stability
 """
 
 from __future__ import annotations
@@ -1800,5 +1801,160 @@ def plot_parallel_ratio(
             chapter=chapter,
         )
         save_and_stub(fig, meta, plot_type="parallel_ratio")
+
+    return fig
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WAVE STABILITY
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def plot_wave_stability(
+    combined_meta: pd.DataFrame,
+    probe_positions: list,
+    plotvariables: dict,
+    chapter: str = "04",
+    stability_threshold: float = 0.85,
+) -> plt.Figure:
+    """
+    Wave-train stability (autocorrelation at lag-1-period) vs frequency.
+
+    One subplot per probe, coloured by wind condition. A threshold line at
+    *stability_threshold* marks the boundary below which the IN probe signal
+    is dominated by wind-wave noise rather than the paddle wave. This motivates
+    using FFT amplitude (not time-domain) for OUT/IN under full wind.
+
+    Parameters
+    ----------
+    combined_meta : DataFrame (all runs)
+    probe_positions : list of "dist/lat" position strings
+    plotvariables : dict with "filters" and "plotting" sub-dicts.
+        Recognised "plotting" keys:
+            show_plot          : bool  (default False)
+            save_plot          : bool  (default False)
+            figure_name        : str
+            force_stub         : bool  (default False)
+            figsize            : tuple (default auto)
+            caption            : str  (optional template with {n_runs},
+                                       {threshold}, {n_probes})
+    chapter : str
+    stability_threshold : float
+        Horizontal reference line drawn on each subplot (default 0.85).
+    """
+    from wavescripts.filters import apply_experimental_filters
+
+    plotting = plotvariables.get("plotting", {})
+    show_plot  = plotting.get("show_plot",  False)
+    save_plot  = plotting.get("save_plot",  False)
+    figure_name = plotting.get("figure_name", "ch04_wave_stability")
+    force_stub  = plotting.get("force_stub",  False)
+
+    _top_caption = plotvariables.get("caption")
+    if isinstance(_top_caption, str) and "caption" not in plotting:
+        plotting = {**plotting, "caption": _top_caption}
+
+    # ── Filter and build tidy data frame ─────────────────────────────────────
+    sel = apply_experimental_filters(combined_meta, plotvariables)
+    # keep only wave runs with a measured frequency
+    sel = sel[sel["WaveFrequencyInput [Hz]"].notna()].copy()
+
+    rows = []
+    for _, row in sel.iterrows():
+        for pos in probe_positions:
+            col    = f"Probe {pos} wave_stability"
+            cv_col = f"Probe {pos} period_amplitude_cv"
+            if col not in sel.columns:
+                continue
+            val = row.get(col)
+            if pd.isna(val):
+                continue
+            rows.append({
+                "probe":          pos,
+                "freq":           row["WaveFrequencyInput [Hz]"],
+                "wind":           row.get("WindCondition"),
+                "amplitude":      row.get("WaveAmplitudeInput [Volt]"),
+                "wave_stability": float(val),
+                "period_cv":      float(row.get(cv_col, np.nan)),
+            })
+
+    stab_df = pd.DataFrame(rows)
+
+    n_runs   = len(sel)
+    n_probes = len(probe_positions)
+
+    _caption_slots = {
+        "n_runs":    n_runs,
+        "threshold": stability_threshold,
+        "n_probes":  n_probes,
+    }
+    _default_caption = (
+        "Wave-train stability (autocorrelation at lag-1-period) versus wave "
+        "frequency for {n_probes} probes, {n_runs} wave runs. "
+        "Colour encodes wind condition. "
+        "Dashed line: quality threshold {threshold} — "
+        "runs below this are dominated by wind-wave noise at the IN probe."
+    )
+    _caption = resolve_caption(
+        plotting, _default_caption, _caption_slots,
+        fn_name="plot_wave_stability",
+    )
+
+    # ── Draw figure ───────────────────────────────────────────────────────────
+    n_cols  = len(probe_positions)
+    figsize = plotting.get("figsize", (3.2 * n_cols, 3.5))
+    apply_thesis_style()
+    fig, axes = plt.subplots(1, n_cols, figsize=figsize, sharey=True)
+    if n_cols == 1:
+        axes = [axes]
+
+    for ax, pos in zip(axes, probe_positions):
+        sub = stab_df[stab_df["probe"] == pos]
+        for wind, grp in sub.groupby("wind"):
+            agg = (grp.groupby("freq")["wave_stability"]
+                      .agg(mean="mean", std="std")
+                      .reset_index())
+            ax.errorbar(
+                agg["freq"], agg["mean"], yerr=agg["std"],
+                label=wind,
+                color=WIND_COLOR_MAP.get(wind, "gray"),
+                marker="o", markersize=5, linewidth=1.2, capsize=3,
+            )
+        ax.axhline(
+            stability_threshold, color="gray",
+            linestyle="--", linewidth=0.8, alpha=0.7,
+            label=f"threshold {stability_threshold}",
+        )
+        ax.set_title(pos, fontsize=9)
+        ax.set_xlabel("Frequency [Hz]")
+        ax.set_ylim(0, 1.05)
+
+    axes[0].set_ylabel("wave_stability")
+    axes[-1].legend(title="wind", fontsize=8, loc="lower left")
+    fig.suptitle("Wavetrain stability vs frequency", fontsize=10)
+    # Fixed margins — content-independent so all subfigures align in LaTeX
+    fig.subplots_adjust(left=0.10, right=0.97, top=0.88, bottom=0.14, wspace=0.08)
+
+    if show_plot:
+        plt.show()
+
+    if save_plot:
+        FIGURES_DIR = Path("output/FIGURES")
+        FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+        fname = figure_name
+        fig.savefig(FIGURES_DIR / f"{fname}.pdf")
+        fig.savefig(FIGURES_DIR / f"{fname}.pgf")
+        print(f"  Saved: output/FIGURES/{fname}.pdf")
+        meta = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting,
+                                           "figure_name": figure_name,
+                                           "caption": _caption}},
+            chapter=chapter,
+        )
+        write_figure_stub(
+            meta, plot_type="wave_stability",
+            subfig_filenames=[fname],
+            force=force_stub,
+        )
 
     return fig
