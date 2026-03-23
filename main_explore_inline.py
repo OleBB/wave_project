@@ -315,8 +315,17 @@ from wavescripts.plot_quicklook import plot_stillwater_fit
 from wavescripts.improved_data_loader import get_configuration_for_date
 from datetime import datetime as _dt
 
-_sw_date = "2026-03-19"   # change to the day you want to inspect
-_sw_cfg  = get_configuration_for_date(_dt.strptime(_sw_date, "%Y-%m-%d"))
+# Auto-pick first date that has nowave runs. Override to inspect a specific day:
+#   _sw_date = "2026-03-07"
+_nowave_dates = sorted(
+    combined_meta.loc[combined_meta["WaveFrequencyInput [Hz]"].isna(), "file_date"]
+    .dropna().unique()
+)
+print(f"Dates with nowave runs: {_nowave_dates}")
+_sw_date = _nowave_dates[0]   # change index to pick a different day
+_sw_date = _sw_date[:10]      # ensure "YYYY-MM-DD" format
+print(f"Plotting: {_sw_date}")
+_sw_cfg = get_configuration_for_date(_dt.strptime(_sw_date, "%Y-%m-%d"))
 plot_stillwater_fit(processed_dfs, combined_meta, _sw_cfg, date=_sw_date)
 
 
