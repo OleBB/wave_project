@@ -814,11 +814,14 @@ print(
 )
 
 # %% ── quick-load: one dataset for arrival detection ─────────────────────────
-# Load only the last PROCESSED_DIR — fast, avoids reloading all datasets.
-_arr_dir  = sorted(Path("waveprocessed").glob("PROCESSED-*"))[-1]
-print(f"Loading: {_arr_dir.name}")
-_arr_meta, _arr_dfs, _, _ = load_analysis_data(_arr_dir, load_processed=True)
-print(f"  {len(_arr_meta)} runs  |  {len(_arr_dfs)} timeseries loaded")
+# Load only the last PROCESSED_DIR. Skipped if already loaded this session.
+if "_arr_meta" not in vars():
+    _arr_dir  = sorted(Path("waveprocessed").glob("PROCESSED-*"))[-1]
+    print(f"Loading: {_arr_dir.name}")
+    _arr_meta, _arr_dfs, _, _ = load_analysis_data(_arr_dir, load_processed=True)
+    print(f"  {len(_arr_meta)} runs  |  {len(_arr_dfs)} timeseries loaded")
+else:
+    print(f"_arr_meta already in memory ({len(_arr_meta)} runs) — skipping load")
 
 # %% ── upcrossing-based arrival detection ─────────────────────────────────────
 def _find_arrival_upcross(signal, fs, target_freq, threshold_mm,
