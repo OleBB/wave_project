@@ -89,6 +89,7 @@ PROCESSED_DIRS = [
 combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
     *PROCESSED_DIRS, load_processed=False
 )
+# %%
 processed_dfs: dict = {}  # loaded lazily below (wind-only section)
 
 # Paths present in both metadata and FFT dict
@@ -299,17 +300,23 @@ fig, axes = plot_reconstructed(
 # surface response. Compare wind conditions against stillwater baseline (no wind).
 # ==========================================================================================================================
 """
-# %%  see the stillwater leve.
+# %%  see the stillwater level — load processed_dfs if not yet in memory
+from wavescripts.improved_data_loader import load_processed_dfs
+from pathlib import Path
+if not processed_dfs:
+    PROCESSED_DIRS = sorted(Path("waveprocessed").glob("PROCESSED-*"))
+    processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
 
+# %%  plot stillwater drift fit — pick a date to inspect
 import importlib
 import wavescripts.plot_quicklook as pql
 importlib.reload(pql)
 from wavescripts.plot_quicklook import plot_stillwater_fit
-plot_stillwater_fit(processed_dfs, combined_meta, cfg)
-from wavescripts.improved_data_loader import load_processed_dfs
-from pathlib import Path
-PROCESSED_DIRS = sorted(Path("waveprocessed").glob("PROCESSED-*"))
-processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+from wavescripts.improved_data_loader import get_configuration_for_date
+
+_sw_date = "2026-03-19"   # change to the day you want to inspect
+_sw_cfg  = get_configuration_for_date(_sw_date)
+plot_stillwater_fit(processed_dfs, combined_meta, _sw_cfg, date=_sw_date)
 
 
 
