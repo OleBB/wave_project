@@ -339,7 +339,7 @@ importlib.reload(_c)
 import wavescripts.plot_quicklook as pql
 importlib.reload(pql)
 from wavescripts.plot_quicklook import plot_stillwater_fit
-plot_stillwater_fit(processed_dfs, combined_meta, cfg, date="2026-03-07")
+plot_stillwater_fit(processed_dfs, combined_meta, _sw_cfg, date="2026-03-07")
 
 
 
@@ -961,8 +961,9 @@ for _pos in _PROBE_POSITIONS:
 
 ax.set_xlabel("Probe distance from paddle [mm]")
 ax.set_ylabel("First arrival [s]")
-ax.set_title(f"First wave arrival — period-based detection, no wind  "
-             f"(window = {_N_PERIODS} periods)")
+ax.set_title(f"First wave arrival — upcrossing-based detection, no wind  "
+             f"(threshold {_THRESH_FACTOR}× noise, period window "
+             f"{_MIN_PERIOD_FACTOR}–{_MAX_PERIOD_FACTOR}× target)")
 _h, _l = ax.get_legend_handles_labels()
 ax.legend(_h[::-1], _l[::-1], fontsize=8, title="frequency")
 ax.grid(True, alpha=0.3)
@@ -973,10 +974,10 @@ _thresh_str2 = ",  ".join(
     for pos in _PROBE_POSITIONS if pos in _noise_floor
 )
 print(
-    f"Caption: First arrival detected by sliding a {_N_PERIODS}-period window and "
-    f"measuring FFT amplitude at the target frequency. "
-    f"Threshold: {_THRESH_FACTOR}× stillwater noise floor per probe "
-    f"({_thresh_str2}). "
+    f"Caption: First arrival detected by zero-upcrossing cycle analysis. "
+    f"Each cycle's peak-to-trough amplitude is compared to {_THRESH_FACTOR}× "
+    f"stillwater noise floor per probe ({_thresh_str2}). "
+    f"Cycles outside {_MIN_PERIOD_FACTOR}–{_MAX_PERIOD_FACTOR}× the target period are rejected. "
     f"No-wind runs only. "
     f"Error bars show half-range across parallel probes at the same longitudinal distance."
 )
