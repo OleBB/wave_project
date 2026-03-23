@@ -813,12 +813,14 @@ print(
     f"Error bars show half-range across parallel probes at the same longitudinal distance."
 )
 
-# %% ── period-based arrival detection (experimental) ─────────────────────────
-# Instead of a broadband amplitude threshold, slide a window of exactly N periods
-# at the target frequency and compute the FFT amplitude at that frequency.
-# When that narrow-band amplitude first exceeds a threshold, the wave has arrived.
-# This rejects wind-wave energy (wrong frequency) and is probe-noise-independent.
+# %% ── quick-load: one dataset for arrival detection ─────────────────────────
+# Load only the last PROCESSED_DIR — fast, avoids reloading all datasets.
+_arr_dir  = sorted(Path("waveprocessed").glob("PROCESSED-*"))[-1]
+print(f"Loading: {_arr_dir.name}")
+_arr_meta, _arr_dfs, _, _ = load_analysis_data(_arr_dir, load_processed=True)
+print(f"  {len(_arr_meta)} runs  |  {len(_arr_dfs)} timeseries loaded")
 
+# %% ── upcrossing-based arrival detection ─────────────────────────────────────
 def _find_arrival_upcross(signal, fs, target_freq, threshold_mm,
                            min_period_factor=0.25, max_period_factor=4.0):
     """
@@ -880,11 +882,11 @@ _MIN_PERIOD_FACTOR  = 0.25  # reject crossings shorter than 25% of target period
 _MAX_PERIOD_FACTOR  = 4.0   # reject crossings longer than 4× target period (sloshing)
 
 _periodic_rows = []
-for _, _row in combined_meta[
-        combined_meta["WaveFrequencyInput [Hz]"].notna() &
-        (combined_meta["WindCondition"] == "no")
+for _, _row in _arr_meta[
+        _arr_meta["WaveFrequencyInput [Hz]"].notna() &
+        (_arr_meta["WindCondition"] == "no")
 ].iterrows():
-    _df = processed_dfs.get(_row["path"])
+    _df = _arr_dfs.get(_row["path"])
     if _df is None:
         continue
     _freq = float(_row["WaveFrequencyInput [Hz]"])
