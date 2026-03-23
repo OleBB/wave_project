@@ -19,6 +19,7 @@ Sections
   RECONSTRUCTED SIGNAL        plot_reconstructed, plot_reconstructed_rms
   RAMP DETECTION              gather_ramp_data, plot_ramp_detection
   WAVE STABILITY              plot_wave_stability
+  TIME-SERIES OVERVIEW        plot_timeseries_overview
 """
 
 from __future__ import annotations
@@ -1953,6 +1954,196 @@ def plot_wave_stability(
         )
         write_figure_stub(
             meta, plot_type="wave_stability",
+            subfig_filenames=[fname],
+            force=force_stub,
+        )
+
+    return fig
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TIME-SERIES OVERVIEW
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def plot_timeseries_overview(
+    combined_meta: pd.DataFrame,
+    processed_dfs: dict,
+    plotvariables: dict,
+    chapter: str = "04",
+) -> plt.Figure:
+    """
+    Static time-series grid for selected runs — CH04 §5.
+
+    Layout: rows = probes (from plotvariables["plotting"]["probes"]),
+            columns = runs selected by plotvariables["filters"].
+
+    Each cell shows eta_{pos} [mm] vs time [s] with:
+      - light-grey band for the detected stable-window (good_start → good_end)
+      - column title = short run description (wind condition, freq, amplitude)
+
+    Parameters
+    ----------
+    combined_meta : DataFrame (all runs)
+    processed_dfs : dict {path: DataFrame} with eta_{pos} columns
+    plotvariables : dict with "filters" and "plotting" sub-dicts.
+        Recognised "plotting" keys:
+            show_plot      : bool  (default False)
+            save_plot      : bool  (default False)
+            figure_name    : str
+            force_stub     : bool  (default False)
+            probes         : list[str]  — which probes to show as rows
+            max_runs       : int   — cap on columns shown (default 4)
+            xlim           : tuple (t_start, t_end) [s], or None for full run
+            ylim           : tuple (y_lo, y_hi) [mm], or None for auto (shared)
+            figsize        : tuple  (auto if omitted)
+            caption        : str  (optional template with {n_runs},
+                                   {freq_hz}, {wind_conds}, {probe_list})
+    chapter : str
+    """
+    from wavescripts.filters import apply_experimental_filters
+    from wavescripts.constants import MEASUREMENT, PC
+
+    fs = MEASUREMENT.SAMPLING_RATE
+
+    plotting     = plotvariables.get("plotting", {})
+    show_plot    = plotting.get("show_plot",  False)
+    save_plot    = plotting.get("save_plot",  False)
+    figure_name  = plotting.get("figure_name", "ch04_timeseries")
+    force_stub   = plotting.get("force_stub",  False)
+    probe_positions = plotting.get("probes", [])
+    max_runs     = plotting.get("max_runs", 4)
+    xlim         = plotting.get("xlim",  None)
+    ylim         = plotting.get("ylim",  None)
+
+    _top_caption = plotvariables.get("caption")
+    if isinstance(_top_caption, str) and "caption" not in plotting:
+        plotting = {**plotting, "caption": _top_caption}
+
+    # ── Select runs ───────────────────────────────────────────────────────────
+    sel = apply_experimental_filters(combined_meta, plotvariables)
+    sel = sel[sel["WaveFrequencyInput [Hz]"].notna()].copy()
+    if len(sel) > max_runs:
+        sel = sel.iloc[:max_runs]
+
+    n_runs   = len(sel)
+    n_probes = len(probe_positions)
+
+    if n_runs == 0 or n_probes == 0:
+        raise ValueError("plot_timeseries_overview: no runs or no probes selected.")
+
+    # ── Caption slots ─────────────────────────────────────────────────────────
+    freq_vals  = sorted(sel["WaveFrequencyInput [Hz]"].dropna().unique())
+    wind_vals  = sorted(sel["WindCondition"].dropna().unique())
+    _caption_slots = {
+        "n_runs":      n_runs,
+        "freq_hz":     ", ".join(f"{f:.2f}" for f in freq_vals),
+        "wind_conds":  ", ".join(wind_vals),
+        "probe_list":  ", ".join(probe_positions),
+    }
+    _default_caption = (
+        "Time series of free-surface elevation at {n_probes} probes "
+        "for {n_runs} selected runs "
+        "(f = {freq_hz}\\,Hz; wind: {wind_conds}). "
+        "Grey shading marks the detected stable-wave window used for amplitude "
+        "and FFT analysis."
+    )
+    _default_caption = _default_caption.replace("{n_probes}", str(n_probes))
+    _caption = resolve_caption(
+        plotting, _default_caption, _caption_slots,
+        fn_name="plot_timeseries_overview",
+    )
+
+    # ── Build figure ──────────────────────────────────────────────────────────
+    figsize = plotting.get("figsize", (3.5 * n_runs, 2.8 * n_probes))
+    apply_thesis_style()
+    fig, axes = plt.subplots(
+        n_probes, n_runs,
+        figsize=figsize,
+        sharey="row" if ylim is None else False,
+        sharex=False,
+        squeeze=False,
+    )
+
+    for col_i, (_, run_row) in enumerate(sel.iterrows()):
+        path = run_row["path"]
+        df   = processed_dfs.get(path)
+        freq  = run_row.get("WaveFrequencyInput [Hz]")
+        wind  = run_row.get("WindCondition", "?")
+        amp   = run_row.get("WaveAmplitudeInput [Volt]")
+        col_title = f"{freq:.2f} Hz  {wind}  {amp:.2f} V"
+
+        for row_i, pos in enumerate(probe_positions):
+            ax = axes[row_i][col_i]
+
+            if df is None:
+                ax.text(0.5, 0.5, "no data", transform=ax.transAxes,
+                        ha="center", va="center", fontsize=8, color="gray")
+                ax.set_title(col_title if row_i == 0 else "", fontsize=8)
+                continue
+
+            eta_col    = f"eta_{pos}"
+            interp_col = f"eta_{pos}_interp"
+            sig_col    = eta_col if interp_col not in df.columns else interp_col
+
+            if sig_col not in df.columns:
+                ax.text(0.5, 0.5, f"no {eta_col}", transform=ax.transAxes,
+                        ha="center", va="center", fontsize=8, color="gray")
+                continue
+
+            # Build time axis
+            t = np.arange(len(df)) / fs
+
+            # Stable-window bounds from meta
+            start_col = PC.START.format(i=pos)
+            end_col   = PC.END.format(i=pos)
+            gs = run_row.get(start_col)
+            ge = run_row.get(end_col)
+
+            sig = df[sig_col].values
+            ax.plot(t, sig, color=WIND_COLOR_MAP.get(wind, "#1F77B4"),
+                    linewidth=0.6, alpha=0.85)
+
+            # Shade stable window
+            if pd.notna(gs) and pd.notna(ge):
+                t_gs = int(gs) / fs
+                t_ge = int(ge) / fs
+                ax.axvspan(t_gs, t_ge, color="gray", alpha=0.12, linewidth=0)
+
+            if xlim:
+                ax.set_xlim(xlim)
+            if ylim:
+                ax.set_ylim(ylim)
+
+            if row_i == 0:
+                ax.set_title(col_title, fontsize=8)
+            if col_i == 0:
+                ax.set_ylabel(f"{pos}\n[mm]", fontsize=8)
+            if row_i == n_probes - 1:
+                ax.set_xlabel("Time [s]", fontsize=8)
+
+    # Fixed margins — content-independent so all subfigures align in LaTeX
+    fig.subplots_adjust(left=0.12, right=0.97, top=0.92, bottom=0.10,
+                        hspace=0.35, wspace=0.15)
+
+    if show_plot:
+        plt.show()
+
+    if save_plot:
+        FIGURES_DIR = Path("output/FIGURES")
+        FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+        fname = figure_name
+        fig.savefig(FIGURES_DIR / f"{fname}.pdf")
+        fig.savefig(FIGURES_DIR / f"{fname}.pgf")
+        print(f"  Saved: output/FIGURES/{fname}.pdf")
+        meta = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting,
+                                           "figure_name": figure_name,
+                                           "caption": _caption}},
+            chapter=chapter,
+        )
+        write_figure_stub(
+            meta, plot_type="timeseries_overview",
             subfig_filenames=[fname],
             force=force_stub,
         )

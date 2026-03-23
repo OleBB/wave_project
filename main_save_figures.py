@@ -29,6 +29,7 @@ import importlib, wavescripts.plotter as _pm, wavescripts.filters as _fm
 
 from wavescripts.plotter import (plot_probe_noise_floor, plot_parallel_ratio,
                                   plot_frequency_spectrum, plot_wave_stability,
+                                  plot_timeseries_overview,
                                   plot_damping_freq, plot_damping_scatter)
 from wavescripts.filters import apply_experimental_filters as _aef
 
@@ -62,6 +63,7 @@ from wavescripts.plotter import (
     plot_parallel_ratio,
     plot_probe_noise_floor,
     plot_swell_scatter,
+    plot_timeseries_overview,
     plot_wave_stability,
 )
 from wavescripts.wave_detection import find_first_arrival
@@ -228,7 +230,7 @@ _pv_parallel_ratio = {
     "filters": {},
     "plotting": {
         "show_plot": True,
-        "save_plot": True,           # set True when figure is ready for thesis
+        "save_plot": False,           # set True when figure is ready for thesis
         "figure_name": "ch04_parallel_ratio",
         "force_stub": True,
         "caption": (
@@ -388,16 +390,38 @@ _fig_fft_wave, _ = plot_frequency_spectrum(
 # %%
 """
 ── CH04 § 5 — What does a full signal look like? ────────────────────────────
-Goal: annotated time-domain plot of one complete run showing:
-  - stillwater baseline → wavemaker ramp → stable wavetrain → decay
-  - wind-wave riding on top of the paddle wave (IN probe vs OUT probe)
+Goal: show the full signal for a select few runs — stillwater baseline,
+wavemaker ramp, stable wavetrain, decay. Wind-wave noise visible at IN probe
+vs clean signal at OUT probe.
 
-Data: processed_dfs, one representative wave+fullwind run.
-
-Figures:
-  - Plot:  eta_* vs time for IN and OUT probe, one run, annotated regions
+Layout: rows = probes, columns = runs selected by filters.
+Grey band = detected stable-window used for all amplitude/FFT analysis.
 """
-# TODO — needs processed_dfs
+
+_pv_timeseries = {
+    "filters": {
+        # Pick a representative condition — adjust as needed:
+        "WaveFrequencyInput [Hz]": 1.3,
+        "WaveAmplitudeInput [Volt]": 0.2,
+        "WindCondition": None,      # None = all wind conditions
+        "PanelCondition": "full",
+        # "run_category": "standard",
+    },
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   False,
+        "figure_name": "ch04_timeseries_overview",
+        "force_stub":  False,
+        "probes":      ["9373/170", "12400/250"],   # IN and OUT only
+        "max_runs":    4,           # cap columns; reduce if too crowded
+        "xlim":        None,        # e.g. (0, 60) to zoom; None = full run
+        "ylim":        None,        # e.g. (-30, 30); None = auto per row
+        # caption printed on first run — paste the one-liner here:
+        # "caption": "...",
+    },
+}
+
+_fig_ts = plot_timeseries_overview(combined_meta, processed_dfs, _pv_timeseries)
 
 # %%
 """
