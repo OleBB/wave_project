@@ -24,8 +24,8 @@ import matplotlib.pyplot as plt
 from wavescripts.constants import get_smoothing_window
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
-    ProbeColumns as PC, 
-    GlobalColumns as GC, 
+    ProbeColumns as PC,
+    GlobalColumns as GC,
     ColumnGroups as CG,
     CalculationResultColumns as RC
 )
@@ -41,22 +41,22 @@ def find_wave_range(
     debug: bool = False,
 ) -> Tuple[int, int, dict[str, Any]] :
     """
-     
+
     Finner waverange.
-    
+
     Args:
         utvalgt signal, tilhørende metadatarad, Probe {i}, detect-vindu
-    
+
     Toggle:x
         Smoothing Window, Range-plot, Debug
-    
+
     Returns:
-        good_start_idx, good_end_idx, debug_info 
-    
+        good_start_idx, good_end_idx, debug_info
+
     Raises:
         ?Error: legg til
     """
-        
+
     wind_condition = meta_row["WindCondition"]
     detect_win = detect_win if detect_win is not None else get_smoothing_window(wind_condition)
     # ==========================================================
@@ -81,7 +81,7 @@ def find_wave_range(
         "keep_periods_used": None,
     }
 
-    # ─────── finne tidsstegene ─────── 
+    # ─────── finne tidsstegene ───────
     dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
     Fs = 1.0 / dt
 
@@ -94,11 +94,11 @@ def find_wave_range(
         good_end_idx = len(df)
         debug_info = None
         return good_start_idx, good_end_idx, debug_info
-        
+
     samples_per_period = int(round(Fs / importertfrekvens))
     probe_num_int = probe_num  # physical probe number for stillwater lookup
 
-    # ─────── velge antall perioder ─────── 
+    # ─────── velge antall perioder ───────
     input_periods = (meta_row["WavePeriodInput"])
     keep_periods= round((input_periods-13)*0.9) #trekke fra perioder, -per15- er det bare 4 gode, mens på -per40- per er ish 30 gode. TK todo velge en bedre skalering
     keep_seconds= keep_periods/input_freq
@@ -311,36 +311,36 @@ def find_wave_range(
     #fullpanel-fullwind-amp02-freq13- correct @5780
     # no panel, amp03, freq0650: 2300? probe=??
     #fullpanel-fullwind-amp01-freq0650-per15-probe3: 4000 korrekt
-    
+
     """
     Først: sjekke paneltilstand:
         hvis ingen panel
-    
-    Neste: sjekke vindforhold: 
+
+    Neste: sjekke vindforhold:
         hvis sterk vind
-        
+
     Hvis lav frekvens: da er det kortere (nesten ingen) ramp.
-    
+
     Ramp må tape for høyeste peaks, i hvertfall når panel
-        
+
     Så, enkelt basere probe 2 på 1 , og 34 på 2?
     """
-    
+
     """elif (meta_row["WindCondition"]) == "lowest" and input_freq == 1.3:
         print('lowestwind og 1.3')
-        if data_col == "Probe 1": 
-                good_start_idx = P1amp01frwq13eyeball 
+        if data_col == "Probe 1":
+                good_start_idx = P1amp01frwq13eyeball
                 good_end_idx = good_start_idx+keep_idx
                 #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 2" : 
+        elif data_col == "Probe 2" :
                 good_start_idx = P2handcalc
                 good_end_idx = P2handcalc + keep_idx
                 #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 3" : 
+        elif data_col == "Probe 3" :
                 good_start_idx = P3handcalc
                 good_end_idx = P3handcalc + keep_idx
                 #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 4" : 
+        elif data_col == "Probe 4" :
                 good_start_idx = P3handcalc
                 good_end_idx = P3handcalc + keep_idx
                 #return good_start_idx, good_end_idx, debug_info"""
@@ -372,27 +372,27 @@ def find_wave_range(
     baseline_mean = np.mean(baseline)
     baseline_std = np.std(baseline)
     threshold = baseline_mean + sigma_factor*baseline_std
-    
+
     if debug:
         print('baselines:')
         print(f'_samples: {baseline_samples}, _mean: {baseline_mean}, _seconds {baseline_seconds}, _std {baseline_std}')
     #import sys; print('exit'); sys.exit()
-    
+
     """ærbe
     #print('threshold verdi: ', threshold)
     #print('eexit')
     #print('='*99)
-    
+
     #voltgrense  = meta_row["WaveAmplitudeInput [Volt]"]
     #grense = baseline_mean + (voltgrense*100)/3
     #input volt på 0.1 gir omtrentelig <10mm amplitude.
     #import sys; sys.exit()
     """
-    
+
     above_noise = signal_smooth > threshold
-    
+
     first_motion_idx = np.argmax(above_noise) if np.any(above_noise) else 0
-    
+
     # ==========================================================
     # 3. Peak detection on absolute signal (handles both positive/negative swings)
     # ==========================================================
@@ -404,7 +404,7 @@ def find_wave_range(
         prominence=3 * baseline_std,  # ignore noise peaks
         height=threshold
     )
-    
+
     #TODO
     # ==========================================================
     # ikke i bruk, TK , endret sigmafaktor i staden.
@@ -419,7 +419,7 @@ def find_wave_range(
     # ta 10 største, så ta den første, så ta 10 perioder
     numbaofpeaks = len(peaks)
     if meta_row["WavePeriodInput"] <16 and numbaofpeaks >3 :
-        
+
         largest_ampl = np.abs(signal_smooth[peaks])
         kth = 3
         largest_peaks = np.argpartition(peaks, kth)
@@ -430,11 +430,11 @@ def find_wave_range(
         print(f'LESS THAN 16 periods, choosing largest peaks')
         print("="*99)
         return good_start_idx, good_end_idx, debug_info
-    
+
     """
     #
     # ==========================================================
-    #  
+    #
     # ==========================================================
     """
     if len(peaks) < min_ramp_peaks + 3:
@@ -495,8 +495,8 @@ def find_wave_range(
         max_dips=max_dips_allowed,
         min_growth=min_growth_factor
     )
-    
-    
+
+
     if ramp_result is None:
         print("No clear ramp-up found – using legacy timing")
         skip_periods = skip_periods or (5 + 12)
@@ -543,7 +543,7 @@ def find_wave_range(
         # print("=== END – COPY ALL ABOVE AND SEND TO GROK ===")
         # dumped = True
         #import sys; sys.exit(0)
-        
+
     # ==========================================================
     # 5.b) Plotting – safe version that works with your current plot_ramp_detection
     # ==========================================================
@@ -573,7 +573,7 @@ def find_wave_range(
                 ramp_peak_samples = peaks[ramp_result[0]:ramp_result[1]+1]
                 plot_kwargs["ramp_peak_indices"] = ramp_peak_samples
             """
-            try: 
+            try:
                 fig, ax = plot_ramp_detection(**plot_kwargs)
                 plt.show()
             except Exception as e:
