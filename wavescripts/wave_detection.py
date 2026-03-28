@@ -125,9 +125,13 @@ def find_wave_range(
         # ~11800 mm from paddle (march2026_rearranging config, 4–6 Mar 2026 only)
         # Values interpolated from 9373 and 12400 at distance fraction 0.802 — eyeball-refine
         # in RampDetectionBrowser once confirmed.
-        "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)],
+        # 1.70/1.80: estimated, needs eyeballing
+        "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700), (1.70, 6700), (1.80, 6650)],
         # ~12400 mm from paddle
-        "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
+        # 1.60: reduced from 7000 → 6700 (~2 periods earlier, artifact at tail was misleading)
+        # 1.70: estimated, needs eyeballing in RampDetectionBrowser
+        # 1.80: extrapolated ~7350 minus 4 periods (4×139=556) → 6800 — verify in browser
+        "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 6700), (1.70, 6750), (1.80, 6800)],
     }
 
     # Map every probe column name to a distance group — auto-generated from PROBE_CONFIGS
@@ -157,14 +161,26 @@ def find_wave_range(
     good_end_idx     = None
     wave_upcrossings = None
 
+    # How many periods to trim from each end of the snarvei window.
+    # Start trim: removes the ramp-exit transition period(s) still building to full amplitude.
+    # End trim:   removes the wavemaker deceleration / mstop onset period(s).
+    # These are applied to the snarvei reference BEFORE the upcrossing snap,
+    # so wave_upcrossings, debug_info, and the range_plot all see the same trimmed window.
+    # High-frequency runs (≥1.6 Hz) need more trimming at both ends:
+    # — start: ramp transition is slower, more buildup bleeds in (+2 extra)
+    # — end:   ramp-down begins earlier and swell tail is longer (+3 extra)
+    _TRIM_START_PERIODS = 3 if importertfrekvens >= 1.6 else 1
+    _TRIM_END_PERIODS   = 4 if importertfrekvens >= 1.6 else 1
+
     _group = _PROBE_GROUP.get(data_col)
     if _group is not None and _group in _SNARVEI_CALIB:
         good_start_idx  = _snarvei_start(importertfrekvens, _SNARVEI_CALIB[_group])
-        good_start_idx += samples_per_period   # skip first period (still in ramp transition)
-        good_end_idx    = good_start_idx + int(keep_idx)
+        good_start_idx += _TRIM_START_PERIODS * samples_per_period
+        good_end_idx    = good_start_idx + int(keep_idx) - _TRIM_END_PERIODS * samples_per_period
         if debug:
             print(f"[snarvei] {data_col} (group={_group}): f={importertfrekvens:.3f} Hz → "
-                  f"good_start={good_start_idx} (+1 period={samples_per_period})")
+                  f"good_start={good_start_idx} (trim_start={_TRIM_START_PERIODS}p, "
+                  f"trim_end={_TRIM_END_PERIODS}p)")
 
     """
     # PHYSICS-BASED SNARVEI (too early in practice – kept for reference / future use)
@@ -279,12 +295,8 @@ def find_wave_range(
     signal_length = len(signal_smooth)
 
     if mstop_samples > 0 and good_end_idx is not None:
-        cutoff_idx = signal_length - mstop_samples   # sample where wavemaker stopped
-        if good_end_idx > cutoff_idx:
-            overlap = good_end_idx - cutoff_idx
-            print(f"  WARNING [{data_col}]: good_end_idx ({good_end_idx}) is {overlap} samples "
-                  f"({overlap/Fs:.1f} s) into the mstop window. "
-                  f"Probe may be missing the tail of the wave group.")
+        # Only warn when periods are actually missing — sitting inside the mstop
+        # tail is normal for short runs and is not itself a problem.
         if n_found < n_periods_target:
             print(f"  WARNING [{data_col}]: only {n_found}/{n_periods_target} periods found – "
                   f"signal may be cut short (mstop={mstop_sec:.0f} s, "

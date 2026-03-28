@@ -1127,14 +1127,19 @@ def update_processed_metadata(
         if not old_df.empty:
             old_df["path"] = old_df["path"].astype(str)
 
-        # Merge logic
+        # Merge logic: new non-NaN values win; NaN in new falls back to old value.
+        # This prevents a later partial save (e.g. meta_sel without Stillwater cols)
+        # from overwriting columns that an earlier save (e.g. ensure_stillwater_columns)
+        # already wrote correctly.
         if old_df.empty:
             final_df = new_df
         elif new_df.empty:
             final_df = old_df
         else:
-            combined = pd.concat([old_df, new_df], ignore_index=True)
-            final_df = combined.drop_duplicates(subset="path", keep="last")
+            new_indexed = new_df.set_index("path")
+            old_indexed = old_df.set_index("path")
+            # combine_first: take from new where not NaN, else from old; union of all paths
+            final_df = new_indexed.combine_first(old_indexed).reset_index()
 
         # Save back safely
         records = final_df.to_dict("records")

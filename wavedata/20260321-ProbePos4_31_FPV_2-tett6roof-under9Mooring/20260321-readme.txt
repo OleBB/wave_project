@@ -1,0 +1,13 @@
+på tide å senke probene.
+
+wow - ser u som amp0100-freq1500 vokser over tid. 
+
+må kvantifiseres som wave-maker-warmup???
+
+trykkmålern til padla har økt fra 120 til 130 på mitt øyemål. 
+
+hæ vent! det ser ut som denne også vokser... det gåkke ann. 
+
+probe 1 (den skrå) på amp0200-freq1500 har feilet totalt, nå later den som den er på 198 ikke 100 som de andre. 
+
+resetter ULS-boksen. 

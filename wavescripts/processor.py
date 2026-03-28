@@ -65,22 +65,24 @@ def ensure_stillwater_columns(
     cfg,
 ) -> pd.DataFrame:
     """
-    Computes per-run stillwater levels by weighted linear regression over ALL
-    no-wind runs in the folder, accounting for slow water-level drift (evaporation,
-    wind setup) across a session.
+    Computes per-run stillwater levels using each run's own pre-wave signal.
 
-    Data sources (per probe):
-      - No-wind + no-wave runs: full-run median, weight=5  (high confidence)
-      - No-wind + wave runs:    first PRE_WAVE_S seconds,  weight=1  (pre-wave window only)
+    Strategy (per run, per probe):
+      - Nowave runs:  full-run median  (no wave arriving, all samples valid)
+      - Wave runs:    mean of first PRE_WAVE_S seconds  (before wave front arrives)
 
-    Outlier rejection: two-pass polyfit. Any point with residual > OUTLIER_MM is
-    removed and the fit is recomputed.  Outliers are printed but not silently dropped.
+    This is self-calibrating: each run references its own water level, so
+    wind-setup shifts (which vary run-to-run and take ~10 min to equalise
+    after wind-off) are automatically captured without any cross-run fitting.
 
-    Safe to call multiple times — skips if per-row values already exist.
+    Diagnostic prints compare wave-run pre-wave means against nowave means
+    grouped by wind condition — use these to validate that PRE_WAVE_S is
+    short enough to avoid wave contamination.
+
+    Safe to call multiple times — skips if all Stillwater columns are already
+    populated with per-run (varying) values.
     """
-    _PRE_WAVE_N  = int(STILLWATER.PRE_WAVE_S * MEASUREMENT.SAMPLING_RATE)
-    _W_NOWAVE    = 5     # weight for full no-wave runs (relative; ratio matters, not absolute value)
-    _W_WAVE      = 1     # weight for pre-wave snippets
+    _PRE_WAVE_N = int(STILLWATER.PRE_WAVE_S * MEASUREMENT.SAMPLING_RATE)
 
     if not dfs:
         raise ValueError(
@@ -98,102 +100,100 @@ def ensure_stillwater_columns(
     if meta.empty:
         raise ValueError(f"No rows in meta match cfg '{cfg.name}' date range.")
 
-    probe_positions = list(cfg.probe_col_names().values())
-    probe_cols = [f"Stillwater Probe {pos}" for pos in probe_positions]
+    col_names = cfg.probe_col_names()
+    probe_cols = [f"Stillwater Probe {pos}" for pos in col_names.values()]
 
-    # Skip if already computed with time-varying (interpolated) values
+    # Skip if already computed with per-run (varying) values
     if all(col in meta.columns for col in probe_cols):
         if meta[probe_cols].notna().all().all():
             if meta[probe_cols[0]].std() > 0.001:
-                print("Stillwater levels already time-interpolated → skipping")
+                print("Stillwater levels already computed per-run → skipping")
                 return meta
 
-    print("Computing stillwater levels from weighted linear fit over all no-wind runs...")
+    print(f"Computing per-run stillwater levels "
+          f"(nowave: full-run median; wave: first {STILLWATER.PRE_WAVE_S:.1f} s mean)...")
 
-    col_names = cfg.probe_col_names()
-
+    nowave_mask = (
+        meta[GC.WAVE_FREQUENCY_INPUT].isna()
+        | meta["path"].astype(str).str.lower().str.contains("nowave")
+    )
     wind_str = meta[GC.WIND_CONDITION].astype(str).str.strip().str.lower()
-    nowind   = wind_str.isin(["no", "", "nan", "none"])
-    nowave   = meta[GC.WAVE_FREQUENCY_INPUT].isna() | meta["path"].astype(str).str.lower().str.contains("nowave")
+    nowind_mask = wind_str.isin(["no", "", "nan", "none"])
 
-    nowind_rows = meta[nowind].copy()
-    if nowind_rows.empty:
-        raise ValueError("No no-wind runs found — cannot compute stillwater!")
-
-    nowind_rows = nowind_rows.assign(
-        _t       = pd.to_datetime(nowind_rows["file_date"]),
-        _is_nowave = nowave.reindex(nowind_rows.index).fillna(False),
-    ).sort_values("_t").reset_index(drop=True)
-
-    # ── per-probe weighted linear fit ────────────────────────────────────────
-    new_cols      = {}   # probe col → Series of fitted values for all meta rows
-    noise_updates = {}   # path → {col: std}
+    new_cols = {}    # probe col → per-row values
+    noise_updates = {}
 
     for i, pos in col_names.items():
         probe_col = f"Probe {pos}"
-        pts_t, pts_v, pts_w, pts_label = [], [], [], []
+        per_run_values = {}    # path → stillwater value
+        nowave_nowind_vals = []  # for noise floor
 
-        for _, row in nowind_rows.iterrows():
-            fname = Path(row["path"]).name
+        for _, row in meta.iterrows():
+            path = row["path"]
+            fname = Path(path).name
+
             if any(kw in fname for kw in STILLWATER_EXCLUDE):
                 print(f"  ⚠ Skipping excluded run: {fname}")
+                per_run_values[path] = np.nan
                 continue
+
+            df_run = dfs.get(path)
+            if df_run is None:
+                per_run_values[path] = np.nan
+                continue
+
+            is_nowave = nowave_mask.loc[row.name]
+            # nowave: full run median; wave: first PRE_WAVE_S seconds mean
+            n_samp = None if is_nowave else _PRE_WAVE_N
+            v = _probe_median_from_run(df_run, probe_col, n_samp)
+            per_run_values[path] = v if v is not None else np.nan
+
+        stillwater_series = meta["path"].map(per_run_values)
+
+        # ── fallback for NaN stillwater (e.g. probe malfunction) ─────────────
+        # Use session median of valid values so downstream doesn't crash.
+        # The probe's signal is unusable anyway — this only prevents a hard error.
+        nan_paths = [p for p, v in per_run_values.items() if np.isnan(v)]
+        if nan_paths:
+            valid_vals = [v for v in per_run_values.values() if not np.isnan(v)]
+            fallback = float(np.median(valid_vals)) if valid_vals else 0.0
+            for p in nan_paths:
+                per_run_values[p] = fallback
+                print(f"  ⚠ Probe {pos}: NaN stillwater for {Path(p).name} "
+                      f"— using session median {fallback:.3f} mm as fallback")
+            stillwater_series = meta["path"].map(per_run_values)
+
+        new_cols[f"Stillwater Probe {pos}"] = stillwater_series.values
+
+        # ── diagnostics: compare pre-wave means vs nowave reference ──────────
+        # Collect nowave+nowind mean (the stable reference)
+        nowave_nowind_rows = meta[nowave_mask & nowind_mask]
+        ref_vals = []
+        for _, row in nowave_nowind_rows.iterrows():
             df_run = dfs.get(row["path"])
             if df_run is None:
                 continue
-            n_samp = None if row["_is_nowave"] else _PRE_WAVE_N
-            v = _probe_median_from_run(df_run, probe_col, n_samp)
-            if v is None:
+            v = _probe_median_from_run(df_run, probe_col, None)
+            if v is not None:
+                ref_vals.append(v)
+                nowave_nowind_vals.append(v)
+
+        ref_mean = float(np.mean(ref_vals)) if ref_vals else None
+
+        # Print per-run values grouped by nowave vs wave
+        for _, row in meta.iterrows():
+            path = row["path"]
+            fname = Path(path).name
+            v = per_run_values.get(path, np.nan)
+            if np.isnan(v):
                 continue
-            pts_t.append(row["_t"].timestamp())
-            pts_v.append(v)
-            pts_w.append(_W_NOWAVE if row["_is_nowave"] else _W_WAVE)
-            pts_label.append(fname)
+            is_nowave = nowave_mask.loc[row.name]
+            tag = "[nowave]" if is_nowave else f"[first {STILLWATER.PRE_WAVE_S:.1f}s]"
+            delta = f"  Δ={v - ref_mean:+.2f} mm vs nowave ref" if ref_mean is not None else ""
+            print(f"  Probe {pos}  {fname}: {v:.3f} mm  {tag}{delta}")
 
-        if not pts_t:
-            raise ValueError(f"No data points for Probe {pos}")
-
-        ts = np.array(pts_t)
-        vs = np.array(pts_v)
-        ws = np.array(pts_w, dtype=float)
-        t_origin = ts[0]
-        ts_rel = ts - t_origin
-
-        if len(pts_t) == 1:
-            coeffs = np.array([0.0, vs[0]])  # flat
-        else:
-            coeffs = np.polyfit(ts_rel, vs, deg=1, w=ws)
-            residuals = np.abs(vs - np.polyval(coeffs, ts_rel))
-            outlier_mask = residuals > STILLWATER.OUTLIER_MM
-            if outlier_mask.any() and (~outlier_mask).sum() >= 2:
-                for lbl, res in zip(pts_label, residuals):
-                    if res > STILLWATER.OUTLIER_MM:
-                        print(f"  ⚠ Probe {pos}: outlier rejected — {lbl}  (residual {res:+.3f} mm)")
-                coeffs = np.polyfit(ts_rel[~outlier_mask], vs[~outlier_mask], deg=1,
-                                    w=ws[~outlier_mask])
-
-        # Apply fit to every run in meta
-        meta_t = pd.to_datetime(meta["file_date"])
-        if meta_t.dt.tz is not None:
-            meta_t = meta_t.dt.tz_localize(None)
-        t_arr = meta_t.map(lambda t: t.timestamp()) - t_origin
-        new_cols[f"Stillwater Probe {pos}"] = np.polyval(coeffs, t_arr)
-
-        # Print fit summary
-        fit_at_start = np.polyval(coeffs, 0)
-        fit_at_end   = np.polyval(coeffs, ts_rel[-1])
-        print(f"  Probe {pos}: {len(pts_t)} points → "
-              f"start {fit_at_start:.3f} mm, end {fit_at_end:.3f} mm "
-              f"(drift {fit_at_end - fit_at_start:+.3f} mm over session)")
-
-        # Control: print residuals for all data points
-        fit_vals = np.polyval(coeffs, ts_rel)
-        for lbl, actual, fitted, w in zip(pts_label, vs, fit_vals, ws):
-            tag = " [nowave]" if w == _W_NOWAVE else f" [pre-wave {STILLWATER.PRE_WAVE_S:.0f}s]"
-            print(f"    {lbl}: actual={actual:.3f}  fit={fitted:.3f}  Δ={actual-fitted:+.3f} mm{tag}")
-
-        # Noise std for no-wave runs
-        for _, row in nowind_rows[nowind_rows["_is_nowave"]].iterrows():
+        # Noise std for nowave+nowind runs (probe noise floor)
+        for _, row in nowave_nowind_rows.iterrows():
             df_run = dfs.get(row["path"])
             if df_run is None:
                 continue
@@ -215,7 +215,7 @@ def ensure_stillwater_columns(
 
     # Compute (P97.5-P2.5)/2 noise floor per probe from all no-wind/no-wave runs,
     # broadcast to EVERY row as "Probe {n} at {pos} Uncertainty".
-    nowave_nowind_rows = nowind_rows[nowind_rows["_is_nowave"]]
+    nowave_nowind_rows = meta[nowave_mask & nowind_mask]
     noise_floor_accum: dict[int, list[float]] = {i: [] for i in col_names}
     for _, row in nowave_nowind_rows.iterrows():
         df_run = dfs.get(row["path"])
@@ -294,6 +294,63 @@ def _remask_long_gaps(filled: np.ndarray, nan_mask: np.ndarray, max_gap: int) ->
     return filled
 
 
+def _detect_stuck_segments(
+    raw_signal: np.ndarray,
+    fs: float,
+    std_thresh: float = None,
+    min_duration_s: float = None,
+    level_thresh_mm: float = 5.0,
+) -> list[tuple[int, int]]:
+    """Detect flat/stuck segments in a raw probe signal (before zeroing).
+
+    Two conditions must both be true for a segment to be flagged:
+      1. Rolling std < std_thresh  (probe is flat)
+      2. Segment mean differs from the run's overall median by > level_thresh_mm
+         (probe is flat at the WRONG level — not just genuinely still water)
+
+    Condition 2 prevents false positives from the pre-wave stillwater period in
+    nowind runs, where water is legitimately very flat at the correct level.
+    The 198 mm hardware fault satisfies both: flat AND offset by ~100 mm from
+    the true water level.
+
+    Returns list of (start_sample, end_sample) tuples (inclusive endpoints).
+    """
+    if std_thresh is None:
+        std_thresh = CLIP.STUCK_STD_MM
+    if min_duration_s is None:
+        min_duration_s = CLIP.STUCK_MIN_S
+
+    min_samples = int(min_duration_s * fs)
+    win_samples = max(int(0.2 * fs), 10)  # 0.2 s rolling window (shorter than any wave period)
+
+    vals = pd.to_numeric(pd.Series(raw_signal), errors='coerce')
+    run_median = float(vals.median())
+    rolling_std = vals.rolling(window=win_samples, center=True, min_periods=win_samples // 2).std().to_numpy()
+
+    # NaN regions count as "not stuck"
+    is_flat = (rolling_std < std_thresh) & ~np.isnan(raw_signal)
+
+    # Collect candidate flat segments, then filter by wrong-level criterion
+    segments = []
+    in_seg = False
+    seg_start = 0
+    for k in range(len(is_flat) + 1):
+        ended = (k == len(is_flat)) or not is_flat[k]
+        if is_flat[k] if k < len(is_flat) else False:
+            if not in_seg:
+                in_seg = True
+                seg_start = k
+        if ended and in_seg:
+            in_seg = False
+            seg_end = k - 1
+            if seg_end - seg_start + 1 >= min_samples:
+                seg_mean = float(np.nanmean(raw_signal[seg_start:seg_end + 1]))
+                if abs(seg_mean - run_median) > level_thresh_mm:
+                    segments.append((seg_start, seg_end))
+
+    return segments
+
+
 def _zero_and_smooth_signals(
     dfs: dict,
     meta_sel: pd.DataFrame,
@@ -333,7 +390,7 @@ def _zero_and_smooth_signals(
             max_interp_gap = CLIP.INTERP_MAX_GAP
 
         if is_stillwater:
-            clip_mm = CLIP.NOWIND_MM
+            clip_mm = None  # no hard cap — stuck/velocity detection handles faults
         elif is_wave_run:
             volt = row.get("WaveAmplitudeInput [Volt]")
             if volt is not None and not pd.isna(float(volt)):
@@ -350,14 +407,30 @@ def _zero_and_smooth_signals(
                 print(f"  Missing column {probe_col} in {Path(path).name}")
                 continue
 
-            eta_col = f"eta_{pos}"
-            df[eta_col] = -(df[probe_col] - stillwater[path][i])
+            # ── Layer 0: Stuck probe detection (on raw signal before zeroing) ─
+            raw_vals = pd.to_numeric(df[probe_col], errors='coerce').to_numpy(dtype=float).copy()
+            stuck_segs = _detect_stuck_segments(raw_vals, fs)
+            if stuck_segs:
+                stuck_mask = np.zeros(len(raw_vals), dtype=bool)
+                for s, e in stuck_segs:
+                    stuck_mask[s:e + 1] = True
+                n_stuck = int(stuck_mask.sum())
+                raw_vals[stuck_mask] = np.nan   # neutralise before zeroing
+                print(f"  STUCK [{Path(path).name}] {pos}: "
+                      f"{len(stuck_segs)} segment(s), {n_stuck} samples "
+                      f"({n_stuck / fs:.1f} s) → NaN")
+            else:
+                stuck_mask = None
 
-            # ── Layer 1: Hard cap ────────────────────────────────────────────
-            outlier_mask = df[eta_col].abs() > clip_mm
-            if outlier_mask.any():
-                df.loc[outlier_mask, eta_col] = np.nan
-                print(f"  CLIP [{Path(path).name}] {pos}: {int(outlier_mask.sum())} samples |η| > {clip_mm} mm → NaN")
+            eta_col = f"eta_{pos}"
+            df[eta_col] = -(raw_vals - stillwater[path][i])
+
+            # ── Layer 1: Hard cap (wave/wind runs only; stillwater uses detection layers) ─
+            if clip_mm is not None:
+                outlier_mask = df[eta_col].abs() > clip_mm
+                if outlier_mask.any():
+                    df.loc[outlier_mask, eta_col] = np.nan
+                    print(f"  CLIP [{Path(path).name}] {pos}: {int(outlier_mask.sum())} samples |η| > {clip_mm} mm → NaN")
 
             # ── Layer 2: Velocity filter + ±VEL_BUFFER shoulder removal ─────
             _eta = df[eta_col].to_numpy(dtype=float).copy()
@@ -399,7 +472,11 @@ def _zero_and_smooth_signals(
                 max_gap_val = int((ends - starts).max())
             else:
                 max_gap_val = 0
-            clip_stats[path][pos] = {"samples_clipped": n_clipped_total, "max_gap": max_gap_val}
+            clip_stats[path][pos] = {
+                "samples_clipped": n_clipped_total,
+                "max_gap": max_gap_val,
+                "stuck_segments": stuck_segs if stuck_segs else [],
+            }
 
             # ── eta_interp: pchip fill of small gaps (display layer) ─────────
             interp_col = f"eta_{pos}_interp"
@@ -641,6 +718,88 @@ def _set_output_folder(
     return meta_sel
 
 
+def _write_quality_flags(
+    meta_sel: pd.DataFrame,
+    clip_stats: dict,
+    cfg,
+    flags_file: Path,
+) -> pd.DataFrame:
+    """Check for probe malfunctions overlapping the stable analysis window.
+
+    Adds `probe_{pos}_malfunction` (bool) and `quality_flag` ('ok' / description)
+    columns to meta_sel.  Appends flagged runs to flags_file (one line per run).
+
+    A run is flagged if a stuck segment overlaps [good_start_idx, good_end_idx]
+    for the IN or OUT probe.  Other-probe malfunctions are noted but don't flag
+    the run as unusable for damping.
+    """
+    col_names = cfg.probe_col_names()
+    in_pos  = cfg.probe_col_names()[cfg.in_probe]
+    out_pos = cfg.probe_col_names()[cfg.out_probe]
+
+    # Initialise columns
+    for pos in col_names.values():
+        meta_sel[f"probe_{pos}_malfunction"] = False
+    if "quality_flag" not in meta_sel.columns:
+        meta_sel["quality_flag"] = "ok"
+
+    flagged_lines = []
+
+    for _, row in meta_sel.iterrows():
+        path = row["path"]
+        fname = Path(path).name
+        stats = clip_stats.get(path, {})
+
+        # good_start / good_end for the IN probe (all probes share the same window)
+        start_col = f"Computed Probe {in_pos} start"
+        end_col   = f"Computed Probe {in_pos} end"
+        good_start = row.get(start_col)
+        good_end   = row.get(end_col)
+        has_window = (
+            good_start is not None and good_end is not None
+            and not pd.isna(good_start) and not pd.isna(good_end)
+        )
+
+        affected_in_window = []
+        for pos, pstats in stats.items():
+            segs = pstats.get("stuck_segments", [])
+            if not segs:
+                continue
+            idx = meta_sel.index[meta_sel["path"] == path][0]
+            meta_sel.at[idx, f"probe_{pos}_malfunction"] = True
+
+            if has_window:
+                for s, e in segs:
+                    if s <= int(good_end) and e >= int(good_start):
+                        affected_in_window.append(pos)
+                        break
+
+        if affected_in_window:
+            idx = meta_sel.index[meta_sel["path"] == path][0]
+            is_critical = in_pos in affected_in_window or out_pos in affected_in_window
+            flag = (
+                "probe_malfunction_critical"   # IN or OUT broken in analysis window
+                if is_critical else
+                "probe_malfunction_secondary"  # only auxiliary probe broken
+            )
+            meta_sel.at[idx, "quality_flag"] = flag
+            critical_tag = " [CRITICAL — IN/OUT affected]" if is_critical else ""
+            line = (
+                f"{flag} | {fname} | probes: {', '.join(affected_in_window)}{critical_tag}"
+            )
+            print(f"  ⚠ QUALITY FLAG: {line}")
+            flagged_lines.append(line)
+
+    if flagged_lines:
+        flags_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(flags_file, "a") as fh:
+            for line in flagged_lines:
+                fh.write(line + "\n")
+        print(f"  Quality flags written → {flags_file}")
+
+    return meta_sel
+
+
 def process_selected_data(
     dfs: dict[str, pd.DataFrame],
     meta_sel: pd.DataFrame,
@@ -686,6 +845,11 @@ def process_selected_data(
     # 3. Optional: find wave ranges
     if find_range:
         meta_sel = run_find_wave_ranges(processed_dfs, meta_sel, cfg, win, range_plot, debug)
+
+    # 3b. Quality flags: probe malfunction vs stable analysis window
+    _flags_file = Path(__file__).parents[1] / "waveprocessed" / "quality_flags.txt"
+    meta_sel = _write_quality_flags(meta_sel, clip_stats, cfg, _flags_file)
+    # Merge per-probe malfunction bools into meta_sel (already done inside _write_quality_flags)
 
     # 4. a - Compute PSDs and amplitudes from PSD (wave runs only)
     psd_dict, amplitudes_psd_df = compute_psd_with_amplitudes(processed_dfs, meta_sel, cfg, fs=fs, debug=debug)

@@ -251,6 +251,42 @@ print(f"Lateral symmetry of plot_parallel_ratio {end-start:.4f} seconds")
 
 # %%
 """
+── CH04 § 3b — Probe height: validity range and the 100 mm lowering ─────────
+Goal: explain and quantify the effect of probe height above the water surface.
+
+Background:
+  - All runs up to 2026-03-23: probe tips ~272 mm above water surface.
+    This was fine for moderate wave amplitudes, but for steep/high waves the
+    probe tips risked leaving the water surface on the wave troughs.
+  - 2026-03-23: probes lowered to ~100 mm above water.
+
+What to show:
+  1. At what wave amplitude / frequency does a 272 mm height become problematic?
+     Compute: if trough drops below -272 mm from stillwater → probe tip exits water.
+     Compare against measured wave amplitudes to find the steepness limit.
+  2. Plot: OUT/IN ratio vs amplitude, coloured by probe height configuration.
+     If the 272 mm runs are consistent with the 100 mm runs at moderate amplitude,
+     the earlier data is valid. If they diverge at high amplitude → flag those runs.
+  3. Data: probe_height column in combined_meta (from mooring/config — check if this
+     needs to be added as a new config field, or derive from run date).
+
+TODO: needs data from both height configurations to make the comparison.
+      100 mm data was collected 2026-03-23 onward.
+      Earliest comparison runs need to be identified.
+"""
+# TODO: implement plot_probe_height_comparison() in plotter.py when data is ready
+# _pv_probe_height = {
+#     "filters": {"run_category": "standard"},
+#     "plotting": {
+#         "show_plot": False,
+#         "save_plot": False,
+#         "figure_name": "ch04_probe_height",
+#         "caption": "TODO",
+#     },
+# }
+
+# %%
+"""
 ── CH04 § 4-1 — Wind characterisation ─────────────────────────────────────────
 Goal: characterise what the wind does to the water surface — spectrum, spatial
 extent, interaction with the panel.

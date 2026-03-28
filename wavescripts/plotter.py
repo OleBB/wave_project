@@ -1279,6 +1279,65 @@ def plot_reconstructed_rms(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+def _build_sw_fits(combined_meta_sel: pd.DataFrame, positions: list[str]) -> dict:
+    """
+    Fit per-(date, probe) linear polynomials to nowave stillwater levels
+    for nowind and fullwind conditions separately.
+
+    Returns dict keyed by (date, pos), value is dict with keys "no" and "full",
+    each a callable f(mtime_seconds) -> predicted raw probe stillwater [mm],
+    or None if fewer than 1 data point available.
+
+    x-axis: file modification time in seconds (os.path.getmtime).
+    Fits are linear (deg=1) when ≥2 points, constant when exactly 1 point.
+    """
+    import os
+    fits: dict = {}
+    dates = combined_meta_sel[GC.FILE_DATE].dropna().unique()
+
+    for date in dates:
+        day_mask = combined_meta_sel[GC.FILE_DATE] == date
+        day_rows  = combined_meta_sel[day_mask]
+        nowave_mask = day_rows[GC.WAVE_FREQUENCY_INPUT].isna()
+
+        for pos in positions:
+            sw_col = PC.STILLWATER.format(i=pos)
+            result: dict = {}
+
+            for wind_cond in ("no", "full"):
+                if sw_col not in day_rows.columns:
+                    result[wind_cond] = None
+                    continue
+                sel = day_rows[
+                    nowave_mask &
+                    (day_rows[GC.WIND_CONDITION] == wind_cond) &
+                    day_rows[sw_col].notna()
+                ]
+                if len(sel) == 0:
+                    result[wind_cond] = None
+                    continue
+
+                mtimes   = np.array([os.path.getmtime(p) for p in sel[GC.PATH]])
+                sw_vals  = sel[sw_col].values.astype(float)
+                valid    = np.isfinite(sw_vals)
+                mtimes   = mtimes[valid]
+                sw_vals  = sw_vals[valid]
+
+                if len(mtimes) == 0:
+                    result[wind_cond] = None
+                elif len(mtimes) == 1:
+                    v = sw_vals[0]
+                    result[wind_cond] = lambda t, _v=v: _v
+                else:
+                    t0 = mtimes.mean()
+                    coeffs = np.polyfit(mtimes - t0, sw_vals, deg=1)
+                    result[wind_cond] = lambda t, _c=coeffs, _t0=t0: np.polyval(_c, t - _t0)
+
+            fits[(date, pos)] = result
+
+    return fits
+
+
 def gather_ramp_data(
     dfs: dict,
     combined_meta_sel: pd.DataFrame,
@@ -1289,6 +1348,17 @@ def gather_ramp_data(
     Returns a flat DataFrame with one row per (experiment × probe).
     Used to feed RampDetectionBrowser (in plot_quicklook.py).
     """
+    import os
+
+    # Collect all probe positions present in any df
+    all_positions: list[str] = list({
+        c[len("eta_"):] for df in dfs.values() for c in df.columns
+        if c.startswith("eta_") and not c.endswith("_interp")
+    })
+
+    # Pre-compute nowind + fullwind stillwater regression curves per (date, probe)
+    sw_fits = _build_sw_fits(combined_meta_sel, all_positions)
+
     records = []
     for path, df in dfs.items():
         meta_row = combined_meta_sel[combined_meta_sel[GC.PATH] == path]
@@ -1335,15 +1405,42 @@ def gather_ramp_data(
             first_motion = int(exceeded[0]) if len(exceeded) > 0 else good_start
 
             _sw = meta_row.get(PC.STILLWATER.format(i=pos), np.nan)
-            baseline_mean_val = (
-                float(_sw) if pd.notna(_sw)
-                else (float(np.nanmean(base_region)) if len(base_region) > 0 else 0.0)
-            )
+            if pd.notna(_sw):
+                baseline_mean_val = float(_sw)
+            elif len(base_region) > 0 and not np.all(np.isnan(base_region)):
+                baseline_mean_val = float(np.nanmean(base_region))
+            else:
+                # eta is all-NaN (stale cache with NaN stillwater) — use raw median
+                baseline_mean_val = float(np.nanmedian(raw))
+
+            # Stillwater references from pre-computed regression curves (time-aware)
+            file_date   = meta_row.get(GC.FILE_DATE, "")
+            wind_cond   = meta_row.get(GC.WIND_CONDITION, "no")
+            run_mtime   = os.path.getmtime(path)
+            fit         = sw_fits.get((file_date, pos), {})
+
+            nowind_fn   = fit.get("no")
+            fullwind_fn = fit.get("full")
+
+            sw_nowind_ref   = float(nowind_fn(run_mtime))   if nowind_fn   else np.nan
+            sw_fullwind_ref = float(fullwind_fn(run_mtime)) if fullwind_fn else np.nan
+
+            # Wind setup in probe-distance units: positive = water level dropped
+            # (fullwind raises raw probe reading → larger probe distance → lower water)
+            sw_wind_setup = sw_fullwind_ref - sw_nowind_ref
+
+            # Delta vs the curve appropriate for this run's wind condition
+            sw_expected = sw_fullwind_ref if wind_cond == "full" else sw_nowind_ref
+            sw_delta = baseline_mean_val - sw_expected  # probe units; positive = water lower than fit
 
             t0 = df["Date"].iat[0]
             time_ms = (
                 df["Date"] - t0
             ).dt.total_seconds().to_numpy() * MEASUREMENT.M_TO_MM
+
+            def _get(col):
+                v = meta_row.get(col, np.nan)
+                return float(v) if v is not None and not pd.isna(v) else np.nan
 
             records.append(
                 {
@@ -1353,12 +1450,18 @@ def gather_ramp_data(
                     "data_col": col_raw,
                     GC.WIND_CONDITION: meta_row.get(GC.WIND_CONDITION, "unknown"),
                     GC.PANEL_CONDITION: meta_row.get(GC.PANEL_CONDITION, "unknown"),
-                    GC.WAVE_FREQUENCY_INPUT: meta_row.get(
-                        GC.WAVE_FREQUENCY_INPUT, np.nan
-                    ),
-                    GC.WAVE_AMPLITUDE_INPUT: meta_row.get(
-                        GC.WAVE_AMPLITUDE_INPUT, np.nan
-                    ),
+                    GC.WAVE_FREQUENCY_INPUT: meta_row.get(GC.WAVE_FREQUENCY_INPUT, np.nan),
+                    GC.WAVE_AMPLITUDE_INPUT: meta_row.get(GC.WAVE_AMPLITUDE_INPUT, np.nan),
+                    # Wave physics for this probe — displayed in browser info panel
+                    "ka_fft":         _get(f"Probe {pos} ka (FFT)"),
+                    "period_fft":     _get(f"Probe {pos} WavePeriod (FFT)"),
+                    "wavelength_fft": _get(f"Probe {pos} Wavelength (FFT)"),
+                    "amp_fft":        _get(f"Probe {pos} Amplitude (FFT)"),
+                    "amp_td":         _get(f"Probe {pos} Amplitude"),
+                    "sw_nowind_ref":   sw_nowind_ref,
+                    "sw_fullwind_ref": sw_fullwind_ref,
+                    "sw_wind_setup":   sw_wind_setup,
+                    "sw_delta":        sw_delta,
                     "time_ms": time_ms,
                     "raw": raw,
                     "signal": signal,
@@ -1398,6 +1501,7 @@ def plot_ramp_detection(
     title: str = "Ramp Detection",
     signal_interp: Optional[np.ndarray] = None,
     expected_sine: Optional[np.ndarray] = None,
+    wave_info: Optional[dict] = None,
 ) -> Tuple[plt.Figure, plt.Axes]:
     """Diagnostic plot for ramp detection on a single experiment/probe."""
     if "Date" not in df.columns:
@@ -1420,21 +1524,22 @@ def plot_ramp_detection(
     fig, ax = plt.subplots(figsize=(15, 7))
     fig.suptitle(title)
 
-    ax.plot(time_ms, raw, color="lightgray", alpha=0.6, label="Raw")
+    # Transform raw to eta coordinate: -(raw - baseline_mean)
+    # baseline_mean is the per-run stillwater in raw probe units (~100 mm absolute).
+    # eta = -(probe - SW), so raw_as_eta = -(raw - baseline_mean).
+    # This centers the raw signal at 0, same axis as cleaned eta — dropouts visible as jumps.
+    raw_display = -(np.asarray(raw, dtype=float) - baseline_mean)
+    ax.plot(time_ms, raw_display, color="lightgray", alpha=0.6, label="Raw (η-centered)")
     if signal_interp is not None:
         ax.plot(time_ms, signal_interp, color="steelblue", lw=1.2, alpha=0.7, label="Cleaned (interp)")
-    ax.plot(time_ms, signal, color="black", lw=1.5, alpha=0.8, label=f"Cleaned (gaps=NaN)")
+    ax.plot(time_ms, signal, color="black", lw=1.5, alpha=0.8, label="Cleaned (gaps=NaN)")
     if expected_sine is not None:
         ax.plot(time_ms, expected_sine, color="darkorange", lw=1.5, alpha=0.8,
                 linestyle="--", label="Expected sine (FFT-fit)")
-    ax.axhline(
-        baseline_mean,
-        color="blue",
-        linestyle="--",
-        label=f"Baseline = {baseline_mean:.2f} mm",
-    )
-    ax.axhline(baseline_mean + threshold, color="red", linestyle=":", alpha=0.7)
-    ax.axhline(baseline_mean - threshold, color="red", linestyle=":", alpha=0.7)
+    # Reference lines in eta coordinate (centered at 0)
+    ax.axhline(0.0, color="blue", linestyle="--", label="Stillwater (0 mm)")
+    ax.axhline(+threshold, color="red", linestyle=":", alpha=0.7)
+    ax.axhline(-threshold, color="red", linestyle=":", alpha=0.7)
     ax.axvline(
         time_ms[first_motion_idx],
         color="orange",
@@ -1476,13 +1581,49 @@ def plot_ramp_detection(
     except Exception:
         pass
 
-    amp_in = float(meta_sel.get(GC.WAVE_AMPLITUDE_INPUT, 0) or 0)
+    amp_in = meta_sel.get(GC.WAVE_AMPLITUDE_INPUT, 0)
+    try:
+        amp_in = float(amp_in)
+    except (TypeError, ValueError):
+        amp_in = 0.0
+    if not np.isfinite(amp_in):
+        amp_in = 0.0
     zoom = max(amp_in * 100, 15)
-    ax.set_ylim(baseline_mean - zoom, baseline_mean + zoom)
+    ax.set_ylim(-zoom, zoom)  # eta coordinate: centered at 0
     ax.set_xlabel("Time [ms]")
     ax.set_ylabel("Water level [mm]")
     ax.grid(True, alpha=0.1)
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
+    ax.legend(loc="upper left", fontsize=8, framealpha=0.7)
+
+    if wave_info:
+        def _wi(v, unit="", fmt=".3f"):
+            try:
+                return f"{float(v):{fmt}} {unit}".strip() if np.isfinite(float(v)) else "—"
+            except (TypeError, ValueError):
+                return "—"
+        units = {"ka": "", "T": "s", "λ": "m", "A(FFT)": "mm", "A(TD)": "mm"}
+        wave_parts = [f"{k} = {_wi(wave_info.get(k), units.get(k, ''))}"
+                      for k in ["ka", "T", "λ", "A(FFT)", "A(TD)"]]
+        wind_cond  = wave_info.get("wind_cond", "no")
+        ref_label  = "fullwind fit" if wind_cond == "full" else "nowind fit"
+        sw_d  = wave_info.get("sw_delta")
+        sw_ws = wave_info.get("sw_wind_setup")
+        try:
+            sw_str = f"ΔSW = {float(sw_d):+.2f} mm vs {ref_label}" if np.isfinite(float(sw_d)) else f"ΔSW = — (no {ref_label} available)"
+        except (TypeError, ValueError):
+            sw_str = f"ΔSW = — (no {ref_label} available)"
+        try:
+            ws_str = f"wind setup = {float(sw_ws):+.2f} mm probe-dist (↑ = WL dropped)" if np.isfinite(float(sw_ws)) else "wind setup = —"
+        except (TypeError, ValueError):
+            ws_str = "wind setup = —"
+        ax.text(
+            0.01, 0.04, "   ".join(wave_parts) + "\n" + sw_str + "   |   " + ws_str,
+            transform=ax.transAxes,
+            fontsize=9, family="monospace",
+            verticalalignment="bottom",
+            bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="#aaaaaa", alpha=0.85),
+        )
+
     return fig, ax
 
 

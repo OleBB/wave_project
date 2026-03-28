@@ -170,10 +170,11 @@ AMPLITUDE = AmplitudeParams()
 class ClipParams:
     """Outlier clipping thresholds applied to zeroed eta_ signals.
 
-    Samples whose absolute value exceeds the threshold are replaced with NaN.
+    Stillwater/nowave runs have NO hard cap — faults are caught by the stuck-probe
+    detector (Layer 0) and velocity filter (Layer 2) instead.
+    Wave and wind-only runs keep a hard cap scaled to the expected amplitude.
     Downstream code (nanpercentile, dropna, interpolation) handles NaN safely.
     """
-    NOWIND_MM: float = 5.0    # nowind/stillwater runs: noise floor ~0.3 mm; ±5 mm catches only gross glitches
     WAVE_MM:   float = 200.0  # fallback hard cap when no voltage info available
     WAVE_CLIP_FACTOR: float = 270.0  # hard cap = factor × amp_volts; 0.1V→27mm, 0.2V→54mm, 0.3V→81mm
     WIND_BASE_VOLT: float = 0.05     # extra effective voltage for wind runs: adds ~13.5mm to cap
@@ -181,6 +182,8 @@ class ClipParams:
     DIFF_MM: float = 10.0         # velocity threshold: 10 mm/sample = 2500 mm/s (~4× max physical wave velocity)
     INTERP_MAX_GAP: int = 10      # fallback max gap (nowave/stillwater runs); wave runs use 1/4 wavelength
     VEL_BUFFER: int = 2           # samples removed on each side of a velocity-detected spike (shoulder contamination)
+    STUCK_STD_MM: float = 0.05   # rolling std below this → probe is stuck (well below ~0.13 mm noise floor)
+    STUCK_MIN_S: float = 1.0     # minimum duration of flat segment to flag as malfunction [s]
 
 CLIP = ClipParams()
 
@@ -191,13 +194,15 @@ CLIP = ClipParams()
 
 @dataclass(frozen=True)
 class StillwaterParams:
-    """Tuning parameters for the weighted linear stillwater drift fit.
+    """Tuning parameters for per-run stillwater self-calibration.
 
     The fit uses all no-wind runs in a folder to estimate how the still-water
     level changes over a session (evaporation, wind setup).
     """
-    PRE_WAVE_S:  float = 1.0   # seconds of pre-wave signal used from wave runs [s]
-    OUTLIER_MM:  float = 1.0   # residual threshold for outlier rejection [mm]
+    PRE_WAVE_S:  float = 2.0   # seconds of pre-wave signal used from wave runs [s]
+    # 2 s is safe for 1.0+ Hz (wave front arrives later); may clip for 0.65 Hz
+    # but those runs are low priority. Increase if diagnostics show wave contamination.
+    OUTLIER_MM:  float = 1.0   # kept for backward compat (no longer used in fitting)
 
 STILLWATER = StillwaterParams()
 

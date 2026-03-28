@@ -20,7 +20,9 @@ Browsers launched:
 # %% ── dev: reload modules (run this cell after editing wavescripts/) ─────────
 import importlib
 import wavescripts.plot_browsers as _pb
+import importlib, wavescripts.plotter as _pm
 importlib.reload(_pb)
+importlib.reload(_pm)
 from wavescripts.plot_browsers import SignalBrowserFiltered, RampDetectionBrowser
 
 
@@ -53,13 +55,18 @@ PROCESSED_DIRS = [
     # Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
     # Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),
     # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
-    Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    # Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    # Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    # Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),
+    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
 ]
 
 # ── Load from cache (fast — no reprocessing) ──────────────────────────────────
@@ -91,6 +98,7 @@ freqplotvariables = {
     },
 }
 
+# %%
 # ── Launch ────────────────────────────────────────────────────────────────────
 app = QApplication.instance() or QApplication(sys.argv)
 
@@ -105,7 +113,8 @@ app.exec_()
 
 # %% ----- Signal Browser
 browser_signal = SignalBrowserFiltered(
-    filtered_fft_dict, filtered_meta, freqplotvariables
+    filtered_fft_dict, filtered_meta, freqplotvariables,
+    processed_dfs=processed_dfs,   # enables True η / Repaired η / Expected sine / Residue overlays
 )
 browser_signal.setWindowTitle("Signal Browser — FFT reconstruction")
 browser_signal.show()

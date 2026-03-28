@@ -77,13 +77,18 @@ PROCESSED_DIRS = [
     # Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
     # Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),
     # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),  #disse under bør være greie bortsett fra de steile
     Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
     Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
     Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),
+    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
 ]
 
 combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
@@ -140,7 +145,7 @@ dampingplotvariables = {
     "overordnet": {"chooseAll": False, "chooseFirst": False, "chooseFirstUnique": False},
     "filters": {
         "WaveAmplitudeInput [Volt]": (0.1,0.3),
-        "WaveFrequencyInput [Hz]":   (0.1,1.8),
+        "WaveFrequencyInput [Hz]":   (1.3,1.9),
         "WavePeriodInput":           None,
         "WindCondition":             None,
         "TunnelCondition":           None,
@@ -200,7 +205,7 @@ freqplotvariables = {
     },
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1],
-        "WaveFrequencyInput [Hz]":   [1.7],
+        "WaveFrequencyInput [Hz]":   [1.5],
         "WavePeriodInput":           None,
         "WindCondition":             ["no", "lowest", "full"],
         "TunnelCondition":           None,
@@ -506,7 +511,6 @@ def repl_out(filename: str):
 with repl_out("filnavn.txt"):
     print(f"Nowave+fullwind rows: {len(funksjon)}")
 """
-
 # %% ── stillwater — overview + zoom ──────────────────────────────────────────
 import matplotlib.pyplot as plt
 _sw_row = _meta_stillwater.iloc[2]
@@ -544,6 +548,7 @@ else:
     ax_zm.grid(True, alpha=0.3)
 
     plt.show()
+    print(_sw_row["path"])
     print(f"{len(_sw_df)} samples  |  {len(_sw_df)/_FS:.1f} s")
 
 # %% ── stillwater — probe uncertainty statistics ──────────────────────────────
@@ -1078,7 +1083,7 @@ print(_mstop_meta[["path", "WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]
 # %% ── swell tail — wind-only baseline PSD (same date as mstop90 runs) ────────
 from scipy.signal import welch as _welch
 
-_mstop_date = "2026-03-07"
+_mstop_date = "2026-03-23"
 _wind_baseline_meta = combined_meta[
     (combined_meta["file_date"].astype(str).str.startswith(_mstop_date)) &
     (combined_meta["WindCondition"] == "full") &
