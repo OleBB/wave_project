@@ -14,7 +14,6 @@ For saving publication figures → use main_save_figures.py.
 # %% ── imports ────────────────────────────────────────────────────────────────
 import time
 
-from pandas._libs.lib import fast_unique_multiple_list_gen
 start0 = time.perf_counter()
 
 %matplotlib inline
@@ -89,11 +88,31 @@ PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
+    Path("waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
 ]
 
 combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analysis_data(
     *PROCESSED_DIRS, load_processed=False
 )
+# %%
+# Patch Mooring column from path — cached meta.json has old "below_90" string
+# before --force-recompute is run. Remove this cell once force-recompute is done.
+import re as _re
+
+def _mooring_from_path(path_str: str) -> str:
+    if _re.search(r"[Uu]nder\d+[Mm]ooring30", path_str):
+        return "below_90_loose30"
+    if _re.search(r"[Uu]nder\d+[Mm]ooring", path_str):
+        return "below_90_loose23"
+    if _re.search(r"[Ll]ow[Mm]ooring", path_str):
+        return "above_50"
+    if _re.search(r"[Hh]igh[Mm]ooring", path_str):
+        return "above_200"
+    return "unknown"
+
+combined_meta["Mooring"] = combined_meta["path"].apply(_mooring_from_path)
 # %%
 processed_dfs: dict = {}  # loaded lazily below (wind-only section)
 
@@ -119,7 +138,7 @@ amplitudeplotvariables = {
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
         "WaveFrequencyInput [Hz]":   (0.5,1.5),
-        "WavePeriodInput":           None,
+        "WavePeriodInput":           (29,),
         "WindCondition":             ["full"],
         "TunnelCondition":           None,
         "Mooring":                   None,

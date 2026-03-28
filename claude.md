@@ -26,7 +26,10 @@
 
 ## 0. How to use this document
 
-**Current tasks and session state** → `MEMORY.md` (auto-loaded) → `project_tasks.md`
+**Current tasks and session state** → `MEMORY.md` is auto-loaded and has a START HERE
+section at the top with the end goal, current state, and immediate next steps.
+For the full task list see `memory/project_tasks.md`. For the latest session changelog
+see `memory/session_2026-03-28.md`.
 
 **Document map — find it here:**
 

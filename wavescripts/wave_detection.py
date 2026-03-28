@@ -15,13 +15,10 @@ import pandas as pd
 import numpy as np
 from wavescripts.improved_data_loader import update_processed_metadata, PROBE_CONFIGS
 from scipy.signal import find_peaks
-from scipy.signal import welch
-from scipy.optimize import brentq
 from scipy import signal
 from typing import Dict, List, Tuple, Any
 import matplotlib.pyplot as plt
 
-from wavescripts.constants import get_smoothing_window
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
     ProbeColumns as PC,
@@ -76,8 +73,6 @@ def find_wave_range(
         "first_motion_idx": None,
         "samples_per_period": None,
         "detected_peaks": None,
-        "ramp_found": None,
-        "ramp_length_peaks": None,
         "keep_periods_used": None,
     }
 
@@ -85,7 +80,7 @@ def find_wave_range(
     dt = (df["Date"].iloc[1] - df["Date"].iloc[0]).total_seconds()
     Fs = 1.0 / dt
 
-    # ─────── hente ut input-frekvens ─────── TK bytte ut med ekte frekven senere?
+    # ─────── hente ut input-frekvens ───────
     input_freq = meta_row["WaveFrequencyInput [Hz]"] if isinstance(meta_row, pd.Series) else meta_row["WaveFrequencyInput [Hz]"].iloc[0]
     importertfrekvens = float(input_freq)
     if pd.isna(input_freq):
@@ -100,7 +95,7 @@ def find_wave_range(
 
     # ─────── velge antall perioder ───────
     input_periods = (meta_row["WavePeriodInput"])
-    keep_periods= round((input_periods-13)*0.9) #trekke fra perioder, -per15- er det bare 4 gode, mens på -per40- per er ish 30 gode. TK todo velge en bedre skalering
+    keep_periods= round((input_periods-13)*0.9) # empirical: (input_periods - 13) * 0.9; per15→2, per40→24
     keep_seconds= keep_periods/input_freq
     keep_idx = keep_seconds*250 # 1 sek = 250 målinger
     good_range = keep_idx
@@ -169,8 +164,10 @@ def find_wave_range(
     # High-frequency runs (≥1.6 Hz) need more trimming at both ends:
     # — start: ramp transition is slower, more buildup bleeds in (+2 extra)
     # — end:   ramp-down begins earlier and swell tail is longer (+3 extra)
-    _TRIM_START_PERIODS = 3 if importertfrekvens >= 1.6 else 1
-    _TRIM_END_PERIODS   = 4 if importertfrekvens >= 1.6 else 1
+    _TRIM_START_PERIODS = (RAMP.TRIM_START_PERIODS_HIGH_FREQ if importertfrekvens >= RAMP.HIGH_FREQ_TRIM_HZ
+                           else RAMP.TRIM_START_PERIODS_DEFAULT)
+    _TRIM_END_PERIODS   = (RAMP.TRIM_END_PERIODS_HIGH_FREQ   if importertfrekvens >= RAMP.HIGH_FREQ_TRIM_HZ
+                           else RAMP.TRIM_END_PERIODS_DEFAULT)
 
     _group = _PROBE_GROUP.get(data_col)
     if _group is not None and _group in _SNARVEI_CALIB:
@@ -182,34 +179,6 @@ def find_wave_range(
                   f"good_start={good_start_idx} (trim_start={_TRIM_START_PERIODS}p, "
                   f"trim_end={_TRIM_END_PERIODS}p)")
 
-    """
-    # PHYSICS-BASED SNARVEI (too early in practice – kept for reference / future use)
-    # Deep-water dispersion: ω² = g·k  →  c = g/ω
-    # omega   = 2 * np.pi * importertfrekvens
-    # c_phase = PHYSICS.GRAVITY / omega           # phase velocity [m/s]  (import PHYSICS to use)
-    # P1_ANCHORS = {1.3: 4700, 0.65: 3950}
-    # anchor = P1_ANCHORS.get(round(importertfrekvens, 2))
-    # if anchor is not None:
-    #     pos_current = float(
-    #         meta_row[PC.MM_FROM_PADDLE.format(i=probe_num_int)] if isinstance(meta_row, pd.Series)
-    #         else meta_row[PC.MM_FROM_PADDLE.format(i=probe_num_int)].iloc[0]
-    #     )
-    #     pos_p1 = float(
-    #         meta_row[PC.MM_FROM_PADDLE.format(i=1)] if isinstance(meta_row, pd.Series)
-    #         else meta_row[PC.MM_FROM_PADDLE.format(i=1)].iloc[0]
-    #     )
-    #     delta_d   = (pos_current - pos_p1) / 1000       # mm → m
-    #     delta_idx = int(round(delta_d / c_phase * Fs))  # travel time in samples
-    #     good_start_idx = anchor + delta_idx
-    #     good_end_idx   = good_start_idx + int(keep_idx)
-    """
-    #import sys; print('exit'); sys.exit()
-
-    # TODO stability_skip: some 1.3 Hz runs not fully stable at snarvei start.
-    # Add _STABILITY_SKIP = {1.3: 2, 0.65: 0} (periods) applied before section 1.c.
-    # Future: replace with autocorrelation-based stability detection.
-    # good_start_idx += _STABILITY_SKIP.get(round(importertfrekvens,2), 0) * samples_per_period
-    # good_end_idx    = good_start_idx + int(keep_idx)
 
     # ==========================================================
     # 1.c  Snap start and end independently to nearest zero-upcrossing
@@ -263,23 +232,6 @@ def find_wave_range(
                   f"start={refined_start}, end={refined_end}, "
                   f"periods≈{n_found}/{n_periods_target}")
 
-    """
-    # WALK-FORWARD APPROACH (failed on windy signals – chain breaks after 1 period)
-    # Kept for reference; may be useful for individual period boundary detection later.
-    # tol = 0.10
-    # min_period_samp = int((1 - tol) * samples_per_period)
-    # max_period_samp = int((1 + tol) * samples_per_period)
-    # valid = [first_uc]
-    # prev  = first_uc
-    # for uc in subsequent:
-    #     gap = int(uc) - prev
-    #     if min_period_samp <= gap <= max_period_samp:
-    #         valid.append(int(uc))
-    #         prev = int(uc)
-    #         if len(valid) - 1 >= n_periods_target:
-    #             break
-    # good_start_idx = valid[0]; good_end_idx = valid[-1]
-    """
 
     # ==========================================================
     # 1.d  Mstop warning: check if good_end_idx falls inside the post-stop window
@@ -312,57 +264,10 @@ def find_wave_range(
     # no panel, amp03, freq0650: 2300? probe=??
     #fullpanel-fullwind-amp01-freq0650-per15-probe3: 4000 korrekt
 
-    """
-    Først: sjekke paneltilstand:
-        hvis ingen panel
 
-    Neste: sjekke vindforhold:
-        hvis sterk vind
-
-    Hvis lav frekvens: da er det kortere (nesten ingen) ramp.
-
-    Ramp må tape for høyeste peaks, i hvertfall når panel
-
-    Så, enkelt basere probe 2 på 1 , og 34 på 2?
-    """
-
-    """elif (meta_row["WindCondition"]) == "lowest" and input_freq == 1.3:
-        print('lowestwind og 1.3')
-        if data_col == "Probe 1":
-                good_start_idx = P1amp01frwq13eyeball
-                good_end_idx = good_start_idx+keep_idx
-                #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 2" :
-                good_start_idx = P2handcalc
-                good_end_idx = P2handcalc + keep_idx
-                #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 3" :
-                good_start_idx = P3handcalc
-                good_end_idx = P3handcalc + keep_idx
-                #return good_start_idx, good_end_idx, debug_info
-        elif data_col == "Probe 4" :
-                good_start_idx = P3handcalc
-                good_end_idx = P3handcalc + keep_idx
-                #return good_start_idx, good_end_idx, debug_info"""
-
-#TODO: claude sitt forslag til bruk av konstanter
-    # def detect_baseline_AFTER(signal_smooth):
-    #     """NEW VERSION."""
-    #     baseline_samples = int(SIGNAL.BASELINE_DURATION_SEC * MEASUREMENT.SAMPLING_RATE)
-    #     baseline = signal_smooth[:baseline_samples]
-    #     baseline_mean = np.mean(baseline)
-    #     baseline_std = np.std(baseline)
-    #     threshold = baseline_mean + SIGNAL.BASELINE_SIGMA_FACTOR * baseline_std
-    #     return threshold
-    baseline_seconds = 2# testkommentar
-    sigma_factor=1.0
-    skip_periods=None
-
-    min_ramp_peaks=5
-    max_ramp_peaks=15
-    max_dips_allowed=2
-    min_growth_factor = 1.015
-    #import sys; print('exit'); sys.exit()
+    baseline_seconds = 2
+    sigma_factor = 1.0
+    skip_periods = None
 
     # ==========================================================
     # 2. Baseline & first motion (still useful for rough start)
@@ -376,19 +281,6 @@ def find_wave_range(
     if debug:
         print('baselines:')
         print(f'_samples: {baseline_samples}, _mean: {baseline_mean}, _seconds {baseline_seconds}, _std {baseline_std}')
-    #import sys; print('exit'); sys.exit()
-
-    """ærbe
-    #print('threshold verdi: ', threshold)
-    #print('eexit')
-    #print('='*99)
-
-    #voltgrense  = meta_row["WaveAmplitudeInput [Volt]"]
-    #grense = baseline_mean + (voltgrense*100)/3
-    #input volt på 0.1 gir omtrentelig <10mm amplitude.
-    #import sys; sys.exit()
-    """
-
     above_noise = signal_smooth > threshold
 
     first_motion_idx = np.argmax(above_noise) if np.any(above_noise) else 0
@@ -405,144 +297,6 @@ def find_wave_range(
         height=threshold
     )
 
-    #TODO
-    # ==========================================================
-    # ikke i bruk, TK , endret sigmafaktor i staden.
-    # ==========================================================
-    """
-    TODO: LAGE noe som fanger opp de med 15 perioder.
-    for der er signalet veldig kort.
-    lettest: FANGE OPP DE 10 største bølgene. starte fra den første.
-
-    """
-    """
-    # ta 10 største, så ta den første, så ta 10 perioder
-    numbaofpeaks = len(peaks)
-    if meta_row["WavePeriodInput"] <16 and numbaofpeaks >3 :
-
-        largest_ampl = np.abs(signal_smooth[peaks])
-        kth = 3
-        largest_peaks = np.argpartition(peaks, kth)
-        good_start_idx = largest_peaks[0]
-        good_end_idx = largest_peaks[-1]
-        debug_info = None
-        print("="*99)
-        print(f'LESS THAN 16 periods, choosing largest peaks')
-        print("="*99)
-        return good_start_idx, good_end_idx, debug_info
-
-    """
-    #
-    # ==========================================================
-    #
-    # ==========================================================
-    """
-    if len(peaks) < min_ramp_peaks + 3:
-        print("Not enough peaks detected – falling back to legacy method")
-        skip_periods = skip_periods or (5 + 12)
-        keep_periods = keep_periods or 5
-        good_start_idx = first_motion_idx + int(skip_periods * samples_per_period)
-        good_range = int(keep_periods * samples_per_period)
-        good_range = min(good_range, len(df) - good_start_idx)
-        good_end_idx = good_start_idx + good_range
-        return good_start_idx, good_end_idx, {}
-
-    peak_amplitudes = np.abs(signal_smooth[peaks])
-
-    # ==========================================================
-    # 4. Ramp-up detection: nearly monotonic increase with dips
-    # ==========================================================
-    def find_best_ramp(seq, min_len=5, max_len=15, max_dips=2, min_growth=2.0):
-        n = len(seq)
-        best_start = best_end = -1
-        best_len = 0
-        best_dips = 99
-
-        for length in range(min_len, min(max_len + 1, n)):
-            for start in range(n - length + 1):
-                end = start + length - 1
-                sub = seq[start:end + 1]
-
-                dips = sum(1 for i in range(1, len(sub)) if sub[i] <= sub[i - 1])
-                growth_ok = sub[-1] >= sub[0] * min_growth
-
-                if dips <= max_dips and growth_ok:
-                    if length > best_len or (length == best_len and dips < best_dips):
-                        best_start, best_end = start, end
-                        best_len = length
-                        best_dips = dips
-
-        if best_start == -1:
-            return None
-        return best_start, best_end, seq[best_start:best_end + 1]
-    #TODO
-    CLAUDE
-    def find_best_ramp_AFTER(seq):
-        # All parameters come from constants
-        return _find_ramp_core(
-            seq,
-            min_len=RAMP.MIN_RAMP_PEAKS,
-            max_len=RAMP.MAX_RAMP_PEAKS,
-            max_dips=RAMP.MAX_DIPS_ALLOWED,
-            min_growth=RAMP.MIN_GROWTH_FACTOR
-    # ==========================================================
-    # Kjører "find_best_ramp(...)"
-    # ==========================================================
-    ramp_result = find_best_ramp(
-        peak_amplitudes,
-        min_len=min_ramp_peaks,
-        max_len=max_ramp_peaks,
-        max_dips=max_dips_allowed,
-        min_growth=min_growth_factor
-    )
-
-
-    if ramp_result is None:
-        print("No clear ramp-up found – using legacy timing")
-        skip_periods = skip_periods or (5 + 12)
-        keep_periods = keep_periods or 8
-        good_start_idx = first_motion_idx + int(skip_periods * samples_per_period)
-    else:
-        ramp_start_peak_idx, ramp_end_peak_idx, ramp_seq = ramp_result
-        print(f"RAMP-UP DETECTED: {len(ramp_seq)} peaks, "
-              f"from {ramp_seq[0]:.2f} → {ramp_seq[-1]:.2f} (x{ramp_seq[-1]/ramp_seq[0]:.1f})")
-        # Convert last ramp peak → sample index
-        last_ramp_sample_idx = peaks[ramp_end_peak_idx]
-        # Stable phase starts right after ramp-up
-        good_start_idx = last_ramp_sample_idx + samples_per_period // 4  # small safety margin
-        keep_periods = keep_periods or 10
-
-    # Final stable window - nå tar den start+range=end
-    good_range     = int(keep_periods * samples_per_period)
-    good_start_idx = min(good_start_idx, len(df) - good_range - 1)
-    good_range     = min(good_range, len(df) - good_start_idx)
-    good_end_idx   = good_start_idx + good_range
-    """
-    # ==========================================================
-    # 5.a Få hjelp av grok
-    # ==========================================================
-    # for å printe verdiene slik at grok kunne forstå signalet
-    # if 'dumped' not in locals():   # only once
-        # print("\n=== SIGNAL FOR GROK (downsampled 200:1) ===")
-        # print("value")
-        # print("\n".join(f"{x:.5f}" for x in df[data_col].values[::200]))  # every 200th point
-        # print("=== FULL STATS ===")
-        # print(f"total_points: {len(df)}")
-        # print(f"dt_sec: {dt:.6f}")
-        # print(f"frequency_hz: {importertfrekvens}")
-        # print(f"samples_per_period: {samples_per_period}")
-        # print(f"baseline_mean: {baseline_mean:.4f}")
-        # print(f"baseline_std: {baseline_std:.4f}")
-        # print(f"first_motion_idx: {first_motion_idx}")
-        # print("=== PEAKS (index, value) ===")
-        # peaks_abs = np.abs(signal_smooth[peaks]) if 'peaks' in locals() and len(peaks)>0 else []
-        # for i, (pidx, pval) in enumerate(zip(peaks[:30], peaks_abs[:30])):  # max 30 peaks
-            # print(f"{pidx:5d} -> {pval:.5f}")
-        # if len(peaks) > 30:
-            # print("... (more peaks exist)")
-        # print("=== END – COPY ALL ABOVE AND SEND TO GROK ===")
-        # dumped = True
-        #import sys; sys.exit(0)
 
     # ==========================================================
     # 5.b) Plotting – safe version that works with your current plot_ramp_detection
@@ -588,8 +342,6 @@ def find_wave_range(
         "first_motion_idx": first_motion_idx,
         "samples_per_period": samples_per_period,
         "detected_peaks": len(peaks),
-        #"ramp_found": ramp_result is not None,
-        #"ramp_length_peaks": len(ramp_result[2]) if ramp_result else None,
         "keep_periods_used": keep_periods,
         "n_periods_target": n_periods_target,
         "n_periods_found": n_found,

@@ -20,7 +20,6 @@ from typing import Dict, Iterator, List, Optional, Tuple
 
 import pandas as pd
 
-# import pyarrow
 from wavescripts.constants import MEASUREMENT, RAMP, SIGNAL, get_smoothing_window
 from wavescripts.constants import CalculationResultColumns as RC
 from wavescripts.constants import ColumnGroups as CG
@@ -397,7 +396,7 @@ class MooringConfiguration:
     name: str
     valid_from: datetime
     valid_until: Optional[datetime]
-    mooring_type: str  # e.g. "above_50", "below_90"
+    mooring_type: str  # e.g. "above_50", "below_90_loose23"
     notes: str = ""
 
 
@@ -420,9 +419,12 @@ MOORING_CONFIGS = [
         name="below_9_mooring",
         valid_from=datetime(2026, 3, 17),   # folder keyword "under9Mooring" is primary signal;
         valid_until=None,                    # this date-based entry is fallback for future runs
-        mooring_type="below_90",
-        notes="Flytta mooring under vann 16 mars ~13:00 — høyde omtrent = 90 millimeter under vannet (mmuv)",
+        mooring_type="below_90_loose23",
+        notes="Flytta mooring under vann 16 mars ~13:00 — høyde omtrent = 90 mm under vannet (mmuv). Gummibånd løslengde 230 mm.",
     ),
+    # below_90_loose30: same depth (90 mm under), but 300 mm loose rubberband.
+    # Detected only via folder keyword "under9Mooring30" — no date-based fallback
+    # because we don't know yet when/if this becomes the permanent setup.
 ]
 
 
@@ -609,9 +611,15 @@ def _extract_mooring_condition(metadata: dict, filename: str) -> bool:
 
     Takes priority over date-based config — handles same-day changes (e.g. 13:00
     switch on 2026-03-16) where the folder name is the only reliable signal.
+
+    under9Mooring30 (300 mm loose band) must be checked before the general
+    under9Mooring pattern (230 mm loose band), as the latter regex also matches.
     """
+    if re.search(r"[Uu]nder\d+[Mm]ooring30", filename):
+        metadata["Mooring"] = "below_90_loose30"
+        return True
     if re.search(r"[Uu]nder\d+[Mm]ooring", filename):
-        metadata["Mooring"] = "below_90"
+        metadata["Mooring"] = "below_90_loose23"
         return True
     if re.search(r"[Ll]ow[Mm]ooring", filename):
         metadata["Mooring"] = "above_50"

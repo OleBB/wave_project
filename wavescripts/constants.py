@@ -103,6 +103,17 @@ class RampDetectionParams:
     KEEP_PERIODS_DEFAULT: int = 5  # default number of periods to analyze
     KEEP_PERIODS_SCALING: float = 1.0  # scaling factor: (input_periods - 13) * this
 
+    # Snarvei stable-window end trimming
+    # After the snarvei lookup places the window, trim this many periods from each
+    # end to exclude ramp-exit and mstop-onset transients.
+    # High-freq runs (≥ HIGH_FREQ_TRIM_HZ) need more trimming: ramp transition is
+    # slower and mstop/swell tail is longer.
+    TRIM_START_PERIODS_DEFAULT: int = 1
+    TRIM_START_PERIODS_HIGH_FREQ: int = 3
+    TRIM_END_PERIODS_DEFAULT: int = 1
+    TRIM_END_PERIODS_HIGH_FREQ: int = 4
+    HIGH_FREQ_TRIM_HZ: float = 1.6
+
 RAMP = RampDetectionParams()
 
 
@@ -147,6 +158,34 @@ WIND_SPEEDS: Dict[str, float] = {
     "lowest": 3.8,
     "low": 3.8,
     "full": 5.8,
+}
+
+# Mooring physical parameters by Mooring type string.
+# depth_mm:       vertical position of mooring attachment relative to water surface.
+#                 positive = above water, negative = below water.
+# loose_length_mm: free (unstretched) length of the rubber band mooring line (mm).
+# Notes: above-water loose lengths not yet measured — fill in when found in lab notes.
+MOORING_PARAMS: Dict[str, Dict[str, object]] = {
+    "above_200": {
+        "depth_mm":        200,    # approx 200 mm above water (mmov)
+        "loose_length_mm": None,   # TODO: find in lab notes
+        "notes":           "Early high-mooring setup (before Nov 2025)",
+    },
+    "above_50": {
+        "depth_mm":        50,     # approx 50 mm above water (mmov)
+        "loose_length_mm": None,   # TODO: find in lab notes
+        "notes":           "Low mooring from Nov 2025",
+    },
+    "below_90_loose23": {
+        "depth_mm":        -90,    # 90 mm below water (mmuv), moved under 2026-03-16
+        "loose_length_mm": 230,    # 230 mm rubberband loose length
+        "notes":           "Under-water mooring, short rubber band",
+    },
+    "below_90_loose30": {
+        "depth_mm":        -90,    # same depth as above
+        "loose_length_mm": 300,    # 300 mm rubberband loose length
+        "notes":           "Under-water mooring, longer rubber band (from 2026-03-27)",
+    },
 }
 
 
@@ -689,9 +728,7 @@ if __name__ == "__main__":
         print(f"{condition:10s}: {length} m")
 
     print("\n=== COLUMN NAMES ===")
-    print(f"Number of probes: {len(ColumnGroups.BASIC_AMPLITUDE_COLS)}")
-    print(f"Sample amplitude column: {ProbeColumns.AMPLITUDE.format(i=1)}")
-    print(f"FFT amplitude columns: {ColumnGroups.FFT_AMPLITUDE_COLS}")
+    print(f"Sample amplitude column: {ProbeColumns.AMPLITUDE}")
     print(f"Global columns sample: {GlobalColumns.PATH}, {GlobalColumns.WATER_DEPTH}")
 
     validate_constants()

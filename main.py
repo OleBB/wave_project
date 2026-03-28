@@ -66,6 +66,9 @@ dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
 ]
 
 # ── CLI overrides ─────────────────────────────────────────────────────────────
@@ -87,7 +90,7 @@ processvariables = {
         "WavePeriodInput": None,
         "WindCondition": None,
         "TunnelCondition": None,
-        "Mooring": None,  # was "low" — now "above_50" / "above_200" / "below_90"
+        "Mooring": None,  # was "low" — now "above_50" / "above_200" / "below_90_loose23" / "below_90_loose30"
         "PanelCondition": None,
     },
     "prosessering": {
