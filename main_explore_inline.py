@@ -158,14 +158,19 @@ plot_all_probes(m_filtrert, amplitudeplotvariables)
 # %% ── damping grouper + interactive HTML ─────────────────────────────────────
 damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta)
 save_interactive_plot(damping_groupedruns_df)
+# %%
+import importlib
+import wavescripts.plot_quicklook as pq
+importlib.reload(pq)
+from wavescripts.plot_quicklook import explore_damping_vs_freq, explore_damping_vs_amp
 
 # %% ── damping vs frequency ───────────────────────────────────────────────────
 dampingplotvariables = {
     "overordnet": {"chooseAll": False, "chooseFirst": False, "chooseFirstUnique": False},
     "filters": {
         "WaveAmplitudeInput [Volt]": (0.1,0.3),
-        "WaveFrequencyInput [Hz]":   (1.3,1.9),
-        "WavePeriodInput":           None,
+        "WaveFrequencyInput [Hz]":   (1.3,1.7),
+        "WavePeriodInput":           240,
         "WindCondition":             None,
         "TunnelCondition":           None,
         "PanelCondition":            None, #"reverse",#"full"],

@@ -74,7 +74,7 @@ def compare_probe_amplitudes_and_lag(df,
     lag_ms = lags[np.argmax(corr)] * (time_ms[1] - time_ms[0])  # convert samples → ms
 
     # Convert to distance (if you know probe spacing!)
-    probe_distance_mm = 500  # TK TODO CHANGE THIS: actual distance between Probe 1 and 2 in mm
+    probe_distance_mm = 500  # TODO: replace with actual probe spacing from tank measurements
     celerity_m_s = probe_distance_mm / 1000 / (abs(lag_ms)/1000) if lag_ms != 0 else np.inf
 
     # Print beautiful result

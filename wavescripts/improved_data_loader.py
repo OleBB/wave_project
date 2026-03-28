@@ -32,6 +32,7 @@ NON_FLOAT_COLUMNS = {
     "TunnelCondition": str,
     "PanelCondition": str,
     "Mooring": str,
+    "probe_range_mode": str,   # "high" (130–250 mm) or "low" (30–150 mm) — hardware switch on probe box
     "Run number": str,
     "experiment_folder": str,
     "path": str,
@@ -107,6 +108,7 @@ _META_INFO_COLS = [
     "path", "file_date", "experiment_folder",
     "run_category",
     "WindCondition", "TunnelCondition", "PanelCondition", "Mooring",
+    "probe_height_mm", "probe_range_mode",
     "Run number",
     "WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WavePeriodInput",
     "in_position", "out_position", "in_probe", "out_probe",
@@ -298,7 +300,7 @@ PROBE_CONFIGS = [
             1:  170.0,  # parallell, nær referansevegg
             2: 250.0,  # senter av tanken
             3:  340.0,  # parallell, 340mm frå referansevegg
-            4: 250.0,  # !!TK, 230 er egentlig mer korrekt her.
+            4: 250.0,  # TODO: 230 mm may be more accurate — measure and update
         },
         in_probe=1,
         out_probe=2,
@@ -306,7 +308,7 @@ PROBE_CONFIGS = [
     ),
 ]
 
-# TK TODO: måle alle målene på tanken. få det inn i en tikz-tegning. spesielt måle probeavstandene ordentlig.
+# TODO: measure all tank dimensions precisely — probe spacings especially. Put into a TikZ drawing.
 
 # Standard 4-probe analysis set for the current layout (march2026_better_rearranging and earlier).
 # Import this in explore/save scripts instead of hardcoding the list — single source of truth.
@@ -467,6 +469,8 @@ def extract_metadata_from_filename(
     _extract_tunnel_condition(metadata, filename)
     _extract_panel_condition(metadata, filename)
     _extract_wave_parameters(metadata, filename)
+    _extract_probe_height(metadata, filename)
+    _extract_probe_range_mode(metadata, filename)
 
     # ─────── Date-dependent configurations ───────
     if file_date:
@@ -508,6 +512,8 @@ def _initialize_metadata_dict(file_path: str, experiment_name: str) -> dict:
         "TunnelCondition": "",
         "PanelCondition": "",
         "Mooring": "",
+        "probe_height_mm": None,   # mm above still water; extracted from folder keyword or default 272
+        "probe_range_mode": "high", # hardware switch: "high" (130–250 mm) or "low" (30–150 mm)
         "WaveAmplitudeInput [Volt]": None,
         "WaveFrequencyInput [Hz]": None,
         "WavePeriodInput": None,
@@ -628,6 +634,35 @@ def _extract_mooring_condition(metadata: dict, filename: str) -> bool:
         metadata["Mooring"] = "above_200"
         return True
     return False
+
+
+def _extract_probe_height(metadata: dict, filename: str) -> None:
+    """Extract probe height above still water from folder keyword.
+
+    -height{N} → probe_height_mm = N (integer mm above still water).
+    Default when keyword absent: 272 mm (all runs before 20260323).
+    """
+    m = re.search(r"-height(\d+)", filename)
+    if m:
+        metadata["probe_height_mm"] = int(m.group(1))
+    else:
+        metadata["probe_height_mm"] = 272  # default before probe was lowered
+
+
+def _extract_probe_range_mode(metadata: dict, filename: str) -> None:
+    """Extract probe hardware range mode from folder keyword.
+
+    -lowrange  → "low"  (30–150 mm measurement window)
+    (absent)   → "high" (130–250 mm measurement window)
+
+    The range mode is a physical switch on the probe-box hardware.
+    Low-range is required when the probe is close to the water (e.g. height100),
+    since the still-water surface would fall outside the high-range window.
+    """
+    if re.search(r"-lowrange", filename, re.IGNORECASE):
+        metadata["probe_range_mode"] = "low"
+    else:
+        metadata["probe_range_mode"] = "high"
 
 
 def _extract_wave_parameters(metadata: dict, filename: str):

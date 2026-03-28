@@ -165,6 +165,22 @@ WIND_SPEEDS: Dict[str, float] = {
 #                 positive = above water, negative = below water.
 # loose_length_mm: free (unstretched) length of the rubber band mooring line (mm).
 # Notes: above-water loose lengths not yet measured — fill in when found in lab notes.
+# Probe height above still water by folder keyword (mm).
+# Probe is an ultrasound distance sensor pointing downward at the water surface.
+# Height = distance from sensor face to still-water surface.
+# Lowering the probe improves sensitivity to small waves (shorter signal path,
+# less air attenuation) but requires switching to low-range mode on the probe box.
+PROBE_HEIGHT_DEFAULT_MM: int = 272   # all runs before 20260323 (no keyword in folder)
+
+# Hardware range modes — physical switch on the probe-box.
+# Each mode defines the valid measurement window (mm from sensor face).
+# Still-water surface must fall within the window; waves must stay within it too.
+# Low-range is required for height100 (272 mm default would be outside high-range minimum).
+PROBE_RANGE_MODES: Dict[str, Dict[str, int]] = {
+    "high": {"min_mm": 130, "max_mm": 250},
+    "low":  {"min_mm": 30,  "max_mm": 150},
+}
+
 MOORING_PARAMS: Dict[str, Dict[str, object]] = {
     "above_200": {
         "depth_mm":        200,    # approx 200 mm above water (mmov)
@@ -236,6 +252,18 @@ class ClipParams:
         Diagnostic print: STUCK.
 
       ── zeroing: eta_ = -(raw − stillwater_ref) ──────────────────────────────
+
+      Layer 0d — Physical range clip (eta_ signal, after zeroing)
+        Samples outside the probe's valid measurement window are physically
+        impossible. Valid eta_ range is derived from probe_height_mm and
+        probe_range_mode (PROBE_RANGE_MODES / PROBE_HEIGHT_DEFAULT_MM):
+          eta_floor   = -(range_max_mm − probe_height_mm)
+          eta_ceiling =   probe_height_mm − range_min_mm
+        Guard: skipped if probe_height_mm >= range_max_mm (old default height272
+        + high-range setup, where 250 mm is a nominal accuracy limit rather than
+        a hard cutoff). Catches multi-sample sensor dropouts not caught by the
+        velocity filter (Layer 2 only sees single-sample reversals).
+        Diagnostic print: RANGECLIP.
 
       Layer 1 — Dynamic hard cap (eta_ signal, wave/wind runs only)
         Backstop for any fault that slipped through Layers 0a–0c.

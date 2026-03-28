@@ -17,6 +17,7 @@ After processing, use:
 
 # %%
 import argparse
+import datetime
 import gc
 import os
 import sys
@@ -24,6 +25,27 @@ from pathlib import Path
 
 import pandas as pd
 from numpy._core.numeric import True_
+
+
+class _Tee:
+    """Mirror writes to sys.stdout / sys.stderr into a log file as well."""
+
+    def __init__(self, stream, logfile):
+        self._stream = stream
+        self._log = logfile
+
+    def write(self, data):
+        self._stream.write(data)
+        self._log.write(data)
+        self._log.flush()
+
+    def flush(self):
+        self._stream.flush()
+        self._log.flush()
+
+    def fileno(self):
+        return self._stream.fileno()
+
 
 from wavescripts.filters import filter_chosen_files
 from wavescripts.improved_data_loader import (
@@ -78,6 +100,22 @@ _cli.add_argument("--force-recompute", action="store_true")
 _cli.add_argument("--debug",           action="store_true")
 _args, _ = _cli.parse_known_args()
 
+# ── Log file (mirrors stdout + stderr to waveprocessed/run_*.log) ─────────────
+_log_dir = file_dir / "waveprocessed"
+_log_dir.mkdir(exist_ok=True)
+_log_suffix = ""
+if _args.debug:
+    _log_suffix += "_debug"
+if _args.force_recompute:
+    _log_suffix += "_force"
+if _args.total_reset:
+    _log_suffix += "_reset"
+_log_path = _log_dir / f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}{_log_suffix}.log"
+_log_file = open(_log_path, "w", encoding="utf-8", buffering=1)
+sys.stdout = _Tee(sys.__stdout__, _log_file)
+sys.stderr = _Tee(sys.__stderr__, _log_file)
+print(f"Logging to {_log_path}")
+
 # ── Processing options ────────────────────────────────────────────────────────
 processvariables = {
     "overordnet": {
@@ -107,7 +145,7 @@ processvariables = {
 prosessering = processvariables.get("prosessering", {})
 total_reset = prosessering.get("total_reset", False)
 force_recompute = prosessering.get("force_recompute", False)
-print("force_recompute ER ....", force_recompute)
+print(f"force_recompute={force_recompute}  debug={prosessering.get('debug', False)}")
 
 if total_reset:
     input(

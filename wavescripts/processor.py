@@ -18,7 +18,7 @@ from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_f
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
 from scipy.interpolate import PchipInterpolator
-from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, STILLWATER, STILLWATER_EXCLUDE, get_smoothing_window
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, STILLWATER, STILLWATER_EXCLUDE, get_smoothing_window, PROBE_RANGE_MODES, PROBE_HEIGHT_DEFAULT_MM
 from wavescripts.constants import (
     ProbeColumns as PC,
     GlobalColumns as GC,
@@ -539,6 +539,31 @@ def _zero_and_smooth_signals(
 
             eta_col = f"eta_{pos}"
             df[eta_col] = -(raw_vals - stillwater[path][i])
+
+            # ── Layer 0d: Physical range clip (eta_ signal, after zeroing) ──────
+            # Samples outside the probe's valid measurement window are physically
+            # impossible and indicate sensor dropout (surface moved out of range).
+            # Valid eta_ range is derived from probe_height_mm and probe_range_mode:
+            #   eta_floor   = -(range_max_mm - probe_height_mm)  [deepest valid trough]
+            #   eta_ceiling =   probe_height_mm - range_min_mm   [tallest valid crest]
+            # Guard: skip if probe_height_mm is outside the window (eta_floor >= 0),
+            # which happens for the old default height272 + high-range setup where
+            # the stated max_mm (250) is likely a nominal accuracy limit rather than
+            # a hard cutoff — those runs have no reliable range-based floor.
+            _probe_h = row.get("probe_height_mm", PROBE_HEIGHT_DEFAULT_MM)
+            _range_mode = row.get("probe_range_mode", "high")
+            _range_limits = PROBE_RANGE_MODES.get(str(_range_mode))
+            if _range_limits is not None and _probe_h is not None and not pd.isna(float(_probe_h)):
+                _h = float(_probe_h)
+                _eta_floor   = -(_range_limits["max_mm"] - _h)
+                _eta_ceiling =   _h - _range_limits["min_mm"]
+                if _eta_floor < 0 and _eta_ceiling > 0:
+                    _range_mask = (df[eta_col] < _eta_floor) | (df[eta_col] > _eta_ceiling)
+                    if _range_mask.any():
+                        df.loc[_range_mask, eta_col] = np.nan
+                        print(f"  RANGECLIP [{Path(path).name}] {pos}: "
+                              f"{int(_range_mask.sum())} samples outside "
+                              f"[{_eta_floor:.0f}, +{_eta_ceiling:.0f}] mm → NaN")
 
             # ── Layer 1: Hard cap (wave/wind runs only; stillwater uses detection layers) ─
             if clip_mm is not None:

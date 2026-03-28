@@ -117,6 +117,8 @@ def _explore_damping(
                 ax.scatter(sr[x_col], sr["mean_out_in"],
                            s=60, facecolors="none", edgecolors=color,
                            linewidths=1.2, zorder=5)
+    for ax in g.axes.flat:
+        ax.set_ylim(0, 1.1)
     sns.move_legend(g, "lower center",
                     bbox_to_anchor=(0.5, 1), ncol=3,
                     title=None, frameon=False)
