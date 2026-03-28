@@ -168,22 +168,106 @@ AMPLITUDE = AmplitudeParams()
 
 @dataclass
 class ClipParams:
-    """Outlier clipping thresholds applied to zeroed eta_ signals.
+    """Outlier clipping thresholds applied to probe signals.
 
-    Stillwater/nowave runs have NO hard cap — faults are caught by the stuck-probe
-    detector (Layer 0) and velocity filter (Layer 2) instead.
-    Wave and wind-only runs keep a hard cap scaled to the expected amplitude.
-    Downstream code (nanpercentile, dropna, interpolation) handles NaN safely.
+    The cleaning pipeline runs in layers, in this order:
+
+      Layer 0a — Ceiling detection (raw signal, before zeroing)
+        Probe hardware outputs ~198.70 mm when the tip is beyond its measuring
+        range. Three observed variants:
+          1. Exact freeze:   raw ≈ 198.70 mm, rolling std ≈ 0
+          2. Near-ceiling:   raw ≈ 198.69 mm ± tiny noise (std < STUCK_STD_MM)
+          3. DC shift:       raw base ≈ 190 mm, but wave signal still visible on
+                             top — NOT caught by ceiling detection alone; caught by
+                             Layer 0b.
+        Any sample within CEILING_BAND_MM of PROBE_CEILING_MM is set to NaN
+        before zeroing. Diagnostic print: CEILCLIP.
+
+      Layer 0b — DC step detection (raw signal, before zeroing)
+        A probe repositioned or hardware-faulted mid-run shifts the DC level by
+        ~80–90 mm (e.g. from ~100 mm to ~190 mm). The stillwater reference
+        (captured in the first 2 s) is no longer valid after the step. All samples
+        from the step onset to end-of-run are set to NaN.
+        The step location is stored as step_at_s_{pos} in combined_meta.
+        Diagnostic print: STEPCLIP.
+
+      Layer 0c — Stuck probe detection (raw signal, before zeroing)
+        Extended flat segment at the WRONG level (catches variants 1 and 2 above
+        as a redundant safety net, and any other stuck-at-wrong-level faults).
+        Diagnostic print: STUCK.
+
+      ── zeroing: eta_ = -(raw − stillwater_ref) ──────────────────────────────
+
+      Layer 1 — Dynamic hard cap (eta_ signal, wave/wind runs only)
+        Backstop for any fault that slipped through Layers 0a–0c.
+        Stillwater/nowave runs have no hard cap — detection layers handle faults.
+
+      Layer 2 — Velocity filter + shoulder removal
+        Single-sample spikes: up AND back within 2 samples, opposite sign.
+        VEL_BUFFER samples removed on each side of each spike core.
+        Diagnostic print: VELCLIP.
+
+      Layer 3 — Isolated sample check
+        A valid sample surrounded by NaN on both sides — set to NaN.
+        Diagnostic print: ISOCLIP.
     """
+    # ── Layer 1: hard cap ──────────────────────────────────────────────────────
     WAVE_MM:   float = 200.0  # fallback hard cap when no voltage info available
     WAVE_CLIP_FACTOR: float = 270.0  # hard cap = factor × amp_volts; 0.1V→27mm, 0.2V→54mm, 0.3V→81mm
     WIND_BASE_VOLT: float = 0.05     # extra effective voltage for wind runs: adds ~13.5mm to cap
-    MAX_NAN_FRACTION: float = 0.05  # if >5% of a signal window is clipped, skip that probe/run for FFT
-    DIFF_MM: float = 10.0         # velocity threshold: 10 mm/sample = 2500 mm/s (~4× max physical wave velocity)
-    INTERP_MAX_GAP: int = 10      # fallback max gap (nowave/stillwater runs); wave runs use 1/4 wavelength
-    VEL_BUFFER: int = 2           # samples removed on each side of a velocity-detected spike (shoulder contamination)
+
+    # ── Layer 2: velocity filter ───────────────────────────────────────────────
+    DIFF_MM: float = 10.0   # velocity threshold: 10 mm/sample = 2500 mm/s (~4× max physical wave velocity)
+    VEL_BUFFER: int = 2     # samples removed on each side of a velocity-detected spike (shoulder contamination)
+
+    # ── Layer 0c: stuck probe ──────────────────────────────────────────────────
     STUCK_STD_MM: float = 0.05   # rolling std below this → probe is stuck (well below ~0.13 mm noise floor)
     STUCK_MIN_S: float = 1.0     # minimum duration of flat segment to flag as malfunction [s]
+
+    # ── Layer 0a: ceiling detection ────────────────────────────────────────────
+    PROBE_CEILING_MM: float = 198.70  # hardware output when probe tip is beyond max range [mm]
+    CEILING_BAND_MM:  float = 2.0     # tolerance: |raw − PROBE_CEILING_MM| < this → NaN [mm]
+                                       # Covers exact freeze (198.70) and near-ceiling noise (198.69 ± δ).
+
+    # ── Layer 0b: DC step detection ───────────────────────────────────────────
+    DC_STEP_MM:      float = 50.0  # minimum level change to flag as a DC step [mm]
+                                    # Observed fault steps are ~80–90 mm; max wave-induced
+                                    # drift in a 1 s rolling median is <25 mm even at 0.65 Hz
+                                    # high-amplitude, so 50 mm is safely above the noise floor.
+    DC_STEP_WINDOW_S: float = 1.0  # rolling median window for DC level estimation [s]
+                                    # 1 s covers ~0.65 wave periods at the lowest frequency (0.65 Hz),
+                                    # which is enough to suppress most wave oscillation in the median.
+    DC_STEP_BUFFER_S: float = 0.5  # extra NaN margin added before the detected step onset [s]
+                                    # Guards against the step being detected slightly late due to
+                                    # the rolling-window lag.
+
+    # ── mstop tail measurement ─────────────────────────────────────────────────
+    TAIL_WINDOW_S: float = 5.0  # seconds of post-wave signal used for mstop_tail_mm_{pos}
+                                  # Captures residual energy immediately after the wave train ends.
+                                  # Should cover at least 3 periods at the lowest frequency (0.65 Hz
+                                  # → T=1.54 s → 3 periods = 4.6 s), so 5 s is a safe minimum.
+
+    # ── tail period diagnostics (seiche emergence tracking) ────────────────────
+    # After the wave train ends the tank rings down. Higher frequencies (paddle freq)
+    # dissipate faster; longer-period seiche modes persist. These constants control
+    # how the per-cycle period series is summarised in the pipeline.
+    # Physical seiche periods at d=580 mm, L≈25 m:  T1≈20.9 s, T2≈10.4 s, T3≈7.0 s
+    #
+    # Method: zero-upcrossing period tracking.
+    #   eta_ is already zeroed to stillwater, so zero-upcrossings of eta_ define
+    #   wave cycle boundaries. Period of cycle i = t_upcross[i+1] - t_upcross[i].
+    #   One value per cycle — no windowing, no averaging over the evolving period.
+    TAIL_PERIOD_SAMPLE_OFFSETS_S: tuple = (5.0, 15.0, 25.0)  # seconds from good_end at which to read nearest upcrossing period
+    TAIL_PERIOD_MIN_S:  float = 0.15   # reject upcrossing-to-upcrossing gaps shorter than this [s]
+                                        # Filters noise crossings; must be < 1/max_freq = 1/1.9 ≈ 0.53 s at highest paddle freq
+    TAIL_PERIOD_MAX_S:  float = 30.0   # reject gaps longer than this [s]
+                                        # Filters slow DC drift masquerading as a crossing; safely above T1 ≈ 20.9 s
+    TAIL_CLEAR_FACTOR:  float = 2.0    # tail is "cleared" at the first upcrossing cycle whose period > FACTOR × paddle_T
+
+    # ── Misc ───────────────────────────────────────────────────────────────────
+    MAX_NAN_FRACTION: float = 0.05  # if >5% of a signal window is clipped, skip that probe/run for FFT
+    INTERP_MAX_GAP: int = 10        # fallback max interpolation gap (nowave/stillwater runs) [samples]
+                                     # Wave runs use int(fs / (4 × freq)) = 1/4 wavelength instead.
 
 CLIP = ClipParams()
 

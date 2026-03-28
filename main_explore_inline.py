@@ -1260,3 +1260,343 @@ for pos in _probes_by_dist:
 #TODO: is the wind noise centered at the same baseline in these plots?
 # TODO: does wind "increase" the baseline? does it move water backwards in the tank?
 #todo: should we remove any obvious outliers from this plot?
+
+# %% ── tail period tracking — seiche emergence after mstop ───────────────────
+# After the wavemaker stops, paddle-frequency energy dissipates and lower-
+# frequency (longer-period) seiche modes emerge.
+#
+# Physical prediction:
+#   - Phase 1 (ramp-down): ~paddle frequency, decaying amplitude
+#   - Phase 2 (free decay): still ~paddle freq, further decay each wall-bounce
+#   - Phase 3 (seiche): period grows toward tank seiche harmonics
+#       T1 = 2L/c  (L~25m, c=sqrt(g*d)=sqrt(9.81*0.580)~2.39 m/s → T1~20.9 s)
+#       T2 = T1/2 ~10.4 s,  T3 = T1/3 ~7.0 s
+#
+# Method: zero-upcrossing period tracking (per cycle, no windowing).
+#   eta_ is already zeroed to the stillwater level, so each time the signal
+#   crosses zero upward is one wave cycle boundary. The period of cycle i is
+#   simply t_upcross[i+1] - t_upcross[i]. One period estimate per wave cycle —
+#   no window, no averaging, no smearing across the very evolution we want to see.
+#
+# Start with nowind runs — clean physics, no wind-wave interference.
+# Second cell (below) overlays fullwind runs for comparison.
+
+import re as _re2
+
+# ── seiche reference constants ────────────────────────────────────────────────
+_TANK_LENGTH_M   = 25.0      # approximate tank length [m]
+_DEPTH_M         = 0.580     # water depth [m]
+_C_SHALLOW       = float(np.sqrt(9.81 * _DEPTH_M))   # ~2.39 m/s
+_T_SEICHE        = [2 * _TANK_LENGTH_M / _C_SHALLOW / n for n in (1, 2, 3)]  # [T1, T2, T3]
+
+# ── upcrossing filter bounds ──────────────────────────────────────────────────
+# Reject implausibly short or long "periods" to filter noise spikes and DC drift
+_MIN_PERIOD_S    = 0.15    # shorter than this = noise crossing, not a real wave
+_MAX_PERIOD_S    = 30.0    # longer than this = slow drift crossing, not seiche
+
+# ── helper: zero-upcrossing period series ────────────────────────────────────
+def _upcross_periods(sig, fs, min_period_s=_MIN_PERIOD_S, max_period_s=_MAX_PERIOD_S):
+    """
+    Return (t_uc, T_uc): time of each upcrossing and the period of that cycle.
+
+    sig is expected to be already zeroed (eta_ column — zero = stillwater).
+    t_uc[i]  = time [s] of the i-th zero-upcrossing
+    T_uc[i]  = t_uc[i+1] - t_uc[i]  (period of cycle starting at upcrossing i)
+
+    Crossings with T < min_period_s or T > max_period_s are excluded.
+    Returns (array, array) — both empty if fewer than 2 valid crossings.
+    """
+    sig   = np.where(np.isnan(sig), 0.0, np.asarray(sig, dtype=float))
+    cross = np.where((sig[:-1] < 0) & (sig[1:] >= 0))[0]
+    if len(cross) < 2:
+        return np.array([]), np.array([])
+    t_uc = cross / fs
+    T_uc = np.diff(t_uc)
+    valid = (T_uc >= min_period_s) & (T_uc <= max_period_s)
+    return t_uc[:-1][valid], T_uc[valid]
+
+# ── select nowind per240 runs from 20260313 (cleanest long dataset) ──────────
+_tail_meta_nw = combined_meta[
+    (combined_meta["WindCondition"] == "no") &
+    (combined_meta["path"].str.contains("20260313")) &
+    (combined_meta["WaveFrequencyInput [Hz]"].notna()) &
+    (combined_meta["run_category"] == "standard")
+].sort_values("WaveFrequencyInput [Hz]").reset_index(drop=True)
+
+print(f"Nowind tail-period runs (20260313): {len(_tail_meta_nw)}")
+print(_tail_meta_nw[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]",
+                      "PanelCondition"]].to_string())
+
+# %% ── tail period tracking — compute ────────────────────────────────────────
+# Ensure processed_dfs is loaded
+if not processed_dfs:
+    print("Loading processed_dfs (~75 MB, ~20 s)...")
+    _t0 = time.perf_counter()
+    processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+    print(f"Loaded {len(processed_dfs)} runs in {time.perf_counter() - _t0:.1f} s")
+
+# Use the IN probe — most exposed, clearest wave signal
+_in_pos  = "9373/170"
+_eta_col = f"eta_{_in_pos}"
+
+_period_tracks = []   # list of dicts, one per run
+
+for _, row in _tail_meta_nw.iterrows():
+    path = row["path"]
+    df   = processed_dfs.get(path)
+    if df is None or _eta_col not in df.columns:
+        continue
+
+    freq_hz = float(row["WaveFrequencyInput [Hz]"])
+    amp_v   = float(row["WaveAmplitudeInput [Volt]"])
+    panel   = row.get("PanelCondition", "?")
+
+    # good_end from pipeline (last clean wave sample index)
+    _end_col = f"Computed Probe {_in_pos} end"
+    good_end = row.get(_end_col)
+    if good_end is None or pd.isna(good_end):
+        m = _re2.search(r"mstop(\d+)", _Path(path).name)
+        if m:
+            good_end = max(0, len(df) - int(int(m.group(1)) * _FS))
+        else:
+            continue
+    good_end = int(good_end)
+
+    sig_full = df[_eta_col].values
+    t_full   = np.arange(len(sig_full)) / _FS
+
+    sig_tail = sig_full[good_end:]
+    t_tail   = t_full[good_end:]    # absolute time stamps of the tail
+
+    if len(sig_tail) < int(0.5 * _FS):   # need at least 0.5 s of tail
+        continue
+
+    # Per-cycle period: t of each upcrossing + T[i] = t[i+1]-t[i]
+    # t_uc is relative to tail start (sample 0 of sig_tail)
+    t_uc, T_uc = _upcross_periods(sig_tail, _FS)
+
+    _period_tracks.append({
+        "path":     path,
+        "freq_hz":  freq_hz,
+        "amp_v":    amp_v,
+        "panel":    panel,
+        "t_full":   t_full,
+        "sig_full": sig_full,
+        "good_end": good_end,
+        # t_uc offset to absolute run time for consistent x-axis with timeseries
+        "t_uc":     t_uc + t_tail[0],
+        "T_uc":     T_uc,
+        "paddle_T": 1.0 / freq_hz,
+    })
+
+print(f"Computed upcrossing period tracks for {len(_period_tracks)} runs")
+for tr in _period_tracks:
+    print(f"  {tr['freq_hz']:.2f} Hz  {int(tr['amp_v']*1000):d} mV  "
+          f"{tr['panel']:8}  {len(tr['T_uc'])} cycles in tail")
+
+# %% ── tail period tracking — plot ────────────────────────────────────────────
+# Layout: one column per run, two rows:
+#   Row 0 — full eta_ signal, good_end dashed line
+#   Row 1 — per-cycle period (semilogy scatter), one dot per wave cycle
+#            x-axis = time of upcrossing (absolute), y-axis = period of that cycle
+#
+# Reading the period plot:
+#   • Dots start near 1/freq_hz (paddle period) immediately after good_end
+#   • If seiche physics is right, dots climb toward T3~7s then T2~10s
+#   • Gaps = no zero crossings in that interval (signal below noise or decayed)
+#   • The climb should be monotonic (lower frequencies survive longer)
+
+_n_runs = len(_period_tracks)
+if _n_runs == 0:
+    print("No tracks computed — check processed_dfs is loaded and 20260313 data exists")
+else:
+    fig, axes = plt.subplots(2, _n_runs,
+                             figsize=(max(4, 3.5 * _n_runs), 7),
+                             sharey="row")
+    if _n_runs == 1:
+        axes = axes[:, np.newaxis]
+
+    _palette = plt.cm.viridis(np.linspace(0.15, 0.85, _n_runs))
+
+    for ci, tr in enumerate(_period_tracks):
+        ax_ts  = axes[0, ci]
+        ax_per = axes[1, ci]
+        col    = _palette[ci]
+
+        # ── timeseries ─────────────────────────────────────────────────────
+        ax_ts.plot(tr["t_full"], tr["sig_full"], lw=0.4, color="steelblue")
+        ax_ts.axvline(tr["t_full"][tr["good_end"]], color="red",
+                      lw=1.0, ls="--", label="good_end")
+        ax_ts.set_title(
+            f"{tr['freq_hz']:.2f} Hz  {int(tr['amp_v']*1000):d} mV  {tr['panel']}",
+            fontsize=8
+        )
+        ax_ts.set_xlabel("t [s]", fontsize=7)
+        if ci == 0:
+            ax_ts.set_ylabel("η [mm]", fontsize=8)
+        ax_ts.legend(fontsize=6, loc="upper right")
+        ax_ts.grid(True, alpha=0.3)
+
+        # ── per-cycle period track ─────────────────────────────────────────
+        if len(tr["T_uc"]) > 0:
+            ax_per.semilogy(tr["t_uc"], tr["T_uc"],
+                            "o", ms=3, color=col, alpha=0.8)
+
+        ax_per.axhline(tr["paddle_T"], color="grey", ls="--", lw=0.8,
+                       label=f"paddle T={tr['paddle_T']:.2f} s")
+        for k, Ts in enumerate(_T_SEICHE, 1):
+            ax_per.axhline(Ts, color=f"C{k+1}", ls=":", lw=0.9,
+                           label=f"seiche T{k}={Ts:.1f} s")
+
+        ax_per.axvline(tr["t_full"][tr["good_end"]], color="red", lw=0.8, ls="--")
+        ax_per.set_xlim(tr["t_full"][tr["good_end"]] - 2, tr["t_full"][-1] + 2)
+        ax_per.set_ylim(_MIN_PERIOD_S * 0.8, _MAX_PERIOD_S * 1.2)
+        ax_per.set_xlabel("t [s]", fontsize=7)
+        if ci == 0:
+            ax_per.set_ylabel("Cycle period [s]  (log)", fontsize=8)
+        ax_per.legend(fontsize=6, loc="upper left")
+        ax_per.grid(True, alpha=0.3, which="both")
+
+    fig.suptitle(
+        f"Tail period evolution — per zero-upcrossing cycle — nowind, 20260313, "
+        f"IN probe ({_in_pos})\n"
+        f"Each dot = one wave cycle.  "
+        f"Seiche T₁={_T_SEICHE[0]:.1f} s  "
+        f"(L={_TANK_LENGTH_M:.0f} m, d={_DEPTH_M*1000:.0f} mm)",
+        fontsize=9
+    )
+    plt.tight_layout()
+    plt.show()
+    # What to look for:
+    #   1. Do dots start near paddle_T and climb monotonically?
+    #   2. Do they approach T3 (~7 s) or T2 (~10 s) within the tail window?
+    #   3. Dot density = number of cycles per unit time → thins as period grows
+    #   4. Higher-amplitude runs should have more dots (more energy to decay)
+
+# %% ── tail period tracking — overlay wind vs nowind ─────────────────────────
+# Compare fullwind vs nowind: does wind clear the tank faster?
+# Use mstop90 runs from 20260307 (fullwind, 1.3 Hz) — longest available tail.
+# For nowind comparison at 1.3 Hz: use matching runs from _period_tracks.
+#
+# NOTE: 20260307 nowind runs do NOT have mstop90 — only fullwind does.
+# The 20260313 per240-mstop30 nowind runs give ~30 s of clean tail.
+
+_mstop90_meta = combined_meta[
+    (combined_meta["path"].str.contains("20260307")) &
+    (combined_meta["WaveFrequencyInput [Hz]"].notna()) &
+    (combined_meta["run_category"] == "standard")
+].sort_values("WindCondition").reset_index(drop=True)
+print(f"\nmstop90 runs (20260307): {len(_mstop90_meta)}")
+print(_mstop90_meta[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]",
+                      "WindCondition", "PanelCondition",
+                      "path"]].to_string(index=False))
+
+# %% ── wind vs nowind period track — compute and overlay ─────────────────────
+_wind_tracks = []
+
+for _, row in _mstop90_meta.iterrows():
+    path = row["path"]
+    df   = processed_dfs.get(path)
+    if df is None or _eta_col not in df.columns:
+        continue
+
+    freq_hz = float(row["WaveFrequencyInput [Hz]"])
+    wind    = row.get("WindCondition", "?")
+
+    _end_col = f"Computed Probe {_in_pos} end"
+    good_end = row.get(_end_col)
+    if good_end is None or pd.isna(good_end):
+        m = _re2.search(r"mstop(\d+)", _Path(path).name)
+        if m:
+            good_end = max(0, len(df) - int(int(m.group(1)) * _FS))
+        else:
+            continue
+    good_end = int(good_end)
+
+    sig_full = df[_eta_col].values
+    t_full   = np.arange(len(sig_full)) / _FS
+    sig_tail = sig_full[good_end:]
+    t_tail   = t_full[good_end:]
+
+    if len(sig_tail) < int(0.5 * _FS):
+        continue
+
+    t_uc, T_uc = _upcross_periods(sig_tail, _FS)
+
+    _wind_tracks.append({
+        "freq_hz":  freq_hz,
+        "wind":     wind,
+        "good_end": good_end,
+        "t_full":   t_full,
+        "sig_full": sig_full,
+        "t_uc":     t_uc + t_tail[0],
+        "T_uc":     T_uc,
+        "paddle_T": 1.0 / freq_hz,
+    })
+
+# Pull matching nowind 1.3 Hz tracks from _period_tracks
+_nw_1300 = [tr for tr in _period_tracks if abs(tr["freq_hz"] - 1.3) < 0.05]
+_all_compare = _wind_tracks + _nw_1300
+
+print(f"\nWind comparison tracks: {len(_all_compare)}")
+for tr in _all_compare:
+    wind_lbl = tr.get("wind", "no")
+    n_cyc    = len(tr["T_uc"])
+    t_span   = (tr["t_uc"][-1] - tr["t_full"][tr["good_end"]]) if n_cyc else 0
+    print(f"  {tr['freq_hz']:.2f} Hz  {wind_lbl:8}  {n_cyc} cycles  tail ~{t_span:.0f} s")
+
+# %% ── wind vs nowind — plot comparison ──────────────────────────────────────
+if _all_compare:
+    fig, (ax_ts, ax_per) = plt.subplots(2, 1, figsize=(12, 7), sharex=False)
+
+    _wind_colors = {"full": "orangered", "lowest": "goldenrod", "no": "steelblue"}
+
+    for tr in _all_compare:
+        wind_lbl = tr.get("wind", "no")
+        col      = _wind_colors.get(wind_lbl, "grey")
+        t_offset = tr["t_full"][tr["good_end"]]   # re-zero to tail start
+
+        ax_ts.plot(tr["t_full"] - t_offset, tr["sig_full"],
+                   lw=0.5, color=col, alpha=0.6,
+                   label=f"{tr['freq_hz']:.2f} Hz {wind_lbl}")
+        ax_ts.axvline(0, color=col, ls="--", lw=0.7)
+
+        if len(tr["T_uc"]) > 0:
+            ax_per.semilogy(tr["t_uc"] - t_offset, tr["T_uc"],
+                            "o", ms=3, alpha=0.75, color=col,
+                            label=f"{wind_lbl} ({len(tr['T_uc'])} cycles)")
+
+    for k, Ts in enumerate(_T_SEICHE, 1):
+        ax_per.axhline(Ts, color=f"C{k+2}", ls=":", lw=1.0,
+                       label=f"seiche T{k}={Ts:.1f} s")
+    ax_per.axhline(1.0 / 1.3, color="grey", ls="--", lw=0.8,
+                   label="paddle T (1.3 Hz)")
+
+    ax_ts.set_xlabel("t since good_end [s]", fontsize=9)
+    ax_ts.set_ylabel("η [mm]", fontsize=9)
+    ax_ts.set_title("Tail signal — wind vs no-wind (re-zeroed to good_end)", fontsize=10)
+    ax_ts.legend(fontsize=7)
+    ax_ts.grid(True, alpha=0.3)
+
+    ax_per.set_xlabel("t since good_end [s]", fontsize=9)
+    ax_per.set_ylabel("Cycle period [s]  (log)", fontsize=9)
+    ax_per.set_ylim(_MIN_PERIOD_S * 0.8, _MAX_PERIOD_S * 1.2)
+    ax_per.set_title(
+        f"Per-cycle period evolution — does wind clear the tank faster?\n"
+        f"Seiche harmonics: T₁={_T_SEICHE[0]:.1f} s, T₂={_T_SEICHE[1]:.1f} s, "
+        f"T₃={_T_SEICHE[2]:.1f} s  |  each dot = one wave cycle",
+        fontsize=10
+    )
+    ax_per.legend(fontsize=7)
+    ax_per.grid(True, alpha=0.3, which="both")
+
+    plt.tight_layout()
+    plt.show()
+    # What to look for:
+    #   • Does fullwind curve reach longer periods EARLIER → faster seiche emergence?
+    #   • Does fullwind have FEWER dots in tail → faster decay to below-noise floor?
+    #   • Do both wind conditions converge to the same seiche period eventually?
+    #   • Nowind tail is only ~30 s; fullwind is ~90 s — the extra 60 s of fullwind
+    #     data past the nowind range is the most interesting for decay characterisation.
+else:
+    print("No comparison tracks — check that 20260307 data is in PROCESSED_DIRS and processed_dfs is loaded")

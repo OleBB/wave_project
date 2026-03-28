@@ -351,6 +351,84 @@ def _detect_stuck_segments(
     return segments
 
 
+def _detect_dc_step(
+    raw_signal: np.ndarray,
+    fs: float,
+    step_mm: float = None,
+    window_s: float = None,
+) -> int | None:
+    """Detect a sudden one-way DC level shift (probe repositioning / hardware fault).
+
+    Physical motivation:
+      A probe can shift its DC output mid-run: the mean level jumps from the normal
+      operating range (~100 mm tip-to-water) to a fault level (~190 mm in observed
+      cases). The wave signal may still be superimposed on the new DC level, but
+      the stillwater reference captured in the first 2 s is no longer valid — all
+      post-step data must be discarded.
+
+      This is distinct from a spike (which the velocity filter handles): a spike
+      returns to the previous level immediately. A DC step stays at the new level
+      for the remainder of the recording.
+
+    Algorithm:
+      1. Compute a causal rolling median (window = DC_STEP_WINDOW_S, default 1 s).
+         A 1 s window covers ~0.65 wave periods at the lowest wave frequency
+         (0.65 Hz), so the median tracks the DC level rather than wave oscillations.
+         Maximum median drift from a wave alone: ~25 mm at 0.65 Hz, 0.3 V amplitude.
+      2. Compute the absolute element-wise diff of the rolling median — this peaks
+         at the midpoint of the causal window's transition through the step.
+         For a causal window of length win, the transition spans [s, s+win] where
+         s is the actual step onset. The diff peak occurs at approximately s+win//2.
+      3. Subtract win//2 from the peak index to recover the estimated step onset s.
+      4. Sanity check: compare pre-step and post-step medians. If the actual level
+         change is below DC_STEP_MM, reject (no real step — just noise or a ramp).
+
+    Returns:
+      Index of the first invalid post-step sample (= estimated step onset, clamped
+      to [0, n-1]), or None if no step is found.
+
+    Note on precision:
+      Step onset is accurate to ±(DC_STEP_WINDOW_S / 2) seconds. An additional
+      DC_STEP_BUFFER_S margin is applied by the caller, so ±0.5 s imprecision in
+      step detection is fully covered.
+    """
+    step_mm  = CLIP.DC_STEP_MM       if step_mm  is None else step_mm
+    window_s = CLIP.DC_STEP_WINDOW_S if window_s is None else window_s
+
+    win = max(int(window_s * fs), 10)
+    n   = len(raw_signal)
+
+    vals = pd.to_numeric(pd.Series(raw_signal), errors='coerce')
+    # Causal (left-sided) rolling median: at sample i, covers [i-win+1, i].
+    # min_periods=win//4 avoids NaN at the very start of the signal.
+    rolling_med = vals.rolling(window=win, center=False,
+                               min_periods=win // 4).median().to_numpy()
+
+    # Quick reject: if the total range of the rolling median is below threshold,
+    # there is definitely no step large enough to concern us.
+    valid_med = rolling_med[~np.isnan(rolling_med)]
+    if len(valid_med) < 2 or (np.nanmax(valid_med) - np.nanmin(valid_med)) < step_mm:
+        return None
+
+    # Find the sharpest transition in the rolling median.
+    # The causal window creates a ramp at the step: the diff peaks at s + win//2.
+    # Subtracting win//2 recovers the estimated onset sample s.
+    diff_abs = np.abs(np.diff(rolling_med))
+    peak_idx = int(np.nanargmax(diff_abs))
+    step_idx = max(0, peak_idx - win // 2)
+
+    # Sanity check: is the actual signal level genuinely different before vs after?
+    min_flank = max(10, win // 4)
+    if step_idx < min_flank or n - step_idx < min_flank:
+        return None  # step too close to edge — unreliable estimate
+    pre_level  = float(np.nanmedian(raw_signal[:step_idx]))
+    post_level = float(np.nanmedian(raw_signal[step_idx:]))
+    if abs(post_level - pre_level) < step_mm:
+        return None  # level difference too small — likely just a drift, not a step
+
+    return step_idx
+
+
 def _zero_and_smooth_signals(
     dfs: dict,
     meta_sel: pd.DataFrame,
@@ -362,7 +440,7 @@ def _zero_and_smooth_signals(
     """Zero signals using stillwater, clean outliers, interpolate small gaps, add moving averages.
 
     Returns (processed_dfs, clip_stats) where
-    clip_stats = {path: {pos: {"samples_clipped": int, "max_gap": int}}}
+    clip_stats = {path: {pos: {"samples_clipped": int, "max_gap": int, "step_at_s": float|None}}}
     """
     fs = MEASUREMENT.SAMPLING_RATE
     col_names = cfg.probe_col_names()
@@ -407,15 +485,52 @@ def _zero_and_smooth_signals(
                 print(f"  Missing column {probe_col} in {Path(path).name}")
                 continue
 
-            # ── Layer 0: Stuck probe detection (on raw signal before zeroing) ─
+            # ── Layer 0a: Ceiling detection (raw signal, before zeroing) ─────────
+            # Probe hardware saturates at ~198.70 mm when the tip is out of range.
+            # Three observed variants: exact freeze, near-ceiling noise, and DC
+            # shift with wave on top. All share the symptom that raw ≈ PROBE_CEILING_MM.
+            # See CLIP.PROBE_CEILING_MM / CEILING_BAND_MM in constants.py.
             raw_vals = pd.to_numeric(df[probe_col], errors='coerce').to_numpy(dtype=float).copy()
+            ceil_mask = np.abs(raw_vals - CLIP.PROBE_CEILING_MM) < CLIP.CEILING_BAND_MM
+            if ceil_mask.any():
+                n_ceil = int(ceil_mask.sum())
+                raw_vals[ceil_mask] = np.nan
+                print(f"  CEILCLIP [{Path(path).name}] {pos}: "
+                      f"{n_ceil} samples within {CLIP.CEILING_BAND_MM:.1f} mm of "
+                      f"ceiling ({CLIP.PROBE_CEILING_MM:.2f} mm) → NaN")
+
+            # ── Layer 0b: DC step detection (raw signal, before zeroing) ─────────
+            # Probe repositioning or hardware fault shifts the DC level mid-run
+            # (e.g. from ~100 mm to ~190 mm). After the step, the stillwater
+            # reference (first 2 s) is no longer valid — all post-step data is NaN.
+            # A half-window safety buffer (DC_STEP_BUFFER_S) is prepended to the
+            # NaN region to guard against the rolling-median lag underestimating
+            # how early the step actually started.
+            step_idx = _detect_dc_step(raw_vals, fs)
+            step_at_s = None
+            if step_idx is not None:
+                buf_samples = int(CLIP.DC_STEP_BUFFER_S * fs)
+                step_start  = max(0, step_idx - buf_samples)
+                raw_vals[step_start:] = np.nan
+                step_at_s = step_start / fs
+                print(f"  STEPCLIP [{Path(path).name}] {pos}: "
+                      f"DC step at ~{step_idx / fs:.1f} s "
+                      f"→ NaN from {step_at_s:.1f} s onward "
+                      f"({len(raw_vals) - step_start} samples)")
+
+            # ── Layer 0c: Stuck probe detection (raw signal, before zeroing) ──────
+            # Redundant safety net for ceiling-freeze variants (already caught by
+            # 0a) and any other flat-at-wrong-level fault. Two conditions required:
+            # rolling std < STUCK_STD_MM AND segment mean differs from run median
+            # by > level_thresh_mm, to avoid false positives in genuinely still
+            # pre-wave periods.
             stuck_segs = _detect_stuck_segments(raw_vals, fs)
             if stuck_segs:
                 stuck_mask = np.zeros(len(raw_vals), dtype=bool)
                 for s, e in stuck_segs:
                     stuck_mask[s:e + 1] = True
                 n_stuck = int(stuck_mask.sum())
-                raw_vals[stuck_mask] = np.nan   # neutralise before zeroing
+                raw_vals[stuck_mask] = np.nan
                 print(f"  STUCK [{Path(path).name}] {pos}: "
                       f"{len(stuck_segs)} segment(s), {n_stuck} samples "
                       f"({n_stuck / fs:.1f} s) → NaN")
@@ -476,6 +591,7 @@ def _zero_and_smooth_signals(
                 "samples_clipped": n_clipped_total,
                 "max_gap": max_gap_val,
                 "stuck_segments": stuck_segs if stuck_segs else [],
+                "step_at_s": step_at_s,  # None if no DC step detected; float (seconds) if detected
             }
 
             # ── eta_interp: pchip fill of small gaps (display layer) ─────────
@@ -762,17 +878,30 @@ def _write_quality_flags(
 
         affected_in_window = []
         for pos, pstats in stats.items():
-            segs = pstats.get("stuck_segments", [])
-            if not segs:
-                continue
-            idx = meta_sel.index[meta_sel["path"] == path][0]
-            meta_sel.at[idx, f"probe_{pos}_malfunction"] = True
+            segs      = pstats.get("stuck_segments", [])
+            step_at_s = pstats.get("step_at_s")      # None or float (seconds from run start)
 
-            if has_window:
-                for s, e in segs:
-                    if s <= int(good_end) and e >= int(good_start):
+            # Stuck probe segments (Layer 0c) ─────────────────────────────────
+            if segs:
+                idx = meta_sel.index[meta_sel["path"] == path][0]
+                meta_sel.at[idx, f"probe_{pos}_malfunction"] = True
+                if has_window:
+                    for s, e in segs:
+                        if s <= int(good_end) and e >= int(good_start):
+                            affected_in_window.append(pos)
+                            break
+
+            # DC step (Layer 0b) ───────────────────────────────────────────────
+            # A step means all samples from step_at_s onward are NaN. If the
+            # step occurred before the analysis window ends, the FFT will fail
+            # (or yield a severely degraded result) and the run should be flagged.
+            if step_at_s is not None:
+                idx = meta_sel.index[meta_sel["path"] == path][0]
+                meta_sel.at[idx, f"probe_{pos}_malfunction"] = True
+                if has_window:
+                    step_sample = int(step_at_s * MEASUREMENT.SAMPLING_RATE)
+                    if step_sample < int(good_end) and pos not in affected_in_window:
                         affected_in_window.append(pos)
-                        break
 
         if affected_in_window:
             idx = meta_sel.index[meta_sel["path"] == path][0]
@@ -796,6 +925,145 @@ def _write_quality_flags(
             for line in flagged_lines:
                 fh.write(line + "\n")
         print(f"  Quality flags written → {flags_file}")
+
+    return meta_sel
+
+
+def _tail_upcross_periods(
+    sig: np.ndarray, fs: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """Zero-upcrossing period series for the tail signal.
+
+    eta_ is already zeroed to the stillwater level, so zero-upcrossings of
+    eta_ define wave cycle boundaries.  Period of cycle i is simply
+        T[i] = t_upcross[i+1] − t_upcross[i]
+    One value per wave cycle — no windowing, no averaging.
+
+    Returns
+    -------
+    t_uc : 1-D array, time [s] of each upcrossing (0 = start of sig)
+    T_uc : 1-D array, period of that cycle [s]; len(T_uc) == len(t_uc).
+           The last upcrossing has no following pair and is excluded so the
+           arrays have equal length.
+
+    Crossings with T < CLIP.TAIL_PERIOD_MIN_S or T > CLIP.TAIL_PERIOD_MAX_S
+    are dropped to filter noise spikes and slow DC-drift crossings.
+    """
+    s     = np.where(np.isnan(sig), 0.0, np.asarray(sig, dtype=float))
+    cross = np.where((s[:-1] < 0) & (s[1:] >= 0))[0]
+    if len(cross) < 2:
+        return np.array([]), np.array([])
+    t_uc = cross / fs
+    T_uc = np.diff(t_uc)
+    keep = (T_uc >= CLIP.TAIL_PERIOD_MIN_S) & (T_uc <= CLIP.TAIL_PERIOD_MAX_S)
+    return t_uc[:-1][keep], T_uc[keep]
+
+
+def _compute_tail_amplitudes(
+    processed_dfs: dict,
+    meta_sel: pd.DataFrame,
+    cfg,
+) -> pd.DataFrame:
+    """Measure residual wave energy in the tail of each wave run.
+
+    After the mstop sequence the wavemaker decelerates and the tank rings down.
+    This function captures the amplitude of the signal in TAIL_WINDOW_S seconds
+    immediately AFTER the stable wave range ends (i.e., just after the last clean
+    wave period used for FFT). That amplitude is the starting residual energy that
+    the NEXT run will inherit if the inter-run wait is short.
+
+    Uses the same percentile amplitude definition as the main analysis:
+        amp = (P97.5 − P2.5) / 2
+
+    Stores `mstop_tail_mm_{pos}` per probe row in meta_sel.
+    NaN for nowave/stillwater runs (no wave range → no tail defined).
+
+    Physical note:
+        The free long-wave (piston transient) arrives at each probe well before
+        the tail window starts, so it does not contaminate this measurement.
+        Wind-wave energy will appear here for fullwind runs — the percentile
+        amplitude includes all frequencies, not just the paddle frequency.
+        Compare `mstop_tail_mm` across wind conditions with this in mind.
+    """
+    fs        = MEASUREMENT.SAMPLING_RATE
+    tail_n    = int(CLIP.TAIL_WINDOW_S * fs)
+    col_names = cfg.probe_col_names()
+    in_pos    = col_names[cfg.in_probe]
+    end_col   = f"Computed Probe {in_pos} end"
+
+    for idx, row in meta_sel.iterrows():
+        path     = row["path"]
+        good_end = row.get(end_col)
+        if path not in processed_dfs or good_end is None or pd.isna(good_end):
+            continue  # nowave run or wave range not found — skip
+
+        good_end  = int(good_end)
+        df        = processed_dfs[path]
+        n_signal  = len(df)
+
+        # Paddle period for this run (used to define "cleared" threshold)
+        freq_hz    = row.get("WaveFrequencyInput [Hz]")
+        paddle_T   = (1.0 / float(freq_hz)) if freq_hz and not pd.isna(freq_hz) else None
+
+        for pos in col_names.values():
+            eta_col = f"eta_{pos}"
+            if eta_col not in df.columns:
+                continue
+
+            sig_full = df[eta_col].values  # full run signal
+
+            # ── mstop_tail_mm: amplitude in first TAIL_WINDOW_S of tail ──────
+            tail_start = good_end
+            tail_end   = min(n_signal, good_end + tail_n)
+            if tail_end > tail_start:
+                seg = sig_full[tail_start:tail_end]
+                seg = seg[~np.isnan(seg)]
+                meta_sel.at[idx, f"mstop_tail_mm_{pos}"] = float(
+                    (np.percentile(seg, 97.5) - np.percentile(seg, 2.5)) / 2.0
+                ) if len(seg) >= 10 else np.nan
+            else:
+                meta_sel.at[idx, f"mstop_tail_mm_{pos}"] = np.nan
+
+            # ── tail period diagnostics (zero-upcrossing, per cycle) ─────────
+            # Compute the per-cycle period series for the entire tail, then
+            # read off the period at each configured sample offset (nearest
+            # upcrossing to that time).  No windowing — every dot is one cycle.
+            tail_all = sig_full[good_end:]
+            t_uc, T_uc = _tail_upcross_periods(tail_all, fs)
+
+            if len(t_uc) == 0:
+                # No valid crossings — tail too short or below noise
+                for t_s in CLIP.TAIL_PERIOD_SAMPLE_OFFSETS_S:
+                    meta_sel.at[idx, f"tail_uc_period_at_{t_s:.0f}s_{pos}"] = np.nan
+                meta_sel.at[idx, f"tail_clear_s_{pos}"] = np.nan
+                continue
+
+            for t_s in CLIP.TAIL_PERIOD_SAMPLE_OFFSETS_S:
+                # Find the upcrossing nearest to t_s seconds into the tail
+                diffs = np.abs(t_uc - t_s)
+                nearest = int(np.argmin(diffs))
+                # Only accept if the nearest upcrossing is within half a paddle
+                # period of the requested time (avoids reading a crossing from
+                # the wrong part of the tail when the tail is short)
+                if paddle_T is not None and diffs[nearest] > 0.5 * paddle_T:
+                    meta_sel.at[idx, f"tail_uc_period_at_{t_s:.0f}s_{pos}"] = np.nan
+                elif diffs[nearest] > 5.0:   # fallback: >5 s away → skip
+                    meta_sel.at[idx, f"tail_uc_period_at_{t_s:.0f}s_{pos}"] = np.nan
+                else:
+                    meta_sel.at[idx, f"tail_uc_period_at_{t_s:.0f}s_{pos}"] = float(T_uc[nearest])
+
+            # tail_clear_s: time of the first upcrossing cycle whose period
+            # exceeds TAIL_CLEAR_FACTOR × paddle_T.  Indicates when the
+            # paddle-frequency energy has dissipated (longer period = seiche).
+            if paddle_T is None:
+                meta_sel.at[idx, f"tail_clear_s_{pos}"] = np.nan
+                continue
+
+            clear_threshold = CLIP.TAIL_CLEAR_FACTOR * paddle_T
+            cleared = np.where(T_uc > clear_threshold)[0]
+            meta_sel.at[idx, f"tail_clear_s_{pos}"] = (
+                float(t_uc[cleared[0]]) if cleared.size > 0 else np.nan
+            )
 
     return meta_sel
 
@@ -840,11 +1108,15 @@ def process_selected_data(
         mask = meta_sel["path"] == path
         for pos, stats in probe_stats.items():
             meta_sel.loc[mask, f"samples_clipped_{pos}"] = stats["samples_clipped"]
-            meta_sel.loc[mask, f"max_gap_{pos}"] = stats["max_gap"]
+            meta_sel.loc[mask, f"max_gap_{pos}"]         = stats["max_gap"]
+            # NaN means no step detected (normal run); a float value = step onset in seconds
+            meta_sel.loc[mask, f"step_at_s_{pos}"] = stats.get("step_at_s", None)
 
     # 3. Optional: find wave ranges
     if find_range:
         meta_sel = run_find_wave_ranges(processed_dfs, meta_sel, cfg, win, range_plot, debug)
+        # 3a. Tail amplitudes — residual energy after the wave train, per probe
+        meta_sel = _compute_tail_amplitudes(processed_dfs, meta_sel, cfg)
 
     # 3b. Quality flags: probe malfunction vs stable analysis window
     _flags_file = Path(__file__).parents[1] / "waveprocessed" / "quality_flags.txt"

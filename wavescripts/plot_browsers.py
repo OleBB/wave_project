@@ -379,11 +379,25 @@ class SignalBrowserFiltered(QMainWindow):
                 ws_str = f"setup={sw_ws:+.2f}mm"
             except (TypeError, ValueError):
                 ws_str = "setup=—"
+            # ── tail diagnostics (seiche emergence) ──────────────────────
+            tail_a   = meta_row.get(f"mstop_tail_mm_{pos}", float("nan"))
+            tail_p5  = meta_row.get(f"tail_uc_period_at_5s_{pos}",  float("nan"))
+            tail_p15 = meta_row.get(f"tail_uc_period_at_15s_{pos}", float("nan"))
+            tail_p25 = meta_row.get(f"tail_uc_period_at_25s_{pos}", float("nan"))
+            tail_clr = meta_row.get(f"tail_clear_s_{pos}",    float("nan"))
+            tail_str = (
+                f"tail: A₀={_fmt(tail_a,'mm')}  "
+                f"T@5s={_fmt(tail_p5,'s')}  "
+                f"T@15s={_fmt(tail_p15,'s')}  "
+                f"T@25s={_fmt(tail_p25,'s')}  "
+                f"clear={_fmt(tail_clr,'s')}"
+            )
             lines.append(
                 f"{pos:12s}  ka={_fmt(ka)}  T={_fmt(per,'s')}  "
                 f"λ={_fmt(wl,'m')}  A(FFT)={_fmt(af,'mm')}  A(TD)={_fmt(at,'mm')}  "
                 f"{d_str}  {ws_str}"
             )
+            lines.append(f"{'':12s}  {tail_str}")
         self.info_label.setText("\n".join(lines) if lines else "—")
         show_true_eta    = self.true_eta_check.isChecked()
         show_repaired    = self.repaired_eta_check.isChecked()

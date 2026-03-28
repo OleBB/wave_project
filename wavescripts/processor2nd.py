@@ -5,9 +5,11 @@ Created on Fri Dec 19 10:37:28 2025
 
 @author: ole
 """
+import os
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from pathlib import Path
 
 from wavescripts.improved_data_loader import update_processed_metadata, get_configuration_for_date
 from typing import Mapping, Any, Optional, Sequence, Dict, Tuple, Iterable
@@ -228,6 +230,73 @@ def compute_amplitude_by_band(
 #     return meta_indexed.reset_index()
 
 
+def compute_inter_run_timing(meta_df: pd.DataFrame) -> pd.DataFrame:
+    """Compute inter-run gaps and preceding-run context within each experiment folder.
+
+    Within a single experiment folder (same parent directory), runs are sorted by
+    file modification time — which is when LabVIEW finished writing each CSV. The
+    gap between consecutive runs is the time the tank had to settle between recordings.
+
+    Why mtime (not filename timestamp)?
+      Filename dates are date-level (YYYYMMDD), not time-level. mtime gives second-
+      level resolution of the actual recording order. For runs on the same day this
+      is the only reliable ordering signal.
+
+    Adds these columns:
+      run_mtime          [float]  Unix timestamp of the file's mtime
+      inter_run_gap_s    [float]  Seconds since the preceding run in the same folder.
+                                  NaN for the first run of the day.
+      prev_run_category  [str]    run_category of the preceding run ("" = first run).
+                                  Useful for understanding what the tank was doing just
+                                  before this run. E.g. prev_run_category="wind_decay"
+                                  means the preceding run was a fan-off decay recording.
+      prev_run_wind      [str]    WindCondition of the preceding run ("" = first run).
+                                  Tells you whether the tank had wind before this run.
+
+    Practical use — stillwater recovery:
+      A run immediately after a wave run (gap < 2 min at 1.3 Hz fullwind) carries
+      residual wave energy at the IN probe. Combine inter_run_gap_s with the
+      mstop_tail_mm_{pos} columns (last 5 s amplitude of the preceding run) and
+      the empirical decay constants to estimate the residual fraction at t=0 of
+      this run.
+
+    Note: NON_FLOAT_COLUMNS in improved_data_loader.py lists prev_run_category and
+    prev_run_wind as str so apply_dtypes does not coerce them to NaN.
+    """
+    meta_df = meta_df.copy()
+
+    # Read mtime for each file; fall back to NaN if path is missing or inaccessible
+    def _safe_mtime(path: str) -> float:
+        try:
+            return float(os.path.getmtime(path))
+        except (OSError, TypeError, ValueError):
+            return float("nan")
+
+    meta_df["run_mtime"] = meta_df["path"].apply(_safe_mtime)
+
+    # Process each folder independently
+    meta_df["_folder"] = meta_df["path"].apply(lambda p: str(Path(p).parent))
+
+    for folder, grp in meta_df.groupby("_folder"):
+        sorted_idx = grp.sort_values("run_mtime").index
+        prev_row = None
+        for i, idx in enumerate(sorted_idx):
+            if prev_row is None:
+                meta_df.at[idx, "inter_run_gap_s"]   = float("nan")
+                meta_df.at[idx, "prev_run_category"] = ""
+                meta_df.at[idx, "prev_run_wind"]     = ""
+            else:
+                meta_df.at[idx, "inter_run_gap_s"]   = (
+                    float(meta_df.at[idx, "run_mtime"]) - float(meta_df.at[prev_row, "run_mtime"])
+                )
+                meta_df.at[idx, "prev_run_category"] = str(meta_df.at[prev_row, "run_category"] or "")
+                meta_df.at[idx, "prev_run_wind"]     = str(meta_df.at[prev_row, "WindCondition"] or "")
+            prev_row = idx
+
+    meta_df = meta_df.drop(columns=["_folder"])
+    return meta_df
+
+
 def _update_more_metrics(
     psd_dict: dict,
     fft_dict: dict,
@@ -387,6 +456,9 @@ def process_processed_data(
         print("kjører process_processed_data fra processsor2nd.py")
 
     meta_sel = _update_more_metrics(psd_dict, fft_dict, meta_sel)
+
+    # Inter-run timing: gap to previous run, preceding-run context
+    meta_sel = compute_inter_run_timing(meta_sel)
 
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)
     """VIKTIG - denne oppdaterer .JSON-filen"""

@@ -41,20 +41,38 @@ NON_FLOAT_COLUMNS = {
     "out_position": str,   # e.g. "12400/170" — must stay as string
     "in_probe": "Int64",   # probe index 1–4, nullable integer
     "out_probe": "Int64",
-    "run_category": str,   # "standard" | "nowave_control" | "diagnostic"
+    "run_category": str,        # "standard" | "nowave_control" | "diagnostic" | "wind_decay" | "partial" | "experimental"
+    "prev_run_category": str,   # run_category of the preceding run in the same folder ("" = first run)
+    "prev_run_wind": str,       # WindCondition of the preceding run ("" = first run)
 }
 
 # ── Run category classification ───────────────────────────────────────────────
 # Keywords matched against the full file path (case-insensitive).
 # First matching category wins; "standard" is the fallback.
 _CATEGORY_KEYWORDS: Dict[str, List[str]] = {
+    # Runs that do not contain usable wave data and exist purely as reference measurements.
     "diagnostic": [
-        "nestenstille",
-        "frommax",       # e.g. FromMaxWinToNoWin
-        # "midday",
-        # "startofday",
-        # "endofday",
+        "nestenstille",    # "almost still" — tank not fully settled, intentional outlier
     ],
+    # Wind transition characterisation: fan brought from full→zero (or similar).
+    # No paddle wave; the recording captures how quickly wind-induced surface roughness
+    # decays after the fan is switched off. Used to build empirical decay constants.
+    "wind_decay": [
+        "frommax",         # covers FromMaxToZeroWin, FromMaxToNoWin, FromMaxWinToZeroWin …
+    ],
+    # Probe hardware fault mid-run. The first portion of the recording (before the step)
+    # may still be valid; see step_at_s_{pos} in combined_meta for the fault onset.
+    "partial": [
+        "p2malfunction",
+        "butfirstpartcanbeused",
+    ],
+    # Non-standard run: unusual amplitude/frequency sequence, wavemaker stopped and
+    # restarted, wind transition during wave recording, etc. Needs manual inspection
+    # before including in analysis.
+    "experimental": [
+        "experimental",
+    ],
+    # Runs with no paddle wave — stillwater, wind-only, ULSonly calibration, etc.
     "nowave_control": [
         "nowave",
         "ulsonly",
@@ -66,7 +84,16 @@ _CATEGORY_KEYWORDS: Dict[str, List[str]] = {
 
 
 def _assign_run_category(path: str) -> str:
-    """Return 'diagnostic', 'nowave_control', or 'standard' based on filename keywords."""
+    """Return run category based on filename keywords; 'standard' is the fallback.
+
+    Category priority (first match wins):
+      diagnostic      → nestenstille (not-quite-still reference, intentional outlier)
+      wind_decay      → frommax* (fan run-down, no paddle wave)
+      partial         → p2malfunction / butfirstpartcanbeused (probe fault mid-run)
+      experimental    → experimental (non-standard run, needs manual review)
+      nowave_control  → nowave / stillwater / ulsonly / nopaddle
+      standard        → everything else (normal wave run)
+    """
     lower = Path(path).name.lower()   # filename only — folder names must not bleed in
     for category, keywords in _CATEGORY_KEYWORDS.items():
         if any(kw in lower for kw in keywords):
@@ -129,10 +156,15 @@ def _sort_meta_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_dtypes(meta_df: pd.DataFrame) -> pd.DataFrame:
-    """Everything is float64 except NON_FLOAT_COLUMNS. Also assigns run_category."""
+    """Everything is float64 except NON_FLOAT_COLUMNS. Also assigns run_category and recording_truncated."""
     meta_df = meta_df.copy()
     if "path" in meta_df.columns:
         meta_df["run_category"] = meta_df["path"].apply(_assign_run_category)
+        # recording_truncated = True when the LabVIEW logger stopped early (shortened but valid data).
+        # The keyword "withlabviewerror" in the filename marks these runs.
+        meta_df["recording_truncated"] = meta_df["path"].apply(
+            lambda p: 1.0 if "withlabviewerror" in Path(p).name.lower() else 0.0
+        )
     for col in meta_df.columns:
         if col in NON_FLOAT_COLUMNS:
             meta_df[col] = meta_df[col].astype(NON_FLOAT_COLUMNS[col])
@@ -1040,6 +1072,10 @@ def _load_csv_files(
         try:
             suffix = path.suffix.lower()
             if suffix == ".csv":
+                size_mb = path.stat().st_size / 1_048_576
+                if size_mb > 500:
+                    print(f"   SKIP {path.name}: {size_mb:.0f} MB exceeds 500 MB safety limit")
+                    continue
                 df = pd.read_csv(path, engine="pyarrow", names=col_names)
 
                 for col in probe_col_names:

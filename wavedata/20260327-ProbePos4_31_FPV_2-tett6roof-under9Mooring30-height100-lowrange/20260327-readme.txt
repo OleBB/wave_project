@@ -1,0 +1,103 @@
+nå med under9mooring30 så er strikken lengre (før var den 23, nå er den 30, i slapp utstrukket tillstand. 
+
+panelrekka er i underkant av 2.6meter i slapp utstrekning.
+
+lettest å kjøre serier på amp01-03 med freq13-16.
+
+rykkingen i panelene ser vi skaper bølger som brer seg lateralt fra veggen mot midten av tanken. 
+tok bilde!
+
+panelene legger seg litt skrått oppå hverandre. 
+
+probe 1 klarte ikke dalene på amp0300-freq1600. gjorde et nytt forsøk rett etterpå. samme problem. Kjørte en tredje, rett etter den. Da gikk det ålreit. og en fjerde!
+
+Så en baseline amp0100-freq1300, rett etter på! den må flagges som en "rett-etterpå-run" og behandles med varsomhet. 
+
+okei, kjørte noen runs med referanse amp01-freq13. og per240. kjørte også en mstop330 på slutten . tampen på den kan brukes til å finne vannstand. 
+
+så skrudde jeg på vind, med måling fra ZeroTilMaxWin.
+trykksensoren stod på 1.0 ved nullvind, og nå er den på 19-20. tyder på noe lavere vindhastighet. kan være probenes plassering..?
+
+starter med første amp01-freq13-per40-mstop30. 
+jobber oppover som i stad. 
+
+mooringen ser ut til å ikke gjøre så mye forskjell. 
+
+jeg kan sammenlikne stilltilstand/spekter på starten av alle kjøringer, ha det som en egen kolonne. første 1 og 2 sekundene
+
+slik kan jeg finne ut om mine utålmodige hurtige kjøringer med full vind har så mye å si. 
+gjelder vel også å se på den bakre proben. 
+
+men det koster ikke såå mye å vente 1 min ekstra. hvis det gjør det lettere å unngå dårlig data...
+
+nå etter amp0200-freq1300 så synes jeg det pulserer i bakkant. 
+
+ser jo ut som jeg bør vente i hvertfall 30 sek etter lagring. 
+
+men jeg må kvantifisere skikelig. så, da er forslaget: sjekke alle 0til1 og 0til2 første sekundene på alle runs og sammenlikne med gjerne tampen av alle fullwind-nowave run. Også sjekke en fullwindrun om hvor mange sekunder jeg trenger for å kunne finne vindspekteret. 
+
+ekstra notis. husk dette med lowrange. står jo i mappenavnet. 
+
+så. liste:
+1. finne ut hvor mange sekunder jeg trenger av en fullwind-run for å finne spekteret, med 95-97? statistisk treffsikkerhet. 
+1.b sammenlikne med ekte vindspekter- skalert. 
+1.c skalere ting! lag nytt pkt. virkeligheten. 
+2. ta x-funnete sekunder fra pkt 1 og se om det har noe å si hvor tett oppi forrige kjøring jeg var. 
+
+
+hey! fremre paneler gravde seg godt ned under amp03-freq1400. og så fløt den nestn helt til topps. Nå erre bare fremste panel som bukker under. 
+
+VIKTIG Å NEVNE. Jeg strammet inn vestre strikk (lengst vekk fra PCen). 
+
+igår lkjørte jeg noen 02 lange frekevenser. de må jeg kjøre med vind i dag. 
+
+på fullwind-amp0200-freq1100 så jeg vel 15 cm total inskrump-utstrekning.
+
+på neste, nedover i frekvenser så jeg under 15cm innskrump . På f09 så ble det kanskje bare 11cm.
+I front var det maks 1 cm sidelengs, men må måle vertikalen. 
+
+på fullwind-amp0200-freq0800-per40 ser det ut som den dykket til 6 cm under, og ender opp stabilt på -2.5. (forrerste fronten på fremste panelet altså).
+
+Ferdig med hovedseriene. Lot amp02-gå ned til freq0800. 
+
+spm! hva er den maksimale sammentrekningen jeg klarer å finne! lets go. 
+
+Foreløpig rekord: amp0200-freq1000.
+Prøver: amp0300-freq1600. wow! 18 cm!! se video. 
+hva med en crazy på 1700 - faktisk mindre (se video). Fronten gikk ned til 6 cm under. 
+
+freq1500 ga 21cm innskrump!! og freq1400 ga komfortable 22cm minst. Freq1300 ga 27! målt skikkelig. 
+
+
+referansebølgen på amp0100-freq1300 flytta bare et par cm. ikke nøye målt. Kjørte med mstop330 for å få se fade ut og få med vannstand. 
+
+mulig fikk en avlesnings-error fra labview (pga save to fil??)
+
+så den siste experimental skulle vært mange flere Kb??
+eller ble den delt i to??? se tullenavnet. 
+
+pumpa ble skrudd av kl 13, og nå på igjen kl 15.18. Den er allerede på 130 bar. Slangen kunne vært litt varmere, men ellers er dette å regne som klar pumpe. 
+
+hva skal jeg kjøre nå. Ny moring. kan kjøre mer av de fra i stad. det er jo de viktigste. fra 1.3-1.6hz. amp03-freq1.6 er i grenseland for dropouts. 
+
+Kan kjøre noen lengre sett. 240 per. 
+
+satte på LED på undersiden. lyser opp gjennom sprekkene! 
+
+kjørte nå en serie på amp01-freq13til16. Så amp02. der siste på 17 ble satt i sving for tidlig (med vilje) dette må merkes av koden, og flagges eller sjekkes. den har altså en potensielt ugyldig stilltilstand.
+
+trikeset  må jo være å sjekke siste tilstand etter forrige bølge. regne på tiden og finne ut hvor mye lenger jeg burde ventet. 
+
+ettter den litt useriøse amp02-freq17 (et par dropouts), kjørte jeg den mer useriøse amp03-freq17. den fikk masse dropouts. 
+
+nå på amp03-freq1600-per240 nå er det dropouts på 3'ern. Ser ut som vi fikk opptil 20 i strekk, men den strekkes ikke like mye ut bak som når vinden er på. Så, la oss si: stillposisjon etter denne: 11 fra stolpen. (målt med isoporplate inntil stolpen. 
+
+kjører to nowave nå. 
+
+Kjører experimental-fromZeroToMaxWin.
+
+ser på utstrekning. se bilde. vinden strekker slapp panelrekke ut hele 6cm. 
+
+kjører en amp01-freq1300-per240-mstop330. brukes til å se på vindfeltet etterpå.
+
+
