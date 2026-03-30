@@ -109,9 +109,9 @@ class RampDetectionParams:
     # High-freq runs (≥ HIGH_FREQ_TRIM_HZ) need more trimming: ramp transition is
     # slower and mstop/swell tail is longer.
     TRIM_START_PERIODS_DEFAULT: int = 1
-    TRIM_START_PERIODS_HIGH_FREQ: int = 3
+    TRIM_START_PERIODS_HIGH_FREQ: int = 1   # was 3 — eyeballed too late; start 2 periods earlier
     TRIM_END_PERIODS_DEFAULT: int = 1
-    TRIM_END_PERIODS_HIGH_FREQ: int = 4
+    TRIM_END_PERIODS_HIGH_FREQ: int = 9     # was 4 — ramp-down at 1.7 Hz grabbed too much end
     HIGH_FREQ_TRIM_HZ: float = 1.6
 
 RAMP = RampDetectionParams()
@@ -192,12 +192,12 @@ MOORING_PARAMS: Dict[str, Dict[str, object]] = {
         "loose_length_mm": None,   # TODO: find in lab notes
         "notes":           "Low mooring from Nov 2025",
     },
-    "below_90_loose23": {
+    "below_90_loose230": {
         "depth_mm":        -90,    # 90 mm below water (mmuv), moved under 2026-03-16
         "loose_length_mm": 230,    # 230 mm rubberband loose length
         "notes":           "Under-water mooring, short rubber band",
     },
-    "below_90_loose30": {
+    "below_90_loose300": {
         "depth_mm":        -90,    # same depth as above
         "loose_length_mm": 300,    # 300 mm rubberband loose length
         "notes":           "Under-water mooring, longer rubber band (from 2026-03-27)",

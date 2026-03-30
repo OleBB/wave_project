@@ -557,13 +557,17 @@ def _zero_and_smooth_signals(
                 _h = float(_probe_h)
                 _eta_floor   = -(_range_limits["max_mm"] - _h)
                 _eta_ceiling =   _h - _range_limits["min_mm"]
-                if _eta_floor < 0 and _eta_ceiling > 0:
-                    _range_mask = (df[eta_col] < _eta_floor) | (df[eta_col] > _eta_ceiling)
-                    if _range_mask.any():
-                        df.loc[_range_mask, eta_col] = np.nan
+                # Floor clip only — ceiling clip deliberately omitted.
+                # The high-range mode's stated min_mm (130 mm) is a nominal
+                # accuracy limit, not a hard cutoff. Applying it as a ceiling
+                # (e.g. +6 mm at height136) would clip real wave crests.
+                if _eta_floor < 0:
+                    _floor_mask = df[eta_col] < _eta_floor
+                    if _floor_mask.any():
+                        df.loc[_floor_mask, eta_col] = np.nan
                         print(f"  RANGECLIP [{Path(path).name}] {pos}: "
-                              f"{int(_range_mask.sum())} samples outside "
-                              f"[{_eta_floor:.0f}, +{_eta_ceiling:.0f}] mm → NaN")
+                              f"{int(_floor_mask.sum())} samples below "
+                              f"floor {_eta_floor:.0f} mm → NaN")
 
             # ── Layer 1: Hard cap (wave/wind runs only; stillwater uses detection layers) ─
             if clip_mm is not None:

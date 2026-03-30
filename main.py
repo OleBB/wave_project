@@ -128,7 +128,7 @@ processvariables = {
         "WavePeriodInput": None,
         "WindCondition": None,
         "TunnelCondition": None,
-        "Mooring": None,  # was "low" — now "above_50" / "above_200" / "below_90_loose23" / "below_90_loose30"
+        "Mooring": None,  # was "low" — now "above_50" / "above_200" / "below_90_loose230" / "below_90_loose300"
         "PanelCondition": None,
     },
     "prosessering": {

@@ -1401,17 +1401,32 @@ def gather_ramp_data(
             base_region = signal[:n_base] if n_base > 10 else signal[:50]
             base_std = np.std(base_region) if len(base_region) > 0 else 1.0
             threshold = sigma_factor * base_std
-            exceeded = np.where(np.abs(signal) > threshold)[0]
+
+            # Find first SUSTAINED motion using rolling RMS over half a wave period.
+            # A single sample exceeding threshold is almost always probe oscillation
+            # or electrical noise — not the wave front. Requiring a half-period window
+            # of elevated RMS filters these out while still detecting the true wave
+            # arrival within ~half a period of accuracy.
+            freq_row = meta_row.get(GC.WAVE_FREQUENCY_INPUT, np.nan)
+            if pd.notna(freq_row) and float(freq_row) > 0:
+                _half_period = max(int(MEASUREMENT.SAMPLING_RATE / (2.0 * float(freq_row))), 10)
+            else:
+                _half_period = 50  # fallback: ~0.2 s
+            _sig_filled = np.where(np.isnan(signal), 0.0, signal)
+            _rms_kernel = np.ones(_half_period) / _half_period
+            _rolling_rms = np.sqrt(np.convolve(_sig_filled ** 2, _rms_kernel, mode="same"))
+            exceeded = np.where(_rolling_rms > threshold)[0]
             first_motion = int(exceeded[0]) if len(exceeded) > 0 else good_start
 
             _sw = meta_row.get(PC.STILLWATER.format(i=pos), np.nan)
             if pd.notna(_sw):
                 baseline_mean_val = float(_sw)
-            elif len(base_region) > 0 and not np.all(np.isnan(base_region)):
-                baseline_mean_val = float(np.nanmean(base_region))
             else:
-                # eta is all-NaN (stale cache with NaN stillwater) — use raw median
-                baseline_mean_val = float(np.nanmedian(raw))
+                # Stillwater column missing or NaN — derive from raw pre-wave window.
+                # Must use raw (probe distance units), NOT eta_ (already zeroed → ~0),
+                # because raw_display = -(raw - baseline_mean) needs raw units here.
+                raw_base = raw[:n_base] if n_base > 10 else raw[:50]
+                baseline_mean_val = float(np.nanmedian(raw_base)) if len(raw_base) > 0 else float(np.nanmedian(raw))
 
             # Stillwater references from pre-computed regression curves (time-aware)
             file_date   = meta_row.get(GC.FILE_DATE, "")
@@ -1438,6 +1453,10 @@ def gather_ramp_data(
                 df["Date"] - t0
             ).dt.total_seconds().to_numpy() * MEASUREMENT.M_TO_MM
 
+            import re as _re
+            _mstop_m = _re.search(r"mstop(\d+)", Path(path).name)
+            _mstop_s = int(_mstop_m.group(1)) if _mstop_m else None
+
             def _get(col):
                 v = meta_row.get(col, np.nan)
                 return float(v) if v is not None and not pd.isna(v) else np.nan
@@ -1462,6 +1481,11 @@ def gather_ramp_data(
                     "sw_fullwind_ref": sw_fullwind_ref,
                     "sw_wind_setup":   sw_wind_setup,
                     "sw_delta":        sw_delta,
+                    # Inter-run timing — for settle-time display in browser
+                    "inter_run_gap_s":   _get("inter_run_gap_s"),
+                    "prev_run_category": str(meta_row.get("prev_run_category") or ""),
+                    "prev_run_wind":     str(meta_row.get("prev_run_wind") or ""),
+                    "mstop_s":           _mstop_s,
                     "time_ms": time_ms,
                     "raw": raw,
                     "signal": signal,

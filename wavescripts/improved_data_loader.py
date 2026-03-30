@@ -398,7 +398,7 @@ class MooringConfiguration:
     name: str
     valid_from: datetime
     valid_until: Optional[datetime]
-    mooring_type: str  # e.g. "above_50", "below_90_loose23"
+    mooring_type: str  # e.g. "above_50", "below_90_loose230"
     notes: str = ""
 
 
@@ -413,7 +413,7 @@ MOORING_CONFIGS = [
     MooringConfiguration(
         name="low_mooring",
         valid_from=datetime(2025, 11, 6),
-        valid_until=None,
+        valid_until=datetime(2026, 3, 17),  # mooring moved below water surface ~13:00 on 16 March
         mooring_type="above_50",
         notes="Switched to low mooring on Nov 6 - høyde omtrent = 50 millimeter over vannet (mmov) ",
     ),
@@ -421,10 +421,10 @@ MOORING_CONFIGS = [
         name="below_9_mooring",
         valid_from=datetime(2026, 3, 17),   # folder keyword "under9Mooring" is primary signal;
         valid_until=None,                    # this date-based entry is fallback for future runs
-        mooring_type="below_90_loose23",
+        mooring_type="below_90_loose230",
         notes="Flytta mooring under vann 16 mars ~13:00 — høyde omtrent = 90 mm under vannet (mmuv). Gummibånd løslengde 230 mm.",
     ),
-    # below_90_loose30: same depth (90 mm under), but 300 mm loose rubberband.
+    # below_90_loose300: same depth (90 mm under), but 300 mm loose rubberband.
     # Detected only via folder keyword "under9Mooring30" — no date-based fallback
     # because we don't know yet when/if this becomes the permanent setup.
 ]
@@ -488,15 +488,17 @@ def extract_metadata_from_filename(
             for probe_num in range(1, 5):
                 metadata[f"Probe {probe_num} mm from paddle"] = None
 
-        # Mooring type: folder keyword takes priority (handles same-day changes);
-        # fall back to date-based config when no keyword is present.
-        if not _extract_mooring_condition(metadata, filename):
+        # Mooring type: folder keyword takes priority (handles same-day changes).
+        # Use the full file path so that folder-level keywords (e.g. "under9Mooring"
+        # in the experiment folder name) are detected — individual CSV filenames
+        # do not carry this keyword.
+        if not _extract_mooring_condition(metadata, str(file_path)):
             metadata["Mooring"] = get_mooring_type(file_date)
     else:
         # No date available - set to None
         for probe_num in range(1, 5):
             metadata[f"Probe {probe_num} mm from paddle"] = None
-        if not _extract_mooring_condition(metadata, filename):
+        if not _extract_mooring_condition(metadata, str(file_path)):
             metadata["Mooring"] = "unknown"
 
     return metadata
@@ -622,10 +624,10 @@ def _extract_mooring_condition(metadata: dict, filename: str) -> bool:
     under9Mooring pattern (230 mm loose band), as the latter regex also matches.
     """
     if re.search(r"[Uu]nder\d+[Mm]ooring30", filename):
-        metadata["Mooring"] = "below_90_loose30"
+        metadata["Mooring"] = "below_90_loose300"
         return True
     if re.search(r"[Uu]nder\d+[Mm]ooring", filename):
-        metadata["Mooring"] = "below_90_loose23"
+        metadata["Mooring"] = "below_90_loose230"
         return True
     if re.search(r"[Ll]ow[Mm]ooring", filename):
         metadata["Mooring"] = "above_50"

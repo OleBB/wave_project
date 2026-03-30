@@ -97,23 +97,6 @@ combined_meta, processed_dfs, combined_fft_dict, combined_psd_dict = load_analys
     *PROCESSED_DIRS, load_processed=False
 )
 # %%
-# Patch Mooring column from path — cached meta.json has old "below_90" string
-# before --force-recompute is run. Remove this cell once force-recompute is done.
-import re as _re
-
-def _mooring_from_path(path_str: str) -> str:
-    if _re.search(r"[Uu]nder\d+[Mm]ooring30", path_str):
-        return "below_90_loose30"
-    if _re.search(r"[Uu]nder\d+[Mm]ooring", path_str):
-        return "below_90_loose23"
-    if _re.search(r"[Ll]ow[Mm]ooring", path_str):
-        return "above_50"
-    if _re.search(r"[Hh]igh[Mm]ooring", path_str):
-        return "above_200"
-    return "unknown"
-
-combined_meta["Mooring"] = combined_meta["path"].apply(_mooring_from_path)
-# %%
 processed_dfs: dict = {}  # loaded lazily below (wind-only section)
 
 # Paths present in both metadata and FFT dict

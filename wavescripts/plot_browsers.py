@@ -591,13 +591,31 @@ class RampDetectionBrowser(QMainWindow):
             ws_str = f"wind setup = {float(sw_ws):+.2f} mm (probe units)" if pd.notna(sw_ws) else "wind setup = —"
         except (TypeError, ValueError):
             ws_str = "wind setup = —"
+        # Inter-run gap: time since previous recording ended, and estimate of
+        # settle time since the previous wavemaker stopped.
+        gap_s    = row.get("inter_run_gap_s")
+        mstop_s  = row.get("mstop_s")
+        prev_cat = row.get("prev_run_category", "")
+        prev_wnd = row.get("prev_run_wind", "")
+        if pd.notna(gap_s) and gap_s > 0:
+            gm, gs = divmod(int(gap_s), 60)
+            gap_str = f"{gm}m {gs:02d}s (file→file)"
+            if mstop_s is not None:
+                settle = gap_s - mstop_s
+                sm, ss = divmod(max(0, int(settle)), 60)
+                gap_str += f"  ~{sm}m {ss:02d}s settle (−mstop{mstop_s}s)"
+            if prev_cat or prev_wnd:
+                gap_str += f"  prev: {prev_cat}/{prev_wnd}"
+        else:
+            gap_str = "gap: — (first run or unknown)"
         self.info_label.setText(
             f"ka = {_fmt(row.get('ka_fft'))}  |  "
             f"T = {_fmt(row.get('period_fft'), 's')}  |  "
             f"λ = {_fmt(row.get('wavelength_fft'), 'm')}  |  "
             f"A(FFT) = {_fmt(row.get('amp_fft'), 'mm')}  |  "
             f"A(TD) = {_fmt(row.get('amp_td'), 'mm')}\n"
-            f"{sw_str}   |   {ws_str}"
+            f"{sw_str}   |   {ws_str}\n"
+            f"{gap_str}"
         )
 
         dummy_dates = pd.to_datetime(row["time_ms"], unit="ms")
