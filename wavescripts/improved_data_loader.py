@@ -469,8 +469,8 @@ def extract_metadata_from_filename(
     _extract_tunnel_condition(metadata, filename)
     _extract_panel_condition(metadata, filename)
     _extract_wave_parameters(metadata, filename)
-    _extract_probe_height(metadata, filename)
-    _extract_probe_range_mode(metadata, filename)
+    _extract_probe_height(metadata, str(file_path))
+    _extract_probe_range_mode(metadata, str(file_path))
 
     # ─────── Date-dependent configurations ───────
     if file_date:

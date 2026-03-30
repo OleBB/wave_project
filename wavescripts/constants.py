@@ -177,8 +177,8 @@ PROBE_HEIGHT_DEFAULT_MM: int = 272   # all runs before 20260323 (no keyword in f
 # Still-water surface must fall within the window; waves must stay within it too.
 # Low-range is required for height100 (272 mm default would be outside high-range minimum).
 PROBE_RANGE_MODES: Dict[str, Dict[str, int]] = {
-    "high": {"min_mm": 130, "max_mm": 250},
-    "low":  {"min_mm": 30,  "max_mm": 150},
+    "high": {"min_mm": 130, "max_mm": 350},
+    "low":  {"min_mm": 30,  "max_mm": 250},
 }
 
 MOORING_PARAMS: Dict[str, Dict[str, object]] = {
