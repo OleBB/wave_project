@@ -32,7 +32,7 @@ NON_FLOAT_COLUMNS = {
     "TunnelCondition": str,
     "PanelCondition": str,
     "Mooring": str,
-    "probe_range_mode": str,   # "high" (130–250 mm) or "low" (30–150 mm) — hardware switch on probe box
+    "probe_range_mode": str,   # "high" (130–350 mm) or "low" (30–150 mm) — hardware switch on probe box
     "Run number": str,
     "experiment_folder": str,
     "path": str,

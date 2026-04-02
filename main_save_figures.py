@@ -78,23 +78,38 @@ os.chdir(file_dir)
 
 # ── Dataset(s) ────────────────────────────────────────────────────────────────
 PROCESSED_DIRS = [
-    # Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
-    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"), # mange kjøringer med -per15
-    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"), # noen kjøringer med  -per30-
-    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"), #et par kjøringer med -per15-
+    # ── Nov 2025: probe 1 at 18000 mm, roof not fully sealed ──────────────────
+    # Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"),        # probe 1 på 18000 mm; tak ikke tetta helt
+    # ── Nov 2025: probe 1 moved to 8804 mm, lowMooring ────────────────────────
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),          # mange kjøringer med -per15
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),            # noen kjøringer med -per30
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),          # et par kjøringer med -per15
     # Path("waveprocessed/PROCESSED-20251112-tett6roof"),
     # Path("waveprocessed/PROCESSED-20251113-tett6roof"),
     # Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
     # Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
-    # Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),
-    # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
+    # ── Mar 2026: new probe positions (march2026_rearranging config) ───────────
+    # Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),           # in=9373/170, out=11800/250 — transitional
+    # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),           # in=9373/170, out=11800/250 — transitional
+    # ── Mar 2026: final probe positions (march2026_better_rearranging) ─────────
+    # Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),    # disse bør være greie bortsett fra de steile
+    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),      # noen filer med FALSEDATE (riktig dato fra mappe)
+    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),     # noen filer med FALSEDATE?
+    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),     # noen filer med FALSEDATE?
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),     # noen filer med FALSEDATE?
     Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
     Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED"),
+    # ── Mar 2026: probe lowered — height136 (transitional, 1 dag) ─────────────
+    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),  # h136/high, 1 dag
+    # ── Mar 2026: probe lowered to height100 ──────────────────────────────────
+    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    # ── Mar 2026: lowrange switch enabled ─────────────────────────────────────
+    Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
+    Path("waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
 ]
 
 # ── Load from cache ───────────────────────────────────────────────────────────
@@ -156,20 +171,11 @@ PRINTOUT:
 _pv_noise_floor = {
     "filters": {},
     "plotting": {
-        "show_plot": False,
+        "show_plot": True,
         "save_plot": False,           # set True when figure is ready for thesis
         "figure_name": "ch04_probe_noise_floor",
-        "force_stub": True,
-        "caption": (
-            "Probe noise floor estimated as the minimum windowed "
-            r"(P$_{97.5}$--P$_{2.5}$)/2 amplitude over 200\,ms "
-            "sliding windows of 14 stillwater recordings "
-            r"(1 run(s) excluded — name keyword or windowed minimum above 0.5\,mm). "
-            "Short windows suppress slow tank sloshing so only electronic "
-            "jitter and capillary ripples remain. "
-            "Error bars: standard deviation across runs. "
-            "White dots: individual run values."
-        ),
+        "force_stub": False,
+        # caption auto-generated from template — paste final version here when saving
     },
 }
 
@@ -179,6 +185,7 @@ _fig_nf, _noise_summary = plot_probe_noise_floor(
     processed_dfs,
     probe_positions=ANALYSIS_PROBES,
     plotvariables=_pv_noise_floor,
+    group_by=["probe_height_mm", "probe_range_mode"],
 )
 print("\n=== Probe noise floor summary [mm] ===")
 print(_noise_summary.round(4).to_string())

@@ -1665,6 +1665,7 @@ def plot_probe_noise_floor(
     window_s: float = 0.2,
     exclude_keywords: tuple[str, ...] = ("nestenstille",),
     amp_cap_mm: float = 0.5,
+    group_by: list[str] | None = None,
     chapter: str = "04",
 ) -> tuple[plt.Figure, pd.DataFrame]:
     """
@@ -1694,23 +1695,24 @@ def plot_probe_noise_floor(
                   {n_runs}      accepted stillwater runs
                   {n_flagged}   excluded runs
                   {amp_cap_mm}  amplitude cap threshold [mm]
-                Example:
-                  "caption": (
-                      "Noise floor of each wave gauge over {n_runs} "
-                      "stillwater recordings ({window_ms:.0f}\\,ms window)."
-                  )
+                  {groups}      group labels (only when group_by is set)
         }
     window_s        : sliding window length in seconds (default 0.2 s)
     exclude_keywords: run filenames containing any of these are flagged/excluded
     amp_cap_mm      : runs whose windowed-min exceeds this [mm] are also flagged
+    group_by        : list of combined_meta column names to group bars by,
+                      e.g. ["probe_height_mm", "probe_range_mode"].
+                      When None (default) a single bar per probe is drawn.
     chapter         : thesis chapter string for save_and_stub (default "04")
 
     Returns
     -------
     fig : matplotlib Figure
-    summary : DataFrame  — per-probe mean/std/min/max noise floor [mm],
-              index = probe position string
+    summary : DataFrame
+        group_by=None : per-probe mean/std/min/max, index = probe position
+        group_by set  : columns [group, probe, mean, std, min, max, n]
     """
+    from numpy.lib.stride_tricks import sliding_window_view
     from wavescripts.constants import MEASUREMENT
 
     fs = MEASUREMENT.SAMPLING_RATE
@@ -1720,7 +1722,6 @@ def plot_probe_noise_floor(
     show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
     figure_name = plotting.get("figure_name", "ch04_probe_noise_floor")
-    # Allow caption at plotvariables top level (string) as a convenience
     _top_caption = plotvariables.get("caption")
     if isinstance(_top_caption, str) and "caption" not in plotting:
         plotting = {**plotting, "caption": _top_caption}
@@ -1738,7 +1739,7 @@ def plot_probe_noise_floor(
         df = processed_dfs.get(row["path"])
         if df is None:
             continue
-        entry = {"run": Path(str(row["path"])).name}
+        entry = {"run": Path(str(row["path"])).name, "path": row["path"]}
         for pos in probe_positions:
             col = f"eta_{pos}"
             if col not in df.columns:
@@ -1746,11 +1747,17 @@ def plot_probe_noise_floor(
                 continue
             sig = df[col].values
             step = max(1, window_n // 2)
-            from numpy.lib.stride_tricks import sliding_window_view
-            windows = sliding_window_view(sig, window_n)[::step]  # (n_wins, window_n)
+            windows = sliding_window_view(sig, window_n)[::step]
             # drop windows with too many NaNs
             valid = np.sum(~np.isnan(windows), axis=1) >= window_n // 2
             windows = windows[valid]
+            if windows.size == 0:
+                entry[pos] = np.nan
+                continue
+            # drop windows dominated by exact zeros (sentinel/out-of-range values)
+            # a window with >30% zeros is measuring dropouts, not electronics noise
+            zero_frac = np.sum(windows == 0.0, axis=1) / window_n
+            windows = windows[zero_frac <= 0.30]
             if windows.size == 0:
                 entry[pos] = np.nan
                 continue
@@ -1776,29 +1783,92 @@ def plot_probe_noise_floor(
     bad = name_flag | amp_flag
     sw_clean = sw_all[~bad].copy()
 
+    # --- attach group columns and build label ---
+    if group_by:
+        _grp_cols = [c for c in group_by if c in meta_sw.columns]
+        _join = meta_sw[["path"] + _grp_cols].drop_duplicates("path")
+        sw_clean = sw_clean.merge(_join, on="path", how="left")
+
+        def _group_label(r):
+            parts = []
+            for c in _grp_cols:
+                v = r[c]
+                parts.append(f"h{int(v)}" if c == "probe_height_mm" else str(v))
+            return " / ".join(parts)
+
+        sw_clean["_group"] = sw_clean.apply(_group_label, axis=1)
+
+        # sort groups: height descending, then range mode (chronological order)
+        def _sort_key(lbl):
+            parts = lbl.split(" / ")
+            h = int(parts[0].lstrip("h")) if parts[0].startswith("h") else 0
+            r = parts[1] if len(parts) > 1 else ""
+            return (-h, r)
+
+        groups = sorted(sw_clean["_group"].unique(), key=_sort_key)
+    else:
+        groups = None
+
     # --- summary statistics ---
-    summary = sw_clean[probe_cols_present].agg(["mean", "std", "min", "max"]).T
-    summary.index.name = "probe"
+    if groups is not None:
+        records = []
+        for grp in groups:
+            sub = sw_clean[sw_clean["_group"] == grp]
+            for pos in probe_cols_present:
+                vals = sub[pos].dropna()
+                records.append({
+                    "group": grp, "probe": pos,
+                    "mean": vals.mean(), "std": vals.std(),
+                    "min": vals.min(),   "max": vals.max(),
+                    "n": len(vals),
+                })
+        summary = pd.DataFrame(records)
+    else:
+        summary = sw_clean[probe_cols_present].agg(["mean", "std", "min", "max"]).T
+        summary.index.name = "probe"
 
     # --- plot ---
     apply_thesis_style()
-    fig, ax = plt.subplots(figsize=(max(4, len(probe_cols_present) * 1.1), 4))
-
     x = np.arange(len(probe_cols_present))
-    means = summary["mean"].values
-    stds = summary["std"].fillna(0).values
 
-    ax.bar(x, means, yerr=stds, capsize=4, color="steelblue", alpha=0.85,
-           error_kw={"elinewidth": 1.2, "ecolor": "navy"})
+    if groups is not None:
+        n_grp = len(groups)
+        bar_w = 0.8 / n_grp
+        colors = plt.cm.tab10(np.linspace(0, 0.6, n_grp))
+        fig, ax = plt.subplots(figsize=(max(5, len(probe_cols_present) * (0.5 + 0.4 * n_grp) + 1.5), 4))
 
-    # overlay individual run dots
-    for i, pos in enumerate(probe_cols_present):
-        vals = sw_clean[pos].dropna().values
-        ax.scatter(
-            np.full(len(vals), i),
-            vals,
-            s=20, color="white", edgecolors="navy", linewidths=0.8, zorder=3
-        )
+        for gi, grp in enumerate(groups):
+            offset = (gi - (n_grp - 1) / 2) * bar_w
+            sub_sum = summary[summary["group"] == grp].set_index("probe")
+            means = np.array([sub_sum.loc[p, "mean"] if p in sub_sum.index else np.nan
+                              for p in probe_cols_present], dtype=float)
+            stds  = np.array([sub_sum.loc[p, "std"]  if p in sub_sum.index else 0.0
+                              for p in probe_cols_present], dtype=float)
+            stds  = np.where(np.isfinite(stds), stds, 0.0)
+
+            ax.bar(x + offset, means, width=bar_w * 0.9, yerr=stds,
+                   capsize=3, color=colors[gi], alpha=0.85, label=grp,
+                   error_kw={"elinewidth": 1.0, "ecolor": "0.3"})
+
+            sw_grp = sw_clean[sw_clean["_group"] == grp]
+            for pi, pos in enumerate(probe_cols_present):
+                vals = sw_grp[pos].dropna().values
+                ax.scatter(np.full(len(vals), x[pi] + offset), vals,
+                           s=14, color="white", edgecolors="0.3",
+                           linewidths=0.6, zorder=3)
+
+        ax.legend(title=" / ".join(_grp_cols), fontsize=8, title_fontsize=8)
+    else:
+        fig, ax = plt.subplots(figsize=(max(4, len(probe_cols_present) * 1.1), 4))
+        means = summary["mean"].values
+        stds  = summary["std"].fillna(0).values
+        ax.bar(x, means, yerr=stds, capsize=4, color="steelblue", alpha=0.85,
+               error_kw={"elinewidth": 1.2, "ecolor": "navy"})
+        for i, pos in enumerate(probe_cols_present):
+            vals = sw_clean[pos].dropna().values
+            ax.scatter(np.full(len(vals), i), vals,
+                       s=20, color="white", edgecolors="navy",
+                       linewidths=0.8, zorder=3)
 
     ax.axhline(0, color="black", linewidth=0.5)
     ax.set_xticks(x)
@@ -1816,22 +1886,35 @@ def plot_probe_noise_floor(
 
     # ── caption ──────────────────────────────────────────────────────────────
     _caption_slots = {
-        "window_ms": window_s * 1e3,
-        "n_runs":    len(sw_clean),
-        "n_flagged": int(bad.sum()),
+        "window_ms":  window_s * 1e3,
+        "n_runs":     len(sw_clean),
+        "n_flagged":  int(bad.sum()),
         "amp_cap_mm": amp_cap_mm,
+        "groups":     ", ".join(groups) if groups else "all runs combined",
     }
-    _default_caption = (
-        "Probe noise floor estimated as the minimum windowed "
-        "(P$_{{97.5}}$--P$_{{2.5}}$)/2 amplitude over {window_ms:.0f}\\,ms "
-        "sliding windows of {n_runs} stillwater recordings "
-        "({n_flagged} run(s) excluded — name keyword or windowed minimum "
-        "above {amp_cap_mm}\\,mm). "
-        "Short windows suppress slow tank sloshing so only electronic "
-        "jitter and capillary ripples remain. "
-        "Error bars: standard deviation across runs. "
-        "White dots: individual run values."
-    )
+    if groups is not None:
+        _default_caption = (
+            "Probe noise floor estimated as the minimum windowed "
+            "(P$_{{97.5}}$--P$_{{2.5}}$)/2 amplitude over {window_ms:.0f}\\,ms "
+            "sliding windows of {n_runs} stillwater recordings "
+            "({n_flagged} run(s) excluded). "
+            "Bars grouped by hardware configuration: {groups}. "
+            "Short windows suppress slow tank sloshing. "
+            "Error bars: standard deviation across runs. "
+            "White dots: individual run values."
+        )
+    else:
+        _default_caption = (
+            "Probe noise floor estimated as the minimum windowed "
+            "(P$_{{97.5}}$--P$_{{2.5}}$)/2 amplitude over {window_ms:.0f}\\,ms "
+            "sliding windows of {n_runs} stillwater recordings "
+            "({n_flagged} run(s) excluded — name keyword or windowed minimum "
+            "above {amp_cap_mm}\\,mm). "
+            "Short windows suppress slow tank sloshing so only electronic "
+            "jitter and capillary ripples remain. "
+            "Error bars: standard deviation across runs. "
+            "White dots: individual run values."
+        )
     _caption = resolve_caption(
         plotting, _default_caption, _caption_slots,
         fn_name="plot_probe_noise_floor",

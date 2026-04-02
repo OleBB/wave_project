@@ -66,29 +66,36 @@ import time
 start = time.perf_counter()
 
 PROCESSED_DIRS = [
-    # Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"), #denne har probe 1 på 18000. Men husk at taket ikke var tetta helt.
-    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"), # mange kjøringer med -per15
-    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"), # noen kjøringer med  -per30-
-    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"), #et par kjøringer med -per15-
+    # ── Nov 2025: probe 1 at 18000 mm, roof not fully sealed ──────────────────
+    # Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"),        # probe 1 på 18000 mm; tak ikke tetta helt
+    # ── Nov 2025: probe 1 moved to 8804 mm, lowMooring ────────────────────────
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),          # mange kjøringer med -per15
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),            # noen kjøringer med -per30
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),          # et par kjøringer med -per15
     # Path("waveprocessed/PROCESSED-20251112-tett6roof"),
     # Path("waveprocessed/PROCESSED-20251113-tett6roof"),
     # Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
     # Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
-    # Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),
-    # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),
-    # Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),  #disse under bør være greie bortsett fra de steile
-    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
-    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
+    # ── Mar 2026: new probe positions (march2026_rearranging config) ───────────
+    # Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),           # in=9373/170, out=11800/250 — transitional
+    # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),           # in=9373/170, out=11800/250 — transitional
+    # ── Mar 2026: final probe positions (march2026_better_rearranging) ─────────
+    # Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),    # disse bør være greie bortsett fra de steile
+    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),      # noen filer med FALSEDATE (riktig dato fra mappe)
+    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),     # noen filer med FALSEDATE?
+    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),     # noen filer med FALSEDATE?
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),     # noen filer med FALSEDATE?
     Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
     Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
-    Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
-    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),
+    Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED"),
+    # ── Mar 2026: probe lowered — height136 (transitional, 1 dag) ─────────────
+    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),  # h136/high, 1 dag
+    # ── Mar 2026: probe lowered to height100 ──────────────────────────────────
     Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    # ── Mar 2026: lowrange switch enabled ─────────────────────────────────────
     Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
     Path("waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
 ]

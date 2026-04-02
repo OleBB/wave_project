@@ -83,7 +83,7 @@ dataset_paths = [
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260316-ProbePos4_31_FPV_2-tett6roof"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
-    Path("/Users/ole/Kodevik/wave_project/wavedata/20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("/Users/ole/Kodevik/wave_project/wavedata/20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     Path("/Users/ole/Kodevik/wave_project/wavedata/20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
