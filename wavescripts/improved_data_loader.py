@@ -310,10 +310,41 @@ PROBE_CONFIGS = [
 
 # TODO: measure all tank dimensions precisely — probe spacings especially. Put into a TikZ drawing.
 
-# Standard 4-probe analysis set for the current layout (march2026_better_rearranging and earlier).
-# Import this in explore/save scripts instead of hardcoding the list — single source of truth.
-# Order: IN probe, OUT probe, secondary parallel probe, upstream probe.
-ANALYSIS_PROBES = ["9373/170", "12400/250", "9373/340", "8804/250"]
+def _derive_analysis_probes(cfg: ProbeConfiguration) -> list:
+    """Derive the standard probe set from a ProbeConfiguration.
+
+    Order: IN, OUT, parallel-to-IN (same longitudinal distance, different probe), upstream.
+    The physical role of each probe is defined solely by its position:
+      - IN  : cfg.in_probe  (right in front of the panel)
+      - OUT : cfg.out_probe (right behind the panel)
+      - parallel : same longitudinal distance as IN, not IN or OUT
+      - upstream : smaller longitudinal distance than IN (closer to paddle)
+    Probes not fitting any of the above are appended at the end.
+    """
+    names    = cfg.probe_col_names()
+    in_dist  = cfg.distances_mm[cfg.in_probe]
+    in_col   = names[cfg.in_probe]
+    out_col  = names[cfg.out_probe]
+    parallel = []
+    upstream = []
+    other    = []
+    for n in sorted(cfg.distances_mm):
+        if n in (cfg.in_probe, cfg.out_probe):
+            continue
+        d = cfg.distances_mm[n]
+        if d == in_dist:
+            parallel.append(names[n])
+        elif d < in_dist:
+            upstream.append(names[n])
+        else:
+            other.append(names[n])
+    return [in_col, out_col] + parallel + upstream + other
+
+
+# Standard 4-probe analysis set — derived from the current (latest) configuration.
+# Import this in explore/save scripts instead of hardcoding the list.
+# Re-derive manually if you add a new ProbeConfiguration to PROBE_CONFIGS.
+ANALYSIS_PROBES = _derive_analysis_probes(PROBE_CONFIGS[-1])
 
 
 def get_probe_positions(file_date: datetime) -> Dict[int, float]:
