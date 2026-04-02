@@ -1125,8 +1125,19 @@ def process_selected_data(
     cfg = get_configuration_for_date(file_date)
 
     # 1. Ensure stillwater levels are computed
+    _meta_full_cols_before = set(meta_full.columns)
     meta_full = ensure_stillwater_columns(dfs, meta_full, cfg)
     stillwater = _extract_stillwater_levels(meta_full, cfg, debug)
+
+    # Propagate any columns that ensure_stillwater_columns added to meta_full → meta_sel.
+    # meta_sel is what gets saved to meta.json (here at line ~1172 and in processor2nd).
+    # Without this step, all stillwater columns are lost when force-recompute=True because
+    # the later save overwrites meta.json entirely with meta_sel.
+    _sw_new_cols = [c for c in meta_full.columns if c not in _meta_full_cols_before]
+    if _sw_new_cols:
+        _mf_sw = meta_full.set_index("path")[_sw_new_cols]
+        for c in _sw_new_cols:
+            meta_sel[c] = meta_sel["path"].map(_mf_sw[c])
 
     # 2. Process dataframes: zero, clean, interpolate, add moving averages
     processed_dfs, clip_stats = _zero_and_smooth_signals(dfs, meta_sel, stillwater, cfg, win, debug)

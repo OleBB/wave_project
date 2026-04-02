@@ -27,17 +27,18 @@ OUTPUT KEYS (measured results):
 # %% ── dev: reload modules (run this cell after editing wavescripts/) ─────────
 import importlib, wavescripts.plotter as _pm, wavescripts.filters as _fm
 
+importlib.reload(_pm); importlib.reload(_fm);
+
 from wavescripts.plotter import (plot_probe_noise_floor, plot_parallel_ratio,
                                   plot_frequency_spectrum, plot_wave_stability,
                                   plot_timeseries_overview,
                                   plot_damping_freq, plot_damping_scatter)
 from wavescripts.filters import apply_experimental_filters as _aef
 
-importlib.reload(_pm); importlib.reload(_fm);
-
 
 # %% ----------- Velkommen ----------------------------
 import os
+from datetime import datetime as _dt
 from pathlib import Path
 
 import time
@@ -53,7 +54,7 @@ from wavescripts.filters import (
     damping_all_amplitude_grouper,
     filter_for_frequencyspectrum,
 )
-from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs, ANALYSIS_PROBES
+from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs, ANALYSIS_PROBES, get_configuration_for_date
 from wavescripts.plot_utils import WIND_COLOR_MAP, apply_thesis_style, save_and_stub
 from wavescripts.plotter import (
     plot_all_probes,
@@ -131,42 +132,37 @@ processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
 # %%
 """
 ── CH04 § 1 — Probe uncertainty / noise floor ───────────────────────────────
-Goal: show that each probe has a measurable noise floor and that it is stable
-across stillwater runs. Defines the detection threshold ((2?)× noise floor).
+Goal: show the stillwater noise amplitude per probe and hardware configuration,
+and derive the minimum detectable wave amplitude (detection threshold).
 
-Data: stillwater runs (WindCondition == "no", WaveFrequencyInput NaN or regex:nowwave).
-Already in combined_meta as "Probe {pos} Amplitude" for those rows.
+Three questions answered per (probe, config):
+  1. Precision  — how much does the reading fluctuate in still water?
+  2. Bias       — do probes agree on the mean water level within a config?
+  3. Threshold  — what is the smallest detectable wave amplitude?
 
-Figures/tables:
-  - Table: noise floor per probe (mean ± std across stillwater runs) [mm]
-  - Plot:  stillwater amplitude bar chart or box plot, one bar per probe
+Data: combined_meta stillwater rows (WindCondition=="no", WaveFrequencyInput NaN).
+      processed_dfs needed for quantization_step_mm (optional but recommended).
 
-Mine notater:
+Groups: probe_height_mm × probe_range_mode — 4 hardware configurations:
+  h272/high  (default pre-2026-03-23)
+  h136/high
+  h100/high
+  h100/low
+
+Metrics (all from combined_meta, shift-invariant — valid at any probe height):
+  noise_95pct_amp_mm   (P97.5−P2.5)/2   mean across accepted runs in group
+  noise_rms_mm         std(raw signal)   mean across accepted runs in group
+  mean_level_mm        median level      mean across accepted runs in group
+  bias_vs_ref_mm       mean_level − cross-probe mean (within group)
+  quantization_step_mm P5 of nonzero |diff(η)|  from processed_dfs
+  detection_threshold_mm  max(k_sigma·σ,  k_q·q)   default max(3σ, 2q)
 """
 
-
-"""
-PRINTOUT:
-    [plot_probe_noise_floor] caption slots: {'window_ms': 200.0, 'n_runs': 14, 'n_flagged': 1, 'amp_cap_mm': 0.5}
-    [plot_probe_noise_floor] formatted caption:
-      "Probe noise floor estimated as the minimum windowed (P$_{97.5}$--P$_{2.5}$)/2 amplitude over 200\,ms sliding windows of 14 st
-    illwater recordings (1 run(s) excluded — name keyword or windowed minimum above 0.5\,mm). Short windows suppress slow tank slosh
-    ing so only electronic jitter and capillary ripples remain. Error bars: standard deviation across runs. White dots: individual r
-    un values."
-    === Probe noise floor summary [mm] ===
-                 mean     std  min     max
-    probe
-    9373/170   0.0285  0.0159  0.0  0.0400
-    12400/250  0.0314  0.0174  0.0  0.0489
-    9373/340   0.0251  0.0195  0.0  0.0400
-    8804/250   0.0258  0.0174  0.0  0.0450
-
-"""
-
-# import importlib
-# import wavescripts.plotter as _plotter_mod
-# importlib.reload(_plotter_mod)
-# from wavescripts.plotter import plot_probe_noise_floor
+from datetime import datetime as _dt
+from wavescripts.improved_data_loader import get_configuration_for_date
+# Probe numbers derived from current config (hardware IDs, fixed across configs):
+_active_cfg = get_configuration_for_date(_dt(2026, 3, 15))
+_PROBE_NUM_MAP = {pos: num for num, pos in _active_cfg.probe_col_names().items()}
 
 _pv_noise_floor = {
     "filters": {},
@@ -180,12 +176,12 @@ _pv_noise_floor = {
 }
 
 start = time.perf_counter()
-_fig_nf, _noise_summary = plot_probe_noise_floor(
-    combined_meta,
-    processed_dfs,
-    probe_positions=ANALYSIS_PROBES,
-    plotvariables=_pv_noise_floor,
+_figs_nf, _noise_summary = plot_probe_noise_floor(
+    combined_meta, ANALYSIS_PROBES, _pv_noise_floor,
     group_by=["probe_height_mm", "probe_range_mode"],
+    processed_dfs = processed_dfs,
+    highlight_keyword="wavemakeroff-1hour",  # visual star only, no effect on metrics
+    probe_number_map=_PROBE_NUM_MAP,
 )
 print("\n=== Probe noise floor summary [mm] ===")
 print(_noise_summary.round(4).to_string())
