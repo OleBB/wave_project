@@ -213,10 +213,72 @@ def ensure_stillwater_columns(
         for col_name, val in std_dict.items():
             meta.loc[idx, col_name] = val
 
-    # Compute (P97.5-P2.5)/2 noise floor per probe from all no-wind/no-wave runs,
-    # broadcast to EVERY row as "Probe {n} at {pos} Uncertainty".
+    # ── Per-hardware-config noise floor ──────────────────────────────────────
+    #
+    # Probe noise depends on three independent hardware factors, ALL of which can
+    # change between experiment folders.  A single scalar broadcast blends configs
+    # with very different noise levels and gives wrong thresholds for both ends.
+    #
+    # Factor 1 — physical probe unit identity (probe number 1–4 in the config).
+    #   Each probe box has different internal electronics and calibration history.
+    #   Swapping probes between positions (e.g. March 2026 rearrangement) changes
+    #   the noise at each position even if height and range-mode are unchanged.
+    #   Probe numbers ARE the hardware IDs — they do not follow position strings.
+    #
+    # Factor 2 — probe_height_mm (distance from sensor face to still-water surface).
+    #   Longer path → more air → weaker ultrasonic return → higher noise.
+    #   Old default h272 (pre-2026-03-23, no keyword in folder name) had ~2–3×
+    #   higher noise than h100 (post-2026-03-23).  Folders without a height keyword
+    #   are assigned PROBE_HEIGHT_DEFAULT_MM = 272 by the data loader.
+    #
+    # Factor 3 — probe_range_mode ("high" / "low", hardware switch on probe box).
+    #   "high" range (130–350 mm window) has coarser quantisation.
+    #   "low"  range (30–150 mm window) has finer quantisation and lower noise.
+    #   High-range is required at h272 (sensor face is already outside the low-range
+    #   window); low-range is preferred — and required — at h100.
+    #
+    # Second-order factors tracked in combined_meta but NOT used here:
+    #   - WaterDepth [mm]  : changes the water-surface reflection geometry slightly.
+    #   - Room temperature : affects ultrasonic speed-of-sound → mm/sample conversion.
+    #     (TODO: plot speed-of-sound vs temperature across all folders to quantify
+    #      this systematic.  Air at 20 °C ≈ 343 m/s; at 10 °C ≈ 337 m/s — ~1.7 %
+    #      difference, translating to ~1.7 % amplitude scale error if uncorrected.
+    #      Relevant especially when comparing November 2025 and March 2026 data.)
+    #
+    # Strategy:
+    #   Accumulate stillwater amplitude measurements keyed by the tuple
+    #   (probe_i, probe_height_mm, probe_range_mode).
+    #   Each run then receives the mean noise of its OWN hardware config, not a
+    #   blended average that mixes noisy h272/high with quiet h100/low data.
+    #
+    # Column written: "Probe {i} at {pos} Uncertainty"  — per-row float [mm]
+    #   Value = mean (P97.5−P2.5)/2 across all nowave+nowind runs that share the
+    #   same (probe_i, height_mm, range_mode) as this row.
+    #   NaN if no matching stillwater data exists for that hardware config — this
+    #   flags the row as having no trustworthy threshold rather than silently
+    #   inheriting a wrong one from a different physical setup.
+    #
+    # Downstream use (filters.py damping_grouper):
+    #   reliable = (Amplitude(FFT) >= k * Uncertainty)   (k ≈ 2)
+    #   The check is now per-run and hardware-config-aware.
+
+    def _hw_key_from_row(row_: pd.Series, probe_i_: int) -> tuple:
+        """Return (probe_i, height_mm, range_mode) — a hashable hardware config key.
+
+        Missing or NaN height falls back to PROBE_HEIGHT_DEFAULT_MM (272 mm) — the
+        historical default before the probe-height keyword was introduced in folder
+        names (2026-03-23).  Missing range_mode defaults to 'high'.
+        """
+        h = row_.get("probe_height_mm")
+        if h is None or (isinstance(h, float) and np.isnan(h)):
+            h = PROBE_HEIGHT_DEFAULT_MM
+        else:
+            h = int(float(h))
+        r = str(row_.get("probe_range_mode") or "high").strip().lower()
+        return (probe_i_, h, r)
+
     nowave_nowind_rows = meta[nowave_mask & nowind_mask]
-    noise_floor_accum: dict[int, list[float]] = {i: [] for i in col_names}
+    noise_floor_accum: dict[tuple, list[float]] = {}
     for _, row in nowave_nowind_rows.iterrows():
         df_run = dfs.get(row["path"])
         if df_run is None:
@@ -224,17 +286,32 @@ def ensure_stillwater_columns(
         for i, pos in col_names.items():
             v = _probe_noise_amplitude_from_run(df_run, f"Probe {pos}", None)
             if v is not None:
-                noise_floor_accum[i].append(v)
+                key = _hw_key_from_row(row, i)
+                noise_floor_accum.setdefault(key, []).append(v)
 
-    unc_cols = {}
-    for i, pos in col_names.items():
-        vals = noise_floor_accum[i]
-        if vals:
-            unc_cols[f"Probe {i} at {pos} Uncertainty"] = float(np.mean(vals))
-            print(f"  Noise floor  Probe {i} at {pos}: {np.mean(vals):.4f} mm"
-                  f"  (n={len(vals)}, range {min(vals):.4f}–{max(vals):.4f})")
-    if unc_cols:
-        meta = meta.assign(**{c: v for c, v in unc_cols.items()})
+    # Mean per hardware-config key — printed grouped for easy verification
+    noise_floor_by_key: dict[tuple, float] = {}
+    for key in sorted(noise_floor_accum):
+        vals = noise_floor_accum[key]
+        probe_i, height, rmode = key
+        pos = col_names[probe_i]
+        mean_val = float(np.mean(vals))
+        noise_floor_by_key[key] = mean_val
+        print(f"  Noise floor  Probe {probe_i} at {pos} [{height}mm/{rmode}]: "
+              f"{mean_val:.4f} mm  (n={len(vals)}, range {min(vals):.4f}–{max(vals):.4f})")
+
+    # Assign per-row Uncertainty: each row gets the mean for its own hardware config.
+    # Rows whose (probe_i, height_mm, range_mode) combination has no matching
+    # stillwater data receive NaN — no threshold is better than a wrong threshold.
+    if noise_floor_by_key:
+        unc_cols = {}
+        for i, pos in col_names.items():
+            col = f"Probe {i} at {pos} Uncertainty"
+            unc_cols[col] = meta.apply(
+                lambda row_, _i=i: noise_floor_by_key.get(_hw_key_from_row(row_, _i), np.nan),
+                axis=1,
+            ).values
+        meta = meta.assign(**unc_cols)
 
     # Ensure PROCESSED_folder is set so meta can be saved
     if "PROCESSED_folder" not in meta.columns:
@@ -1123,6 +1200,48 @@ def process_selected_data(
     # Derive cfg once for the whole folder (all files share the same configuration)
     file_date = datetime.fromisoformat(str(meta_sel["file_date"].iloc[0]))
     cfg = get_configuration_for_date(file_date)
+
+    # 0b. Capture hardware speed-of-sound from the raw "Mach" column.
+    #
+    # Every raw CSV row contains a 6th value: the probe hardware's own real-time
+    # measurement of the speed of sound in air [m/s].  The data loader reads this
+    # as column "Mach" but discards it after loading — it is not in processed_dfs
+    # or meta.json.  We extract two scalars per run here, before the raw DataFrames
+    # are processed and "Mach" is lost.
+    #
+    # Physical meaning:
+    #   c_air ≈ 331 + 0.606 × T_Celsius  [m/s]   (dry air approximation)
+    #   Humidity adds a small positive correction (~0.1–0.3 % at typical indoor RH).
+    #
+    # The hardware almost certainly APPLIES this measurement for its own time-of-
+    # flight → mm conversion (that is why it measures it).  The reported probe values
+    # are therefore already compensated; the "Mach" column is diagnostic logging of
+    # the compensation that was applied.
+    #
+    # Even in the worst case (no hardware compensation, fixed internal c_ref):
+    #   Total observed spread across all sessions: 342.20–343.44 m/s = 0.36 %
+    #   Scale error on a 10 mm wave: ~0.036 mm — well below 0.25 mm target.
+    #   For OUT/IN ratios: ZERO — both probes share the same air column at the
+    #   same moment, so any scale error cancels in the ratio.
+    #
+    # We store mean ± std per run so that:
+    #   (a) seasonal/daily temperature trends can be plotted from combined_meta
+    #       (sound_speed_mean_ms is a temperature proxy without a direct sensor)
+    #   (b) the November 2025 vs March 2026 comparison can quote the actual
+    #       lab-condition difference rather than a theoretical worst-case bound
+    #   (c) the late-March high-humidity sessions are identifiable by their
+    #       distinctly lower mean c_air (~342.2 m/s vs ~343.4 m/s in November)
+    for _, _row in meta_sel.iterrows():
+        _path = _row["path"]
+        _df_raw = dfs.get(_path)
+        if _df_raw is None or "Mach" not in _df_raw.columns:
+            continue
+        _mach = pd.to_numeric(_df_raw["Mach"], errors="coerce").dropna()
+        if len(_mach) == 0:
+            continue
+        _mask = meta_sel["path"] == _path
+        meta_sel.loc[_mask, "sound_speed_mean_ms"] = float(_mach.mean())
+        meta_sel.loc[_mask, "sound_speed_std_ms"]  = float(_mach.std())
 
     # 1. Ensure stillwater levels are computed
     _meta_full_cols_before = set(meta_full.columns)

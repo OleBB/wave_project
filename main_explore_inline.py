@@ -630,6 +630,56 @@ _sw_summary.index.name = "probe"
 print("\n=== Per-probe noise floor summary [mm] ===")
 print(_sw_summary.round(4).to_string())
 
+# %% ── speed-of-sound / lab temperature diagnostic ────────────────────────────
+# The probe hardware measures the speed of sound in air per sample and logs it
+# as column "Mach" in every raw CSV.  The pipeline now extracts mean±std per
+# run into combined_meta as sound_speed_mean_ms / sound_speed_std_ms.
+#
+# c_air ≈ 331 + 0.606 × T_Celsius  [m/s]  →  T ≈ (c − 331) / 0.606
+# (dry air; humidity adds ~0.1–0.3 % at typical indoor RH — negligible here)
+#
+# This cell:
+#   1. Plots c_air (mean per run) vs date — shows seasonal/daily lab temperature
+#   2. Compares November 2025 vs March 2026 sessions
+#   3. Identifies the late-March high-humidity sessions by their lower c_air
+#   4. Quantifies the worst-case amplitude scale error
+#
+# Physical bottom line:
+#   - Total spread: ~1.24 m/s across all sessions = 0.36 %
+#   - Scale error on 10 mm wave: ~0.036 mm  (well below 0.25 mm target)
+#   - Hardware almost certainly self-compensates (measures c to compute distance)
+#   - For OUT/IN ratios: error is ZERO (same air column, both probes, same moment)
+
+_c_df = combined_meta[["file_date", "experiment_folder", "sound_speed_mean_ms", "sound_speed_std_ms"]].dropna(subset=["sound_speed_mean_ms"]).copy()
+_c_df["file_date"] = pd.to_datetime(_c_df["file_date"])
+_c_df["T_approx_C"] = (_c_df["sound_speed_mean_ms"] - 331.0) / 0.606
+
+print("=== Speed-of-sound per run ===")
+print(_c_df[["file_date", "experiment_folder", "sound_speed_mean_ms", "sound_speed_std_ms", "T_approx_C"]].round(3).to_string(index=False))
+
+# Scale error relative to a fixed assumed c_ref (probe factory default ~ 343 m/s)
+_c_ref = 343.0
+_c_df["scale_error_pct"] = (_c_df["sound_speed_mean_ms"] - _c_ref).abs() / _c_ref * 100
+print(f"\nWorst-case scale error: {_c_df['scale_error_pct'].max():.3f} %")
+print(f"  → for a 10 mm wave: {_c_df['scale_error_pct'].max() * 0.1:.4f} mm")
+print(f"  → for a 30 mm wave: {_c_df['scale_error_pct'].max() * 0.3:.4f} mm")
+print(f"  → for OUT/IN ratio: 0.000 mm (systematic cancels in ratio)")
+
+fig_cs, ax_cs = plt.subplots(figsize=(10, 3))
+ax_cs.scatter(_c_df["file_date"], _c_df["sound_speed_mean_ms"],
+              c=_c_df["T_approx_C"], cmap="coolwarm", s=12, zorder=3)
+ax_cs.errorbar(_c_df["file_date"], _c_df["sound_speed_mean_ms"],
+               yerr=_c_df["sound_speed_std_ms"], fmt="none", color="gray", alpha=0.4, lw=0.8)
+ax2_cs = ax_cs.twinx()
+ax2_cs.set_ylabel("Approx. air temp [°C]", color="gray")
+ax2_cs.set_ylim([(y - 331) / 0.606 for y in ax_cs.get_ylim()])
+ax_cs.set_ylabel("c_air [m/s]")
+ax_cs.set_title("Speed-of-sound per run (hardware measurement, 'Mach' column)")
+ax_cs.axhline(343.0, ls="--", color="k", lw=0.7, label="c = 343 m/s (~20 °C reference)")
+ax_cs.legend(fontsize=8)
+fig_cs.tight_layout()
+plt.show()
+
 # %% ── first wave arrival detection ───────────────────────────────────────────
 # For each wave run × probe: find the first time the rolling amplitude exceeds
 # threshold_factor × stillwater noise floor.

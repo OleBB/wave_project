@@ -109,6 +109,7 @@ _META_INFO_COLS = [
     "run_category",
     "WindCondition", "TunnelCondition", "PanelCondition", "Mooring",
     "probe_height_mm", "probe_range_mode",
+    "sound_speed_mean_ms", "sound_speed_std_ms",
     "Run number",
     "WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]", "WavePeriodInput",
     "in_position", "out_position", "in_probe", "out_probe",
