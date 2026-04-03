@@ -319,6 +319,95 @@ fig, axes = plot_reconstructed(
 # surface response. Compare wind conditions against stillwater baseline (no wind).
 # ==========================================================================================================================
 """
+# %%  load only nowave+nowind runs — fast subset (~1 s vs ~20 s for all)
+# Use this for noise-floor diagnostics and settle-logic development.
+# Does NOT populate `processed_dfs` used by other cells — kept separate
+# so it never accidentally replaces the full load.
+import time as _time
+from wavescripts.improved_data_loader import load_processed_dfs
+_nowave_nowind_mask = (
+    combined_meta["WaveFrequencyInput [Hz]"].isna()
+    & combined_meta["WindCondition"].astype(str).str.strip().str.lower().isin(["no", "", "nan", "none"])
+)
+_nowave_nowind_paths = combined_meta.loc[_nowave_nowind_mask, "path"].tolist()
+print(f"Loading {len(_nowave_nowind_paths)} nowave+nowind runs...")
+_t0 = _time.perf_counter()
+nowave_dfs = load_processed_dfs(*PROCESSED_DIRS, paths=_nowave_nowind_paths)
+print(f"Done in {_time.perf_counter() - _t0:.1f} s")
+
+# %%  pre-recompute check A — are prev_run_freq_hz / prev_run_nperiods populated?
+# These two columns drive the sub-1Hz and long-run flags in the settling logic.
+# If mostly NaN the logic silently falls back to 120 s for everything → too lenient.
+# Run this before force-recompute to know whether the cache is already usable.
+_prev_cols = ["prev_run_freq_hz", "prev_run_nperiods", "prev_run_category", "prev_run_wind"]
+_present = [c for c in _prev_cols if c in combined_meta.columns]
+_missing = [c for c in _prev_cols if c not in combined_meta.columns]
+if _missing:
+    print(f"MISSING columns (need recompute): {_missing}")
+print(combined_meta[_present].describe(include="all"))
+
+# %%  pre-recompute check B — dry-run settling logic on nowave+nowind rows
+# Simulates what ensure_stillwater_columns will do per run:
+#   start_s = max(settling_deficit, run_duration/3)
+# Shows prev_cat, gap, required threshold, deficit, and run duration.
+# Look for: unexpected prev_cat values; deficit_s >> run_dur_s (run will be skipped);
+# very short runs (< ~45 s → skipped by 30 s minimum).
+_SETTLE_GAP_S_DRY = {
+    (True,  True,  True):  720.0, (True,  True,  False): 720.0,
+    (True,  False, True):  720.0, (True,  False, False): 720.0,
+    (False, True,  True):  600.0, (False, True,  False): 300.0,
+    (False, False, True):  300.0, (False, False, False): 120.0,
+}
+_wind_decay_mask = combined_meta["run_category"].astype(str).str.strip() == "wind_decay"
+_nw = combined_meta[_nowave_nowind_mask & ~_wind_decay_mask].copy()
+_dry_rows = []
+for _, _row in _nw.iterrows():
+    _prev_cat  = str(_row.get("prev_run_category") or "").strip().lower()
+    _gap       = _row.get("inter_run_gap_s")
+    _gap       = float(_gap) if (_gap is not None and not (isinstance(_gap, float) and np.isnan(_gap))) else 0.0
+    _run_dur   = _row.get("run_duration_s")
+    _run_dur_s = float(_run_dur) if (_run_dur is not None and not (isinstance(_run_dur, float) and np.isnan(_run_dur))) else None
+    # fall back to measuring from nowave_dfs if run_duration_s column absent
+    if _run_dur_s is None:
+        _df_r = nowave_dfs.get(_row["path"])
+        _run_dur_s = len(_df_r) / 250.0 if _df_r is not None else None
+
+    _prev_wind_str = str(_row.get("prev_run_wind") or "").strip().lower()
+    if _prev_cat in {"", "nowave_control"} and _prev_wind_str not in {"full", "lowest"}:
+        _required_s = 0.0
+    else:
+        _had_wind  = _prev_wind_str in {"full", "lowest"}
+        _pf        = _row.get("prev_run_freq_hz")
+        _sub_1hz   = (_pf is not None and not (isinstance(_pf, float) and np.isnan(_pf)) and float(_pf) < 1.0)
+        _pn        = _row.get("prev_run_nperiods")
+        _long_run  = (_pn is not None and not (isinstance(_pn, float) and np.isnan(_pn)) and float(_pn) >= 120)
+        _required_s = _SETTLE_GAP_S_DRY.get((_had_wind, _sub_1hz, _long_run), 300.0)
+
+    _deficit_s  = max(0.0, _required_s - _gap)
+    _start_s    = max(_deficit_s, (_run_dur_s / 3.0) if _run_dur_s else 0.0)
+    _remaining  = (_run_dur_s - _start_s) if _run_dur_s else None
+    _min_rem    = max(15.0, (_run_dur_s * 0.4) if _run_dur_s else 15.0)
+    _status     = (
+        "SKIP (too short)" if (_remaining is not None and _remaining < _min_rem)
+        else f"start +{_start_s:.0f}s" if _start_s > 0
+        else "full run"
+    )
+    _dry_rows.append({
+        "file":        __import__("pathlib").Path(_row["path"]).name[:40],
+        "prev_cat":    _prev_cat or "—",
+        "prev_wind":   str(_row.get("prev_run_wind") or "—"),
+        "gap_s":       round(_gap),
+        "required_s":  _required_s,
+        "deficit_s":   round(_deficit_s),
+        "run_dur_s":   round(_run_dur_s) if _run_dur_s else "?",
+        "start_s":     round(_start_s),
+        "remaining_s": round(_remaining) if _remaining else "?",
+        "action":      _status,
+    })
+pd.set_option("display.max_rows", 80)
+pd.set_option("display.max_colwidth", 42)
+pd.DataFrame(_dry_rows)
+
 # %%  see the stillwater level — load processed_dfs if not yet in memory
 from wavescripts.improved_data_loader import load_processed_dfs
 from pathlib import Path

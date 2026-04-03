@@ -592,22 +592,33 @@ def _initialize_metadata_dict(file_path: str, experiment_name: str) -> dict:
 
 def _extract_file_date(filename: str, file_path: Path) -> Optional[datetime]:
     """
-    Extract date from filename, fall back to file modification time.
+    Extract date from filename, folder name, or file modification time.
 
     Priority:
-    1. Date in filename (YYYYMMDD format)
-    2. File modification time
+    1. Date in filename itself (YYYYMMDD pattern) — rare, most run CSVs don't include it
+    2. Date in parent folder name (YYYYMMDD pattern) — always present for experiment folders
+       e.g. "20251112-tett6roof" → 2025-11-12. This is the normal path for run CSVs.
+    3. File modification time — last resort only. Unreliable: files touched/copied after
+       the experiment get a wrong date (observed: 2 files in 20251112 folder showing
+       2026-02-05 because their mtime was updated during a later session).
     """
-    # Try to extract from filename first
+    # 1. Try filename
     date_match = re.search(r"(\d{8})", filename)
     if date_match:
-        date_str = date_match.group(1)
         try:
-            return datetime.strptime(date_str, "%Y%m%d")
+            return datetime.strptime(date_match.group(1), "%Y%m%d")
         except ValueError:
             pass
 
-    # Fall back to file modification time
+    # 2. Try parent folder name — experiment folders always start with YYYYMMDD
+    folder_match = re.search(r"(\d{8})", file_path.parent.name)
+    if folder_match:
+        try:
+            return datetime.strptime(folder_match.group(1), "%Y%m%d")
+        except ValueError:
+            pass
+
+    # 3. Fall back to file modification time (last resort — mtime is unreliable)
     try:
         modtime = os.path.getmtime(file_path)
         return datetime.fromtimestamp(modtime)
@@ -794,27 +805,48 @@ def save_processed_dfs(processed_dfs: Dict[str, pd.DataFrame], cache_dir: Path) 
     return out_path
 
 
-def load_processed_dfs(*cache_dirs) -> Dict[str, pd.DataFrame]:
+def load_processed_dfs(
+    *cache_dirs,
+    paths: list[str] | None = None,
+) -> Dict[str, pd.DataFrame]:
     """
     Load processed DataFrames from one or more PROCESSED-* cache directories.
 
+    Args:
+        *cache_dirs: One or more PROCESSED-* directories.
+        paths:  Optional list of CSV path strings to load.  When given, only
+                rows whose '_path' column matches are read from the parquet —
+                pyarrow predicate pushdown avoids deserialising the rest, so
+                a 10-run subset loads in ~1 s instead of ~20 s.
+
+                Typical use — load only nowave+nowind runs for noise-floor
+                diagnostics without triggering a full pipeline recompute:
+
+                    _nowave_paths = combined_meta.loc[
+                        combined_meta["WaveFrequencyInput [Hz]"].isna(), "path"
+                    ].tolist()
+                    nowave_dfs = load_processed_dfs(*PROCESSED_DIRS, paths=_nowave_paths)
+
     Usage:
-        combined = load_processed_dfs(*processed_dirs)
-        ramp_df = gather_ramp_data(combined, combined_meta_sel)
+        all_dfs     = load_processed_dfs(*processed_dirs)
+        nowave_dfs  = load_processed_dfs(*processed_dirs, paths=nowave_path_list)
+        single_dfs  = load_processed_dfs(*processed_dirs, paths=[one_csv_path])
     """
+    _pq_filters = [("_path", "in", list(paths))] if paths is not None else None
     result: Dict[str, pd.DataFrame] = {}
     for cache_dir in cache_dirs:
         parquet_path = Path(cache_dir) / "processed_dfs.parquet"
         if not parquet_path.exists():
             print(f"   Warning: no processed cache at {parquet_path}")
             continue
-        df = pd.read_parquet(parquet_path)
+        df = pd.read_parquet(parquet_path, filters=_pq_filters)
         for path in df["_path"].unique():
             result[path] = (
                 df[df["_path"] == path].drop(columns=["_path"]).reset_index(drop=True)
             )
+        subset_note = f" (subset: {len(result)} of requested {len(paths)})" if paths is not None else ""
         print(
-            f"   Loaded {len(result)} processed DataFrames from {Path(cache_dir).name}"
+            f"   Loaded {len(result)} processed DataFrames from {Path(cache_dir).name}{subset_note}"
         )
     return result
 

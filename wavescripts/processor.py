@@ -43,16 +43,26 @@ def _probe_median_from_run(df: pd.DataFrame, probe_col: str, n_samples: int | No
     return float(vals.median()) if len(vals) > 0 else None
 
 
-def _probe_noise_amplitude_from_run(df: pd.DataFrame, probe_col: str, n_samples: int | None = None) -> float | None:
+def _probe_noise_amplitude_from_run(
+    df: pd.DataFrame,
+    probe_col: str,
+    n_samples: int | None = None,
+    start_sample: int = 0,
+) -> float | None:
     """Return (P97.5 - P2.5) / 2 of a probe column — the pipeline amplitude definition.
 
     This is the noise floor for that probe in that run: the smallest wave amplitude
     indistinguishable from background fluctuations.  Consistent with how
     'Probe {pos} Amplitude' is computed everywhere else in the pipeline.
+
+    Args:
+        start_sample: First sample to include.  Used to skip the initial settling
+                      period of a run that started too soon after a wave/wind run,
+                      or simply to focus on the calmer latter portion of the run.
     """
     if probe_col not in df.columns:
         return None
-    src = df[probe_col].iloc[:n_samples] if n_samples is not None else df[probe_col]
+    src = df[probe_col].iloc[start_sample:n_samples]
     vals = pd.to_numeric(src, errors='coerce').dropna().values
     if len(vals) < 2:
         return None
@@ -92,7 +102,11 @@ def ensure_stillwater_columns(
     # When called with combined_meta (all dates), restrict to rows that belong
     # to this cfg's date range so probe column names match.
     meta = meta.copy()
-    meta_t = pd.to_datetime(meta["file_date"])
+    # format='ISO8601' tolerates both "2025-11-12T15:36:14" and
+    # "2026-02-05T10:52:00.195183" (with microseconds) — the latter appears
+    # when metadata extraction falls back to file-mtime for e.g. .stats.csv
+    # files accidentally caught by the *.csv glob.
+    meta_t = pd.to_datetime(meta["file_date"], format='ISO8601')
     in_range = meta_t >= pd.Timestamp(cfg.valid_from)
     if cfg.valid_until is not None:
         in_range &= meta_t < pd.Timestamp(cfg.valid_until)
@@ -277,17 +291,140 @@ def ensure_stillwater_columns(
         r = str(row_.get("probe_range_mode") or "high").strip().lower()
         return (probe_i_, h, r)
 
-    nowave_nowind_rows = meta[nowave_mask & nowind_mask]
+    # ── Settling-time thresholds for noise floor quality gate ────────────────
+    # Required inter_run_gap_s before a nowave+nowind run is trustworthy as a
+    # stillwater noise floor reference.  Keyed by (prev_had_wind, sub1hz, long).
+    #
+    # Physics rationale (from tank observations and fromMaxToZeroWin runs):
+    #
+    #   Wind (any):
+    #     Fan-off decay takes ~12 min (fromMaxToZeroWin characterisation).
+    #     Wind generates broadband surface roughness that outlasts the fan.
+    #
+    #   Sub-1 Hz waves (long wavelength):
+    #     Orbital motion reaches the tank floor at d=580 mm even at 0.65 Hz.
+    #     Reflections from walls and panel geometry create a complicated standing
+    #     field that decays slowly.  Per240 = long steady state = more energy.
+    #
+    #   High-freq waves (≥1 Hz):
+    #     Shorter wavelength, orbitals confined near surface, faster viscous decay.
+    #     per40 = short burst, little residual.  per240 = more, but still manageable.
+    #
+    #   Nowave preceding run:
+    #     No wave energy added — water already at rest, no gap needed.
+    #
+    # Thresholds (seconds) — conservative but not excessive:
+    _SETTLE_GAP_S: dict[tuple[bool, bool, bool], float] = {
+        # (had_wind, sub_1hz,  long_run)  → gap_s
+        (True,  True,  True):  720.0,   # wind + sub-1Hz long  → 12 min
+        (True,  True,  False): 720.0,   # wind + sub-1Hz short → 12 min (wind dominates)
+        (True,  False, True):  720.0,   # wind + high-f long   → 12 min
+        (True,  False, False): 720.0,   # wind + high-f short  → 12 min
+        (False, True,  True):  600.0,   # no-wind + sub-1Hz + per240 → 10 min (worst non-wind)
+        (False, True,  False): 300.0,   # no-wind + sub-1Hz + per40  →  5 min
+        (False, False, True):  300.0,   # no-wind + high-f  + per240 →  5 min
+        (False, False, False): 120.0,   # no-wind + high-f  + per40  →  2 min
+    }
+
+    # ── Noise floor accumulation: use all nowave+nowind rows ────────────────
+    # Rather than excluding under-settled runs outright, we compute a per-run
+    # start_sample that skips the unsettled beginning.  Two rules apply:
+    #
+    #   Rule A — "latter-third" (always):
+    #     The last two-thirds of any stillwater run are calmer than the first.
+    #     The first third can still be recovering from the previous activity.
+    #     → start_s ≥ run_duration_s / 3
+    #
+    #   Rule B — "settling deficit" (when gap < required):
+    #     If the gap since the previous wave/wind run is shorter than the
+    #     empirical threshold from _SETTLE_GAP_S, part of the run is still
+    #     settling.  Skip the estimated unsettled prefix:
+    #     → start_s ≥ (required_gap_s − actual_gap_s)
+    #
+    # The effective start_sample = max(Rule A, Rule B) * Fs.
+    #
+    # Runs where the remaining signal (after start_sample) is shorter than
+    # MIN_REMAINING_S are skipped entirely — too little settled data.
+    #
+    # This means we NEVER discard a run just for being "too close" to a wave run;
+    # we simply measure it from its calmer end.
+
+    _fs = float(MEASUREMENT.SAMPLING_RATE)
+
+    # Exclude wind-transition runs (fromMax*/fromZero*) even when WindCondition=="no":
+    # during most of the run wind was active — the latter portion is not clean stillwater.
+    _run_cat = meta.get("run_category", pd.Series("", index=meta.index)).astype(str).str.strip()
+    _wind_decay_mask = _run_cat == "wind_decay"
+
+    nowave_nowind_rows = meta[nowave_mask & nowind_mask & ~_wind_decay_mask]
     noise_floor_accum: dict[tuple, list[float]] = {}
+    n_partial = 0   # runs where start_sample > 0
+    n_too_short = 0  # runs skipped because remaining settled signal is too short
+
     for _, row in nowave_nowind_rows.iterrows():
         df_run = dfs.get(row["path"])
         if df_run is None:
             continue
+
+        run_n = len(df_run)
+        run_duration_s = run_n / _fs
+
+        # Rule B: settling deficit from previous run
+        prev_cat  = str(row.get("prev_run_category") or "").strip().lower()
+        prev_wind = str(row.get("prev_run_wind")     or "").strip().lower()
+        gap = row.get("inter_run_gap_s")
+        gap = float(gap) if (
+            gap is not None and not (isinstance(gap, float) and np.isnan(gap))
+        ) else 0.0
+
+        # Short-circuit only when the previous run was also nowave AND no-wind.
+        # A nowave_control run with wind (e.g. ULSonly+full) still needs wind
+        # settling time — check prev_wind explicitly.
+        if prev_cat in {"", "nowave_control"} and prev_wind not in {"full", "lowest"}:
+            required_s = 0.0
+        else:
+            _had_wind  = prev_wind in {"full", "lowest"}
+            _prev_freq = row.get("prev_run_freq_hz")
+            _sub_1hz   = (
+                (_prev_freq is not None)
+                and not (isinstance(_prev_freq, float) and np.isnan(_prev_freq))
+                and float(_prev_freq) < 1.0
+            )
+            _prev_nper = row.get("prev_run_nperiods")
+            _long_run  = (
+                (_prev_nper is not None)
+                and not (isinstance(_prev_nper, float) and np.isnan(_prev_nper))
+                and float(_prev_nper) >= 120
+            )
+            required_s = _SETTLE_GAP_S.get((_had_wind, _sub_1hz, _long_run), 300.0)
+
+        settling_deficit_s = max(0.0, required_s - gap)
+
+        # Effective skip: whichever is larger — settling deficit or first-third
+        start_s = max(settling_deficit_s, run_duration_s / 3.0)
+        start_sample = int(start_s * _fs)
+
+        # Minimum remaining signal: proportional to run length, floored at 15 s.
+        # max(15, 40% of run) keeps short mstop30 runs usable (21 s remaining)
+        # while still demanding a meaningful window on longer runs.
+        min_remaining_s = max(15.0, run_duration_s * 0.4)
+        if (run_n - start_sample) < int(min_remaining_s * _fs):
+            n_too_short += 1
+            continue
+        if start_sample > 0:
+            n_partial += 1
+
         for i, pos in col_names.items():
-            v = _probe_noise_amplitude_from_run(df_run, f"Probe {pos}", None)
+            v = _probe_noise_amplitude_from_run(df_run, f"Probe {pos}", None, start_sample)
             if v is not None:
                 key = _hw_key_from_row(row, i)
                 noise_floor_accum.setdefault(key, []).append(v)
+
+    if n_partial > 0:
+        print(f"  Noise floor: {n_partial} run(s) used with partial offset "
+              f"(first-third skip or settling-deficit rule)")
+    if n_too_short > 0:
+        print(f"  Noise floor: {n_too_short} run(s) skipped — too short after offset")
 
     # Mean per hardware-config key — printed grouped for easy verification
     noise_floor_by_key: dict[tuple, float] = {}

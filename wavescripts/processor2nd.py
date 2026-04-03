@@ -182,22 +182,35 @@ def compute_inter_run_timing(meta_df: pd.DataFrame) -> pd.DataFrame:
       is the only reliable ordering signal.
 
     Adds these columns:
-      run_mtime          [float]  Unix timestamp of the file's mtime
-      inter_run_gap_s    [float]  Seconds since the preceding run in the same folder.
-                                  NaN for the first run of the day.
-      prev_run_category  [str]    run_category of the preceding run ("" = first run).
-                                  Useful for understanding what the tank was doing just
-                                  before this run. E.g. prev_run_category="wind_decay"
-                                  means the preceding run was a fan-off decay recording.
-      prev_run_wind      [str]    WindCondition of the preceding run ("" = first run).
-                                  Tells you whether the tank had wind before this run.
+      run_mtime            [float]  Unix timestamp of the file's mtime
+      inter_run_gap_s      [float]  Seconds since the preceding run in the same folder.
+                                    NaN for the first run of the day.
+      prev_run_category    [str]    run_category of the preceding run ("" = first run).
+                                    Useful for understanding what the tank was doing just
+                                    before this run. E.g. prev_run_category="wind_decay"
+                                    means the preceding run was a fan-off decay recording.
+      prev_run_wind        [str]    WindCondition of the preceding run ("" = first run).
+                                    Tells you whether the tank had wind before this run.
+      prev_run_freq_hz     [float]  WaveFrequencyInput of the preceding run (NaN if nowave).
+                                    Critical for stillwater recovery: sub-1 Hz waves deposit
+                                    far more energy per cycle (longer wavelength, larger
+                                    orbital depth) and take significantly longer to decay
+                                    than high-frequency waves at the same amplitude.
+      prev_run_nperiods    [float]  WavePeriodInput of the preceding run (NaN if nowave).
+                                    Proxy for total energy deposited: per40 (short burst)
+                                    leaves much less residual than per240 (long steady state).
+                                    Combined with freq: sub-1Hz + per240 is the worst case.
 
     Practical use — stillwater recovery:
-      A run immediately after a wave run (gap < 2 min at 1.3 Hz fullwind) carries
-      residual wave energy at the IN probe. Combine inter_run_gap_s with the
-      mstop_tail_mm_{pos} columns (last 5 s amplitude of the preceding run) and
-      the empirical decay constants to estimate the residual fraction at t=0 of
-      this run.
+      A nowave+nowind run is only trustworthy as a noise floor reference if the tank
+      has had time to settle.  Required gap depends on the preceding run:
+        - prev nowave:                  no gap needed (water already at rest)
+        - prev wave, ≥1 Hz, per40:      ~120 s  (small, short burst — quick decay)
+        - prev wave, ≥1 Hz, per240:     ~300 s  (long steady state — more energy)
+        - prev wave, sub-1 Hz, per40:   ~300 s  (low-freq orbital depth reaches bottom)
+        - prev wave, sub-1 Hz, per240:  ~600 s  (worst case — deep long waves, full tank)
+        - prev run had wind (any):      ~720 s  (fromMaxToZeroWin characterisation ~12 min)
+      These thresholds live in ensure_stillwater_columns (_SETTLE_GAP_S) in processor.py.
 
     Note: NON_FLOAT_COLUMNS in improved_data_loader.py lists prev_run_category and
     prev_run_wind as str so apply_dtypes does not coerce them to NaN.
@@ -221,15 +234,19 @@ def compute_inter_run_timing(meta_df: pd.DataFrame) -> pd.DataFrame:
         prev_row = None
         for i, idx in enumerate(sorted_idx):
             if prev_row is None:
-                meta_df.at[idx, "inter_run_gap_s"]   = float("nan")
-                meta_df.at[idx, "prev_run_category"] = ""
-                meta_df.at[idx, "prev_run_wind"]     = ""
+                meta_df.at[idx, "inter_run_gap_s"]    = float("nan")
+                meta_df.at[idx, "prev_run_category"]  = ""
+                meta_df.at[idx, "prev_run_wind"]      = ""
+                meta_df.at[idx, "prev_run_freq_hz"]   = float("nan")
+                meta_df.at[idx, "prev_run_nperiods"]  = float("nan")
             else:
-                meta_df.at[idx, "inter_run_gap_s"]   = (
+                meta_df.at[idx, "inter_run_gap_s"]    = (
                     float(meta_df.at[idx, "run_mtime"]) - float(meta_df.at[prev_row, "run_mtime"])
                 )
-                meta_df.at[idx, "prev_run_category"] = str(meta_df.at[prev_row, "run_category"] or "")
-                meta_df.at[idx, "prev_run_wind"]     = str(meta_df.at[prev_row, "WindCondition"] or "")
+                meta_df.at[idx, "prev_run_category"]  = str(meta_df.at[prev_row, "run_category"] or "")
+                meta_df.at[idx, "prev_run_wind"]      = str(meta_df.at[prev_row, "WindCondition"] or "")
+                meta_df.at[idx, "prev_run_freq_hz"]   = meta_df.at[prev_row, "WaveFrequencyInput [Hz]"]
+                meta_df.at[idx, "prev_run_nperiods"]  = meta_df.at[prev_row, "WavePeriodInput"]
             prev_row = idx
 
     meta_df = meta_df.drop(columns=["_folder"])

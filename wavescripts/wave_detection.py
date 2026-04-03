@@ -242,7 +242,8 @@ def find_wave_range(
         meta_row.get("Extra seconds", None) if isinstance(meta_row, pd.Series)
         else (meta_row["Extra seconds"].iloc[0] if "Extra seconds" in meta_row.columns else None)
     )
-    mstop_sec     = float(_mstop_raw) if _mstop_raw is not None else 0.0
+    _mstop_float  = float(_mstop_raw) if _mstop_raw is not None else 0.0
+    mstop_sec     = 0.0 if (np.isnan(_mstop_float) or np.isinf(_mstop_float)) else _mstop_float
     mstop_samples = int(mstop_sec * Fs)
     signal_length = len(signal_smooth)
 
