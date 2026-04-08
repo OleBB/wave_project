@@ -61,12 +61,17 @@ from wavescripts.plotter import (
     plot_all_probes,
     plot_damping_freq,
     plot_damping_scatter,
+    plot_first_arrival,
     plot_frequency_spectrum,
     plot_parallel_ratio,
     plot_probe_noise_floor,
+    plot_reconstructed,
+    plot_sound_speed,
     plot_swell_scatter,
+    plot_td_vs_fft,
     plot_timeseries_overview,
     plot_wave_stability,
+    plot_wind_snr,
 )
 from wavescripts.wave_detection import find_first_arrival
 # %%
@@ -304,6 +309,29 @@ TODO: needs data from both height configurations to make the comparison.
 """
 # TODO: implement plot_probe_height_comparison() in plotter.py when data is ready
 _save_placeholder("ch04_probe_height", "CH04 §3b — Probe height validity range", chapter="04")
+
+# %%
+"""
+── CH04 § 3c — Speed-of-sound / lab temperature ─────────────────────────────
+Goal: show that lab temperature variation introduces < 0.4 % amplitude scale
+error, and that this cancels exactly for OUT/IN ratios.
+Data: sound_speed_mean_ms / sound_speed_std_ms in combined_meta (pipeline).
+"""
+
+_pv_sound_speed = {
+    "filters": {},
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   True,            # DRAFT — not yet polished
+        "draft":       True,
+        "figure_name": "ch04_sound_speed",
+        "force_stub":  True,
+        "figsize":     (10, 3),
+    },
+}
+
+plot_sound_speed(combined_meta, _pv_sound_speed, chapter="04")
+
 # _pv_probe_height = {
 #     "filters": {"run_category": "standard"},
 #     "plotting": {
@@ -457,6 +485,62 @@ _fig_fft_wave, _ = plot_frequency_spectrum(
 
 # %%
 """
+── CH04 § 4-4 — Spectral SNR: paddle signal vs wind noise ───────────────────
+Goal: quantify how much of the FFT amplitude at paddle frequencies is
+wind noise. SNR < 5 = unreliable; SNR < 3 = dominated by wind.
+Data: combined_meta (wave runs + FFT amplitudes) + combined_psd_dict (nowave PSDs).
+"""
+
+_pv_wind_snr = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": None,
+        "WaveFrequencyInput [Hz]":   None,
+        "WindCondition":             None,
+        "PanelCondition":            None,
+    },
+    "plotting": {
+        "show_plot":      True,
+        "save_plot":      True,         # DRAFT — not yet polished
+        "draft":          True,
+        "figure_name":    "ch04_wind_snr",
+        "force_stub":     True,
+        "probes":         ANALYSIS_PROBES,
+        "fft_window_hz":  0.1,
+    },
+}
+
+plot_wind_snr(combined_meta, combined_psd_dict, _pv_wind_snr, chapter="04")
+
+# %%
+"""
+── CH04 § 4-5 — Time-domain vs FFT amplitude: why A_FFT is required ─────────
+Goal: demonstrate that time-domain amplitude is wind-dominated at the IN probe
+under full wind, making OUT/IN from A_td meaningless. FFT amplitude isolates
+the paddle frequency and is unaffected by broadband wind energy.
+Data: combined_meta wave rows (Probe {pos} Amplitude and Probe {pos} Amplitude (FFT)).
+"""
+
+_pv_td_vs_fft = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": None,
+        "WaveFrequencyInput [Hz]":   None,
+        "WindCondition":             None,
+        "PanelCondition":            None,
+    },
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   True,            # DRAFT — not yet polished
+        "draft":       True,
+        "figure_name": "ch04_td_vs_fft",
+        "force_stub":  True,
+        "probes":      ANALYSIS_PROBES,
+    },
+}
+
+plot_td_vs_fft(combined_meta, _pv_td_vs_fft, chapter="04")
+
+# %%
+"""
 ── CH04 § 5 — What does a full signal look like? ────────────────────────────
 Goal: show the full signal for a select few runs — stillwater baseline,
 wavemaker ramp, stable wavetrain, decay. Wind-wave noise visible at IN probe
@@ -504,8 +588,24 @@ Figures:
   - Plot:  single run with detected start/end marked, one probe panel per row
   - Plot:  start sample vs frequency (all probes) — show _SNARVEI_CALIB points
 """
-# TODO: implement wave-range detection figure (needs processed_dfs)
-_save_placeholder("ch04_wave_detection", "CH04 §6 — Wave-range detection", chapter="04")
+
+_pv_first_arrival = {
+    "filters": {},
+    "plotting": {
+        "show_plot":        True,
+        "save_plot":        True,       # DRAFT — threshold not yet calibrated
+        "draft":            True,
+        "figure_name":      "ch04_first_arrival",
+        "force_stub":       True,
+        "probes":           ANALYSIS_PROBES,
+        "threshold_factor": 5.0,        # TODO: calibrate per-probe after noise floor analysis
+        "window_s":         2.5,
+        "min_arrival_s":    0.5,
+        "figsize":          (9, 5),
+    },
+}
+
+plot_first_arrival(combined_meta, processed_dfs, _pv_first_arrival, chapter="04")
 
 # %%
 """
@@ -577,6 +677,38 @@ _pv_lateral_nowind = {
     },
 }
 _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)
+
+# %%
+"""
+── CH04 § 9 — Amplitude profile across all probes ───────────────────────────
+Goal: show measured amplitude at each probe position for all runs, giving a
+physical overview of how wave energy is distributed along the tank.
+Colour = wind condition, linestyle = panel condition.
+Data: combined_meta wave rows, all Probe {pos} Amplitude columns.
+"""
+
+_pv_all_probes = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": None,
+        "WaveFrequencyInput [Hz]":   None,
+        "WindCondition":             None,
+        "PanelCondition":            None,
+    },
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   True,            # DRAFT — not yet polished
+        "draft":       True,
+        "figure_name": "ch04_amplitude_profile",
+        "force_stub":  True,
+        "figsize":     (10, 6),
+        "annotate":    False,
+    },
+}
+
+_ap_meta = apply_experimental_filters(
+    combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()], _pv_all_probes
+)
+plot_all_probes(_ap_meta, _pv_all_probes, chapter="04")
 
 # =============================================================================
 # CHAPTER 05 — RESULTS
@@ -730,6 +862,72 @@ Requires: wavenumber column in combined_meta (computed in processor2nd).
 # TODO: verify wavenumber column is populated for all runs, then replace
 #       Hz x-axis with ka where appropriate in CH05 §1-3
 _save_placeholder("ch05_damping_ka", "CH05 §4 — Damping vs ka (wave steepness axis)", chapter="05")
+
+# %%
+"""
+── CH05 § 5 — Swell / band amplitude scatter (IN vs OUT) ────────────────────
+Goal: show IN vs OUT amplitude for swell, wind-wave, and total bands.
+Characterises what energy bands the panel attenuates and passes.
+Data: combined_meta band amplitude columns (Probe {pos} Swell Amplitude (PSD) etc.)
+"""
+
+_pv_swell_scatter = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],
+        "WaveFrequencyInput [Hz]":   None,
+        "WindCondition":             None,
+        "PanelCondition":            None,
+    },
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   True,            # DRAFT — not yet polished
+        "draft":       True,
+        "figure_name": "ch05_swell_scatter",
+        "force_stub":  True,
+    },
+}
+
+plot_swell_scatter(combined_meta, _pv_swell_scatter, chapter="05")
+
+# %%
+"""
+── CH05 § 6 — Reconstructed wave signal ─────────────────────────────────────
+Goal: show the FFT-reconstructed paddle-frequency signal alongside the raw
+time-series. Illustrates what A_FFT actually isolates from the full signal.
+Data: combined_fft_dict, one representative run (1.3 Hz, 0.2 V, full panel).
+"""
+
+_pv_reconstructed = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": 0.2,
+        "WaveFrequencyInput [Hz]":   1.3,
+        "WindCondition":             None,
+        "PanelCondition":            "full",
+    },
+    "plotting": {
+        "show_plot":    True,
+        "save_plot":    True,           # DRAFT — not yet polished
+        "draft":        True,
+        "figure_name":  "ch05_reconstructed",
+        "force_stub":   True,
+        "facet_by":     "probe",
+        "probes":       ["9373/170", "12400/250"],
+        "linewidth":    0.8,
+        "grid":         True,
+        "legend":       "inside",
+        "xlim":         None,
+        "max_points":   500,
+    },
+}
+
+_recon_meta  = apply_experimental_filters(combined_meta, _pv_reconstructed)
+_recon_paths = {p: combined_fft_dict[p]
+                for p in _recon_meta["path"] if p in combined_fft_dict}
+if _recon_paths:
+    plot_reconstructed(_recon_paths, _recon_meta, _pv_reconstructed,
+                       data_type="fft", chapter="05")
+else:
+    print("ch05_reconstructed: no matching runs found — check filters.")
 
 
 # =============================================================================

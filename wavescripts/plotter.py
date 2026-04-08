@@ -20,6 +20,9 @@ Sections
   RAMP DETECTION              gather_ramp_data, plot_ramp_detection
   WAVE STABILITY              plot_wave_stability
   TIME-SERIES OVERVIEW        plot_timeseries_overview
+  INSTRUMENT DIAGNOSTICS      plot_sound_speed
+  WIND CHARACTERISATION       plot_wind_snr, plot_td_vs_fft
+  WAVE DETECTION              plot_first_arrival
 """
 
 from __future__ import annotations
@@ -2473,4 +2476,538 @@ def plot_timeseries_overview(
             force=force_stub,
         )
 
+    return fig
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# INSTRUMENT DIAGNOSTICS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def plot_sound_speed(
+    combined_meta: pd.DataFrame,
+    plotvariables: dict,
+    chapter: str = "04",
+) -> Optional[plt.Figure]:
+    """
+    Speed-of-sound (and inferred air temperature) per run vs date — CH04.
+
+    Quantifies the worst-case probe amplitude scale error arising from
+    lab temperature variation across sessions.
+
+    Parameters
+    ----------
+    combined_meta : DataFrame — all runs; must have sound_speed_mean_ms /
+                    sound_speed_std_ms columns (added by pipeline).
+    plotvariables : standard dict with "filters" and "plotting" sub-dicts.
+        Recognised "plotting" keys: show_plot, save_plot, draft, force_stub,
+        figsize, figure_name, caption.
+    """
+    plotting   = plotvariables.get("plotting", {})
+    show_plot  = plotting.get("show_plot",  False)
+    save_plot  = plotting.get("save_plot",  False)
+    force_stub = plotting.get("force_stub", False)
+    figsize    = plotting.get("figsize",    (10, 3))
+
+    _c_df = combined_meta[
+        ["file_date", "experiment_folder",
+         "sound_speed_mean_ms", "sound_speed_std_ms"]
+    ].dropna(subset=["sound_speed_mean_ms"]).copy()
+    _c_df["file_date"]    = pd.to_datetime(_c_df["file_date"])
+    _c_df["T_approx_C"]   = (_c_df["sound_speed_mean_ms"] - 331.0) / 0.606
+    _c_ref                = 343.0
+    _c_df["scale_err_pct"] = (_c_df["sound_speed_mean_ms"] - _c_ref).abs() / _c_ref * 100
+
+    n_runs    = len(_c_df)
+    worst_pct = _c_df["scale_err_pct"].max()
+
+    _slots = {
+        "n_runs":      n_runs,
+        "c_ref":       _c_ref,
+        "worst_pct":   f"{worst_pct:.3f}",
+        "worst_mm_10": f"{worst_pct * 0.1:.4f}",
+    }
+    _default = (
+        "Speed of sound in air per run, measured by the probe hardware "
+        "({n_runs} runs). "
+        "Right axis: approximate air temperature from "
+        r"$c_\mathrm{air}\approx 331 + 0.606\,T$. "
+        "Dashed line: {c_ref}\\,m/s reference ($\\approx$20\\,\\textdegree C). "
+        "Worst-case amplitude scale error: {worst_pct}\\,\\% "
+        "({worst_mm_10}\\,mm on a 10\\,mm wave). "
+        "For OUT/IN ratios the error cancels exactly."
+    )
+    _caption = resolve_caption(plotting, _default, _slots,
+                               fn_name="plot_sound_speed")
+
+    def _make_fig() -> plt.Figure:
+        apply_thesis_style()
+        fig, ax = plt.subplots(figsize=figsize)
+        sc = ax.scatter(_c_df["file_date"], _c_df["sound_speed_mean_ms"],
+                        c=_c_df["T_approx_C"], cmap="coolwarm", s=14, zorder=3)
+        ax.errorbar(_c_df["file_date"], _c_df["sound_speed_mean_ms"],
+                    yerr=_c_df["sound_speed_std_ms"],
+                    fmt="none", color="gray", alpha=0.4, lw=0.8)
+        ax2 = ax.twinx()
+        ax2.set_ylim([(y - 331.0) / 0.606 for y in ax.get_ylim()])
+        ax2.set_ylabel("Air temperature [°C]", color="gray", fontsize=9)
+        ax.axhline(_c_ref, ls="--", color="k", lw=0.7,
+                   label=f"c = {_c_ref} m/s  (~20 °C ref)")
+        ax.set_ylabel("$c_\\mathrm{air}$ [m/s]")
+        ax.set_xlabel("Date")
+        ax.legend(fontsize=8)
+        fig.colorbar(sc, ax=ax, label="T [°C]", fraction=0.03, pad=0.12)
+        fig.autofmt_xdate()
+        fig.tight_layout()
+        return fig
+
+    fig = _make_fig()
+    if show_plot:
+        plt.show()
+
+    if save_plot:
+        meta = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
+            chapter=chapter,
+            extra={"script": "plotter.py::plot_sound_speed"},
+        )
+        save_and_stub(fig, meta, plot_type="sound_speed",
+                      force_stub=force_stub)
+
+    return fig
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WIND CHARACTERISATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def plot_wind_snr(
+    combined_meta: pd.DataFrame,
+    combined_psd_dict: dict,
+    plotvariables: dict,
+    chapter: str = "04",
+) -> Optional[plt.Figure]:
+    """
+    Spectral SNR = A_paddle_FFT / A_wind_FFT per probe vs frequency — CH04 §4.
+
+    Wind-noise amplitude A_wind_FFT is derived by integrating the mean fullwind
+    nowave PSD over the 0.1 Hz FFT window at each paddle frequency.
+    SNR < 5 is unreliable; SNR < 3 is wind-dominated.
+
+    Parameters
+    ----------
+    combined_meta     : DataFrame — all runs.
+    combined_psd_dict : {path: DataFrame} with "Pxx {pos}" columns.
+    plotvariables     : standard dict.
+        Extra "plotting" keys: probes (list[str]), fft_window_hz (float, default 0.1).
+    """
+    from wavescripts.filters import apply_experimental_filters as _aef
+
+    plotting       = plotvariables.get("plotting", {})
+    show_plot      = plotting.get("show_plot",     False)
+    save_plot      = plotting.get("save_plot",     False)
+    force_stub     = plotting.get("force_stub",    False)
+    probes         = plotting.get("probes",        [])
+    fft_window_hz  = plotting.get("fft_window_hz", 0.1)
+    figsize        = plotting.get("figsize",       None)
+
+    # ── Baseline: mean PSD from fullwind nowave runs ──────────────────────────
+    _fw_mask  = (combined_meta["WaveFrequencyInput [Hz]"].isna()
+                 & (combined_meta["WindCondition"] == "full"))
+    _fw_paths = set(combined_meta.loc[_fw_mask, "path"].values)
+    _fw_psds  = {k: v for k, v in combined_psd_dict.items() if k in _fw_paths}
+
+    if not _fw_psds:
+        print("plot_wind_snr: no fullwind nowave PSD data — aborting.")
+        return None
+
+    _psd_sample = next(v for v in _fw_psds.values() if v is not None and len(v) > 1)
+    _psd_freqs  = _psd_sample.index.values.astype(float)
+
+    _mean_pxx: dict[str, np.ndarray] = {}
+    for pos in probes:
+        col   = f"Pxx {pos}"
+        stack = [v[col].values for v in _fw_psds.values()
+                 if v is not None and col in v.columns]
+        if stack:
+            _mean_pxx[pos] = np.vstack(stack).mean(axis=0)
+
+    _paddle_freqs = sorted(combined_meta["WaveFrequencyInput [Hz]"].dropna().unique())
+
+    _wind_amp_fft: dict[str, dict] = {}
+    for pos, pxx in _mean_pxx.items():
+        _wind_amp_fft[pos] = {}
+        for f in _paddle_freqs:
+            mask = ((_psd_freqs >= f - fft_window_hz / 2) &
+                    (_psd_freqs <= f + fft_window_hz / 2))
+            if mask.any():
+                _wind_amp_fft[pos][f] = float(
+                    np.sqrt(2.0 * np.trapezoid(pxx[mask], _psd_freqs[mask]))
+                )
+
+    # ── SNR from wave runs ────────────────────────────────────────────────────
+    _wave = _aef(
+        combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy(),
+        plotvariables,
+    )
+    _snr_rows = []
+    for _, row in _wave.iterrows():
+        freq  = row.get("WaveFrequencyInput [Hz]")
+        if not np.isfinite(float(freq)):
+            continue
+        f_key = min(_paddle_freqs, key=lambda f: abs(f - freq))
+        for pos in probes:
+            a_paddle = row.get(f"Probe {pos} Amplitude (FFT)", np.nan)
+            a_wind   = _wind_amp_fft.get(pos, {}).get(f_key, np.nan)
+            if (np.isfinite(float(a_paddle)) and np.isfinite(float(a_wind))
+                    and float(a_wind) > 0):
+                _snr_rows.append({
+                    "freq": float(freq),
+                    "wind": row.get("WindCondition"),
+                    "probe": pos,
+                    "SNR":  float(a_paddle) / float(a_wind),
+                })
+
+    snr_df     = pd.DataFrame(_snr_rows)
+    n_wave_runs = _wave["path"].nunique()
+
+    _slots = {
+        "n_wave_runs": n_wave_runs,
+        "n_fw_psds":   len(_fw_psds),
+        "fft_window":  fft_window_hz,
+    }
+    _default = (
+        "Spectral SNR per probe: ratio of paddle-frequency FFT amplitude "
+        "to wind-noise amplitude integrated over the {fft_window}\\,Hz FFT window "
+        "at each paddle frequency "
+        "({n_wave_runs} wave runs; wind-noise baseline from "
+        "{n_fw_psds} full-wind no-wave runs). "
+        "Horizontal lines: SNR~=~10 (dotted grey), 5 (dashed black), "
+        "3 (dotted red, critical). "
+        "SNR~$<$~3 indicates wind dominates the FFT measurement."
+    )
+    _caption = resolve_caption(plotting, _default, _slots,
+                               fn_name="plot_wind_snr")
+
+    probes_in = [p for p in probes if p in snr_df.get("probe", pd.Series()).values]
+    fs        = figsize or (4.5 * max(len(probes_in), 1), 4)
+
+    def _make_fig() -> plt.Figure:
+        apply_thesis_style()
+        fig, axes = plt.subplots(1, len(probes_in), figsize=fs, sharey=True)
+        if len(probes_in) == 1:
+            axes = [axes]
+        for ax, pos in zip(axes, probes_in):
+            sub = snr_df[snr_df["probe"] == pos]
+            for wc, grp in sub.groupby("wind"):
+                agg = grp.groupby("freq")["SNR"].median()
+                ax.plot(agg.index, agg.values, marker="o", lw=1.2, markersize=6,
+                        color=WIND_COLOR_MAP.get(wc, "grey"), label=wc)
+            ax.axhline(10, color="0.6",     lw=0.7, ls=":",  label="SNR=10")
+            ax.axhline(5,  color="k",       lw=0.8, ls="--", label="SNR=5")
+            ax.axhline(3,  color="tomato",  lw=0.8, ls=":",  label="SNR=3")
+            ax.set_xlabel("Paddle frequency [Hz]")
+            if ax is axes[0]:
+                ax.set_ylabel(
+                    r"Spectral SNR  ($A_\mathrm{paddle}\,/\,A_\mathrm{wind,FFT}$)"
+                )
+            ax.set_title(pos, fontsize=9)
+            ax.legend(fontsize=7)
+            ax.grid(True, alpha=0.3)
+        fig.tight_layout()
+        return fig
+
+    fig = _make_fig()
+    if show_plot:
+        plt.show()
+
+    if save_plot:
+        meta = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
+            chapter=chapter,
+            extra={"script": "plotter.py::plot_wind_snr"},
+        )
+        save_and_stub(fig, meta, plot_type="wind_snr", force_stub=force_stub)
+
+    return fig
+
+
+def plot_td_vs_fft(
+    combined_meta: pd.DataFrame,
+    plotvariables: dict,
+    chapter: str = "04",
+) -> Optional[plt.Figure]:
+    """
+    Time-domain vs FFT amplitude — motivates FFT as the only valid OUT/IN metric.
+
+    Row 0: scatter A_td vs A_FFT per probe (1:1 line = dashed).
+    Row 1: ratio A_FFT/A_td vs paddle frequency.
+
+    Under no wind the ratio ≈ 1 everywhere.  Under full wind at the IN probe
+    the ratio drops sharply (time-domain is wind-dominated).  The OUT probe
+    remains near 1 even under full wind (panel blocks wind fetch).
+
+    Parameters
+    ----------
+    combined_meta : DataFrame — wave runs only (WaveFrequencyInput not NaN).
+    plotvariables : standard dict.
+        Extra "plotting" key: probes (list[str]).
+    """
+    from wavescripts.filters import apply_experimental_filters as _aef
+
+    plotting   = plotvariables.get("plotting", {})
+    show_plot  = plotting.get("show_plot",  False)
+    save_plot  = plotting.get("save_plot",  False)
+    force_stub = plotting.get("force_stub", False)
+    probes     = plotting.get("probes",     [])
+    figsize    = plotting.get("figsize",    None)
+
+    wave_meta = _aef(
+        combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy(),
+        plotvariables,
+    )
+
+    n_runs     = len(wave_meta)
+    wind_conds = sorted(wave_meta["WindCondition"].dropna().unique())
+
+    _slots = {
+        "n_runs":     n_runs,
+        "wind_conds": ", ".join(wind_conds),
+    }
+    _default = (
+        "Time-domain amplitude $A_\\mathrm{{td}}$ vs.\\ FFT amplitude "
+        "$A_\\mathrm{{FFT}}$ at the paddle frequency per probe "
+        "({n_runs} wave runs; wind: {wind_conds}). "
+        "Top row: scatter; dashed = 1:1 line. "
+        "Bottom row: ratio $A_\\mathrm{{FFT}}/A_\\mathrm{{td}}$ vs.\\ frequency. "
+        "Ratio $\\to 1$ under no wind; $\\to 0$ at the IN probe under full wind "
+        "(time-domain dominated by wind waves). "
+        "Confirms $A_\\mathrm{{FFT}}$ as the only valid amplitude metric under wind."
+    )
+    _caption = resolve_caption(plotting, _default, _slots,
+                               fn_name="plot_td_vs_fft")
+
+    probes_avail = [p for p in probes
+                    if (f"Probe {p} Amplitude"       in wave_meta.columns and
+                        f"Probe {p} Amplitude (FFT)" in wave_meta.columns)]
+    fs = figsize or (4 * max(len(probes_avail), 1), 8)
+
+    def _make_fig() -> plt.Figure:
+        apply_thesis_style()
+        fig, axes = plt.subplots(2, len(probes_avail), figsize=fs)
+        if len(probes_avail) == 1:
+            axes = axes.reshape(2, 1)
+
+        for ci, pos in enumerate(probes_avail):
+            td_col  = f"Probe {pos} Amplitude"
+            fft_col = f"Probe {pos} Amplitude (FFT)"
+            sub = wave_meta[
+                [td_col, fft_col, "WindCondition", "WaveFrequencyInput [Hz]"]
+            ].dropna(subset=[td_col, fft_col]).copy()
+            sub["ratio"] = sub[fft_col] / sub[td_col]
+
+            ax_sc = axes[0, ci]
+            ax_rt = axes[1, ci]
+
+            for wc, grp in sub.groupby("WindCondition"):
+                c = WIND_COLOR_MAP.get(wc, "grey")
+                ax_sc.scatter(grp[td_col], grp[fft_col],
+                              s=12, alpha=0.45, color=c, label=wc)
+                agg = grp.groupby("WaveFrequencyInput [Hz]")["ratio"].median()
+                ax_rt.plot(agg.index, agg.values,
+                           marker="o", lw=1.0, markersize=5, color=c, label=wc)
+
+            lim = sub[[td_col, fft_col]].max().max() * 1.08
+            ax_sc.plot([0, lim], [0, lim], "k--", lw=0.7, alpha=0.4)
+            ax_sc.set_xlim(0, lim); ax_sc.set_ylim(0, lim)
+            ax_sc.set_xlabel("$A_\\mathrm{td}$ [mm]")
+            if ci == 0:
+                ax_sc.set_ylabel("$A_\\mathrm{FFT}$ [mm]")
+            ax_sc.set_title(pos, fontsize=9)
+            ax_sc.legend(fontsize=7)
+            ax_sc.grid(True, alpha=0.3)
+
+            ax_rt.axhline(1.0, color="k", lw=0.7, ls="--", alpha=0.5)
+            ax_rt.set_ylim(0, 1.15)
+            ax_rt.set_xlabel("Paddle frequency [Hz]")
+            if ci == 0:
+                ax_rt.set_ylabel("$A_\\mathrm{FFT}\\,/\\,A_\\mathrm{td}$")
+            ax_rt.set_title(f"{pos}  ratio", fontsize=9)
+            ax_rt.legend(fontsize=7)
+            ax_rt.grid(True, alpha=0.3)
+
+        fig.tight_layout()
+        return fig
+
+    fig = _make_fig()
+    if show_plot:
+        plt.show()
+
+    if save_plot:
+        meta = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
+            chapter=chapter,
+            extra={"script": "plotter.py::plot_td_vs_fft"},
+        )
+        save_and_stub(fig, meta, plot_type="td_vs_fft", force_stub=force_stub)
+
+    return fig
+
+
+def plot_first_arrival(
+    combined_meta: pd.DataFrame,
+    processed_dfs: dict,
+    plotvariables: dict,
+    chapter: str = "04",
+) -> Optional[plt.Figure]:
+    """
+    First wave arrival time at each probe vs distance from paddle — CH04 §6.
+
+    No-wind runs only (cleanest signal).  Parallel probes at the same
+    longitudinal distance are averaged with half-range error bars.
+    Noise floor is taken from the mean Amplitude of stillwater rows in
+    combined_meta (pipeline-computed, no extra processing needed).
+
+    Parameters
+    ----------
+    combined_meta : DataFrame — all runs.
+    processed_dfs : {path: DataFrame} with eta_{pos} columns.
+    plotvariables : standard dict.
+        Extra "plotting" keys:
+            probes           : list[str]
+            threshold_factor : float  (default 5.0 × noise floor)
+            window_s         : float  (rolling window [s], default 2.5)
+            min_arrival_s    : float  (ignore arrivals before this, default 0.5)
+    """
+    from wavescripts.wave_detection import find_first_arrival as _find_arr
+
+    plotting         = plotvariables.get("plotting", {})
+    show_plot        = plotting.get("show_plot",        False)
+    save_plot        = plotting.get("save_plot",        False)
+    force_stub       = plotting.get("force_stub",       False)
+    probes           = plotting.get("probes",           [])
+    threshold_factor = plotting.get("threshold_factor", 5.0)
+    window_s         = plotting.get("window_s",         2.5)
+    min_arrival_s    = plotting.get("min_arrival_s",    0.5)
+    figsize          = plotting.get("figsize",          (9, 5))
+
+    _fs = MEASUREMENT.SAMPLING_RATE
+
+    # ── Noise floor from stillwater rows already in combined_meta ────────────
+    sw_mask     = (combined_meta["WaveFrequencyInput [Hz]"].isna()
+                   & (combined_meta["WindCondition"] == "no"))
+    noise_floor = {}
+    for pos in probes:
+        col  = f"Probe {pos} Amplitude"
+        vals = (combined_meta.loc[sw_mask, col].dropna()
+                if col in combined_meta.columns else pd.Series(dtype=float))
+        if not vals.empty:
+            noise_floor[pos] = float(vals.mean())
+
+    # ── Detect arrivals — no-wind wave runs ───────────────────────────────────
+    nowind_wave = combined_meta[
+        combined_meta["WaveFrequencyInput [Hz]"].notna()
+        & (combined_meta["WindCondition"] == "no")
+    ]
+
+    rows = []
+    for _, row in nowind_wave.iterrows():
+        df   = processed_dfs.get(row["path"])
+        if df is None:
+            continue
+        freq = float(row["WaveFrequencyInput [Hz]"])
+        for pos in probes:
+            noise = noise_floor.get(pos)
+            if not noise or noise <= 0:
+                continue
+            eta_col = f"eta_{pos}"
+            if eta_col not in df.columns:
+                continue
+            sig      = df[eta_col].dropna().values
+            _, t_s   = _find_arr(sig, noise, fs=_fs,
+                                 threshold_factor=threshold_factor,
+                                 window_s=window_s)
+            rows.append({
+                "freq_hz":   freq,
+                "probe":     pos,
+                "dist_mm":   int(pos.split("/")[0]),
+                "arrival_s": t_s,
+            })
+
+    if not rows:
+        print("plot_first_arrival: no arrivals detected — check threshold_factor.")
+        return None
+
+    arr_df   = pd.DataFrame(rows)
+    plot_df  = arr_df[arr_df["arrival_s"] > min_arrival_s].copy()
+    n_runs   = nowind_wave["path"].nunique()
+    freqs    = sorted(plot_df["freq_hz"].dropna().unique())
+
+    thresh_strs = ", ".join(
+        f"{pos}: {threshold_factor * noise_floor[pos]:.2f}\\,mm"
+        for pos in probes if pos in noise_floor
+    )
+    _slots = {
+        "n_runs":      n_runs,
+        "threshold":   threshold_factor,
+        "thresh_strs": thresh_strs,
+        "window_s":    window_s,
+        "min_arr":     min_arrival_s,
+    }
+    _default = (
+        "First wave arrival time at each probe vs.\\ distance from the paddle, "
+        "no-wind runs ({n_runs} runs). "
+        "Detection: rolling {window_s}\\,s window exceeds "
+        "{threshold}$\\times$ stillwater noise floor ({thresh_strs}). "
+        "Arrivals $\\leq${min_arr}\\,s excluded as instrument transients. "
+        "Error bars: half-range across parallel probes at the same "
+        "longitudinal distance."
+    )
+    _caption = resolve_caption(plotting, _default, _slots,
+                               fn_name="plot_first_arrival")
+
+    freq_colors = dict(zip(
+        freqs, plt.cm.rainbow(np.linspace(0, 1, max(len(freqs), 1)))
+    ))
+    agg = (
+        plot_df
+        .groupby(["freq_hz", "dist_mm"])["arrival_s"]
+        .agg(mean="mean", err=lambda x: (x.max() - x.min()) / 2)
+        .reset_index()
+    )
+
+    def _make_fig() -> plt.Figure:
+        apply_thesis_style()
+        fig, ax = plt.subplots(figsize=figsize)
+        for freq, grp in agg.groupby("freq_hz"):
+            grp_s = grp.sort_values("dist_mm")
+            ax.errorbar(grp_s["dist_mm"], grp_s["mean"], yerr=grp_s["err"],
+                        marker="o", markersize=8, linewidth=1.2, capsize=4,
+                        color=freq_colors[freq], label=f"{freq:.2f} Hz")
+        for pos in probes:
+            d = int(pos.split("/")[0])
+            ax.axvline(d, color="0.75", lw=0.4, ls="--", zorder=0)
+            ax.text(d, 1.01, pos, fontsize=7, ha="center", va="bottom",
+                    color="0.4", transform=ax.get_xaxis_transform())
+        ax.set_xlabel("Probe distance from paddle [mm]")
+        ax.set_ylabel("First arrival [s]")
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles[::-1], labels[::-1], fontsize=8, title="frequency")
+        ax.grid(True, alpha=0.3)
+        fig.tight_layout()
+        return fig
+
+    fig = _make_fig()
+    if show_plot:
+        plt.show()
+
+    if save_plot:
+        meta = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
+            chapter=chapter,
+            extra={"script": "plotter.py::plot_first_arrival"},
+        )
+        save_and_stub(fig, meta, plot_type="first_arrival",
+                      force_stub=force_stub)
+
+    return fig
     return fig
