@@ -272,12 +272,17 @@ def build_filename(plot_type: str, meta: dict) -> str:
     """
     Build canonical figure filename (no extension) from meta dict.
 
-    Pattern:
+    When ``figure_name`` is set in *meta*, it is returned directly —
+    keeping filenames short and human-readable.
+
+    Fallback pattern (used only when figure_name is absent):
         {chapter}_{plot_type}_{panel}panel-{wind}wind-amp{amp}-freq{freq}-probe{probes}
 
-    Example:
+    Example fallback:
         '05_timeseries_reversepanel-fullwind-amp0100-freq0650-probe2og3'
     """
+    if meta.get("figure_name"):
+        return meta["figure_name"]
     chapter = str(meta.get("chapter", "00"))
     panel   = _fmt_condition(meta.get("panel"))
     wind    = _fmt_condition(meta.get("wind"))

@@ -1235,12 +1235,7 @@ def plot_reconstructed(
             chapter=chapter,
             extra={"script": "plotter.py::plot_reconstructed"},
         )
-        save_and_stub(
-            fig,
-            meta,
-            plot_type="reconstructed",
-            save_pgf=True,
-        )
+        save_and_stub(fig, meta, plot_type="reconstructed")
 
     if show_plot:
         plt.show(block=False)
@@ -2001,11 +1996,25 @@ def plot_probe_noise_floor(
     )
 
     if save_plot:
-        meta_fig = build_fig_meta(
+        meta_base = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
         )
-        save_and_stub(figs[0], meta_fig, plot_type="probe_noise_floor")
+        force_stub = plotting.get("force_stub", False)
+        if len(figs) == 1:
+            save_and_stub(figs[0], meta_base, plot_type="probe_noise_floor",
+                          force_stub=force_stub)
+        else:
+            subfig_filenames = []
+            for i, fig_g in enumerate(figs):
+                group_tag = f"group{i}"
+                fname = build_filename("probe_noise_floor", meta_base) + f"_{group_tag}"
+                _save_figure(fig_g, fname, save_pdf=True, save_pgf=True)
+                subfig_filenames.append(fname)
+                plt.close(fig_g)
+            write_figure_stub(meta_base, "probe_noise_floor",
+                              subfig_filenames=subfig_filenames,
+                              force=force_stub)
 
     return figs, summary
 
@@ -2084,7 +2093,13 @@ def plot_parallel_ratio(
             if grp.empty:
                 continue
             color = WIND_COLOR_MAP.get(wind, "gray")
-            # mean ± std per frequency
+            # TODO (BIG — OLE MUST REVIEW): errorbar = std across ALL runs at the same
+            # frequency, regardless of amplitude or mooring. This mixes physical variation
+            # (different wave steepnesses) with true measurement uncertainty. A tall bar
+            # may mean: (a) genuine lateral asymmetry that varies with amplitude/mooring,
+            # or (b) just that 0.1 V and 0.2 V runs produce different ratios. Before
+            # publishing, decide: should errorbars show spread across amplitudes (as now),
+            # or should each amplitude be a separate line? The current figure conflates both.
             stats = grp.groupby("WaveFrequencyInput [Hz]")["parallel_ratio"].agg(["mean", "std", "count"])
             ax.errorbar(
                 stats.index, stats["mean"],
@@ -2330,7 +2345,7 @@ def plot_timeseries_overview(
     chapter : str
     """
     from wavescripts.filters import apply_experimental_filters
-    from wavescripts.constants import MEASUREMENT, PC
+    from wavescripts.constants import MEASUREMENT
 
     fs = MEASUREMENT.SAMPLING_RATE
 
@@ -2530,7 +2545,7 @@ def plot_sound_speed(
         "Speed of sound in air per run, measured by the probe hardware "
         "({n_runs} runs). "
         "Right axis: approximate air temperature from "
-        r"$c_\mathrm{air}\approx 331 + 0.606\,T$. "
+        "$c_{{\\mathrm{{air}}}}\\approx 331 + 0.606\\,T$. "
         "Dashed line: {c_ref}\\,m/s reference ($\\approx$20\\,\\textdegree C). "
         "Worst-case amplitude scale error: {worst_pct}\\,\\% "
         "({worst_mm_10}\\,mm on a 10\\,mm wave). "

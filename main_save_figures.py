@@ -22,6 +22,37 @@ OUTPUT KEYS (measured results):
                                   (wind waves excluded — they are characterised separately)
     ka                          — wavenumber × amplitude, found per probe per run
                                   (not pre-calculated; measured from the actual wave)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIGURE INDEX
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Status legend:  ✓ ready   ~ draft (DRAFT stamp)   ✗ placeholder (blank fig)
+
+CHAPTER 04 — METHODOLOGY
+  §1   ch04_probe_noise_floor      ~  Stillwater noise floor per probe / hw config
+  §2   ch04_stillwater_timing      ✗  Swell decay time vs wait time  [TODO]
+  §3   ch04_parallel_ratio         ~  Wall/far-side amplitude ratio vs frequency
+  §3b  ch04_probe_height           ✗  Probe height validity range    [TODO]
+  §3c  ch04_sound_speed            ~  Speed-of-sound / lab temperature drift
+  §4-1 ch04_wind_psd               ~  Wind PSD per probe (nowave runs)
+  §4-2 ch04_wind_reflection        ✗  Wind reflection from panel     [TODO]
+  §4-3 ch04_fft_wave               ~  FFT spectrum at paddle freq (1.3 Hz example)
+  §4-4 ch04_wind_snr               ~  Spectral SNR: paddle / wind noise per probe
+  §4-5 ch04_td_vs_fft              ~  A_td vs A_FFT: why FFT is required
+  §5   ch04_timeseries_overview    ~  Full time-series with stable-window band
+  §6   ch04_first_arrival          ~  First wave arrival vs probe distance
+  §7   ch04_wave_stability         ~  Wave stability and period_cv vs frequency
+  §8   ch04_lateral_nowind         ~  Lateral equality (parallel ratio, no-wind)
+  §9   ch04_amplitude_profile      ~  Amplitude at every probe, all runs
+
+CHAPTER 05 — RESULTS
+  §1   ch05_damping_freq           ✓  OUT/IN (FFT) vs frequency  ← primary result
+  §2   ch05_damping_scatter        ✓  OUT/IN scatter vs amplitude
+  §3   ch05_damping_wind_delta     ✗  Wind effect on damping (delta plot)  [TODO]
+  §4   ch05_damping_ka             ✗  Damping vs ka (wavenumber × amplitude) [TODO]
+  §5   ch05_swell_scatter          ~  IN vs OUT by swell/wind/total band
+  §6   ch05_reconstructed          ~  FFT-reconstructed paddle signal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 # %% ── dev: reload modules (run this cell after editing wavescripts/) ─────────
@@ -199,7 +230,20 @@ _pv_noise_floor = {
         "draft":     True,
         "figure_name": "ch04_probe_noise_floor",
         "force_stub": True,
-        # caption auto-generated from template — paste final version here when saving
+        "caption": (
+            "Stillwater 95\\% noise amplitude $(P_{{97.5}} - P_{{2.5}})/2$ per "
+            "ultrasound wave gauge, with no waves and no wind. "
+            "Each panel shows one hardware configuration "
+            "(probe height above still water / range mode). "
+            "Blue bars: mean across accepted stillwater runs within each configuration "
+            "(error bars: \\pm 1\\,std). "
+            "White dots: individual run values. "
+            "Quantization step $q = 0.03$--$0.05$\\,mm per probe "
+            "(P5 of nonzero sample-to-sample differences); "
+            "Dashed red line: detection threshold $\\max(3\\,\\sigma,\\; 2\\,q)$ "
+            "per probe, where $\\sigma$ is the rms noise; "
+            "wave amplitudes below this line are indistinguishable from stillwater noise."
+        ),
     },
 }
 
@@ -489,6 +533,7 @@ _fig_fft_wave, _ = plot_frequency_spectrum(
 Goal: quantify how much of the FFT amplitude at paddle frequencies is
 wind noise. SNR < 5 = unreliable; SNR < 3 = dominated by wind.
 Data: combined_meta (wave runs + FFT amplitudes) + combined_psd_dict (nowave PSDs).
+TODO: ... the 1.3 hz wave is noticably different.. but why, this is the run i have waay more data on .somehing is wrong.
 """
 
 _pv_wind_snr = {
@@ -625,7 +670,7 @@ Figures:
 _pv_wave_stability = {
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   None,
+        "WaveFrequencyInput [Hz]":   (0.9,1.6),
         "WindCondition":             None,
         "PanelCondition":            "full",
         # "run_category": "standard",   # re-enable after --force-recompute
@@ -678,37 +723,37 @@ _pv_lateral_nowind = {
 }
 _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)
 
-# %%
-"""
-── CH04 § 9 — Amplitude profile across all probes ───────────────────────────
-Goal: show measured amplitude at each probe position for all runs, giving a
-physical overview of how wave energy is distributed along the tank.
-Colour = wind condition, linestyle = panel condition.
-Data: combined_meta wave rows, all Probe {pos} Amplitude columns.
-"""
+# %% - perhaps skip this one. its the physical plot.
+# """
+# ── CH04 § 9 — Amplitude profile across all probes ───────────────────────────
+# Goal: show measured amplitude at each probe position for all runs, giving a
+# # physical overview of how wave energy is distributed along the tank.
+# Colour = wind condition, linestyle = panel condition.
+# Data: combined_meta wave rows, all Probe {pos} Amplitude columns.
+# """
 
-_pv_all_probes = {
-    "filters": {
-        "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   None,
-        "WindCondition":             None,
-        "PanelCondition":            None,
-    },
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,            # DRAFT — not yet polished
-        "draft":       True,
-        "figure_name": "ch04_amplitude_profile",
-        "force_stub":  True,
-        "figsize":     (10, 6),
-        "annotate":    False,
-    },
-}
+# _pv_all_probes = {
+#     "filters": {
+#         "WaveAmplitudeInput [Volt]": None,
+#         "WaveFrequencyInput [Hz]":   None,
+#         "WindCondition":             None,
+#         "PanelCondition":            None,
+#     },
+#     "plotting": {
+#         "show_plot":   True,
+#         "save_plot":   False,            # this one is mostly
+#         "draft":       True,
+#         "figure_name": "ch04_amplitude_profile",
+#         "force_stub":  True,
+#         "figsize":     (10, 6),
+#         "annotate":    False,
+#     },
+# }
 
-_ap_meta = apply_experimental_filters(
-    combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()], _pv_all_probes
-)
-plot_all_probes(_ap_meta, _pv_all_probes, chapter="04")
+# _ap_meta = apply_experimental_filters(
+#     combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()], _pv_all_probes
+# )
+# plot_all_probes(_ap_meta, _pv_all_probes, chapter="04")
 
 # =============================================================================
 # CHAPTER 05 — RESULTS
@@ -738,7 +783,7 @@ Figures:
 _pv_damping_freq = {
     "filters": {
         "WaveAmplitudeInput [Volt]": (0.1,0.3),
-        "WaveFrequencyInput [Hz]":   (0.1,1.7),
+        "WaveFrequencyInput [Hz]":   (0.8,1.7),
         "WindCondition":             None,
         "PanelCondition":            None,
     },
@@ -1059,3 +1104,7 @@ if not arrival_df.empty:
 #     plt.show()
 
 print("main_save_figures.py loaded — all figure sections are stubs. Uncomment to run.")
+
+
+TODO: check the phase on the sine vs signal comparison.
+BIG TODO: change all plots with freq on x-axis to kL. (but somehow keep the inputFreq around for easy debug for myself.)
