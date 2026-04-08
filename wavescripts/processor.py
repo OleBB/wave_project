@@ -401,6 +401,10 @@ def ensure_stillwater_columns(
         settling_deficit_s = max(0.0, required_s - gap)
 
         # Effective skip: whichever is larger — settling deficit or first-third
+        # TODO (BIG): run_duration_s / 3.0 is an ad-hoc fraction with no physical
+        # derivation. The correct value should come from the measured swell decay
+        # time constant (CH04 §2 — Stillwater timing). Until that analysis exists,
+        # this fraction is a calibrated guess. Do not treat it as principled.
         start_s = max(settling_deficit_s, run_duration_s / 3.0)
         start_sample = int(start_s * _fs)
 

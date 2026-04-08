@@ -320,6 +320,7 @@ def build_fig_meta(plotvariables: dict,
         "figsize":     p.get("figsize"),
         "caption":     p.get("caption"),
         "figure_name": p.get("figure_name"),
+        "draft":       p.get("draft", False),
     }
     if extra:
         meta.update(extra)
@@ -537,6 +538,16 @@ def resolve_caption(plotting: dict, default_template: str, slots: dict,
     return caption
 
 
+def add_draft_stamp(fig: plt.Figure) -> None:
+    """Overlay a large red DRAFT watermark diagonally across the figure."""
+    fig.text(0.5, 0.5, "DRAFT",
+             fontsize=80, color="red", alpha=0.55,
+             ha="center", va="center",
+             rotation=35, fontweight="bold",
+             transform=fig.transFigure,
+             zorder=9999)
+
+
 def save_and_stub(fig: plt.Figure,
                   meta: dict,
                   plot_type: str,
@@ -567,6 +578,8 @@ def save_and_stub(fig: plt.Figure,
                               extra={"script": "plotter.py::plot_timeseries"})
         save_and_stub(fig, meta, plot_type="timeseries")
     """
+    if meta.get("draft"):
+        add_draft_stamp(fig)
     filename = build_filename(plot_type, meta)
     _save_figure(fig, filename, save_pdf=True, save_pgf=True)
     write_figure_stub(meta, plot_type,

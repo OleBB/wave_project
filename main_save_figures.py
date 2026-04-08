@@ -55,7 +55,8 @@ from wavescripts.filters import (
     filter_for_frequencyspectrum,
 )
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs, ANALYSIS_PROBES, get_configuration_for_date
-from wavescripts.plot_utils import WIND_COLOR_MAP, apply_thesis_style, save_and_stub
+from wavescripts.plot_utils import (WIND_COLOR_MAP, apply_thesis_style,
+                                    add_draft_stamp, build_fig_meta, save_and_stub)
 from wavescripts.plotter import (
     plot_all_probes,
     plot_damping_freq,
@@ -124,6 +125,27 @@ combined_meta, _, combined_fft_dict, combined_psd_dict = load_analysis_data(
 processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
 
 
+# ── Placeholder helper ────────────────────────────────────────────────────────
+def _save_placeholder(figure_name: str, section_label: str, chapter: str) -> None:
+    """Save a red-stamped DRAFT placeholder for a not-yet-implemented figure."""
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.text(0.5, 0.55, section_label, ha="center", va="center",
+            transform=ax.transAxes, fontsize=13, fontweight="bold", color="#444")
+    ax.text(0.5, 0.38, "Not yet implemented", ha="center", va="center",
+            transform=ax.transAxes, fontsize=10, color="#888", style="italic")
+    ax.set_axis_off()
+    meta = build_fig_meta(
+        {"filters": {}, "plotting": {
+            "figure_name": figure_name,
+            "draft": True,
+            "caption": f"PLACEHOLDER — {section_label}. Not yet implemented.",
+        }},
+        chapter=chapter,
+    )
+    save_and_stub(fig, meta, plot_type=figure_name, force_stub=True)
+    plt.close(fig)
+
+
 # =============================================================================
 # CHAPTER 04 — METHODOLOGY
 # =============================================================================
@@ -168,9 +190,10 @@ _pv_noise_floor = {
     "filters": {},
     "plotting": {
         "show_plot": True,
-        "save_plot": False,           # set True when figure is ready for thesis
+        "save_plot": True,            # DRAFT — noise floor plot not yet polished
+        "draft":     True,
         "figure_name": "ch04_probe_noise_floor",
-        "force_stub": False,
+        "force_stub": True,
         # caption auto-generated from template — paste final version here when saving
     },
 }
@@ -207,7 +230,8 @@ Figures:
   - Note:  wind-only runs show near-immediate settling(return to wind-wave spectrum) — physical explanation
            (wind chops suppress long-wave coherence in the tank).
 """
-# TODO
+# TODO: implement stillwater timing figure
+_save_placeholder("ch04_stillwater_timing", "CH04 §2 — Stillwater timing", chapter="04")
 
 
 # %%
@@ -233,7 +257,8 @@ _pv_parallel_ratio = {
     "filters": {},
     "plotting": {
         "show_plot": True,
-        "save_plot": False,           # set True when figure is ready for thesis
+        "save_plot": True,            # DRAFT — parallel ratio not yet polished
+        "draft":     True,
         "figure_name": "ch04_parallel_ratio",
         "force_stub": True,
         "caption": (
@@ -278,6 +303,7 @@ TODO: needs data from both height configurations to make the comparison.
       Earliest comparison runs need to be identified.
 """
 # TODO: implement plot_probe_height_comparison() in plotter.py when data is ready
+_save_placeholder("ch04_probe_height", "CH04 §3b — Probe height validity range", chapter="04")
 # _pv_probe_height = {
 #     "filters": {"run_category": "standard"},
 #     "plotting": {
@@ -371,6 +397,8 @@ Data: combined_psd_dict (nowave entries), nowave+fullwind rows of combined_meta.
 Figures:
   - Plot:
 """
+# TODO: implement wind reflection figure
+_save_placeholder("ch04_wind_reflection", "CH04 §4-2 — Wind reflection from panel", chapter="04")
 
 # %%
 """
@@ -395,9 +423,10 @@ _pv_fft_wave = {
     },
     "plotting": {
         "show_plot":   True,
-        "save_plot":   False,          # set True when figure is ready for thesis
+        "save_plot":   True,           # DRAFT — FFT wave example not yet polished
+        "draft":       True,
         "figure_name": "ch04_fft_wave",
-        "force_stub":  False,
+        "force_stub":  True,
         "figsize":     (11, 4 * 4),
         "linewidth":   0.8,
         "facet_by":    "probe",
@@ -448,9 +477,10 @@ _pv_timeseries = {
     },
     "plotting": {
         "show_plot":   True,
-        "save_plot":   False,
+        "save_plot":   True,           # DRAFT — timeseries overview not yet polished
+        "draft":       True,
         "figure_name": "ch04_timeseries_overview",
-        "force_stub":  False,
+        "force_stub":  True,
         "probes":      ["9373/170", "12400/250"],   # IN and OUT only
         "max_runs":    4,           # cap columns; reduce if too crowded
         "xlim":        None,        # e.g. (0, 60) to zoom; None = full run
@@ -474,7 +504,8 @@ Figures:
   - Plot:  single run with detected start/end marked, one probe panel per row
   - Plot:  start sample vs frequency (all probes) — show _SNARVEI_CALIB points
 """
-# TODO — needs processed_dfs
+# TODO: implement wave-range detection figure (needs processed_dfs)
+_save_placeholder("ch04_wave_detection", "CH04 §6 — Wave-range detection", chapter="04")
 
 # %%
 """
@@ -501,9 +532,10 @@ _pv_wave_stability = {
     },
     "plotting": {
         "show_plot":   True,
-        "save_plot":   False,         # set True when figure is ready for thesis
+        "save_plot":   True,          # DRAFT — wave stability not yet polished
+        "draft":       True,
         "figure_name": "ch04_wave_stability",
-        "force_stub":  False,
+        "force_stub":  True,
         "figsize":     (10, 3.5),
         "probes":      ANALYSIS_PROBES,
         # caption printed to terminal on first run — paste the one-liner here:
@@ -533,9 +565,10 @@ _pv_lateral_nowind = {
     "filters": {"WindCondition": "no", "run_category": "standard"},
     "plotting": {
         "show_plot":   True,
-        "save_plot":   False,
+        "save_plot":   True,          # DRAFT — lateral equality not yet polished
+        "draft":       True,
         "figure_name": "ch04_lateral_nowind",
-        "force_stub":  False,
+        "force_stub":  True,
         "caption": (
             "Wall-side to far-side amplitude ratio at matched longitudinal distance, "
             "no-wind runs only. A ratio of 1 indicates the paddle wave is laterally "
@@ -676,6 +709,7 @@ _pv_damping_wind_effect = {
 }
 # TODO: implement plot_damping_wind_delta() in plotter.py
 # (pivot no/full wind, plot OUT/IN(fullwind) - OUT/IN(nowind) vs frequency)
+_save_placeholder("ch05_damping_wind_delta", "CH05 §3 — Wind effect on damping (delta)", chapter="05")
 
 # %%
 """
@@ -695,6 +729,7 @@ Requires: wavenumber column in combined_meta (computed in processor2nd).
 """
 # TODO: verify wavenumber column is populated for all runs, then replace
 #       Hz x-axis with ka where appropriate in CH05 §1-3
+_save_placeholder("ch05_damping_ka", "CH05 §4 — Damping vs ka (wave steepness axis)", chapter="05")
 
 
 # =============================================================================
