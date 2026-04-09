@@ -187,11 +187,12 @@ for i, data_path in enumerate(dataset_paths):
 
         save_processed_dfs(processed_dfs, _cache_dir)
         processed_dirs.append(_cache_dir)
-        del processed_dfs
 
         meta_sel = process_processed_data(
-            psd_dictionary, fft_dictionary, meta_sel, meta, processvariables
+            psd_dictionary, fft_dictionary, meta_sel, meta, processvariables,
+            processed_dfs=processed_dfs,
         )
+        del processed_dfs
         save_spectra_dicts(fft_dictionary, psd_dictionary, _cache_dir)
         del meta, psd_dictionary, fft_dictionary
 

@@ -169,37 +169,37 @@ def compute_amplitude_by_band(
 # %%
 
 
-def compute_inter_run_timing(meta_df: pd.DataFrame) -> pd.DataFrame:
+def compute_inter_run_timing(
+    meta_df: pd.DataFrame,
+    processed_dfs: Optional[dict] = None,
+) -> pd.DataFrame:
     """Compute inter-run gaps and preceding-run context within each experiment folder.
 
-    Within a single experiment folder (same parent directory), runs are sorted by
-    file modification time — which is when LabVIEW finished writing each CSV. The
-    gap between consecutive runs is the time the tank had to settle between recordings.
+    Ordering and gap calculation
+    ----------------------------
+    Preferred (when processed_dfs provided):
+      Each CSV's "Date" column contains wall-clock timestamps recorded by LabVIEW.
+        run_start  = first Date sample of the run
+        run_end    = last  Date sample of the run
+        inter_run_gap_s = run_start[current] − run_end[previous]
+      This is the true settling time — time between the previous recording ending
+      and the next one starting (manual save + click-to-start on the wavemaker PC).
 
-    Why mtime (not filename timestamp)?
-      Filename dates are date-level (YYYYMMDD), not time-level. mtime gives second-
-      level resolution of the actual recording order. For runs on the same day this
-      is the only reliable ordering signal.
+    Fallback (no processed_dfs, or path not in processed_dfs):
+      Uses mtime (file modification time) for ordering.
+      WARNING: gap = mtime[current] − mtime[previous] includes the entire recording
+      duration of the current run and is NOT the true settling time.
 
     Adds these columns:
-      run_mtime            [float]  Unix timestamp of the file's mtime
-      inter_run_gap_s      [float]  Seconds since the preceding run in the same folder.
-                                    NaN for the first run of the day.
+      run_mtime            [float]  Unix timestamp of the file's mtime (ordering fallback)
+      run_start_ts         [float]  Unix timestamp of first CSV sample (NaN if unavailable)
+      run_end_ts           [float]  Unix timestamp of last  CSV sample (NaN if unavailable)
+      inter_run_gap_s      [float]  True settling time (s): end of prev → start of current.
+                                    NaN for the first run of the folder.
       prev_run_category    [str]    run_category of the preceding run ("" = first run).
-                                    Useful for understanding what the tank was doing just
-                                    before this run. E.g. prev_run_category="wind_decay"
-                                    means the preceding run was a fan-off decay recording.
       prev_run_wind        [str]    WindCondition of the preceding run ("" = first run).
-                                    Tells you whether the tank had wind before this run.
       prev_run_freq_hz     [float]  WaveFrequencyInput of the preceding run (NaN if nowave).
-                                    Critical for stillwater recovery: sub-1 Hz waves deposit
-                                    far more energy per cycle (longer wavelength, larger
-                                    orbital depth) and take significantly longer to decay
-                                    than high-frequency waves at the same amplitude.
       prev_run_nperiods    [float]  WavePeriodInput of the preceding run (NaN if nowave).
-                                    Proxy for total energy deposited: per40 (short burst)
-                                    leaves much less residual than per240 (long steady state).
-                                    Combined with freq: sub-1Hz + per240 is the worst case.
 
     Practical use — stillwater recovery:
       A nowave+nowind run is only trustworthy as a noise floor reference if the tank
@@ -217,7 +217,7 @@ def compute_inter_run_timing(meta_df: pd.DataFrame) -> pd.DataFrame:
     """
     meta_df = meta_df.copy()
 
-    # Read mtime for each file; fall back to NaN if path is missing or inaccessible
+    # ── mtime (always computed — used as ordering fallback) ───────────────────
     def _safe_mtime(path: str) -> float:
         try:
             return float(os.path.getmtime(path))
@@ -226,30 +226,57 @@ def compute_inter_run_timing(meta_df: pd.DataFrame) -> pd.DataFrame:
 
     meta_df["run_mtime"] = meta_df["path"].apply(_safe_mtime)
 
-    # Process each folder independently
+    # ── CSV timestamps (preferred when processed_dfs available) ───────────────
+    def _csv_timestamps(path: str):
+        """Return (start_ts, end_ts) as Unix floats, or (nan, nan) if unavailable."""
+        if processed_dfs is None:
+            return float("nan"), float("nan")
+        df = processed_dfs.get(path) or processed_dfs.get(str(Path(path).resolve()))
+        if df is None or "Date" not in df.columns or len(df) == 0:
+            return float("nan"), float("nan")
+        try:
+            return float(df["Date"].iloc[0].timestamp()), float(df["Date"].iloc[-1].timestamp())
+        except Exception:
+            return float("nan"), float("nan")
+
+    ts_pairs = meta_df["path"].apply(_csv_timestamps)
+    meta_df["run_start_ts"] = ts_pairs.apply(lambda x: x[0])
+    meta_df["run_end_ts"]   = ts_pairs.apply(lambda x: x[1])
+
+    # Sort key: CSV start timestamp if available, else mtime
+    meta_df["_sort_key"] = meta_df["run_start_ts"].where(
+        meta_df["run_start_ts"].notna(), meta_df["run_mtime"]
+    )
+
+    # ── Process each folder independently ─────────────────────────────────────
     meta_df["_folder"] = meta_df["path"].apply(lambda p: str(Path(p).parent))
 
     for folder, grp in meta_df.groupby("_folder"):
-        sorted_idx = grp.sort_values("run_mtime").index
+        sorted_idx = grp.sort_values("_sort_key").index
         prev_row = None
-        for i, idx in enumerate(sorted_idx):
+        for idx in sorted_idx:
             if prev_row is None:
-                meta_df.at[idx, "inter_run_gap_s"]    = float("nan")
-                meta_df.at[idx, "prev_run_category"]  = ""
-                meta_df.at[idx, "prev_run_wind"]      = ""
-                meta_df.at[idx, "prev_run_freq_hz"]   = float("nan")
-                meta_df.at[idx, "prev_run_nperiods"]  = float("nan")
+                meta_df.at[idx, "inter_run_gap_s"]   = float("nan")
+                meta_df.at[idx, "prev_run_category"] = ""
+                meta_df.at[idx, "prev_run_wind"]     = ""
+                meta_df.at[idx, "prev_run_freq_hz"]  = float("nan")
+                meta_df.at[idx, "prev_run_nperiods"] = float("nan")
             else:
-                meta_df.at[idx, "inter_run_gap_s"]    = (
-                    float(meta_df.at[idx, "run_mtime"]) - float(meta_df.at[prev_row, "run_mtime"])
-                )
-                meta_df.at[idx, "prev_run_category"]  = str(meta_df.at[prev_row, "run_category"] or "")
-                meta_df.at[idx, "prev_run_wind"]      = str(meta_df.at[prev_row, "WindCondition"] or "")
-                meta_df.at[idx, "prev_run_freq_hz"]   = meta_df.at[prev_row, "WaveFrequencyInput [Hz]"]
-                meta_df.at[idx, "prev_run_nperiods"]  = meta_df.at[prev_row, "WavePeriodInput"]
+                cur_start = meta_df.at[idx,     "run_start_ts"]
+                prev_end  = meta_df.at[prev_row, "run_end_ts"]
+                if not (np.isnan(cur_start) or np.isnan(prev_end)):
+                    gap = cur_start - prev_end
+                else:
+                    # Fallback: mtime diff (includes current run duration — not true gap)
+                    gap = float(meta_df.at[idx, "run_mtime"]) - float(meta_df.at[prev_row, "run_mtime"])
+                meta_df.at[idx, "inter_run_gap_s"]   = gap
+                meta_df.at[idx, "prev_run_category"] = str(meta_df.at[prev_row, "run_category"] or "")
+                meta_df.at[idx, "prev_run_wind"]     = str(meta_df.at[prev_row, "WindCondition"] or "")
+                meta_df.at[idx, "prev_run_freq_hz"]  = meta_df.at[prev_row, "WaveFrequencyInput [Hz]"]
+                meta_df.at[idx, "prev_run_nperiods"] = meta_df.at[prev_row, "WavePeriodInput"]
             prev_row = idx
 
-    meta_df = meta_df.drop(columns=["_folder"])
+    meta_df = meta_df.drop(columns=["_folder", "_sort_key"])
     return meta_df
 
 
@@ -365,7 +392,8 @@ def process_processed_data(
         fft_dict: dict,
         meta_sel: pd.DataFrame,
         meta_full: pd.DataFrame, #trenger kanskje ikke denne, men _set_output_folder vil ha den.
-        processvariables: dict
+        processvariables: dict,
+        processed_dfs: Optional[dict] = None,
 ) -> pd.DataFrame:
     """
     Forklaring:
@@ -385,7 +413,7 @@ def process_processed_data(
     meta_sel = _update_more_metrics(psd_dict, fft_dict, meta_sel)
 
     # Inter-run timing: gap to previous run, preceding-run context
-    meta_sel = compute_inter_run_timing(meta_sel)
+    meta_sel = compute_inter_run_timing(meta_sel, processed_dfs=processed_dfs)
 
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)
     """VIKTIG - denne oppdaterer .JSON-filen"""

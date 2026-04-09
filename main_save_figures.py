@@ -48,7 +48,7 @@ CHAPTER 04 — METHODOLOGY
 CHAPTER 05 — RESULTS
   §1   ch05_damping_freq           ✓  OUT/IN (FFT) vs frequency  ← primary result
   §2   ch05_damping_scatter        ✓  OUT/IN scatter vs amplitude
-  §3   ch05_damping_wind_delta     ✗  Wind effect on damping (delta plot)  [TODO]
+  §3   ch05_damping_wind_delta     ~  Wind effect on damping (delta plot)
   §4   ch05_damping_ka             ✗  Damping vs ka (wavenumber × amplitude) [TODO]
   §5   ch05_swell_scatter          ~  IN vs OUT by swell/wind/total band
   §6   ch05_reconstructed          ~  FFT-reconstructed paddle signal
@@ -874,12 +874,6 @@ Figures:
   - Table: OUT/IN summary — (frequency × panel) with wind as columns
 """
 
-# _damping_grouped already computed in §1.
-# TODO: add plot_damping_wind_delta() to plotter.py (pivot no/full wind, plot difference)
-#
-# Interim: the §1 plot already shows all three wind conditions on the same axes —
-# the "wind effect" is readable directly from that figure. The delta plot is a
-# cleaner standalone for the thesis.
 _pv_damping_wind_delta = {
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
