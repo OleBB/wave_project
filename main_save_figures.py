@@ -63,7 +63,8 @@ importlib.reload(_pm); importlib.reload(_fm);
 from wavescripts.plotter import (plot_probe_noise_floor, plot_parallel_ratio,
                                   plot_frequency_spectrum, plot_wave_stability,
                                   plot_timeseries_overview,
-                                  plot_damping_freq, plot_damping_scatter)
+                                  plot_damping_freq, plot_damping_scatter,
+                                  plot_damping_wind_delta)
 from wavescripts.filters import apply_experimental_filters as _aef
 
 
@@ -74,6 +75,8 @@ from pathlib import Path
 
 import time
 
+import matplotlib
+matplotlib.use("Agg")   # non-interactive — plt.show() is a no-op; avoids hanging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -92,6 +95,7 @@ from wavescripts.plotter import (
     plot_all_probes,
     plot_damping_freq,
     plot_damping_scatter,
+    plot_damping_wind_delta,
     plot_first_arrival,
     plot_frequency_spectrum,
     plot_parallel_ratio,
@@ -867,26 +871,27 @@ Figures:
 # Interim: the §1 plot already shows all three wind conditions on the same axes —
 # the "wind effect" is readable directly from that figure. The delta plot is a
 # cleaner standalone for the thesis.
-_pv_damping_wind_effect = {
+_pv_damping_wind_delta = {
     "filters": {
-        "WaveAmplitudeInput [Volt]": 0.2,   # focus on higher-SNR amplitude
+        "WaveAmplitudeInput [Volt]": None,
         "WindCondition":             ["no", "full"],
-        "PanelCondition":            "full",
-        # "run_category": "standard",   # re-enable after --force-recompute
+        "PanelCondition":            None,
     },
     "plotting": {
-        "show_plot":   False,
-        "save_plot":   False,
-        "figure_name": "ch05_damping_wind_effect",
-        "force_stub":  False,
-        "figsize":     (7, 4),
-        # caption printed on first run — paste the one-liner here:
-        # "caption": "...",
+        "show_plot":   True,
+        "save_plot":   True,
+        "draft":       True,
+        "figure_name": "ch05_damping_wind_delta",
+        "force_stub":  True,
+        "figsize":     (6, 5),
+        "ref_wind":    "no",
+        "target_wind": "full",
     },
 }
-# TODO: implement plot_damping_wind_delta() in plotter.py
-# (pivot no/full wind, plot OUT/IN(fullwind) - OUT/IN(nowind) vs frequency)
-_save_placeholder("ch05_damping_wind_delta", "CH05 §3 — Wind effect on damping (delta)", chapter="05")
+
+_wind_delta_meta    = _aef(combined_meta, _pv_damping_wind_delta)
+_wind_delta_grouped = damping_all_amplitude_grouper(_wind_delta_meta)
+plot_damping_wind_delta(_wind_delta_grouped, _pv_damping_wind_delta, chapter="05")
 
 # %%
 """
@@ -1103,8 +1108,7 @@ if not arrival_df.empty:
 #     save_and_stub(fig, _meta, "first_arrival")
 #     plt.show()
 
-print("main_save_figures.py loaded — all figure sections are stubs. Uncomment to run.")
+print("main_save_figures.py — all figure sections complete.")
 
-
-TODO: check the phase on the sine vs signal comparison.
-BIG TODO: change all plots with freq on x-axis to kL. (but somehow keep the inputFreq around for easy debug for myself.)
+# TODO: check the phase on the sine vs signal comparison.
+# BIG TODO: change all plots with freq on x-axis to kL.

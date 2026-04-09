@@ -241,7 +241,7 @@ PROBE_CONFIGS = [
             1: 250.0,  # ukjent, antar senter
             2: 250.0,  # senter av tanken
             3:  170.0,  # parallell, nær referansevegg d
-            4:  340.0,  # parallell, 340mm frå referansevegg
+            4:  340.0,  # parallell, 340mm frå referansevegg. østveggen. pc-veggen.
         },
         in_probe=2,
         out_probe=3,

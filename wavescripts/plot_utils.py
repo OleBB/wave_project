@@ -40,6 +40,15 @@ from matplotlib.offsetbox import AnchoredText
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# GLOBAL SAVE FLAGS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Set to True when exporting final thesis figures (requires LaTeX + slow).
+# False = PDF only (fast prototype mode).  Override with plot_utils.SAVE_PGF = True.
+SAVE_PGF: bool = False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # STYLE & CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -339,7 +348,13 @@ def _save_figure(fig: plt.Figure, filename: str,
                  save_pgf: bool = True) -> list[Path]:
     """
     Save fig to FIGURES_DIR as .pdf and/or .pgf.
-    Returns list of saved paths (used to populate stub comments).
+
+    PGF is gated by the module-level SAVE_PGF flag (default False) so the
+    prototype run stays fast.  Set plot_utils.SAVE_PGF = True before import
+    (or patch at runtime) when exporting final thesis figures.
+
+    PGF failures are also caught and warned rather than crashing — PGF
+    requires a full LaTeX install and can fail on special characters.
     """
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     saved = []
@@ -348,11 +363,14 @@ def _save_figure(fig: plt.Figure, filename: str,
         fig.savefig(p)
         saved.append(p)
         print(f"  Saved: {p}")
-    if save_pgf:
+    if save_pgf and SAVE_PGF:
         p = FIGURES_DIR / f"{filename}.pgf"
-        fig.savefig(p)
-        saved.append(p)
-        print(f"  Saved: {p}")
+        try:
+            fig.savefig(p)
+            saved.append(p)
+            print(f"  Saved: {p}")
+        except Exception as exc:
+            print(f"  WARNING: PGF save failed for {filename} — {exc.__class__.__name__}: {exc!s:.120}")
     return saved
 
 

@@ -467,6 +467,163 @@ def plot_damping_scatter(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# WIND DELTA
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _make_damping_wind_delta_fig(
+    stats_df: pd.DataFrame,
+    panel: str,
+    amp: float,
+    ref_wind: str = "no",
+    target_wind: str = "full",
+    figsize: tuple = (6, 5),
+) -> plt.Figure:
+    """
+    Two-row figure: top = OUT/IN per wind condition; bottom = delta (target − ref).
+    Colour = wind condition (top only). Delta bar chart with sign-coded fill.
+    """
+    subset = stats_df[
+        (stats_df[GC.PANEL_CONDITION_GROUPED] == panel)
+        & (stats_df[GC.WAVE_AMPLITUDE_INPUT] == amp)
+    ]
+
+    fig, (ax_top, ax_bot) = plt.subplots(
+        2, 1, figsize=figsize, sharex=True,
+        gridspec_kw={"height_ratios": [2, 1], "hspace": 0.08},
+    )
+
+    # ── Top: OUT/IN per wind ──────────────────────────────────────────────────
+    for wind, grp in subset.groupby(GC.WIND_CONDITION):
+        grp = grp.sort_values(GC.WAVE_FREQUENCY_INPUT)
+        ax_top.errorbar(
+            grp[GC.WAVE_FREQUENCY_INPUT], grp["mean_out_in"],
+            yerr=grp["std_out_in"].fillna(0),
+            label=wind, color=WIND_COLOR_MAP.get(wind, "gray"),
+            marker="o", markersize=5, linewidth=1.4, capsize=3,
+        )
+    ax_top.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
+    ax_top.set_ylabel("OUT/IN (FFT)", fontsize=9)
+    ax_top.set_title(f"{panel} panel  |  {amp:.2f} V", fontsize=9)
+    ax_top.grid(True, alpha=0.3)
+    ax_top.legend(title="wind", fontsize=8, title_fontsize=8)
+
+    # ── Bottom: delta = target − ref ──────────────────────────────────────────
+    # Aggregate per frequency first (multiple moorings → single mean per freq)
+    ref_mean    = (subset[subset[GC.WIND_CONDITION] == ref_wind]
+                   .groupby(GC.WAVE_FREQUENCY_INPUT)["mean_out_in"].mean())
+    target_mean = (subset[subset[GC.WIND_CONDITION] == target_wind]
+                   .groupby(GC.WAVE_FREQUENCY_INPUT)["mean_out_in"].mean())
+
+    common_freqs = sorted(ref_mean.index.intersection(target_mean.index))
+    if common_freqs:
+        delta = target_mean.loc[common_freqs] - ref_mean.loc[common_freqs]
+        colors = [
+            WIND_COLOR_MAP.get(target_wind, "steelblue") if d >= 0 else WIND_COLOR_MAP.get(ref_wind, "gray")
+            for d in delta
+        ]
+        ax_bot.bar(common_freqs, delta.values, width=0.04, color=colors, alpha=0.75)
+        ax_bot.axhline(0, color="black", linewidth=0.8)
+        ax_bot.set_ylabel("Δ (full−no)", fontsize=8)
+    else:
+        ax_bot.text(0.5, 0.5, f"No matched ({ref_wind}/{target_wind}) points",
+                    ha="center", va="center", transform=ax_bot.transAxes, fontsize=9, color="gray")
+
+    ax_bot.set_xlabel("Frequency [Hz]", fontsize=9)
+    ax_bot.grid(True, alpha=0.3)
+
+    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.11)
+    return fig
+
+
+def plot_damping_wind_delta(
+    stats_df: pd.DataFrame,
+    plotvariables: Optional[dict] = None,
+    chapter: str = "05",
+) -> None:
+    """
+    Wind-effect delta plot: OUT/IN(fullwind) − OUT/IN(nowind) vs frequency.
+    One two-row figure per (panel × amplitude): top = raw OUT/IN per wind,
+    bottom = signed delta bar chart.
+
+    show_plot → one window per combination (REPL)
+    save_plot → one PDF per combination + .tex stub
+
+    Input: output from damping_all_amplitude_grouper()
+    """
+    if plotvariables is None:
+        plotvariables = {"plotting": {"show_plot": True, "save_plot": False}}
+
+    plotting  = plotvariables.get("plotting", {})
+    show_plot = plotting.get("show_plot", False)
+    save_plot = plotting.get("save_plot", False)
+    figsize   = plotting.get("figsize", (6, 5))
+    ref_wind    = plotting.get("ref_wind",    "no")
+    target_wind = plotting.get("target_wind", "full")
+
+    panel_conditions = sorted(stats_df[GC.PANEL_CONDITION_GROUPED].unique())
+    amplitudes       = sorted(stats_df[GC.WAVE_AMPLITUDE_INPUT].unique())
+    wind_conditions  = sorted(stats_df[GC.WIND_CONDITION].unique())
+    n_runs           = int(stats_df["n_runs"].sum()) if "n_runs" in stats_df.columns else len(stats_df)
+
+    _top_caption = plotvariables.get("caption")
+    if isinstance(_top_caption, str) and "caption" not in plotting:
+        plotting = {**plotting, "caption": _top_caption}
+
+    _caption_slots = {
+        "n_runs":     n_runs,
+        "n_panels":   len(panel_conditions),
+        "panels":     ", ".join(panel_conditions),
+        "ref_wind":   ref_wind,
+        "target_wind": target_wind,
+        "amps":       ", ".join(f"{a:.2f}\\,V" for a in amplitudes),
+    }
+    _default_caption = (
+        "Wind effect on damping ratio. "
+        "Top: OUT/IN (FFT) versus frequency for all wind conditions. "
+        "Bottom: signed difference OUT/IN({target_wind}) minus OUT/IN({ref_wind}). "
+        "Positive = wind increases transmission; negative = wind reduces it. "
+        "{panels} panel condition(s); amplitudes {amps}."
+    )
+    _caption = resolve_caption(plotting, _default_caption, _caption_slots,
+                               fn_name="plot_damping_wind_delta")
+
+    if show_plot:
+        for panel in panel_conditions:
+            for amp in amplitudes:
+                fig = _make_damping_wind_delta_fig(
+                    stats_df, panel, amp, ref_wind, target_wind, figsize=figsize
+                )
+                plt.show()
+
+    if save_plot:
+        subfig_filenames = []
+        meta_base = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
+            chapter=chapter,
+            extra={"script": "plotter.py::plot_damping_wind_delta"},
+        )
+        figure_name = plotting.get("figure_name") or build_filename("damping_wind_delta", meta_base)
+        subfig_captions = []
+        for panel in panel_conditions:
+            for amp in amplitudes:
+                fig_s = _make_damping_wind_delta_fig(
+                    stats_df, panel, amp, ref_wind, target_wind, figsize=figsize
+                )
+                amp_tag = f"{int(round(amp * 100)):02d}V"
+                fname = f"{figure_name}_{panel}_{amp_tag}"
+                _save_figure(fig_s, fname, save_pgf=True)
+                subfig_filenames.append(fname)
+                subfig_captions.append(f"{panel.capitalize()} panel, ${amp:.2f}$\\,V")
+                plt.close(fig_s)
+
+        stub_meta = {**meta_base, "panel": panel_conditions, "wind": f"{ref_wind}_vs_{target_wind}"}
+        write_figure_stub(stub_meta, "damping_wind_delta", subfig_filenames=subfig_filenames,
+                          subfig_captions=subfig_captions,
+                          force=plotting.get("force_stub", False))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # SWELL / IN vs OUT
 # ═══════════════════════════════════════════════════════════════════════════════
 
