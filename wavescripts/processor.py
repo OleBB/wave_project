@@ -1178,6 +1178,34 @@ def _write_quality_flags(
             print(f"  ⚠ QUALITY FLAG: {line}")
             flagged_lines.append(line)
 
+        # Dropout check — too many NaN samples in the IN or OUT probe analysis window
+        # after interpolation (gap too long to fill). Threshold: >2% of window.
+        # Only applies to wave runs (nowave runs have no analysis window).
+        _DROPOUT_THRESHOLD = 0.02
+        idx_list = meta_sel.index[meta_sel["path"] == path].tolist()
+        if idx_list and has_window:
+            idx = idx_list[0]
+            window_size = max(1, int(good_end) - int(good_start))
+            for critical_pos in (in_pos, out_pos):
+                cut_col = f"cut_samples_{critical_pos}"
+                if cut_col not in meta_sel.columns:
+                    continue
+                cut_n = meta_sel.at[idx, cut_col]
+                if pd.isna(cut_n):
+                    continue
+                cut_frac = min(int(cut_n), window_size) / window_size
+                if cut_frac > _DROPOUT_THRESHOLD:
+                    # Only upgrade flag — don't downgrade a stricter existing flag
+                    existing = meta_sel.at[idx, "quality_flag"]
+                    if existing == "ok":
+                        meta_sel.at[idx, "quality_flag"] = "dropout_critical"
+                        line = (
+                            f"dropout_critical | {fname} | probe {critical_pos} "
+                            f"cut_frac={cut_frac:.1%} ({int(cut_n)} total NaN / {window_size} window)"
+                        )
+                        print(f"  ⚠ QUALITY FLAG: {line}")
+                        flagged_lines.append(line)
+
     if flagged_lines:
         flags_file.parent.mkdir(parents=True, exist_ok=True)
         with open(flags_file, "a") as fh:

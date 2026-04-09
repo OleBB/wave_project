@@ -305,6 +305,20 @@ def apply_experimental_filters(
         return df.iloc[[0]].copy()
 
     out = df.copy()
+
+    # 1b. Quality gate — applied before column filters.
+    # Default: exclude runs flagged as dropout_critical or probe_malfunction_critical.
+    # Override: set filters["quality_flag"] = "all" to include all runs.
+    _qf_filter = filters.get("quality_flag", "ok")
+    if _qf_filter != "all" and "quality_flag" in out.columns:
+        before_q = len(out)
+        if _qf_filter == "ok":
+            out = out[out["quality_flag"].isin(["ok", "probe_malfunction_secondary"])]
+        else:
+            out = out[out["quality_flag"] == _qf_filter]
+        removed_q = before_q - len(out)
+        if removed_q:
+            print(f"  [✓] quality_flag gate: excluded {removed_q} flagged run(s) (use quality_flag='all' to include)")
     n_original = len(out)
     print(f"\n--- Starting Filter Process ({n_original} rows) ---")
 
@@ -320,7 +334,7 @@ def apply_experimental_filters(
 
     # 2b. Sequential column filtering
     for col, val in filters.items():
-        if col == "exclude_run_keywords":
+        if col in ("exclude_run_keywords", "quality_flag"):
             continue  # handled above
         if val is None:
             continue
