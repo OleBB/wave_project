@@ -1,9 +1,11 @@
 """CLAUDE - The key addition is the propagated uncertainty — since v = sqrt(2*ΔP/ρ) is nonlinear, the Stan values in mA need to be scaled by dv/d(mA) evaluated at each second's operating point. This gives you honest error bars in m/s rather than mA. The rest of the plotting code from before stays the same."""
-
+# %%
 import re
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+from datetime import datetime
 
 # --- USER SETTINGS ---
 ein_folder = r"/Users/ole/Kodevik/wave_project/pressuredata/20251107-fullwindUP2-allpanel-angleTest"
@@ -43,17 +45,13 @@ def parse_stats_file(file_path):
     return {k: np.array(v) for k, v in data.items()}
 
 
-from wavescripts.constants import (
-    ProbeColumns as PC,
-    GlobalColumns as GC,
-    ColumnGroups as CG,
-)
-from wavescripts.constants import PHYSICS
+AIR_DENSITY = 1.225  # kg/m³, standard air at sea level
+
 """hugs at dette er basert på 4-20mA kalibrert til 0-100 Pa"""
 def ma_to_windspeed(ma):
     dp = (ma - 4) / 16 * 100   # mA → Pa
     dp = np.maximum(dp, 0)      # clip negatives just in case
-    return np.sqrt(2 * dp / PHYSICS.AIR_DENSITY)
+    return np.sqrt(2 * dp / AIR_DENSITY)
 
 def process_stats_folder(folder_path):
     results = []
@@ -84,7 +82,7 @@ def process_stats_folder(folder_path):
             return np.maximum((ma - 4.0) / 16.0 * 100.0, 0.0)
 
         def pa_to_v(pa):
-            return np.sqrt(2.0 * np.maximum(pa, 0.001) / PHYSICS.AIR_DENSITY)
+            return np.sqrt(2.0 * np.maximum(pa, 0.001) / AIR_DENSITY)
 
         # per-second velocity (for drift)
         v_per_second = pa_to_v(ma_to_pa(d["Arit"]))
@@ -96,7 +94,7 @@ def process_stats_folder(folder_path):
         pa_mean  = float(ma_to_pa(ma_mean))
         pa_mean  = max(pa_mean, 0.001)
 
-        dv_dpa   = 1.0 / np.sqrt(2.0 * pa_mean * PHYSICS.AIR_DENSITY)   # (m/s)/Pa
+        dv_dpa   = 1.0 / np.sqrt(2.0 * pa_mean * AIR_DENSITY)   # (m/s)/Pa
         dv_dma   = dv_dpa * (100.0 / 16.0)                               # (m/s)/mA
 
         # standard error of the mean in mA → convert to m/s
@@ -132,7 +130,7 @@ def process_stats_folder(folder_path):
 results = process_stats_folder(stats_folder)
 
 # --- PLOT SETTINGS ---
-SPLIT_PLOTS = False   # True = 3 separate figures for LaTeX, False = combined
+SPLIT_PLOTS = True   # True = 3 separate figures for LaTeX, False = combined
 SAVE_PLOTS = True
 
 def make_plots(results, split=False, save=False):
@@ -192,9 +190,7 @@ def make_plots(results, split=False, save=False):
     ax2.legend(handles=[tri, sq, tot], fontsize=8)
     style_ax(ax2)
 
-    # --- Panel 3: skewness + kurtosis ---
-    # todo: fix so that the kurtosis line is at kurt=0 (normal distribution)
-    # because according to gpt: In LabVIEW 2016 (Statistics/MathScript/Statistics functions), “kurtosis” is the excess kurtosis... the kurtosis returned is 0, NOT3.
+    # --- Panel 3: skewness + kurtosis (LabVIEW 2016 returns excess kurtosis; normal = 0) ---
     ax3b = ax3.twinx()
 
     for r, c in zip(results, colors):
@@ -202,26 +198,41 @@ def make_plots(results, split=False, save=False):
         ax3b.scatter(r["angle"], r["mean_kurt"], marker='*', color=c, s=40, alpha=0.7)
 
     ax3.axhline(0, color='gray', linewidth=0.8, linestyle='--')
-    ax3b.axhline(3, color='gray', linewidth=0.8, linestyle=':', label='Normalfordeling (kurtose=0)')
+    ax3b.axhline(0, color='gray', linewidth=0.8, linestyle=':', label='Normalfordeling (eksess-kurtose=0)')
 
     ax3.set_ylabel("Gjennomsnittlig skjevhet [-]", color='black')
     ax3b.set_ylabel("Gjennomsnittlig kurtose [-]", color='gray')
     ax3b.tick_params(axis='y', labelcolor='gray')
     ax3.set_title("Strømningssymmetri (skjevhet) og haletykkelse (eksess-kurtose)")
-    ax3.legend(handles=run_legend, fontsize=9, loc='lower right') #todo: add marker
-    ax3b.legend(fontsize=8, loc='lower center')
+
+    skew_handle = mlines.Line2D(
+        [], [], color='black', marker='D', linestyle='None', markersize=6,
+        label='Skjevhet'
+    )
+    kurt_handle = mlines.Line2D(
+        [], [], color='gray', marker='*', linestyle='None', markersize=8,
+        label='Kurtose'
+    )
+    line_handles, _ = ax3b.get_legend_handles_labels()
+    ax3.legend(
+        handles=run_legend + [skew_handle, kurt_handle] + line_handles,
+        fontsize=9, loc='lower right'
+    )
+    if ax3b.get_legend():
+        ax3b.get_legend().remove()
     style_ax(ax3)
 
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    fig_path = os.path.expanduser("~/Kodevik/wave_project/windresults")
+    os.makedirs(fig_path, exist_ok=True)
     if split and save:
         for (fig, _), name in zip(figs, ["windspeed_angles", "uncertainty_angles", "skewness_angles"]):
-            fig_path = "windresults"
-            print(f"saving to {fig_path}/{name}")
-            fig.savefig(f"{fig_path}/{name}.pdf", bbox_inches='tight')
+            print(f"saving to {fig_path}/{name}_{ts}.pdf")
+            fig.savefig(f"{fig_path}/{name}_{ts}.pdf", bbox_inches='tight')
     elif save and not split:
         name = "wind_angles_stats"
-        fig_path = "windresults"
-        print(f"saving to {fig_path}/{name}")
-        fig.savefig(f"{fig_path}/{name}.pdf", bbox_inches='tight')
+        print(f"saving to {fig_path}/{name}_{ts}.pdf")
+        fig.savefig(f"{fig_path}/{name}_{ts}.pdf", bbox_inches='tight')
 
 
     if split:
@@ -232,6 +243,27 @@ def make_plots(results, split=False, save=False):
         fig.tight_layout()
         plt.show()
 
+def print_summary(results):
+    run_label = {(False, False): "run1", (False, True): "run2", (True, False): "prelim"}
+    header = f"{'Angle':>6}  {'Run':<6}  {'Speed [m/s]':>11}  {'±Unc':>6}  {'Drift':>6}  {'Noise':>6}  {'Skew':>6}  {'Kurt(ex)':>8}  {'n [s]':>6}"
+    print(header)
+    print("-" * len(header))
+    for r in results:
+        label = run_label.get((r["prelim_run"], r["is_run2"]), "?")
+        print(
+            f"{r['angle']:>6}  {label:<6}  "
+            f"{r['mean_speed']:>11.3f}  "
+            f"{r['total_unc']:>6.3f}  "
+            f"{r['drift_std']:>6.3f}  "
+            f"{r['noise_mean']:>6.4f}  "
+            f"{r['mean_skew']:>6.3f}  "
+            f"{r['mean_kurt']:>8.3f}  "
+            f"{r['n_seconds']:>6}"
+        )
+    speeds = [r["mean_speed"] for r in results]
+    print(f"\nSpeed range: {min(speeds):.2f} – {max(speeds):.2f} m/s  |  mean: {np.mean(speeds):.2f} m/s")
+
+print_summary(results)
 make_plots(results, split=SPLIT_PLOTS, save=SAVE_PLOTS)
 # fig_path = "windresults/wind_angles_stats.pdf"   # or .png, .svg, .pgf, ...
 # plt.savefig(fig_path)

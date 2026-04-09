@@ -70,6 +70,7 @@ from wavescripts.plot_utils import (
     make_label,
     resolve_caption,
     freq_to_kL,
+    add_freq_axis,
     save_and_stub,
     write_figure_stub,
 )
@@ -257,15 +258,8 @@ def _make_damping_freq_fig(
     ax.set_title(f"{panel} panel  |  {amp:.2f} V", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(title="wind", fontsize=8, title_fontsize=8)
-    # ── SUBFIGURE SIZING RULE ─────────────────────────────────────────────────
-    # Always use fixed subplots_adjust for any _make_*_fig helper that produces
-    # a series of subfigures. NEVER use tight_layout() here — it adjusts margins
-    # per content (legend size, tick label width, title length), so each saved
-    # file gets different internal proportions even at the same figsize. That
-    # breaks downstream LaTeX faceting where all subfigures must align.
-    # Tune these values once for the plot type, then keep them identical across
-    # every subfigure in the series.
-    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
+    add_freq_axis(ax)
+    fig.subplots_adjust(left=0.14, right=0.97, top=0.84, bottom=0.13)
     return fig
 
 
@@ -496,11 +490,18 @@ def _make_damping_wind_delta_fig(
     )
 
     # ── Top: OUT/IN per wind ──────────────────────────────────────────────────
+    # Collapse multiple mooring groups at the same frequency into a single point
+    # before plotting — otherwise the line zig-zags between mooring rows.
     for wind, grp in subset.groupby(GC.WIND_CONDITION):
-        grp = grp.sort_values(GC.WAVE_FREQUENCY_INPUT)
+        freq_agg = (
+            grp.groupby(GC.WAVE_FREQUENCY_INPUT)
+               .agg(mean_out_in=("mean_out_in", "mean"), std_out_in=("std_out_in", "mean"))
+               .reset_index()
+               .sort_values(GC.WAVE_FREQUENCY_INPUT)
+        )
         ax_top.errorbar(
-            freq_to_kL(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
-            yerr=grp["std_out_in"].fillna(0),
+            freq_to_kL(freq_agg[GC.WAVE_FREQUENCY_INPUT].values), freq_agg["mean_out_in"],
+            yerr=freq_agg["std_out_in"].fillna(0),
             label=wind, color=WIND_COLOR_MAP.get(wind, "gray"),
             marker="o", markersize=5, linewidth=1.4, capsize=3,
         )
@@ -509,6 +510,7 @@ def _make_damping_wind_delta_fig(
     ax_top.set_title(f"{panel} panel  |  {amp:.2f} V", fontsize=9)
     ax_top.grid(True, alpha=0.3)
     ax_top.legend(title="wind", fontsize=8, title_fontsize=8)
+    add_freq_axis(ax_top)
 
     # ── Bottom: delta = target − ref ──────────────────────────────────────────
     # Aggregate per frequency first (multiple moorings → single mean per freq)
@@ -535,7 +537,7 @@ def _make_damping_wind_delta_fig(
     ax_bot.set_xlabel("$kL$", fontsize=9)
     ax_bot.grid(True, alpha=0.3)
 
-    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.11)
+    fig.subplots_adjust(left=0.14, right=0.97, top=0.83, bottom=0.11)
     return fig
 
 

@@ -78,6 +78,41 @@ def freq_to_kL(
     return k * panel_length_m
 
 
+def add_freq_axis(
+    ax,
+    depth_mm: float = _TANK_DEPTH_MM,
+    panel_length_m: float = _PANEL_LENGTH_M,
+    label: str = "frequency (Hz)",
+):
+    """Add a secondary x-axis showing input frequency [Hz] above a kL axis.
+
+    Uses the full dispersion relation ω² = gk·tanh(kd) — same as freq_to_kL.
+    Forward (kL → Hz): analytical, no iteration.
+    Inverse (Hz → kL): calls freq_to_kL (iterative solver already implemented).
+
+    Returns the secondary Axes so the caller can adjust tick labels if needed.
+    """
+    g = 9.81  # m/s²
+    d = depth_mm * 1e-3  # mm → m
+
+    def _kL_to_freq(kL):
+        kL = np.asarray(kL, dtype=float)
+        k = kL / panel_length_m
+        # guard against k=0 to avoid sqrt(0*tanh(0)) edge case
+        with np.errstate(invalid="ignore", divide="ignore"):
+            omega = np.where(k > 0, np.sqrt(g * k * np.tanh(k * d)), 0.0)
+        return omega / (2 * np.pi)
+
+    def _freq_to_kL(f):
+        f = np.asarray(f, dtype=float)
+        return freq_to_kL(f, depth_mm=depth_mm, panel_length_m=panel_length_m)
+
+    secax = ax.secondary_xaxis("top", functions=(_kL_to_freq, _freq_to_kL))
+    secax.set_xlabel(label, fontsize=8)
+    secax.tick_params(labelsize=7)
+    return secax
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # STYLE & CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════════════

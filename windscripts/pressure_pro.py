@@ -8,6 +8,28 @@ Created on Mon Oct 13 15:34:16 2025
 dette skriptet plotter to vindprofiler i ett plott
 
 """
+"""
+Key findings:
+
+**Zero offset (3.8 vs 4.0 mA)** — small and speed-dependent:
+- At low wind (~5 mA): **+9.5%**
+- At high wind (~8 mA): **+2.5%**
+
+**Pressure range (100 vs 150 Pa)** — large and constant:
+- Always **+22.5%** regardless of wind speed (it's a fixed `sqrt(1.5)` factor)
+
+**The `pressure_pro.py` formula** (`18.51`, effectively 150 Pa + ρ≈1.0) gives even higher values — at mA=5 it
+gives 4.71 m/s vs the correct 3.19 m/s for 100 Pa.
+
+So the 3.5 m/s (October, `pressure_pro.py`) vs 5.4 m/s (November, `windspeeds.py`) discrepancy is **not** a calibration artifact
+— the formulas go in opposite directions. The October formula *overestimates* (uses 150 Pa range),
+so the real October wind was even lower than 3.5 m/s. The November wind at 5.4 m/s with the
+correct 100 Pa formula appears genuinely stronger.
+These were different measurement sessions — the wind tunnel was simply running at different speeds.
+
+"""
+
+# %%
 import pandas as pd
 from pathlib import Path
 from io import StringIO
@@ -97,7 +119,7 @@ windspeed1 = np.sqrt((sni-3.8)*18.51) #til de målingene fra 24og25okt var 3.8 b
 #sni = df.mean(axis=0)
 sni2 = df2.iloc[0]
 sni2.index = [name.replace('mA_', 'høyde_') for name in sni2.index]
-windspeed2 = np.sqrt((sni2-3.8)*18.51) #2*(150Pa/16mArange) Bruk 18.51 når 3,8 mA 
+windspeed2 = np.sqrt((sni2-3.8)*18.51) #2*(150Pa/16mArange) Bruk 18.51 når 3,8 mA
 #print(windspeed2) #(sni2-4)*18.75 er for nullstilt ved 4.0mA
 
 #%% - string manipulation. Beholder alt før første dash og alt etter siste dash
@@ -105,7 +127,7 @@ import re
 datafoldername1 = re.sub(r'-.*-', '-', datafoldername1)
 datafoldername2 = re.sub(r'-.*-', '-', datafoldername2)
 
-#%% 
+#%%
 ylengde = len(windspeed1)
 yhøgd = range(0,ylengde)
 ylengde2 = len(windspeed2)
@@ -179,6 +201,3 @@ ax.grid(True, which='both', linestyle='--', alpha=0.6)
 ax.legend()
 plt.tight_layout()
 plt.show()
-
-
-
