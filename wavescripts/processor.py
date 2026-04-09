@@ -838,10 +838,13 @@ def _zero_and_smooth_signals(
                 "samples_clipped": n_clipped_total,
                 "max_gap": max_gap_val,
                 "stuck_segments": stuck_segs if stuck_segs else [],
-                "step_at_s": step_at_s,  # None if no DC step detected; float (seconds) if detected
+                "step_at_s": step_at_s,
+                # populated after interpolation (set to 0 here, updated below)
+                "n_interp": 0,
+                "n_cut": 0,
             }
 
-            # ── eta_interp: pchip fill of small gaps (display layer) ─────────
+            # ── eta_interp: pchip fill of small gaps; long gaps stay NaN ────
             interp_col = f"eta_{pos}_interp"
             _valid = ~_final_nan
             if _final_nan.any() and _valid.sum() > 3:
@@ -850,8 +853,17 @@ def _zero_and_smooth_signals(
                 _filled_interp = _pchip(_idx)
                 _filled_interp = _remask_long_gaps(_filled_interp, _final_nan, max_interp_gap)
                 df[interp_col] = _filled_interp
+                # Samples that were NaN and got filled = interpolated
+                # Samples that were NaN and stayed NaN = cut (gap too long)
+                _still_nan = np.isnan(_filled_interp)
+                n_interp = int(_final_nan.sum()) - int(_still_nan.sum())
+                n_cut    = int(_still_nan.sum())
             else:
                 df[interp_col] = _eta.copy()
+                n_interp = 0
+                n_cut    = int(_final_nan.sum())
+            clip_stats[path][pos]["n_interp"] = n_interp
+            clip_stats[path][pos]["n_cut"]    = n_cut
 
             # ── _ma: linear fill of small gaps then smooth ───────────────────
             ma_col = f"{probe_col}_ma"
@@ -1409,6 +1421,8 @@ def process_selected_data(
         for pos, stats in probe_stats.items():
             meta_sel.loc[mask, f"samples_clipped_{pos}"] = stats["samples_clipped"]
             meta_sel.loc[mask, f"max_gap_{pos}"]         = stats["max_gap"]
+            meta_sel.loc[mask, f"interp_samples_{pos}"]  = stats.get("n_interp", 0)
+            meta_sel.loc[mask, f"cut_samples_{pos}"]     = stats.get("n_cut", 0)
             # NaN means no step detected (normal run); a float value = step onset in seconds
             meta_sel.loc[mask, f"step_at_s_{pos}"] = stats.get("step_at_s", None)
 

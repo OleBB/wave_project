@@ -208,7 +208,7 @@ def make_plots(results, split=False, save=False):
     ax3b.set_ylabel("Gjennomsnittlig kurtose [-]", color='gray')
     ax3b.tick_params(axis='y', labelcolor='gray')
     ax3.set_title("Strømningssymmetri (skjevhet) og haletykkelse (eksess-kurtose)")
-    ax3.legend(handles=run_legend, fontsize=9, loc='lower right')
+    ax3.legend(handles=run_legend, fontsize=9, loc='lower right') #todo: add marker
     ax3b.legend(fontsize=8, loc='lower center')
     style_ax(ax3)
 

@@ -31,22 +31,28 @@ def _extract_probe_signal(
     pos: str,
 ) -> Optional[np.ndarray]:
     """Extract signal for a probe identified by position string (e.g. '9373/170')."""
-    col = f"eta_{pos}"
+    # Prefer the interpolated signal: short gaps are pchip-filled, long gaps
+    # stay NaN (re-masked by _remask_long_gaps). Fall back to raw eta_{pos}
+    # (NaN-dropped concatenation) only if the interp column doesn't exist.
+    interp_col = f"eta_{pos}_interp"
+    raw_col    = f"eta_{pos}"
+    col = interp_col if interp_col in df.columns else raw_col
+
     start_val = row.get(f"Computed Probe {pos} start")
     end_val = row.get(f"Computed Probe {pos} end")
-    
+
     if pd.isna(start_val) or pd.isna(end_val) or col not in df.columns:
         return None
-    
+
     try:
         s_idx = max(0, int(start_val))
         e_idx = min(len(df) - 1, int(end_val))
     except (TypeError, ValueError):
         return None
-    
+
     if s_idx >= e_idx:
         return None
-    
+
     signal = df[col].iloc[s_idx:e_idx+1].dropna().to_numpy()
     return signal if signal.size > 0 else None
     

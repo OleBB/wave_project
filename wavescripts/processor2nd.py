@@ -231,7 +231,9 @@ def compute_inter_run_timing(
         """Return (start_ts, end_ts) as Unix floats, or (nan, nan) if unavailable."""
         if processed_dfs is None:
             return float("nan"), float("nan")
-        df = processed_dfs.get(path) or processed_dfs.get(str(Path(path).resolve()))
+        df = processed_dfs.get(path)
+        if df is None:
+            df = processed_dfs.get(str(Path(path).resolve()))
         if df is None or "Date" not in df.columns or len(df) == 0:
             return float("nan"), float("nan")
         try:
@@ -239,7 +241,7 @@ def compute_inter_run_timing(
         except Exception:
             return float("nan"), float("nan")
 
-    ts_pairs = meta_df["path"].apply(_csv_timestamps)
+    ts_pairs = meta_df["path"].map(_csv_timestamps)
     meta_df["run_start_ts"] = ts_pairs.apply(lambda x: x[0])
     meta_df["run_end_ts"]   = ts_pairs.apply(lambda x: x[1])
 
