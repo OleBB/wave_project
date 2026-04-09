@@ -47,6 +47,10 @@ from matplotlib.offsetbox import AnchoredText
 # False = PDF only (fast prototype mode).  Override with plot_utils.SAVE_PGF = True.
 SAVE_PGF: bool = False
 
+# Folder names of the active PROCESSED_DIRS — written into every stub's immutable block.
+# Set once at startup: import wavescripts.plot_utils as _pu; _pu.ACTIVE_DATASETS = [...]
+ACTIVE_DATASETS: list[str] = []
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STYLE & CONSTANTS
@@ -450,6 +454,11 @@ def write_figure_stub(meta: dict, plot_type: str,
     for k, v in meta.items():
         if k not in known_keys and v is not None:
             comment_lines.append(_line(k, v))
+    if ACTIVE_DATASETS:
+        comment_lines.append("%")
+        comment_lines.append("% DATASETS:")
+        for ds in ACTIVE_DATASETS:
+            comment_lines.append(f"%   {ds}")
 
     subfig_files = subfig_filenames or [stub_filename]
     comment_lines += [

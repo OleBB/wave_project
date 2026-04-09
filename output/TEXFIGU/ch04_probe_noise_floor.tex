@@ -11,41 +11,16 @@
 %   probes          : None
 %   draft           : True
 %
+% DATASETS:
+%   PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%   PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%
 % SUBFIGURES AVAILABLE:
-%   FIGURES/ch04_probe_noise_floor_group0.pdf
-%   FIGURES/ch04_probe_noise_floor_group1.pdf
-%   FIGURES/ch04_probe_noise_floor_group2.pdf
-%   FIGURES/ch04_probe_noise_floor_group3.pdf
+%   FIGURES/ch04_probe_noise_floor.pdf
 % ============================================================
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[b]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch04_probe_noise_floor_group0.pdf}
-    \caption{TODO}
-    \label{fig:TODO__noise_floor_group0}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch04_probe_noise_floor_group1.pdf}
-    \caption{TODO}
-    \label{fig:TODO__noise_floor_group1}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch04_probe_noise_floor_group2.pdf}
-    \caption{TODO}
-    \label{fig:TODO__noise_floor_group2}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch04_probe_noise_floor_group3.pdf}
-    \caption{TODO}
-    \label{fig:TODO__noise_floor_group3}
-  \end{subfigure}
+  \includegraphics[width=0.9\linewidth]{FIGURES/ch04_probe_noise_floor.pdf}
   \caption[Stillwater 95\% noise amplitude $(P_{97]{
     Stillwater 95\% noise amplitude $(P_{97.5} - P_{2.5})/2$ per ultrasound wave gauge, with no waves and no wind. Each panel shows one hardware configuration (probe height above still water / range mode). Blue bars: mean across accepted stillwater runs within each configuration (error bars: \pm 1\,std). White dots: individual run values. Quantization step $q = 0.03$--$0.05$\,mm per probe (P5 of nonzero sample-to-sample differences); Dashed red line: detection threshold $\max(3\,\sigma,\; 2\,q)$ per probe, where $\sigma$ is the rms noise; wave amplitudes below this line are indistinguishable from stillwater noise.
   }

@@ -2243,27 +2243,31 @@ def plot_parallel_ratio(
 
     wind_order = ["no", "lowest", "full"]
 
+    amp_linestyles = ["-", "--", ":", "-."]
+
     for ax, panel in zip(axes[0], panel_vals):
         sub = df[df["PanelCondition"] == panel]
+        amps = sorted(sub["WaveAmplitudeInput [Volt]"].dropna().unique())
         for wind in wind_order:
             grp = sub[sub["WindCondition"] == wind]
             if grp.empty:
                 continue
             color = WIND_COLOR_MAP.get(wind, "gray")
-            # TODO (BIG — OLE MUST REVIEW): errorbar = std across ALL runs at the same
-            # frequency, regardless of amplitude or mooring. This mixes physical variation
-            # (different wave steepnesses) with true measurement uncertainty. A tall bar
-            # may mean: (a) genuine lateral asymmetry that varies with amplitude/mooring,
-            # or (b) just that 0.1 V and 0.2 V runs produce different ratios. Before
-            # publishing, decide: should errorbars show spread across amplitudes (as now),
-            # or should each amplitude be a separate line? The current figure conflates both.
-            stats = grp.groupby("WaveFrequencyInput [Hz]")["parallel_ratio"].agg(["mean", "std", "count"])
-            ax.errorbar(
-                stats.index, stats["mean"],
-                yerr=stats["std"].fillna(0),
-                fmt="o-", capsize=3, lw=1.4, ms=5,
-                color=color, label=wind,
-            )
+            for i, amp in enumerate(amps):
+                amp_grp = grp[grp["WaveAmplitudeInput [Volt]"] == amp]
+                if amp_grp.empty:
+                    continue
+                # std within same (freq, wind, amplitude) — pure run-to-run noise,
+                # not inflated by mixing different amplitude inputs.
+                stats = amp_grp.groupby("WaveFrequencyInput [Hz]")["parallel_ratio"].agg(["mean", "std", "count"])
+                ls = amp_linestyles[i % len(amp_linestyles)]
+                label = f"{wind} / {amp:.2f} V" if len(amps) > 1 else wind
+                ax.errorbar(
+                    stats.index, stats["mean"],
+                    yerr=stats["std"].fillna(0),
+                    fmt=f"o{ls}", capsize=3, lw=1.4, ms=5,
+                    color=color, label=label,
+                )
         ax.axhline(1.0, color="black", lw=0.8, ls="--", alpha=0.5)
         ax.set_title(f"panel: {panel}", fontsize=10)
         ax.set_xlabel("Frequency [Hz]")
@@ -2288,7 +2292,9 @@ def plot_parallel_ratio(
         "condition(s) ({panel_conditions}). "
         "A ratio of 1 indicates lateral symmetry. "
         "Deviations indicate wall reflections or wind-driven lateral asymmetry. "
-        "Error bars: standard deviation across runs at the same frequency. "
+        "Colour = wind condition; linestyle = wave amplitude. "
+        "Error bars: standard deviation across repeated runs at the same (frequency, amplitude) — "
+        "pure run-to-run repeatability, not inflated by mixing amplitudes. "
         "Dashed line: ratio = 1."
     )
     _caption = resolve_caption(
@@ -2301,7 +2307,8 @@ def plot_parallel_ratio(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
         )
-        save_and_stub(fig, meta, plot_type="parallel_ratio")
+        save_and_stub(fig, meta, plot_type="parallel_ratio",
+                      force_stub=plotting.get("force_stub", False))
 
     return fig
 
@@ -2392,7 +2399,8 @@ def plot_wave_stability(
     _default_caption = (
         "Wave-train stability (autocorrelation at lag-1-period) versus wave "
         "frequency for {n_probes} probes, {n_runs} wave runs. "
-        "Colour encodes wind condition. "
+        "Colour = wind condition; linestyle = wave amplitude. "
+        "Error bars: standard deviation across repeated runs at the same (frequency, amplitude). "
         "Dashed line: quality threshold {threshold} — "
         "runs below this are dominated by wind-wave noise at the IN probe."
     )
@@ -2409,18 +2417,29 @@ def plot_wave_stability(
     if n_cols == 1:
         axes = [axes]
 
+    _amp_ls = ["-", "--", ":", "-."]
+    all_amps = sorted(stab_df["amplitude"].dropna().unique())
+
     for ax, pos in zip(axes, probe_positions):
         sub = stab_df[stab_df["probe"] == pos]
-        for wind, grp in sub.groupby("wind"):
-            agg = (grp.groupby("freq")["wave_stability"]
-                      .agg(mean="mean", std="std")
-                      .reset_index())
-            ax.errorbar(
-                agg["freq"], agg["mean"], yerr=agg["std"],
-                label=wind,
-                color=WIND_COLOR_MAP.get(wind, "gray"),
-                marker="o", markersize=5, linewidth=1.2, capsize=3,
-            )
+        for wind, wind_grp in sub.groupby("wind"):
+            color = WIND_COLOR_MAP.get(wind, "gray")
+            for i, amp in enumerate(all_amps):
+                amp_grp = wind_grp[wind_grp["amplitude"] == amp]
+                if amp_grp.empty:
+                    continue
+                # std within same (freq, wind, amplitude) — run-to-run noise only
+                agg = (amp_grp.groupby("freq")["wave_stability"]
+                              .agg(mean="mean", std="std")
+                              .reset_index())
+                ls = _amp_ls[i % len(_amp_ls)]
+                label = f"{wind} / {amp:.2f} V" if len(all_amps) > 1 else wind
+                ax.errorbar(
+                    agg["freq"], agg["mean"], yerr=agg["std"].fillna(0),
+                    label=label,
+                    color=color, linestyle=ls,
+                    marker="o", markersize=5, linewidth=1.2, capsize=3,
+                )
         ax.axhline(
             stability_threshold, color="gray",
             linestyle="--", linewidth=0.8, alpha=0.7,
@@ -2560,7 +2579,7 @@ def plot_timeseries_overview(
     fig, axes = plt.subplots(
         n_probes, n_runs,
         figsize=figsize,
-        sharey="row" if ylim is None else False,
+        sharey=True if ylim is None else False,
         sharex=False,
         squeeze=False,
     )

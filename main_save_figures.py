@@ -52,6 +52,9 @@ CHAPTER 05 — RESULTS
   §4   ch05_damping_ka             ✗  Damping vs ka (wavenumber × amplitude) [TODO]
   §5   ch05_swell_scatter          ~  IN vs OUT by swell/wind/total band
   §6   ch05_reconstructed          ~  FFT-reconstructed paddle signal
+
+DIAGNOSTICS
+  D1   diag_13hz_consistency        ✗  1.3 Hz cross-session consistency check [TODO]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -119,6 +122,8 @@ except NameError:
 os.chdir(file_dir)
 
 # ── Dataset(s) ────────────────────────────────────────────────────────────────
+# Only the two most recent folders active — most reliable data (lowrange, h100, mooring30).
+# Earlier folders have interpolation artefacts at high frequencies (≥1.6 Hz).
 PROCESSED_DIRS = [
     # ── Nov 2025: probe 1 at 18000 mm, roof not fully sealed ──────────────────
     # Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"),        # probe 1 på 18000 mm; tak ikke tetta helt
@@ -135,24 +140,28 @@ PROCESSED_DIRS = [
     # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),           # in=9373/170, out=11800/250 — transitional
     # ── Mar 2026: final probe positions (march2026_better_rearranging) ─────────
     # Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),    # disse bør være greie bortsett fra de steile
-    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),      # noen filer med FALSEDATE (riktig dato fra mappe)
-    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),     # noen filer med FALSEDATE?
-    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),     # noen filer med FALSEDATE?
-    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),     # noen filer med FALSEDATE?
-    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
-    Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
-    Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED"),
+    # Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),    # noen filer med FALSEDATE (riktig dato fra mappe)
+    # Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),   # noen filer med FALSEDATE?
+    # Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),   # noen filer med FALSEDATE?
+    # Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),   # noen filer med FALSEDATE?
+    # Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    # Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    # Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED"),
     # ── Mar 2026: probe lowered — height136 (transitional, 1 dag) ─────────────
-    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),  # h136/high, 1 dag
+    # Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),  # h136/high, 1 dag
     # ── Mar 2026: probe lowered to height100 ──────────────────────────────────
-    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
-    Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
-    Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
-    Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    # Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    # Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    # Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    # Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     # ── Mar 2026: lowrange switch enabled ─────────────────────────────────────
     Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
     Path("waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
 ]
+
+# Register dataset names globally so every stub's immutable block records them.
+import wavescripts.plot_utils as _pu
+_pu.ACTIVE_DATASETS = [p.name for p in PROCESSED_DIRS]
 
 # ── Load from cache ───────────────────────────────────────────────────────────
 print("Loading analysis data...")
