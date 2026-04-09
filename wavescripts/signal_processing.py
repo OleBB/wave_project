@@ -30,16 +30,19 @@ def _extract_probe_signal(
     row: pd.Series,
     pos: str,
 ) -> Optional[np.ndarray]:
-    """Extract signal for a probe identified by position string (e.g. '9373/170')."""
-    # Prefer the interpolated signal: short gaps are pchip-filled, long gaps
-    # stay NaN (re-masked by _remask_long_gaps). Fall back to raw eta_{pos}
-    # (NaN-dropped concatenation) only if the interp column doesn't exist.
+    """Extract the longest contiguous valid signal segment for FFT.
+
+    Uses eta_{pos}_interp (short gaps pchip-filled, long gaps stay NaN) when
+    available, falling back to eta_{pos}. Returns the single longest contiguous
+    non-NaN run within the stable analysis window — joining segments across gaps
+    would destroy phase coherence and produce a wrong FFT amplitude.
+    """
     interp_col = f"eta_{pos}_interp"
     raw_col    = f"eta_{pos}"
     col = interp_col if interp_col in df.columns else raw_col
 
     start_val = row.get(f"Computed Probe {pos} start")
-    end_val = row.get(f"Computed Probe {pos} end")
+    end_val   = row.get(f"Computed Probe {pos} end")
 
     if pd.isna(start_val) or pd.isna(end_val) or col not in df.columns:
         return None
@@ -53,8 +56,23 @@ def _extract_probe_signal(
     if s_idx >= e_idx:
         return None
 
-    signal = df[col].iloc[s_idx:e_idx+1].dropna().to_numpy()
-    return signal if signal.size > 0 else None
+    window = df[col].iloc[s_idx:e_idx + 1].to_numpy(dtype=float)
+
+    # Find all contiguous non-NaN segments; return the longest one.
+    is_valid = ~np.isnan(window)
+    if is_valid.all():
+        return window  # fast path: no gaps at all
+
+    runs = np.diff(np.concatenate([[0], is_valid.astype(int), [0]]))
+    seg_starts = np.where(runs == 1)[0]
+    seg_ends   = np.where(runs == -1)[0]   # exclusive end
+
+    if seg_starts.size == 0:
+        return None
+
+    longest_idx = int(np.argmax(seg_ends - seg_starts))
+    best = window[seg_starts[longest_idx]:seg_ends[longest_idx]]
+    return best if best.size > 0 else None
     
 
 def _extract_probe_amplitude(
