@@ -38,6 +38,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 
+from wavescripts.wave_physics import calculate_wavenumbers_vectorized
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # GLOBAL SAVE FLAGS
@@ -50,6 +52,30 @@ SAVE_PGF: bool = False
 # Folder names of the active PROCESSED_DIRS — written into every stub's immutable block.
 # Set once at startup: import wavescripts.plot_utils as _pu; _pu.ACTIVE_DATASETS = [...]
 ACTIVE_DATASETS: list[str] = []
+
+# ── Physics parameters used for x-axis conversion ────────────────────────────
+# Note: calculate_wavenumbers_vectorized expects depth in mm (it applies MM_TO_M internally)
+# and returns k in m⁻¹.
+_TANK_DEPTH_MM: float = 580.0   # nominal lab depth in mm (depth580 in filenames)
+_PANEL_LENGTH_M: float = 1.048  # purple panel length in m (constants.PANEL_LENGTHS["purple"])
+
+
+def freq_to_kL(
+    freqs,
+    depth_mm: float = _TANK_DEPTH_MM,
+    panel_length_m: float = _PANEL_LENGTH_M,
+) -> np.ndarray:
+    """Convert paddle input frequencies [Hz] to dimensionless kL.
+
+    Uses the full dispersion relation ω² = gk·tanh(kd).
+    L defaults to the purple panel length (1.048 m) — used as the reference
+    length for all plots regardless of the run's own PanelCondition, so that
+    the x-axis represents 'wave scale relative to the panel' consistently.
+    depth_mm is in mm (as expected by calculate_wavenumbers_vectorized).
+    """
+    freqs = np.asarray(freqs, dtype=float)
+    k = calculate_wavenumbers_vectorized(freqs, np.full_like(freqs, depth_mm))
+    return k * panel_length_m
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

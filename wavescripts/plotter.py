@@ -69,6 +69,7 @@ from wavescripts.plot_utils import (
     draw_anchored_text,
     make_label,
     resolve_caption,
+    freq_to_kL,
     save_and_stub,
     write_figure_stub,
 )
@@ -213,7 +214,7 @@ def _draw_damping_freq_ax(
             GC.WAVE_FREQUENCY_INPUT
         )
         ax.errorbar(
-            amp_data[GC.WAVE_FREQUENCY_INPUT],
+            freq_to_kL(amp_data[GC.WAVE_FREQUENCY_INPUT].values),
             amp_data["mean_out_in"],
             yerr=amp_data["std_out_in"],
             marker="o",
@@ -223,7 +224,7 @@ def _draw_damping_freq_ax(
             linewidth=1.4,
         )
 
-    ax.set_xlabel("Frequency [Hz]", fontsize=9)
+    ax.set_xlabel("$kL$", fontsize=9)
     ax.set_ylabel("OUT/IN", fontsize=9)
     ax.set_title(f"{panel}panel / {wind}wind", fontsize=9)
     ax.grid(True, alpha=0.3)
@@ -245,13 +246,13 @@ def _make_damping_freq_fig(
     for wind, grp in subset.groupby(GC.WIND_CONDITION):
         grp = grp.sort_values(GC.WAVE_FREQUENCY_INPUT)
         ax.errorbar(
-            grp[GC.WAVE_FREQUENCY_INPUT], grp["mean_out_in"],
+            freq_to_kL(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
             yerr=grp["std_out_in"],
             label=wind, color=WIND_COLOR_MAP.get(wind),
             marker="o", markersize=5, linewidth=1.4, capsize=3,
         )
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
-    ax.set_xlabel("Frequency [Hz]", fontsize=9)
+    ax.set_xlabel("$kL$", fontsize=9)
     ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
     ax.set_title(f"{panel} panel  |  {amp:.2f} V", fontsize=9)
     ax.grid(True, alpha=0.3)
@@ -357,12 +358,13 @@ def _make_damping_scatter_fig(
     Colour = wind condition. Marker size = amplitude. No internal faceting.
     """
     import seaborn as sns
-    subset = stats_df[stats_df[GC.PANEL_CONDITION_GROUPED] == panel]
+    subset = stats_df[stats_df[GC.PANEL_CONDITION_GROUPED] == panel].copy()
+    subset["kL"] = freq_to_kL(subset[GC.WAVE_FREQUENCY_INPUT].values)
     fig, ax = plt.subplots(figsize=figsize)
 
     sns.scatterplot(
-        data=subset.sort_values(GC.WAVE_FREQUENCY_INPUT),
-        x=GC.WAVE_FREQUENCY_INPUT, y="mean_out_in",
+        data=subset.sort_values("kL"),
+        x="kL", y="mean_out_in",
         hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
         size=GC.WAVE_AMPLITUDE_INPUT, sizes=(40, 160),
         alpha=0.80, ax=ax, legend="auto",
@@ -371,14 +373,14 @@ def _make_damping_scatter_fig(
     if "std_out_in" in subset.columns:
         for wind, grp in subset.groupby(GC.WIND_CONDITION):
             ax.errorbar(
-                grp[GC.WAVE_FREQUENCY_INPUT], grp["mean_out_in"],
+                grp["kL"], grp["mean_out_in"],
                 yerr=grp["std_out_in"],
                 fmt="none", ecolor=WIND_COLOR_MAP.get(wind, "gray"),
                 elinewidth=1, capsize=3, alpha=0.4, zorder=1,
             )
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
-    ax.set_xlabel("Frequency [Hz]", fontsize=9)
+    ax.set_xlabel("$kL$", fontsize=9)
     ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
     ax.set_title(f"{panel} panel", fontsize=9)
     ax.legend(title="wind / amp", fontsize=7, title_fontsize=7)
@@ -497,7 +499,7 @@ def _make_damping_wind_delta_fig(
     for wind, grp in subset.groupby(GC.WIND_CONDITION):
         grp = grp.sort_values(GC.WAVE_FREQUENCY_INPUT)
         ax_top.errorbar(
-            grp[GC.WAVE_FREQUENCY_INPUT], grp["mean_out_in"],
+            freq_to_kL(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
             yerr=grp["std_out_in"].fillna(0),
             label=wind, color=WIND_COLOR_MAP.get(wind, "gray"),
             marker="o", markersize=5, linewidth=1.4, capsize=3,
@@ -517,19 +519,20 @@ def _make_damping_wind_delta_fig(
 
     common_freqs = sorted(ref_mean.index.intersection(target_mean.index))
     if common_freqs:
+        common_kL = freq_to_kL(np.array(common_freqs))
         delta = target_mean.loc[common_freqs] - ref_mean.loc[common_freqs]
         colors = [
             WIND_COLOR_MAP.get(target_wind, "steelblue") if d >= 0 else WIND_COLOR_MAP.get(ref_wind, "gray")
             for d in delta
         ]
-        ax_bot.bar(common_freqs, delta.values, width=0.04, color=colors, alpha=0.75)
+        ax_bot.bar(common_kL, delta.values, width=0.35, color=colors, alpha=0.75)
         ax_bot.axhline(0, color="black", linewidth=0.8)
         ax_bot.set_ylabel("Δ (full−no)", fontsize=8)
     else:
         ax_bot.text(0.5, 0.5, f"No matched ({ref_wind}/{target_wind}) points",
                     ha="center", va="center", transform=ax_bot.transAxes, fontsize=9, color="gray")
 
-    ax_bot.set_xlabel("Frequency [Hz]", fontsize=9)
+    ax_bot.set_xlabel("$kL$", fontsize=9)
     ax_bot.grid(True, alpha=0.3)
 
     fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.11)
@@ -2263,14 +2266,14 @@ def plot_parallel_ratio(
                 ls = amp_linestyles[i % len(amp_linestyles)]
                 label = f"{wind} / {amp:.2f} V" if len(amps) > 1 else wind
                 ax.errorbar(
-                    stats.index, stats["mean"],
+                    freq_to_kL(stats.index.values), stats["mean"],
                     yerr=stats["std"].fillna(0),
                     fmt=f"o{ls}", capsize=3, lw=1.4, ms=5,
                     color=color, label=label,
                 )
         ax.axhline(1.0, color="black", lw=0.8, ls="--", alpha=0.5)
         ax.set_title(f"panel: {panel}", fontsize=10)
-        ax.set_xlabel("Frequency [Hz]")
+        ax.set_xlabel("$kL$")
         ax.grid(True, alpha=0.3)
 
     axes[0][0].set_ylabel("Parallel ratio (wall / far)")
@@ -2435,7 +2438,7 @@ def plot_wave_stability(
                 ls = _amp_ls[i % len(_amp_ls)]
                 label = f"{wind} / {amp:.2f} V" if len(all_amps) > 1 else wind
                 ax.errorbar(
-                    agg["freq"], agg["mean"], yerr=agg["std"].fillna(0),
+                    freq_to_kL(agg["freq"].values), agg["mean"], yerr=agg["std"].fillna(0),
                     label=label,
                     color=color, linestyle=ls,
                     marker="o", markersize=5, linewidth=1.2, capsize=3,
@@ -2446,7 +2449,7 @@ def plot_wave_stability(
             label=f"threshold {stability_threshold}",
         )
         ax.set_title(pos, fontsize=9)
-        ax.set_xlabel("Frequency [Hz]")
+        ax.set_xlabel("$kL$")
         ax.set_ylim(0, 1.05)
 
     axes[0].set_ylabel("wave_stability")
@@ -2891,12 +2894,12 @@ def plot_wind_snr(
             sub = snr_df[snr_df["probe"] == pos]
             for wc, grp in sub.groupby("wind"):
                 agg = grp.groupby("freq")["SNR"].median()
-                ax.plot(agg.index, agg.values, marker="o", lw=1.2, markersize=6,
+                ax.plot(freq_to_kL(agg.index.values), agg.values, marker="o", lw=1.2, markersize=6,
                         color=WIND_COLOR_MAP.get(wc, "grey"), label=wc)
             ax.axhline(10, color="0.6",     lw=0.7, ls=":",  label="SNR=10")
             ax.axhline(5,  color="k",       lw=0.8, ls="--", label="SNR=5")
             ax.axhline(3,  color="tomato",  lw=0.8, ls=":",  label="SNR=3")
-            ax.set_xlabel("Paddle frequency [Hz]")
+            ax.set_xlabel("$kL$")
             if ax is axes[0]:
                 ax.set_ylabel(
                     r"Spectral SNR  ($A_\mathrm{paddle}\,/\,A_\mathrm{wind,FFT}$)"
@@ -3004,7 +3007,7 @@ def plot_td_vs_fft(
                 ax_sc.scatter(grp[td_col], grp[fft_col],
                               s=12, alpha=0.45, color=c, label=wc)
                 agg = grp.groupby("WaveFrequencyInput [Hz]")["ratio"].median()
-                ax_rt.plot(agg.index, agg.values,
+                ax_rt.plot(freq_to_kL(agg.index.values), agg.values,
                            marker="o", lw=1.0, markersize=5, color=c, label=wc)
 
             lim = sub[[td_col, fft_col]].max().max() * 1.08
@@ -3019,7 +3022,7 @@ def plot_td_vs_fft(
 
             ax_rt.axhline(1.0, color="k", lw=0.7, ls="--", alpha=0.5)
             ax_rt.set_ylim(0, 1.15)
-            ax_rt.set_xlabel("Paddle frequency [Hz]")
+            ax_rt.set_xlabel("$kL$")
             if ci == 0:
                 ax_rt.set_ylabel("$A_\\mathrm{FFT}\\,/\\,A_\\mathrm{td}$")
             ax_rt.set_title(f"{pos}  ratio", fontsize=9)

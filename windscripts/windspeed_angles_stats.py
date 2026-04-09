@@ -111,7 +111,7 @@ def process_stats_folder(folder_path):
 
         mean_kurt = np.mean(d["Kurt"])
         mean_skew = np.mean(d["Skew"])
-        
+
         results.append({
             "angle":      angle,
             "fname":      fname,
@@ -193,23 +193,25 @@ def make_plots(results, split=False, save=False):
     style_ax(ax2)
 
     # --- Panel 3: skewness + kurtosis ---
+    # todo: fix so that the kurtosis line is at kurt=0 (normal distribution)
+    # because according to gpt: In LabVIEW 2016 (Statistics/MathScript/Statistics functions), “kurtosis” is the excess kurtosis... the kurtosis returned is 0, NOT3.
     ax3b = ax3.twinx()
-    
+
     for r, c in zip(results, colors):
         ax3.scatter(r["angle"], r["mean_skew"], marker='D', color=c, s=30)
         ax3b.scatter(r["angle"], r["mean_kurt"], marker='*', color=c, s=40, alpha=0.7)
-    
+
     ax3.axhline(0, color='gray', linewidth=0.8, linestyle='--')
-    ax3b.axhline(3, color='gray', linewidth=0.8, linestyle=':', label='Normalfordeling (kurt=3)')
-    
+    ax3b.axhline(3, color='gray', linewidth=0.8, linestyle=':', label='Normalfordeling (kurtose=0)')
+
     ax3.set_ylabel("Gjennomsnittlig skjevhet [-]", color='black')
     ax3b.set_ylabel("Gjennomsnittlig kurtose [-]", color='gray')
     ax3b.tick_params(axis='y', labelcolor='gray')
-    ax3.set_title("Strømningssymmetri (skjevhet) og haletykkelse (kurtose)")
+    ax3.set_title("Strømningssymmetri (skjevhet) og haletykkelse (eksess-kurtose)")
     ax3.legend(handles=run_legend, fontsize=9, loc='lower right')
     ax3b.legend(fontsize=8, loc='lower center')
     style_ax(ax3)
-    
+
     if split and save:
         for (fig, _), name in zip(figs, ["windspeed_angles", "uncertainty_angles", "skewness_angles"]):
             fig_path = "windresults"
@@ -220,8 +222,8 @@ def make_plots(results, split=False, save=False):
         fig_path = "windresults"
         print(f"saving to {fig_path}/{name}")
         fig.savefig(f"{fig_path}/{name}.pdf", bbox_inches='tight')
-        
-        
+
+
     if split:
         for fig, _ in figs:
             fig.tight_layout()
@@ -242,7 +244,11 @@ from scipy.stats import norm
 # %%
 #TODO - bruke på ekte fart, per høyde? denne gir et avansert plot
 # ... de
-"""Important caveat for your thesis: label this as "approximated Gaussian distribution" — you're reconstructing it from summary statistics, not raw samples. The shape is assumed Gaussian, which your near-zero skewness actually supports as a reasonable assumption. The width of each curve represents drift_std — the temporal wind speed variation during the run, which is your dominant uncertainty source."""
+"""Important caveat for your thesis: label this as "approximated Gaussian distribution"
+— you're reconstructing it from summary statistics, not raw samples.
+The shape is assumed Gaussian, which your near-zero skewness actually supports as a reasonable assumption.
+The width of each curve represents drift_std
+— the temporal wind speed variation during the run, which is your dominant uncertainty source."""
 def plot_distributions(results):
     from scipy.stats import norm
     vinkellisten = []
@@ -265,7 +271,7 @@ def plot_distributions(results):
 
         ax.plot(x, y, color=color, alpha=0.6, linewidth=1.2)
         ax.axvline(mu, color=color, linewidth=0.5, alpha=0.3)
-    
+
     vinkelmax = max(vinkellisten)
     import matplotlib.patches as mpatches
     p0 = mpatches.Patch(color="tab:green",  label="Kjøring 0")
@@ -285,5 +291,3 @@ def plot_distributions(results):
     plt.show()
 
 plot_distributions(results)
-    
-    

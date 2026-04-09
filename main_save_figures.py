@@ -1117,6 +1117,64 @@ if not arrival_df.empty:
 #     save_and_stub(fig, _meta, "first_arrival")
 #     plt.show()
 
+# %% ── DIAGNOSTICS ───────────────────────────────────────────────────────────
+# D1 — 1.3 Hz cross-session consistency check
+# ─────────────────────────────────────────────────────────────────────────────
+# PURPOSE: 1.3 Hz is the most over-represented frequency — many early sessions
+# used it as a reference wave. The "drop" at 1.3 Hz visible in result plots
+# (ch05_damping_freq etc.) may be a data-quality artefact from older sessions
+# rather than a physical effect. This figure checks consistency.
+#
+# IMPLEMENTATION TODO:
+#   1. Load ALL PROCESSED_DIRS (the full commented-out list), not just the two
+#      active ones. Use load_analysis_data() with the complete list.
+#   2. Filter combined_meta to WaveFrequencyInput = 1.3 Hz, PanelCondition=full,
+#      both amplitudes, all wind conditions.
+#   3. Add a "session" column derived from the PROCESSED_DIR folder name (date
+#      substring), so each session date is a distinct x-category or color group.
+#   4. Plot OUT/IN (FFT) per session, one subplot per (WindCondition, amplitude)
+#      combination. X-axis = session date, y-axis = OUT/IN (FFT).
+#   5. If sessions agree → the 1.3 Hz drop is real physics.
+#      If older sessions are outliers → restrict to the two reliable folders.
+#
+# NOTE: Use a SEPARATE load_analysis_data() call here with ALL_PROCESSED_DIRS
+# so the main combined_meta (two folders only) is not affected.
+#
+# ALL_PROCESSED_DIRS (for this diagnostic only):
+_ALL_PROCESSED_DIRS_FOR_13HZ = [
+    # Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"),
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),
+    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),
+    # Path("waveprocessed/PROCESSED-20251112-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20251113-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
+    # Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
+    # Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
+    # Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    # Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    # Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED"),
+    # Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),
+    # Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    # Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    # Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    # Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
+    Path("waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
+]
+# To activate: uncomment all lines above, then replace _save_placeholder below
+# with a real plot using load_analysis_data(*_ALL_PROCESSED_DIRS_FOR_13HZ).
+
+_save_placeholder(
+    "diag_13hz_consistency",
+    "D1 — 1.3 Hz cross-session consistency check\n[TODO: load all sessions, plot OUT/IN per session-date at 1.3 Hz]",
+    chapter="diag",
+)
+
 print("main_save_figures.py — all figure sections complete.")
 
 # TODO: check the phase on the sine vs signal comparison.
