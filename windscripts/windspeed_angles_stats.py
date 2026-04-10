@@ -110,6 +110,15 @@ def process_stats_folder(folder_path):
         mean_kurt = np.mean(d["Kurt"])
         mean_skew = np.mean(d["Skew"])
 
+        # --- turbulence intensity ---
+        std_v_inst_per_s = dv_dma * d["Stan"]
+        mean_std_v_inst  = np.mean(std_v_inst_per_s)
+        TI = mean_std_v_inst / mean_speed if mean_speed > 0 else np.nan
+
+        # --- percentiles of 1 s means ---
+        v_min, v_max          = np.min(v_per_second), np.max(v_per_second)
+        v_p05, v_p50, v_p95   = np.percentile(v_per_second, [5, 50, 95])
+
         results.append({
             "angle":      angle,
             "fname":      fname,
@@ -122,12 +131,62 @@ def process_stats_folder(folder_path):
             "mean_kurt":  mean_kurt,
             "mean_skew":  mean_skew,
             "n_seconds":  n_seconds,
+            "TI":         TI,
+            "v_min":      v_min,
+            "v_max":      v_max,
+            "v_p05":      v_p05,
+            "v_p50":      v_p50,
+            "v_p95":      v_p95,
         })
 
     results.sort(key=lambda x: x["angle"])
     return results
+
+
+def summarize_results(results):
+    """Print 3–5 representative rows for pasting into another LLM."""
+    if not results:
+        print("No results to summarize.")
+        return
+
+    # Pick representative rows: lowest angle, highest angle, middle angle,
+    # first run2 found, first prelim found (deduplicated by index)
+    candidates = {}
+    candidates["lowest_angle"]  = results[0]
+    candidates["highest_angle"] = results[-1]
+    candidates["middle"]        = results[len(results) // 2]
+    for r in results:
+        if r["is_run2"] and "run2" not in candidates:
+            candidates["run2"] = r
+        if r["prelim_run"] and "prelim" not in candidates:
+            candidates["prelim"] = r
+
+    seen = set()
+    selected = []
+    for r in candidates.values():
+        key = r["fname"]
+        if key not in seen:
+            seen.add(key)
+            selected.append(r)
+
+    run_label = lambda r: "run2" if r["is_run2"] else ("prelim" if r["prelim_run"] else "run1")
+
+    print("\n--- summarize_results (paste into LLM) ---")
+    for r in selected:
+        print(
+            f"angle={r['angle']}, run={run_label(r)}, "
+            f"mean_speed={r['mean_speed']:.2f}, TI={r['TI']:.3f}, "
+            f"drift_std={r['drift_std']:.3f}, "
+            f"v_p05={r['v_p05']:.2f}, v_p50={r['v_p50']:.2f}, v_p95={r['v_p95']:.2f}, "
+            f"v_min={r['v_min']:.2f}, v_max={r['v_max']:.2f}, "
+            f"total_unc={r['total_unc']:.3f}"
+        )
+    print("---")
+
+
 # --- PLOT ---
 results = process_stats_folder(stats_folder)
+summarize_results(results)
 
 # --- PLOT SETTINGS ---
 SPLIT_PLOTS = True   # True = 3 separate figures for LaTeX, False = combined
@@ -245,17 +304,18 @@ def make_plots(results, split=False, save=False):
 
 def print_summary(results):
     run_label = {(False, False): "run1", (False, True): "run2", (True, False): "prelim"}
-    header = f"{'Angle':>6}  {'Run':<6}  {'Speed [m/s]':>11}  {'±Unc':>6}  {'Drift':>6}  {'Noise':>6}  {'Skew':>6}  {'Kurt(ex)':>8}  {'n [s]':>6}"
+    header = f"{'Angle':>6}  {'Run':<6}  {'Speed':>7}  {'p50':>7}  {'±Unc':>6}  {'Drift':>6}  {'TI':>6}  {'Skew':>6}  {'Kurt(ex)':>8}  {'n [s]':>6}"
     print(header)
     print("-" * len(header))
     for r in results:
         label = run_label.get((r["prelim_run"], r["is_run2"]), "?")
         print(
             f"{r['angle']:>6}  {label:<6}  "
-            f"{r['mean_speed']:>11.3f}  "
+            f"{r['mean_speed']:>7.3f}  "
+            f"{r['v_p50']:>7.3f}  "
             f"{r['total_unc']:>6.3f}  "
             f"{r['drift_std']:>6.3f}  "
-            f"{r['noise_mean']:>6.4f}  "
+            f"{r['TI']:>6.3f}  "
             f"{r['mean_skew']:>6.3f}  "
             f"{r['mean_kurt']:>8.3f}  "
             f"{r['n_seconds']:>6}"
