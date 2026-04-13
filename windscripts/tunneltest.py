@@ -29,7 +29,9 @@ STATS_FOLDER    = (
     "/20251107-lowestwindUP2-fullpanel-tunnelTest-STATS"
 )
 
-SAVE = True
+SAVE       = True
+SHOW_ROOF  = True   # extend y-axis to 380 mm (roof height) for spatial context
+ROOF_MM    = 380
 
 # --- roof configs to compare ---
 # (fname_filter, label, linestyle)
@@ -187,6 +189,18 @@ for res, label, ls, c, m in all_data:
 solid_h  = mlines.Line2D([], [], color='gray', linestyle='-',  label='Tett tak')
 dashed_h = mlines.Line2D([], [], color='gray', linestyle='--', label='Slisse (spalte i tak)')
 
+all_heights = sorted(set(
+    r["height_mm"] for res, *_ in all_data for r in res
+))
+if SHOW_ROOF:
+    all_heights = sorted(set(all_heights + [ROOF_MM]))
+
+labeled   = [h for i, h in enumerate(all_heights) if i % 2 == 0]
+unlabeled = [h for i, h in enumerate(all_heights) if i % 2 == 1]
+if SHOW_ROOF and ROOF_MM in unlabeled:
+    unlabeled.remove(ROOF_MM)
+    labeled = sorted(labeled + [ROOF_MM])
+
 for ax, xlabel, title in [
     (ax1, "Vindfart [m/s]", "Vindprofil med usikkerhet"),
     (ax2, "TI [%]",         "Turbulensintensitet"),
@@ -195,6 +209,14 @@ for ax, xlabel, title in [
     ax.set_ylabel("Høyde over vannet [mm]")
     ax.set_title(title)
     ax.grid(True, linestyle='--', linewidth=0.5)
+    ax.set_yticks(labeled)
+    ax.set_yticks(unlabeled, minor=True)
+    ax.tick_params(axis='y', which='major', labelsize=7)
+    ax.tick_params(axis='y', which='minor', length=3, labelsize=0)
+    ax.yaxis.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.5)
+    if SHOW_ROOF:
+        ax.set_ylim(bottom=0, top=ROOF_MM)
+        ax.axhline(ROOF_MM, color='brown', linewidth=1.0, linestyle='-', alpha=0.6)
     ax.legend(handles=legend_handles + [solid_h, dashed_h], fontsize=8)
 
 fig.tight_layout()

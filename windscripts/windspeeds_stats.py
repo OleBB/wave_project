@@ -182,6 +182,112 @@ def summarize_height_stats(results):
         )
     print("--- end ---")
 
+# %%
+# --- NOWIND reference: electronic noise floor ---
+#
+# Three runs, all sealed-roof (pappTett), no wind, no waves.
+# Height does not matter — the sensor noise floor is height-independent.
+# All statistics kept in mA (the raw measurement unit).
+# Speed is derived from mA, so mA is the more fundamental quantity.
+#
+# Each mAstats row ≈ 1 s of data (100 Hz, 100 samples/block).
+# Columns: Arit (block mean mA), Stan (block std mA), Kurt, Skew, ...
+#
+# --- Which nowind data is valid? ---
+#
+# The sensor is a 4–20 mA current loop device. Per NAMUR NE 43:
+#   < 3.6 mA  → hard fault (open circuit / sensor failure) — data unusable
+#   3.6–4.0 mA → below-zero warning zone — sensor functional, pressure is
+#                 at or below zero (no flow), readings are valid noise data
+#   4.0–20 mA → normal operating range
+#
+# Oct 2025 lvm nowind (Oct 24, ~3.800 mA):
+#   EXCLUDED — not because 3.8 mA is in the fault zone (it is above 3.6 mA),
+#   but because the lvm files contain only pre-averaged single means (one value
+#   per file, averaged by LabVIEW). No within-block std (Stan) is available,
+#   so no noise floor statistics can be derived. Additionally, the Oct sensor
+#   had a drifted zero at 3.8 mA (different physical unit from the Nov sensor),
+#   so its noise characteristics are not representative of the Nov data.
+#
+# 06.11 nowind, moh059, Arit ≈ 3.963 mA:
+#   INCLUDED — 3.963 mA is only 0.037 mA below the 4.0 mA zero, well above
+#   the 3.6 mA fault threshold. Per NAMUR NE 43 this is in the functional
+#   below-zero zone. The mAstats format provides full block statistics (Stan,
+#   Kurt, Skew) so this run gives a complete noise characterisation.
+#   Most importantly: this run was taken on the same day as the main wind
+#   profile data (Nov 4–6), making it the most directly relevant noise reference.
+#
+# 07.11 NOWIND (two runs, moh049, Arit ≈ 4.022 mA):
+#   INCLUDED — fully within the normal operating range. Taken one day after
+#   the main wind runs; the slightly higher Arit vs. 06.11 may reflect a
+#   small sensor drift or temperature difference between sessions. The Arit
+#   offset between dates (4.022 vs. 3.963 mA) is larger than the within-run
+#   spread (~0.005 mA), so it is real — but both sessions are noise-floor
+#   measurements (zero wind), and Stan/Kurt/Skew are consistent across all
+#   three runs, confirming the noise character is the same.
+#
+# NOTE on pooled Arit: the pooled mean (≈4.014 mA) mixes two sessions with
+# different sensor offsets. It is not a meaningful zero reference. Use Stan,
+# Kurt, and Skew from the pooled set; use Arit per-session only.
+#
+NOWIND_FILES = {
+    "07.11 pappTett   (n= 90, moh049)": (
+        "/Users/ole/Kodevik/wave_project/pressuredata/20251107-NOWIND"
+        "/20251107-NOWIND-allpanel-tunnelTestpappTett-pitot10075-mAstats-moh049.txt"
+    ),
+    "07.11 ekstratid  (n=300, moh049)": (
+        "/Users/ole/Kodevik/wave_project/pressuredata/20251107-NOWIND"
+        "/20251107-NOWIND-allpanel-tunnelTestekstratid-pappTett-pitot10075-mAstats-moh049.txt"
+    ),
+    "06.11 nowind     (n= 60, moh059)": (
+        "/Users/ole/Kodevik/wave_project/pressuredata"
+        "/20251106-lowestwindUtenProbe2-fullpanel-amp0100-freq1300"
+        "/20251106-lowestwindUtenProbe2-fullpanel-amp0100-freq1300-BONUS"
+        "/20251106-nowind-pitot10075-mAstats-moh59.txt"
+    ),
+}
+
+_STAT_COLS = ["Arit", "Stan", "Kurt", "Skew"]
+
+def _nowind_summary(d, label):
+    print(f"\n{'─'*60}")
+    print(f"  {label}")
+    print(f"{'─'*60}")
+    n = d["Arit"].size
+    print(f"  Blocks (rows): {n}")
+    for col in _STAT_COLS:
+        if col not in d:
+            continue
+        arr = d[col]
+        p5, p25, p50, p75, p95 = np.percentile(arr, [5, 25, 50, 75, 95])
+        print(f"  {col:>5}:  mean={np.mean(arr):.4f}  std={np.std(arr, ddof=1):.4f}  "
+              f"min={arr.min():.4f}  max={arr.max():.4f}  "
+              f"median={p50:.4f}  [p5={p5:.4f} … p95={p95:.4f}]")
+
+nowind_data = {}
+for label, fpath in NOWIND_FILES.items():
+    nowind_data[label] = parse_stats_file(fpath)
+    _nowind_summary(nowind_data[label], label)
+
+# --- pooled across all three runs ---
+pooled = {}
+for col in _STAT_COLS:
+    arrays = [d[col] for d in nowind_data.values() if col in d]
+    if arrays:
+        pooled[col] = np.concatenate(arrays)
+
+_nowind_summary(pooled, f"POOLED — alle tre kjøringer (n={pooled['Arit'].size})")
+# NOTE: pooled Arit mixes two sessions with different sensor offsets (06.11 ≈3.963, 07.11 ≈4.022).
+# The pooled Arit mean (~4.014 mA) is NOT a meaningful zero reference — use per-session Arit only.
+# Stan, Kurt, Skew are consistent across sessions and the pooled values are valid.
+
+# Keep Stan mean from pooled dataset as the noise reference for downstream use.
+# Do NOT use pooled Arit as a zero reference — see note above.
+NOWIND_ARIT_MEAN = float(np.mean(pooled["Arit"]))   # mA — sensor zero offset
+NOWIND_STAN_MEAN = float(np.mean(pooled["Stan"]))   # mA — typical within-block noise
+print(f"\nNoise reference (pooled):  Arit={NOWIND_ARIT_MEAN:.4f} mA  Stan={NOWIND_STAN_MEAN:.4f} mA")
+# %%
+
 # --- USER SETTINGS ---
 # Each entry: (stats_folder_path, legend_label, fname_filter_or_None, linestyle)
 # linestyle: '-' = sealed/closed roof, '--' = slisse (open slit)
@@ -202,46 +308,90 @@ DATASETS = [
         "Laveste vind, med bølger (06.11)",
         None, '-',
     ),
+    # (
+    #     "/Users/ole/Kodevik/wave_project/pressuredata/20251104-fullwind/20251104-fullwind-stats",
+    #     "Full vind, med probe (04.11)",
+    #     None, '-',
+    # ),
     # tunnelTest (07.11) excluded — different experiment (roof config comparison),
     # see windscripts/tunneltest.py
 ]
 
-SPLIT_PLOTS = True
-SAVE_PLOTS  = True
+SPLIT_PLOTS  = True
+SAVE_PLOTS   = True
+SHOW_ROOF    = True   # extend y-axis to 380 mm (roof height) for spatial context
 
 # %%
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from datetime import datetime
 
-def make_height_stats_plots(datasets, split=False, save=False):
+def make_height_stats_plots(datasets, split=False, save=False, show_roof=False):
     """
-    datasets: list of (results, label) tuples.
+    datasets: list of (results, label, linestyle) tuples.
     Panels (height on y-axis throughout):
       1. Mean wind speed + percentile band + error bars
       2. Uncertainty components (drift, noise, total)
       3. TI (turbulence intensity)
-      4. Skewness + kurtosis (twinx)
+      4. Skewness   (separate — own x-scale)
+      5. Kurtosis   (separate — own x-scale)
+    Panels 4 and 5 are diagnostic-only and rendered narrower.
     """
     colors   = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
     markers  = ['o', 's', '^', 'D', '*']
 
+    ROOF_MM = 380
+
+    # collect all measured heights for y-axis ticks
+    all_heights = sorted(set(
+        r["height_mm"]
+        for entry in datasets
+        for r in entry[0]
+    ))
+    if show_roof:
+        all_heights = sorted(set(all_heights + [ROOF_MM]))
+
+    labeled   = [h for i, h in enumerate(all_heights) if i % 2 == 0]
+    unlabeled = [h for i, h in enumerate(all_heights) if i % 2 == 1]
+    if show_roof and ROOF_MM in unlabeled:
+        unlabeled.remove(ROOF_MM)
+        labeled = sorted(labeled + [ROOF_MM])
+
     def style_ax(ax):
         ax.grid(True, linestyle='--', linewidth=0.5)
         ax.set_ylabel("Høyde over vannet [mm]")
+        ax.set_yticks(labeled)
+        ax.set_yticks(unlabeled, minor=True)
+        ax.tick_params(axis='y', which='major', labelsize=7)
+        ax.tick_params(axis='y', which='minor', length=3, labelsize=0)
+        ax.yaxis.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.5)
+        if show_roof:
+            ax.set_ylim(bottom=0, top=ROOF_MM)
+            ax.axhline(ROOF_MM, color='brown', linewidth=1.0,
+                       linestyle='-', alpha=0.6)
 
     panel_titles = [
         "Vindprofil med usikkerhet",
         "Usikkerhetsbidrag",
         "Turbulensintensitet (TI)",
-        "Skjevhet og kurtose",
+        "Skjevhet",
+        "Eksess-kurtose",
+    ]
+    panel_names = [
+        "windspeed_profile", "uncertainty_profile",
+        "TI_profile", "skewness_profile", "kurtosis_profile",
     ]
 
     if split:
-        figs = [plt.subplots(figsize=(7, 5)) for _ in range(4)]
-        ax1, ax2, ax3, ax4 = [f[1] for f in figs]
+        figs = [plt.subplots(figsize=(7, 5)) for _ in range(5)]
+        ax1, ax2, ax3, ax4, ax5 = [f[1] for f in figs]
     else:
-        fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(20, 6))
+        # panels 1–3 wider (width 3), panels 4–5 narrower (width 2)
+        fig, axes = plt.subplots(
+            1, 5, figsize=(22, 6),
+            gridspec_kw={"width_ratios": [3, 3, 3, 2, 2]},
+        )
+        ax1, ax2, ax3, ax4, ax5 = axes
         fig.suptitle("Statistiske egenskaper for vindprofil", fontsize=13)
 
     legend_handles = []
@@ -251,7 +401,7 @@ def make_height_stats_plots(datasets, split=False, save=False):
         ls = entry[2] if len(entry) > 2 else '-'
         c = colors[i % len(colors)]
         m = markers[i % len(markers)]
-        z   = np.array([r["height_mm"]  for r in results])
+        z = np.array([r["height_mm"]  for r in results])
 
         # --- Panel 1: mean speed + percentile band + errorbars ---
         spd  = np.array([r["mean_speed"] for r in results])
@@ -259,27 +409,26 @@ def make_height_stats_plots(datasets, split=False, save=False):
         p05  = np.array([r["v_p05"]      for r in results])
         p95  = np.array([r["v_p95"]      for r in results])
         ax1.errorbar(spd, z, xerr=unc, fmt=m+ls, color=c, capsize=4, markersize=5, label=label)
-        ax1.fill_betweenx(z, p05, p95, alpha=0.15, color=c, linestyle=ls)
+        ax1.fill_betweenx(z, p05, p95, alpha=0.15, color=c)
 
         # --- Panel 2: uncertainty components ---
         drift = np.array([r["drift_std"]  for r in results])
         noise = np.array([r["noise_mean"] for r in results])
-        ax2.plot(drift, z, marker='^', linestyle=ls,  color=c, label=f"{label} – temporal")
-        ax2.plot(noise, z, marker='s', linestyle=ls,  color=c, alpha=0.6, label=f"{label} – sensor")
-        ax2.plot(unc,   z, marker='o', linestyle=ls,  color=c, alpha=0.4, label=f"{label} – samlet")
+        ax2.plot(drift, z, marker='^', linestyle=ls, color=c, label=f"{label} – temporal")
+        ax2.plot(noise, z, marker='s', linestyle=ls, color=c, alpha=0.6, label=f"{label} – sensor")
+        ax2.plot(unc,   z, marker='o', linestyle=ls, color=c, alpha=0.4, label=f"{label} – samlet")
 
         # --- Panel 3: TI ---
         TI = np.array([r["TI"] for r in results]) * 100
         ax3.plot(TI, z, marker=m, linestyle=ls, color=c, label=label)
 
-        # --- Panel 4: skewness + kurtosis (twinx) ---
+        # --- Panel 4: skewness ---
         skew = np.array([r["mean_skew"] for r in results])
+        ax4.plot(skew, z, marker='D', linestyle=ls, color=c, markersize=5, label=label)
+
+        # --- Panel 5: kurtosis ---
         kurt = np.array([r["mean_kurt"] for r in results])
-        ax4b = ax4.twiny() if i == 0 else ax4._aux
-        if i == 0:
-            ax4._aux = ax4b
-        ax4.plot(skew, z,  marker='D', linestyle=ls, color=c, markersize=5)
-        ax4b.plot(kurt, z, marker='*', linestyle=ls, color=c, markersize=7, alpha=0.7)
+        ax5.plot(kurt, z, marker='*', linestyle=ls, color=c, markersize=7, label=label)
 
         legend_handles.append(mlines.Line2D([], [], color=c, marker=m, linestyle=ls, label=label))
 
@@ -287,7 +436,7 @@ def make_height_stats_plots(datasets, split=False, save=False):
         for r in results:
             if r["n_dropped"] > 0:
                 n_tot = r["n_seconds"] + r["n_dropped"]
-                for ax in (ax1, ax2, ax3, ax4):
+                for ax in (ax1, ax2, ax3, ax4, ax5):
                     ax.axhline(r["height_mm"], color=c, linewidth=0.8,
                                linestyle=':', alpha=0.6)
                 ax1.annotate(f"{r['n_dropped']}/{n_tot} s spikes",
@@ -298,43 +447,64 @@ def make_height_stats_plots(datasets, split=False, save=False):
     # --- Panel 1 styling ---
     ax1.set_xlabel("Vindfart [m/s]")
     ax1.set_title(panel_titles[0])
+    ax1.set_xlim(left=0)
     ax1.legend(fontsize=8)
     style_ax(ax1)
 
     # --- Panel 2 styling ---
     ax2.set_xlabel("Vindvariasjon [m/s]")
     ax2.set_title(panel_titles[1])
-    tri = mlines.Line2D([], [], color='gray', marker='^', linestyle='-',   label='Temporal variabilitet')
-    sq  = mlines.Line2D([], [], color='gray', marker='s', linestyle='--',  label='Sensorusikkerhet', alpha=0.6)
-    tot = mlines.Line2D([], [], color='gray', marker='o', linestyle=':',   label='Samlet usikkerhet', alpha=0.4)
+    if _elec_sem is not None:
+        ax2.axvline(_elec_sem, color='black', linewidth=1.0, linestyle=':',
+                    alpha=0.7, label=f'Elektronisk støygulv ({_elec_sem:.4f} m/s)')
+    tri = mlines.Line2D([], [], color='gray', marker='^', linestyle='-',  label='Temporal variabilitet')
+    sq  = mlines.Line2D([], [], color='gray', marker='s', linestyle='--', label='Sensorusikkerhet', alpha=0.6)
+    tot = mlines.Line2D([], [], color='gray', marker='o', linestyle=':',  label='Samlet usikkerhet', alpha=0.4)
     ax2.legend(handles=legend_handles + [tri, sq, tot], fontsize=7)
     style_ax(ax2)
 
     # --- Panel 3 styling ---
     ax3.set_xlabel("TI [%]")
     ax3.set_title(panel_titles[2])
-    ax3.legend(handles=legend_handles, fontsize=8)
+    floor_handle = None
+    if _stan_elec is not None:
+        for i, entry in enumerate(datasets):
+            results = entry[0]
+            c = colors[i % len(colors)]
+            z_f, ti_f = [], []
+            for r in results:
+                v = r["mean_speed"]
+                if v < 0.5: continue
+                mA_est = 4.0 + v**2 * 1.225 * 16.0 / 200.0
+                pa_est = max((mA_est - 4.0) / 16.0 * 100.0, 0.001)
+                dv_dma = 1.0 / np.sqrt(2.0 * pa_est * 1.225) * (100.0 / 16.0)
+                ti_f.append(dv_dma * _stan_elec / v * 100)
+                z_f.append(r["height_mm"])
+            if z_f:
+                ax3.plot(ti_f, z_f, linestyle=':', linewidth=1.0, color=c, alpha=0.5)
+        floor_handle = mlines.Line2D([], [], color='gray', linestyle=':', linewidth=1.0,
+                                     alpha=0.6, label='Elektronisk støygulv (per datasett)')
+    ax3.legend(handles=legend_handles + ([floor_handle] if floor_handle else []), fontsize=8)
     style_ax(ax3)
 
-    # --- Panel 4 styling ---
-    ax4.axvline(0, color='gray', linewidth=0.8, linestyle='--')
-    ax4b = ax4._aux
-    ax4b.axvline(0, color='gray', linewidth=0.8, linestyle=':')
-    ax4.set_xlabel("Skjevhet [-]", color='black')
-    ax4b.set_xlabel("Eksess-kurtose [-]", color='gray')
-    ax4b.tick_params(axis='x', labelcolor='gray')
+    # --- Panel 4 styling: skewness ---
+    ax4.axvline(0, color='gray', linewidth=0.8, linestyle='--', label='0 (symmetrisk)')
+    ax4.set_xlabel("Skjevhet [-]")
     ax4.set_title(panel_titles[3])
-    skew_h = mlines.Line2D([], [], color='black', marker='D', linestyle='-',  markersize=5, label='Skjevhet')
-    kurt_h = mlines.Line2D([], [], color='gray',  marker='*', linestyle='--', markersize=7, label='Eksess-kurtose')
-    ax4.legend(handles=legend_handles + [skew_h, kurt_h], fontsize=7)
+    ax4.legend(handles=legend_handles, fontsize=7)
     style_ax(ax4)
+
+    # --- Panel 5 styling: kurtosis ---
+    ax5.axvline(0, color='gray', linewidth=0.8, linestyle='--', label='0 (normalfordeling)')
+    ax5.set_xlabel("Eksess-kurtose [-]")
+    ax5.set_title(panel_titles[4])
+    ax5.legend(handles=legend_handles, fontsize=7)
+    style_ax(ax5)
 
     # --- save ---
     ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
     fig_path = os.path.expanduser("~/Kodevik/wave_project/windresults")
     os.makedirs(fig_path, exist_ok=True)
-
-    panel_names = ["windspeed_profile", "uncertainty_profile", "TI_profile", "skewness_profile"]
 
     if split and save:
         for (fig, _), pname in zip(figs, panel_names):
@@ -364,5 +534,5 @@ for entry in DATASETS:
     summarize_height_stats(res)
     all_results.append((res, label, linestyle))
 
-make_height_stats_plots(all_results, split=SPLIT_PLOTS, save=SAVE_PLOTS)
+make_height_stats_plots(all_results, split=SPLIT_PLOTS, save=SAVE_PLOTS, show_roof=SHOW_ROOF)
  # %%
