@@ -54,6 +54,17 @@ FULLWIND_DATASETS = [
         # identified), moh041 is a long-duration run at actual 40 mm. Both are loaded
         # by process_folder and appear as separate heights (40 mm and 41 mm) in the plot.
         # File: .../20251105-fullwindUtenProbe2-fullpanel-pitot10075-mAstats-moh041.txt
+        #
+        # OFFSET: 05.11 fullwind reads ~5-8% faster than 04.11 and 06.11 at all heights.
+        # The ratio is flat (1.04-1.08) across the entire profile — identical profile shape,
+        # just uniformly scaled up. Hypothesis: the mooring was in its original (higher)
+        # position on Nov 4 and Nov 5, blocking some of the wind channel cross-section.
+        # A narrower effective cross-section → higher velocity by continuity (flat ratio).
+        # On Nov 4, the wave probe was also in the flow path — an extra obstruction that
+        # partially cancels the mooring effect, putting 04.11 back in line with 06.11.
+        # On Nov 5 (no probe, mooring still up), nothing compensates → faster.
+        # On Nov 6, mooring moved down → more open cross-section → baseline speed.
+        # Status: plausible hypothesis, not confirmed.
         "/Users/ole/Kodevik/wave_project/pressuredata"
         "/20251105-fullwindUtenProbe2-fullpanel"
         "/20251105-fullwindUtenProbe2-fullpanel-stats",
