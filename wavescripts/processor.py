@@ -795,6 +795,13 @@ def _zero_and_smooth_signals(
                     print(f"  CLIP [{Path(path).name}] {pos}: {int(outlier_mask.sum())} samples |η| > {clip_mm} mm → NaN")
 
             # ── Layer 2: Velocity filter + ±VEL_BUFFER shoulder removal ─────
+            # Two sub-conditions:
+            #   2a: Single-sample spike (sign reversal): both rise and fall exceed
+            #       DIFF_MM AND have opposite signs (probe jumps then returns).
+            #   2b: Sustained monotone drift: any neighbouring diff exceeds
+            #       DIFF_MONO_MM regardless of sign. Catches gradual false troughs
+            #       and crests that descend/ascend monotonically (no sign reversal)
+            #       and therefore escape the spike filter.
             _eta = df[eta_col].to_numpy(dtype=float).copy()
             _d = np.diff(_eta)
             _rise = _d[:-1]
@@ -804,7 +811,14 @@ def _zero_and_smooth_signals(
                 (np.abs(_fall) > CLIP.DIFF_MM) &
                 (_rise * _fall < 0)
             )
-            spike_indices = np.where(_spike_core)[0] + 1
+            _mono_core = (
+                (np.abs(_rise) > CLIP.DIFF_MONO_MM) |
+                (np.abs(_fall) > CLIP.DIFF_MONO_MM)
+            )
+            _vel_core = _spike_core | _mono_core
+            spike_indices = np.where(_vel_core)[0] + 1
+            n_spike = int(_spike_core.sum())
+            n_mono  = int((_mono_core & ~_spike_core).sum())
             if spike_indices.size > 0:
                 buf_mask = np.zeros(len(_eta), dtype=bool)
                 for offset in range(-CLIP.VEL_BUFFER, CLIP.VEL_BUFFER + 1):
@@ -813,7 +827,9 @@ def _zero_and_smooth_signals(
                     buf_mask[shifted[valid]] = True
                 _eta[buf_mask] = np.nan
                 df[eta_col] = _eta
-                print(f"  VELCLIP [{Path(path).name}] {pos}: {spike_indices.size} spike(s), {int(buf_mask.sum())} samples → NaN")
+                print(f"  VELCLIP [{Path(path).name}] {pos}: "
+                      f"{n_spike} spike(s) + {n_mono} mono-drift(s), "
+                      f"{int(buf_mask.sum())} samples → NaN")
 
             # ── Layer 3: Isolated sample check ───────────────────────────────
             _nan_mask = np.isnan(_eta)
@@ -1093,6 +1109,57 @@ def _set_output_folder(
     return meta_sel
 
 
+def _count_interp_in_window(
+    processed_dfs: dict,
+    meta_sel: pd.DataFrame,
+    cfg,
+) -> pd.DataFrame:
+    """Count interpolated-through NaN samples that fall inside the analysis window.
+
+    For each wave run and each probe, computes how many samples were originally NaN
+    (dropout / DC step) but were filled by PCHIP interpolation *within* the stable
+    wave analysis window [good_start, good_end].
+
+    Unrecoverable NaN (gap too long to fill) is already tracked as `cut_samples_{pos}`.
+    This function adds `interp_in_window_{pos}` — the additional interpolated count
+    that is also excluded from the FFT but silently treated as real signal.
+
+    Uses `eta_{pos}` (NaN where dropout) and `eta_{pos}_interp` (NaN only where
+    gap unfillable) to derive the interpolation mask.
+    """
+    col_names = cfg.probe_col_names()
+    in_pos = col_names[cfg.in_probe]
+    start_col = f"Computed Probe {in_pos} start"
+    end_col   = f"Computed Probe {in_pos} end"
+
+    for pos in col_names.values():
+        meta_sel[f"interp_in_window_{pos}"] = 0
+
+    wave_mask = meta_sel["WaveFrequencyInput [Hz]"].notna()
+    for idx, row in meta_sel[wave_mask].iterrows():
+        path = row["path"]
+        df = processed_dfs.get(path)
+        if df is None:
+            continue
+        good_start = row.get(start_col)
+        good_end   = row.get(end_col)
+        if good_start is None or good_end is None or pd.isna(good_start) or pd.isna(good_end):
+            continue
+        gs, ge = int(good_start), int(good_end)
+        for pos in col_names.values():
+            eta_col    = f"eta_{pos}"
+            interp_col = f"eta_{pos}_interp"
+            if eta_col not in df.columns or interp_col not in df.columns:
+                continue
+            window_eta    = df[eta_col].iloc[gs:ge]
+            window_interp = df[interp_col].iloc[gs:ge]
+            # Originally NaN but successfully filled = interpolated-through in window
+            n = int((window_eta.isna() & window_interp.notna()).sum())
+            meta_sel.at[idx, f"interp_in_window_{pos}"] = n
+
+    return meta_sel
+
+
 def _write_quality_flags(
     meta_sel: pd.DataFrame,
     clip_stats: dict,
@@ -1178,9 +1245,18 @@ def _write_quality_flags(
             print(f"  ⚠ QUALITY FLAG: {line}")
             flagged_lines.append(line)
 
-        # Dropout check — too many NaN samples in the IN or OUT probe analysis window
-        # after interpolation (gap too long to fill). Threshold: >2% of window.
-        # Only applies to wave runs (nowave runs have no analysis window).
+        # Dropout check — too many unrecoverable NaN samples in the IN or OUT probe
+        # analysis window (gap too long to fill). Threshold: >2% of window.
+        # Only applies to wave runs (has_window).
+        #
+        # Note: `interp_in_window_{pos}` (interpolated-through NaN within the window)
+        # is computed by _count_interp_in_window and stored in meta_sel for diagnostics,
+        # but is NOT used for automatic flagging here. Empirical testing (2026-04-14)
+        # showed that within-window interpolation count does not reliably predict whether
+        # the FFT amplitude is corrupted: some runs with high interp_in_window counts
+        # have perfectly clean FFT amplitudes (interpolation happened early in the window
+        # before the wave was fully established). The root cause of FFT-quality issues is
+        # better detected via wave_stability at the IN probe.
         _DROPOUT_THRESHOLD = 0.02
         idx_list = meta_sel.index[meta_sel["path"] == path].tolist()
         if idx_list and has_window:
@@ -1460,7 +1536,11 @@ def process_selected_data(
         # 3a. Tail amplitudes — residual energy after the wave train, per probe
         meta_sel = _compute_tail_amplitudes(processed_dfs, meta_sel, cfg)
 
-    # 3b. Quality flags: probe malfunction vs stable analysis window
+    # 3b. Count interpolated-through samples within the analysis window (per probe).
+    #     Must run after run_find_wave_ranges so window boundaries are available.
+    meta_sel = _count_interp_in_window(processed_dfs, meta_sel, cfg)
+
+    # 3c. Quality flags: probe malfunction vs stable analysis window
     _flags_file = Path(__file__).parents[1] / "waveprocessed" / "quality_flags.txt"
     meta_sel = _write_quality_flags(meta_sel, clip_stats, cfg, _flags_file)
     # Merge per-probe malfunction bools into meta_sel (already done inside _write_quality_flags)

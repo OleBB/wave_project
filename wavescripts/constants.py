@@ -284,8 +284,12 @@ class ClipParams:
     WIND_BASE_VOLT: float = 0.05     # extra effective voltage for wind runs: adds ~13.5mm to cap
 
     # ── Layer 2: velocity filter ───────────────────────────────────────────────
-    DIFF_MM: float = 10.0   # velocity threshold: 10 mm/sample = 2500 mm/s (~4× max physical wave velocity)
-    VEL_BUFFER: int = 2     # samples removed on each side of a velocity-detected spike (shoulder contamination)
+    DIFF_MM: float = 10.0   # spike threshold: 10 mm/sample; requires sign reversal (up-then-down or vice versa)
+    DIFF_MONO_MM: float = 3.5  # monotone-drift threshold: 3.5 mm/sample catches sustained false troughs/crests
+                                # that escape DIFF_MM because they never reverse sign.
+                                # Physical max: A×ω ≤ 20mm × 2π×1.6 Hz ≈ 0.8 mm/sample.
+                                # Observed fault descent rate: ~4.5 mm/sample.  Safety margin: ~4×.
+    VEL_BUFFER: int = 2     # samples removed on each side of a velocity-detected event (shoulder contamination)
 
     # ── Layer 0c: stuck probe ──────────────────────────────────────────────────
     STUCK_STD_MM: float = 0.05   # rolling std below this → probe is stuck (well below ~0.13 mm noise floor)
