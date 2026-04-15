@@ -933,10 +933,21 @@ def run_find_wave_ranges(
             ):
                 upcrossings = debug_info.get("wave_upcrossings")
                 samples_per_period = int(round(MEASUREMENT.SAMPLING_RATE / freq))
-                sig = df[probe_col].values[start:end]
+
+                # Use PCHIP-interpolated signal for wave quality metrics so that NaN
+                # gaps (from spike/drift filter) do not propagate into the FFT and
+                # produce spurious NaN wave_stability values.
+                interp_col = f"eta_{pos}_interp"
+                sig_col = interp_col if interp_col in df.columns else probe_col
+                sig = df[sig_col].values[start:end]
 
                 # 1. wave_stability: autocorrelation at lag = 1 period (FFT-based, O(n log n))
-                sig_centered = sig - np.mean(sig)
+                # Use nanmean so any residual NaN (e.g. cut samples beyond max_interp_gap)
+                # do not corrupt the autocorrelation.
+                sig_mean = np.nanmean(sig)
+                sig_centered = sig - sig_mean
+                # Replace residual NaN (uninterpolated gaps) with 0 (neutral for autocorr)
+                sig_centered = np.where(np.isnan(sig_centered), 0.0, sig_centered)
                 n = len(sig_centered)
                 if n > 2 * samples_per_period:
                     fft_sig = np.fft.rfft(sig_centered, n=2 * n)
@@ -1278,6 +1289,34 @@ def _write_quality_flags(
                         line = (
                             f"dropout_critical | {fname} | probe {critical_pos} "
                             f"cut_frac={cut_frac:.1%} ({int(cut_n)} total NaN / {window_size} window)"
+                        )
+                        print(f"  ⚠ QUALITY FLAG: {line}")
+                        flagged_lines.append(line)
+
+        # Wave-stability check — low IN probe autocorrelation on no-wind wave runs.
+        # A run whose IN signal is heavily interpolated (PCHIP-filled probe-fault troughs)
+        # may escape the dropout check (all NaN gaps < max_interp_gap), yet the PCHIP
+        # curve is flatter than the true sine wave — FFT amplitude is suppressed.
+        # wave_stability = autocorrelation at lag 1 period: 1.0 = perfect sine, <0.35 = degraded.
+        # Threshold 0.35 chosen to cleanly separate:
+        #   clean runs: 0.48–0.52 (e.g. run3, run4 at 1.6 Hz)
+        #   degraded:   0.29 (run2 at 1.6 Hz with many PCHIP-filled troughs)
+        # Only applies to no-wind wave runs — full-wind raises natural variability so a
+        # lower threshold would produce false positives.
+        _WAVE_STABILITY_THRESHOLD = 0.35
+        if idx_list and has_window:
+            idx = idx_list[0]
+            wind_cond = meta_sel.at[idx, "WindCondition"] if "WindCondition" in meta_sel.columns else None
+            ws_col = f"Probe {in_pos} wave_stability"
+            if wind_cond == "no" and ws_col in meta_sel.columns:
+                ws_val = meta_sel.at[idx, ws_col]
+                if not pd.isna(ws_val) and float(ws_val) < _WAVE_STABILITY_THRESHOLD:
+                    existing = meta_sel.at[idx, "quality_flag"]
+                    if existing == "ok":
+                        meta_sel.at[idx, "quality_flag"] = "in_probe_low_snr"
+                        line = (
+                            f"in_probe_low_snr | {fname} | "
+                            f"IN probe {in_pos} wave_stability={ws_val:.3f} < {_WAVE_STABILITY_THRESHOLD}"
                         )
                         print(f"  ⚠ QUALITY FLAG: {line}")
                         flagged_lines.append(line)
