@@ -289,6 +289,9 @@ class ClipParams:
                                 # that escape DIFF_MM because they never reverse sign.
                                 # Physical max: A×ω ≤ 20mm × 2π×1.6 Hz ≈ 0.8 mm/sample.
                                 # Observed fault descent rate: ~4.5 mm/sample.  Safety margin: ~4×.
+                                # IMPORTANT: only applied on no-wind runs. Wind waves produce sharp crests
+                                # with high instantaneous slopes that are physically real — applying this
+                                # filter on wind runs would clip legitimate signal.
     VEL_BUFFER: int = 2     # samples removed on each side of a velocity-detected event (shoulder contamination)
 
     # ── Layer 0c: stuck probe ──────────────────────────────────────────────────
@@ -371,6 +374,29 @@ STILLWATER = StillwaterParams()
 # probe out of water, equipment fault).
 STILLWATER_EXCLUDE: tuple[str, ...] = ()
 
+
+# =============================================================================
+# SIGNAL RECONSTRUCTION PARAMETERS (false-trough repair, nowind runs only)
+# =============================================================================
+# Used by _repair_false_troughs() in processor.py.
+# See that function's docstring for the full algorithm description.
+#
+# The repair detects phase-locked probe fault artifacts (false troughs / crests)
+# that descend monotonically at 2–3 mm/sample — too slowly to trip DIFF_MONO_MM.
+# It applies ONLY to no-wind wave runs (wind runs have legitimate sharp crests).
+#
+# After repair, amplitude uncertainty is quantified via the Cramér-Rao lower bound:
+#   σ_amplitude = σ_residual / √(N_clean / 2)
+# stored as recon_amp_sigma_{pos} in meta for use in downstream errorbars.
+RECON_SIGMA_THRESH:    float = 3.0   # sigma-clip threshold [× residual std]
+RECON_MAX_ITER:        int   = 10    # max iterations of sigma-clip loop
+RECON_AMP_GATE_FACTOR: float = 1.3  # post-convergence amplitude gate [× fitted amp]
+RECON_EDGE_BUF:        int   = 4    # edge-buffer dilation [samples] around each gap boundary
+RECON_MAX_FRAC:        float = 0.15 # abort reconstruction if > 15% of analysis window is newly flagged.
+                                     # Sigma-clip can over-converge on long, clean runs: residuals shrink
+                                     # to sub-noise level (~0.03 mm) and flag 40% of window as "outliers".
+                                     # Guard: if n_newly_flagged / window_len > RECON_MAX_FRAC, skip the
+                                     # signal modification and set signal_confidence to "reconstruction_failed".
 
 # =============================================================================
 # WAVEMAKER VOLTAGE → EXPECTED AMPLITUDE CALIBRATION

@@ -18,7 +18,7 @@ from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_f
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
 from scipy.interpolate import PchipInterpolator
-from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, STILLWATER, STILLWATER_EXCLUDE, get_smoothing_window, PROBE_RANGE_MODES, PROBE_HEIGHT_DEFAULT_MM, VOLTAGE_TO_AMP_MM_PER_V
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, STILLWATER, STILLWATER_EXCLUDE, get_smoothing_window, PROBE_RANGE_MODES, PROBE_HEIGHT_DEFAULT_MM, VOLTAGE_TO_AMP_MM_PER_V, RECON_SIGMA_THRESH, RECON_MAX_ITER, RECON_AMP_GATE_FACTOR, RECON_EDGE_BUF, RECON_MAX_FRAC
 from wavescripts.constants import (
     ProbeColumns as PC,
     GlobalColumns as GC,
@@ -811,10 +811,14 @@ def _zero_and_smooth_signals(
                 (np.abs(_fall) > CLIP.DIFF_MM) &
                 (_rise * _fall < 0)
             )
+            # Monotone-drift filter is only applied on no-wind runs.
+            # Wind waves create sharp crests with high instantaneous slopes that
+            # are physically real — applying DIFF_MONO_MM to wind runs would clip
+            # legitimate signal. The spike filter (2a) still runs on all runs.
             _mono_core = (
                 (np.abs(_rise) > CLIP.DIFF_MONO_MM) |
                 (np.abs(_fall) > CLIP.DIFF_MONO_MM)
-            )
+            ) if wind == "no" else np.zeros(len(_rise), dtype=bool)
             _vel_core = _spike_core | _mono_core
             spike_indices = np.where(_vel_core)[0] + 1
             n_spike = int(_spike_core.sum())
@@ -1181,6 +1185,291 @@ def _count_interp_in_window(
             meta_sel.at[idx, f"interp_in_window_{pos}"] = n
 
     return meta_sel
+
+
+def _repair_false_troughs(
+    processed_dfs: dict,
+    meta_sel: pd.DataFrame,
+    cfg,
+) -> tuple[dict, pd.DataFrame]:
+    """
+    Detect and repair phase-locked probe fault artifacts (false troughs / false crests)
+    in wave runs using iterative sigma-clip LSQ sine reconstruction.
+
+    Background
+    ----------
+    Some probe fault events descend monotonically at 2–3 mm/sample — below the
+    DIFF_MONO_MM threshold — so they survive the clipping pass as "clean" samples.
+    These false troughs bias the FFT amplitude and the OUT/IN ratio downward.
+    The effect is worst on no-wind runs at high amplitude (0.3 V), where the clean
+    amplitude is ~20 mm but the biased FFT reads ~14 mm (−30%).
+
+    The repair is ONLY applied on no-wind wave runs.  Wind runs are excluded because
+    (a) wind waves create legitimate signal asymmetry that would confound the sigma-clip,
+    and (b) the DIFF_MONO_MM filter is already disabled for wind runs.
+
+    Algorithm (Variant B, per probe per run)
+    -----------------------------------------
+    1. Iterative sigma-clip: fit A·cos(ωt) + B·sin(ωt) via LSQ to non-NaN samples
+       in the analysis window.  Flag |residual| > RECON_SIGMA × σ_residual.
+       Re-fit on survivors.  Repeat until no new outliers (max RECON_MAX_ITER).
+    2. Amplitude gate: flag any sample whose absolute value exceeds
+       RECON_AMP_GATE × fitted_amplitude above/below the signal mean.
+       Catches trough flanks that are within 3σ locally but physically impossible.
+    3. Final re-fit on surviving clean samples.
+    4. Edge buffer: dilate the outlier mask by ±RECON_EDGE_BUF samples around each
+       gap boundary to catch probe-settling transients at re-entry points.
+    5. Derivative-guided fill (per gap):
+       - Anchors to actual signal at the last clean sample left of the gap (i_L)
+         and the first clean sample right of the gap (i_R).
+       - Uses the LSQ sine only to provide rate-of-change guidance:
+           fwd[k] = sig[i_L] + (sine[k] − sine[i_L])
+           bwd[k] = sig[i_R] + (sine[k] − sine[i_R])
+       - Blends fwd/bwd linearly by position across the gap.
+       - Guarantees C0 continuity at both boundaries by construction.
+       - Preserves per-period amplitude variation (sine drives shape, not level).
+
+    Uncertainty quantification (Cramér-Rao)
+    ----------------------------------------
+    For a sinusoidal signal with Gaussian noise variance σ²_residual, the minimum
+    variance of an amplitude estimate from N_clean independent samples is:
+
+        σ_amplitude = σ_residual / √(N_clean / 2)
+
+    This follows from the Fisher information matrix of the two-parameter sine model
+    (Cramér-Rao lower bound). It is the proper theoretical errorbar for a run whose
+    amplitude was estimated via LSQ on N_clean clean samples.  For fully clean runs
+    (no reconstruction), the same formula applies with N_clean = full window length.
+
+    Columns written to meta_sel (per probe pos)
+    --------------------------------------------
+    recon_n_flagged_{pos}  : int   — samples newly flagged (not counting pipeline NaN)
+    recon_n_clean_{pos}    : int   — samples used in final LSQ fit
+    recon_sigma_{pos}      : float — LSQ residual std on clean samples [mm]
+    recon_amp_sigma_{pos}  : float — Cramér-Rao amplitude uncertainty [mm]
+                                     = recon_sigma / √(recon_n_clean / 2)
+    signal_confidence_{pos}: str   — "high" (no reconstruction) or "reconstructed"
+
+    The reconstructed signal is written back into eta_{pos}_interp in processed_dfs,
+    replacing the PCHIP fill in the gap regions only.  Clean samples are unchanged.
+
+    Parameters
+    ----------
+    processed_dfs : dict — {path: DataFrame} with eta_{pos}_interp columns
+    meta_sel      : pd.DataFrame — one row per run, must have analysis window columns
+    cfg           : ProbeConfiguration — provides col_names and in_probe
+
+    Returns
+    -------
+    processed_dfs : dict — updated in place (eta_{pos}_interp modified where repaired)
+    meta_sel      : pd.DataFrame — updated with reconstruction quality columns
+    """
+    from wavescripts.constants import (
+        RECON_SIGMA_THRESH, RECON_MAX_ITER, RECON_AMP_GATE_FACTOR, RECON_EDGE_BUF, RECON_MAX_FRAC
+    )
+
+    col_names = cfg.probe_col_names()   # {probe_int: "pos_str"}
+    fs = float(MEASUREMENT.SAMPLING_RATE)
+
+    for idx, row in meta_sel.iterrows():
+        path    = row["path"]
+        wind    = row.get("WindCondition", "no")
+        freq_v  = row.get("WaveFrequencyInput [Hz]")
+        is_wave = freq_v is not None and not pd.isna(freq_v)
+
+        # Only repair no-wind wave runs
+        if wind != "no" or not is_wave:
+            continue
+
+        freq  = float(freq_v)
+        omega = 2.0 * np.pi * freq
+        df    = processed_dfs[path]
+
+        for _i, pos in col_names.items():
+            interp_col = f"eta_{pos}_interp"
+            raw_col    = f"Probe {pos}"
+            if interp_col not in df.columns:
+                continue
+
+            # Analysis window boundaries (set by run_find_wave_ranges)
+            start_v = row.get(f"Computed Probe {pos} start")
+            end_v   = row.get(f"Computed Probe {pos} end")
+            if start_v is None or end_v is None or pd.isna(start_v) or pd.isna(end_v):
+                continue
+            start, end = int(start_v), int(end_v)
+            if end <= start + 10:
+                continue
+
+            sig_interp = df[interp_col].values[start:end].copy()
+            sig_raw    = df[raw_col].values[start:end] if raw_col in df.columns else sig_interp
+            win_t      = np.arange(end - start) / fs
+
+            # ── Step 1: iterative sigma-clip ─────────────────────────────────
+            nan_mask = np.isnan(sig_raw)   # start from existing pipeline NaN
+            prev_flagged = 0
+            ab = np.array([0.0, 0.0])
+            mean_fit = float(np.nanmean(sig_interp))
+
+            for _it in range(RECON_MAX_ITER):
+                clean_idx = np.where(~nan_mask)[0]
+                if len(clean_idx) < 4:
+                    break
+                yc = sig_interp[clean_idx] - np.nanmean(sig_interp[clean_idx])
+                Xc = np.column_stack([
+                    np.cos(omega * win_t[clean_idx]),
+                    np.sin(omega * win_t[clean_idx]),
+                ])
+                ab, _, _, _ = np.linalg.lstsq(Xc, yc, rcond=None)
+                mean_fit = float(np.nanmean(sig_interp[clean_idx]))
+                sine     = mean_fit + ab[0] * np.cos(omega * win_t) + ab[1] * np.sin(omega * win_t)
+                residuals = sig_interp - sine
+                sigma     = float(np.std(residuals[~nan_mask]))
+                if sigma == 0:
+                    break
+                new_out  = (~nan_mask) & (np.abs(residuals) > RECON_SIGMA_THRESH * sigma)
+                nan_mask |= new_out
+                if new_out.sum() == prev_flagged:
+                    break
+                prev_flagged = int(new_out.sum())
+
+            # ── Step 2: amplitude gate ────────────────────────────────────────
+            amp_fit = float(np.sqrt(ab[0]**2 + ab[1]**2))
+            gate_lo = mean_fit - amp_fit * RECON_AMP_GATE_FACTOR
+            gate_hi = mean_fit + amp_fit * RECON_AMP_GATE_FACTOR
+            amp_gate = (~nan_mask) & ((sig_interp < gate_lo) | (sig_interp > gate_hi))
+            nan_mask |= amp_gate
+
+            # ── Step 3: final re-fit on surviving clean samples ───────────────
+            clean_idx = np.where(~nan_mask)[0]
+            n_clean   = len(clean_idx)
+            if n_clean < 4:
+                # Too few clean samples — skip reconstruction, write NaN uncertainty
+                meta_sel.loc[idx, f"recon_n_flagged_{pos}"]   = int(nan_mask.sum())
+                meta_sel.loc[idx, f"recon_n_clean_{pos}"]     = n_clean
+                meta_sel.loc[idx, f"recon_sigma_{pos}"]       = np.nan
+                meta_sel.loc[idx, f"recon_amp_sigma_{pos}"]   = np.nan
+                meta_sel.loc[idx, f"signal_confidence_{pos}"] = "reconstructed"
+                continue
+
+            yc = sig_interp[clean_idx] - np.nanmean(sig_interp[clean_idx])
+            Xc = np.column_stack([
+                np.cos(omega * win_t[clean_idx]),
+                np.sin(omega * win_t[clean_idx]),
+            ])
+            ab, _, _, _ = np.linalg.lstsq(Xc, yc, rcond=None)
+            mean_fit  = float(np.nanmean(sig_interp[clean_idx]))
+            sine      = mean_fit + ab[0] * np.cos(omega * win_t) + ab[1] * np.sin(omega * win_t)
+            residuals = sig_interp[clean_idx] - sine[clean_idx]
+            sigma_res = float(np.std(residuals))
+
+            # Cramér-Rao amplitude uncertainty: σ_a = σ_residual / √(N_clean / 2)
+            amp_sigma = sigma_res / np.sqrt(n_clean / 2.0) if n_clean >= 2 else np.nan
+
+            # Count only newly flagged samples (beyond existing pipeline NaN)
+            pipeline_nan = np.isnan(sig_raw)
+            n_newly_flagged = int((nan_mask & ~pipeline_nan).sum())
+
+            # ── Over-convergence guard ────────────────────────────────────────
+            # On long clean runs, sigma-clip can shrink σ_res to sub-noise level
+            # (~0.03 mm) and flag 30–40% of the window as "outliers".  If more
+            # than RECON_MAX_FRAC of the analysis window is newly flagged, the
+            # sigma-clip has over-converged — abort reconstruction and leave the
+            # signal untouched.  The run keeps its PCHIP-filled interp signal and
+            # gets signal_confidence = "reconstruction_failed" so downstream code
+            # can detect it.  Cramér-Rao σ_amp is still written (it reflects the
+            # quality of the final fitted sine on the remaining clean samples, but
+            # is less reliable in this degenerate case — treat with caution).
+            win_len = len(win_t)
+            if n_newly_flagged / win_len > RECON_MAX_FRAC:
+                fname = Path(path).name
+                frac_pct = 100.0 * n_newly_flagged / win_len
+                print(f"  RECON ABORTED [{fname}] {pos}: {n_newly_flagged}/{win_len} "
+                      f"({frac_pct:.1f}%) newly flagged — over-convergence suspected "
+                      f"(σ_res={sigma_res:.3f} mm, threshold={RECON_MAX_FRAC*100:.0f}%)")
+                meta_sel.loc[idx, f"recon_n_flagged_{pos}"]   = n_newly_flagged
+                meta_sel.loc[idx, f"recon_n_clean_{pos}"]     = n_clean
+                meta_sel.loc[idx, f"recon_sigma_{pos}"]       = sigma_res
+                meta_sel.loc[idx, f"recon_amp_sigma_{pos}"]   = amp_sigma
+                meta_sel.loc[idx, f"signal_confidence_{pos}"] = "reconstruction_failed"
+                continue
+
+            # ── Step 4: edge buffer dilation ──────────────────────────────────
+            dilated = nan_mask.copy()
+            edges   = np.where(np.diff(nan_mask.astype(int)) != 0)[0]
+            for e in edges:
+                lo = max(0, e - RECON_EDGE_BUF + 1)
+                hi = min(len(nan_mask), e + RECON_EDGE_BUF + 1)
+                dilated[lo:hi] = True
+            nan_fill = dilated   # final mask: samples to replace
+
+            # ── Step 5: derivative-guided fill ───────────────────────────────
+            # Only modify the signal if reconstruction actually happened
+            if n_newly_flagged == 0 and not amp_gate.any():
+                # No new outliers found — signal is clean, write Cramér-Rao uncertainty
+                # for the full window and mark confidence as high
+                meta_sel.loc[idx, f"recon_n_flagged_{pos}"]   = 0
+                meta_sel.loc[idx, f"recon_n_clean_{pos}"]     = n_clean
+                meta_sel.loc[idx, f"recon_sigma_{pos}"]       = sigma_res
+                meta_sel.loc[idx, f"recon_amp_sigma_{pos}"]   = amp_sigma
+                meta_sel.loc[idx, f"signal_confidence_{pos}"] = "high"
+                continue
+
+            # Build repaired signal in window
+            sig_recon = sig_interp.copy()
+            n         = len(nan_fill)
+
+            # Find contiguous gap spans in the fill mask
+            in_gap, gap_start, gaps = False, 0, []
+            for k in range(n):
+                if nan_fill[k] and not in_gap:
+                    gap_start = k; in_gap = True
+                elif not nan_fill[k] and in_gap:
+                    gaps.append((gap_start, k - 1)); in_gap = False
+            if in_gap:
+                gaps.append((gap_start, n - 1))
+
+            for g_start, g_end in gaps:
+                i_L      = g_start - 1
+                i_R      = g_end + 1
+                gap_len  = g_end - g_start + 1
+                has_left  = i_L >= 0 and not nan_fill[i_L]
+                has_right = i_R < n  and not nan_fill[i_R]
+
+                if has_left and has_right:
+                    for k in range(g_start, g_end + 1):
+                        w_R = (k - g_start) / (gap_len + 1)
+                        w_L = 1.0 - w_R
+                        fwd = sig_interp[i_L] + (sine[k] - sine[i_L])
+                        bwd = sig_interp[i_R] + (sine[k] - sine[i_R])
+                        sig_recon[k] = w_L * fwd + w_R * bwd
+                elif has_left:
+                    for k in range(g_start, g_end + 1):
+                        sig_recon[k] = sig_interp[i_L] + (sine[k] - sine[i_L])
+                elif has_right:
+                    for k in range(g_start, g_end + 1):
+                        sig_recon[k] = sig_interp[i_R] + (sine[k] - sine[i_R])
+                else:
+                    sig_recon[g_start:g_end + 1] = sine[g_start:g_end + 1]
+
+            # Write repaired window back into the full-length interp column
+            full_interp = df[interp_col].values.copy()
+            full_interp[start:end] = sig_recon
+            df[interp_col] = full_interp
+            processed_dfs[path] = df
+
+            fname = Path(path).name
+            print(f"  RECON [{fname}] {pos}: {n_newly_flagged} new samples flagged, "
+                  f"σ_res={sigma_res:.2f} mm, σ_amp={amp_sigma:.2f} mm "
+                  f"(Cramér-Rao, N_clean={n_clean})")
+
+            # ── Write meta columns ────────────────────────────────────────────
+            meta_sel.loc[idx, f"recon_n_flagged_{pos}"]   = n_newly_flagged
+            meta_sel.loc[idx, f"recon_n_clean_{pos}"]     = n_clean
+            meta_sel.loc[idx, f"recon_sigma_{pos}"]       = sigma_res
+            meta_sel.loc[idx, f"recon_amp_sigma_{pos}"]   = amp_sigma
+            meta_sel.loc[idx, f"signal_confidence_{pos}"] = "reconstructed"
+
+    return processed_dfs, meta_sel
 
 
 def _write_quality_flags(
@@ -1595,6 +1884,14 @@ def process_selected_data(
     _flags_file = Path(__file__).parents[1] / "waveprocessed" / "quality_flags.txt"
     meta_sel = _write_quality_flags(meta_sel, clip_stats, cfg, _flags_file)
     # Merge per-probe malfunction bools into meta_sel (already done inside _write_quality_flags)
+
+    # 3d. False-trough repair: detect and replace phase-locked probe fault artifacts
+    #     in no-wind wave runs via iterative sigma-clip + derivative-guided fill.
+    #     Updates eta_{pos}_interp in processed_dfs and writes Cramér-Rao amplitude
+    #     uncertainty (recon_amp_sigma_{pos}) and signal_confidence_{pos} to meta_sel.
+    #     Must run AFTER run_find_wave_ranges (needs analysis window boundaries)
+    #     and BEFORE FFT/PSD computation (so repaired signal feeds amplitude estimates).
+    processed_dfs, meta_sel = _repair_false_troughs(processed_dfs, meta_sel, cfg)
 
     # 4. a - Compute PSDs and amplitudes from PSD (wave runs only)
     psd_dict, amplitudes_psd_df = compute_psd_with_amplitudes(processed_dfs, meta_sel, cfg, fs=fs, debug=debug)

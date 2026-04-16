@@ -45,6 +45,20 @@ NON_FLOAT_COLUMNS = {
     "prev_run_category": str,   # run_category of the preceding run in the same folder ("" = first run)
     "prev_run_wind": str,       # WindCondition of the preceding run ("" = first run)
     "quality_flag": str,        # "ok" | "probe_malfunction_secondary" | "probe_malfunction_critical" | "dropout_critical" | "in_probe_low_snr"
+    # Signal confidence per probe — set by _repair_false_troughs() in processor.py.
+    # "high"         : signal untouched or only minor PCHIP gaps filled; full confidence.
+    # "reconstructed": Variant B sigma-clip repair was applied; use recon_amp_sigma_{pos}
+    #                  (Cramér-Rao) as the per-run amplitude uncertainty in errorbars.
+    # Column names contain "/" from probe position strings and would be coerced to NaN
+    # by apply_dtypes without this entry.
+    "signal_confidence_9373/170":  str,
+    "signal_confidence_9373/250":  str,
+    "signal_confidence_9373/340":  str,
+    "signal_confidence_12400/170": str,
+    "signal_confidence_12400/250": str,
+    "signal_confidence_12400/340": str,
+    "signal_confidence_8804/250":  str,
+    "signal_confidence_8804/170":  str,
 }
 
 # ── Run category classification ───────────────────────────────────────────────
