@@ -1,0 +1,8 @@
+--- Starting Filter Process (0 rows) ---
+  [✓] WaveAmplitudeInput [Volt] isin([0.2, 0.3]).............. kept 0 rows (removed 0)
+  [✓] WaveFrequencyInput [Hz].. range(1.2 to 1.7)............. kept 0 rows (removed 0)
+  [✓] WindCondition............ isin(['no', 'full']).......... kept 0 rows (removed 0)
+  [✓] PanelCondition........... == full....................... kept 0 rows (removed 0)
+--- Filter Final: 0 rows remaining (Total removed: 0) ---
+  Saved: output/FIGURES/ch04_mooring_comparison.pdf
+  Stub created: ch04_mooring_comparison.tex

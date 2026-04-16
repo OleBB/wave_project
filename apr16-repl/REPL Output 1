@@ -1,0 +1,61 @@
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2117: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2117: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2117: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2117: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+[plot_probe_noise_floor] caption slots: {'n_accepted': 52, 'n_excluded': 1, 'k_sigma': 3.0, 'k_q': 2.0}
+[plot_probe_noise_floor] caption copied to clipboard — just Cmd+V.
+[plot_probe_noise_floor] formatted caption:
+  "Stillwater 95\% noise amplitude $(P_{97.5} - P_{2.5})/2$ per ultrasound wave gauge, with no waves and no wind. Each panel sho
+ws one hardware configuration (probe height above still water / range mode). Blue bars: mean across accepted stillwater runs wit
+hin each configuration (error bars: \pm 1\,std). White dots: individual run values. Quantization step $q = 0.03$--$0.05$\,mm per
+ probe (P5 of nonzero sample-to-sample differences); Dashed red line: detection threshold $\max(3\,\sigma,\; 2\,q)$ per probe, w
+here $\sigma$ is the rms noise; wave amplitudes below this line are indistinguishable from stillwater noise."
+  Saved: output/FIGURES/ch04_probe_noise_floor_group0.pdf
+  Saved: output/FIGURES/ch04_probe_noise_floor_group1.pdf
+  Saved: output/FIGURES/ch04_probe_noise_floor_group2.pdf
+  Saved: output/FIGURES/ch04_probe_noise_floor_group3.pdf
+  Stub created: ch04_probe_noise_floor.tex
+=== Probe noise floor summary [mm] ===
+          group      probe  mean_level_mm  noise_rms_mm  noise_95pct_amp_mm  noise_95pct_std_mm  n_runs  quantization_step_mm  d
+etection_threshold_mm  bias_vs_ref_mm
+0   h272 / high   9373/170       271.9400        0.1404              0.2891              0.0843      20                  0.01
+               0.4212         -0.1302
+1   h272 / high  12400/250       272.3381        0.1245              0.2633              0.0792      16                  0.04
+               0.3735          0.2680
+2   h272 / high   9373/340       271.9335        0.0638              0.1283              0.1069      20                  0.01
+               0.1913         -0.1367
+3   h272 / high   8804/250       272.0690        0.1155              0.2430              0.0878      20                  0.08
+               0.3464         -0.0012
+4   h136 / high   9373/170       136.3400        0.0445              0.0450                 NaN       1                  0.01
+               0.1334          0.2300
+5   h136 / high  12400/250       135.9200        0.0307              0.0900                 NaN       1                  0.04
+               0.0920         -0.1900
+6   h136 / high   9373/340       136.2600        0.0445              0.0450                 NaN       1                  0.01
+               0.1336          0.1500
+7   h136 / high   8804/250       135.9200        0.0250              0.0900                 NaN       1                  0.08
+               0.1600         -0.1900
+8   h100 / high   9373/170       100.5206        0.0676              0.1500              0.1299      17                  0.01
+               0.2028          0.1193
+9   h100 / high  12400/250       100.7206        0.0421              0.0868              0.0609      17                  0.04
+               0.1264          0.3193
+10  h100 / high   9373/340       100.1665        0.0691              0.1235              0.0867      17                  0.01
+               0.2073         -0.2349
+11  h100 / high   8804/250       100.1976        0.0722              0.1429              0.0846      17                  0.08
+               0.2167         -0.2037
+12   h100 / low   9373/170       100.8644        0.0547              0.1016              0.0816       9                  0.01
+               0.1642          0.0778
+13   h100 / low  12400/250       101.0533        0.0574              0.0872              0.0642       9                  0.04
+               0.1721          0.2667
+14   h100 / low   9373/340       100.6144        0.0403              0.0935              0.1151       9                  0.01
+               0.1210         -0.1722
+15   h100 / low   8804/250       100.6144        0.0303              0.0644              0.0904       9                  0.08
+               0.1600         -0.1722
+probe uncertainty-plot took 1.4077 s

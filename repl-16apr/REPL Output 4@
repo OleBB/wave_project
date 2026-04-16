@@ -1,0 +1,11 @@
+[plot_sound_speed] caption slots: {'n_runs': 646, 'c_ref': 343.0, 'worst_pct': '0.342', 'worst_mm_10': '0.0342'}
+[plot_sound_speed] caption copied to clipboard — just Cmd+V.
+[plot_sound_speed] formatted caption:
+  "Speed of sound in air per run, measured by the probe hardware (646 runs). Right axis: approximate air temperature from $c_{\m
+athrm{air}}\approx 331 + 0.606\,T$. Dashed line: 343.0\,m/s reference ($\approx$20\,\textdegree C). Worst-case amplitude scale e
+rror: 0.342\,\% (0.0342\,mm on a 10\,mm wave). For OUT/IN ratios the error cancels exactly."
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2761: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+  Saved: output/FIGURES/ch04_sound_speed.pdf
+  Stub created: ch04_sound_speed.tex

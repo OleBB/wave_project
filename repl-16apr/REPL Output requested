@@ -1,0 +1,19 @@
+Input dataframe shape: (0, 527)
+Unique PanelCondition: []
+Unique WindCondition: []
+After PanelConditionGrouped mapping:
+Series([], )
+Number of unique grouping combinations: 0
+Group sizes (rows per group):
+count    0.0
+mean     NaN
+std      NaN
+min      NaN
+25%      NaN
+50%      NaN
+75%      NaN
+max      NaN
+dtype: float64
+After aggregation — stats shape: (0, 9)
+Columns in stats: ['WaveAmplitudeInput [Volt]', 'WaveFrequencyInput [Hz]', 'PanelConditionGrouped', 'WindCondition', 'mean_out_i
+n', 'std_out_in', 'n_runs', 'paths', 'mean_kL']

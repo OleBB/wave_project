@@ -1,0 +1,22 @@
+  [✓] quality_flag gate: excluded 27 flagged run(s) (use quality_flag='all' to include)
+--- Starting Filter Process (619 rows) ---
+  [✓] WaveAmplitudeInput [Volt] == 0.2........................ kept 174 rows (removed 445)
+  [✓] WaveFrequencyInput [Hz].. == 1.3........................ kept 39 rows (removed 135)
+  [✓] PanelCondition........... == full....................... kept 21 rows (removed 18)
+  [✓] run_category............. == standard................... kept 21 rows (removed 0)
+--- Filter Final: 21 rows remaining (Total removed: 598) ---
+[plot_frequency_spectrum] caption slots: {'n_runs': 21, 'n_wind': 10, 'n_stillwater': 11, 'wind_conds': 'full, lowest, no', 'pan
+el_conds': 'full', 'probes': '9373/170, 12400/250, 9373/340, 8804/250', 'xlim_lo': 0, 'xlim_hi': 5, 'data_type': 'FFT'}
+[plot_frequency_spectrum] caption copied to clipboard — just Cmd+V.
+[plot_frequency_spectrum] formatted caption:
+  "FFT amplitude spectrum of the free surface during wave runs (paddle frequency 1.3\,Hz, amplitude 0.2\,V, full panel). Each pa
+nel shows one probe; colour encodes wind condition. The narrow paddle-frequency peak is the target signal used for OUT/IN ratio
+computation."
+  Saved: output/FIGURES/ch04_fft_wave.pdf
+  Saved: output/FIGURES/ch04_fft_wave.pdf
+  Saved: output/FIGURES/ch04_fft_wave.pdf
+  Saved: output/FIGURES/ch04_fft_wave.pdf
+  Stub created: ch04_fft_wave.tex
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:1212: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()

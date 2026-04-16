@@ -1,0 +1,30 @@
+--- Starting Filter Process (0 rows) ---
+  [✓] WaveAmplitudeInput [Volt] range(0.1 to 0.3)............. kept 0 rows (removed 0)
+  [✓] WaveFrequencyInput [Hz].. range(0.8 to 1.7)............. kept 0 rows (removed 0)
+--- Filter Final: 0 rows remaining (Total removed: 0) ---
+Input dataframe shape: (0, 527)
+Unique PanelCondition: []
+Unique WindCondition: []
+After PanelConditionGrouped mapping:
+Series([], )
+Number of unique grouping combinations: 0
+Group sizes (rows per group):
+count    0.0
+mean     NaN
+std      NaN
+min      NaN
+25%      NaN
+50%      NaN
+75%      NaN
+max      NaN
+dtype: float64
+After aggregation — stats shape: (0, 9)
+Columns in stats: ['WaveAmplitudeInput [Volt]', 'WaveFrequencyInput [Hz]', 'PanelConditionGrouped', 'WindCondition', 'mean_out_i
+n', 'std_out_in', 'n_runs', 'paths', 'mean_kL']
+[plot_damping_freq] caption slots: {'n_runs': 0, 'n_panels': 0, 'panels': '', 'n_amps': 0, 'amps': '', 'n_wind': 0, 'wind_conds'
+: ''}
+[plot_damping_freq] caption copied to clipboard — just Cmd+V.
+[plot_damping_freq] formatted caption:
+  "Damping ratio OUT/IN (FFT amplitude at paddle frequency) versus wave frequency. Colour encodes wind condition (); each line s
+hows one amplitude (). Errorbars: standard deviation across repeated runs. Dashed line: ratio = 1 (no damping)."
+  Stub created: ch05_damping_freq.tex

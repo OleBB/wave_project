@@ -4,7 +4,7 @@
 %   script          : plotter.py::plot_damping_wind_delta
 %   plot_type       : damping_wind_delta
 %   chapter         : 05
-%   panel           : all
+%   panel           : 
 %   wind            : no_vs_full
 %   amplitude       : None
 %   frequency       : None
@@ -16,34 +16,13 @@
 %   PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
 %
 % SUBFIGURES AVAILABLE:
-%   FIGURES/ch05_damping_wind_delta_all_10V.pdf
-%   FIGURES/ch05_damping_wind_delta_all_20V.pdf
-%   FIGURES/ch05_damping_wind_delta_all_30V.pdf
+%   FIGURES/ch05_damping_wind_delta.pdf
 % ============================================================
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[b]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch05_damping_wind_delta_all_10V.pdf}
-    \caption{All panel, $0.10$\,V}
-    \label{fig:TODO_1}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch05_damping_wind_delta_all_20V.pdf}
-    \caption{All panel, $0.20$\,V}
-    \label{fig:TODO_2}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch05_damping_wind_delta_all_30V.pdf}
-    \caption{All panel, $0.30$\,V}
-    \label{fig:TODO_3}
-  \end{subfigure}
+  \includegraphics[width=0.9\linewidth]{FIGURES/ch05_damping_wind_delta.pdf}
   \caption[Wind effect on damping ratio]{
-    Wind effect on damping ratio. Top: OUT/IN (FFT) versus frequency for all wind conditions. Bottom: signed difference OUT/IN(full) minus OUT/IN(no). Positive = wind increases transmission; negative = wind reduces it. all panel condition(s); amplitudes 0.10\,V, 0.20\,V, 0.30\,V.
+    Wind effect on damping ratio. Top: OUT/IN (FFT) versus frequency for all wind conditions. Bottom: signed difference OUT/IN(full) minus OUT/IN(no). Positive = wind increases transmission; negative = wind reduces it.  panel condition(s); amplitudes .
   }
   \label{fig:ch05_damping_wind_delta}
 \end{figure}

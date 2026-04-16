@@ -1,0 +1,15 @@
+  [✓] quality_flag gate: excluded 27 flagged run(s) (use quality_flag='all' to include)
+--- Starting Filter Process (619 rows) ---
+--- Filter Final: 619 rows remaining (Total removed: 0) ---
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2286: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+[plot_parallel_ratio] caption slots: {'n_runs': 531, 'n_panels': 4, 'panel_conditions': ', full, no, reverse'}
+[plot_parallel_ratio] caption copied to clipboard — just Cmd+V.
+[plot_parallel_ratio] formatted caption:
+  "Ratio of wall-side to far-side probe amplitude at the same longitudinal distance, for 531 wave runs across 4 panel condition(
+s) (, full, no, reverse). A ratio of 1 indicates lateral symmetry. Deviations indicate wall reflections or wind-driven lateral a
+symmetry. Error bars: standard deviation across runs at the same frequency. Dashed line: ratio = 1."
+  Saved: output/FIGURES/ch04_parallel_ratio.pdf
+  Stub created: ch04_parallel_ratio.tex
+Lateral symmetry of plot_parallel_ratio 0.8071 seconds

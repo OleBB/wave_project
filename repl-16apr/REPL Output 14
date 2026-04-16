@@ -1,0 +1,29 @@
+--- Starting Filter Process (0 rows) ---
+  [✓] WaveFrequencyInput [Hz].. range(0.1 to 1.8)............. kept 0 rows (removed 0)
+--- Filter Final: 0 rows remaining (Total removed: 0) ---
+Input dataframe shape: (0, 527)
+Unique PanelCondition: []
+Unique WindCondition: []
+After PanelConditionGrouped mapping:
+Series([], )
+Number of unique grouping combinations: 0
+Group sizes (rows per group):
+count    0.0
+mean     NaN
+std      NaN
+min      NaN
+25%      NaN
+50%      NaN
+75%      NaN
+max      NaN
+dtype: float64
+After aggregation — stats shape: (0, 9)
+Columns in stats: ['WaveAmplitudeInput [Volt]', 'WaveFrequencyInput [Hz]', 'PanelConditionGrouped', 'WindCondition', 'mean_out_i
+n', 'std_out_in', 'n_runs', 'paths', 'mean_kL']
+[plot_damping_scatter] caption slots: {'n_runs': 0, 'n_panels': 0, 'panels': '', 'n_wind': 0, 'wind_conds': '', 'n_amps': 0, 'am
+ps': ''}
+[plot_damping_scatter] caption copied to clipboard — just Cmd+V.
+[plot_damping_scatter] formatted caption:
+  "UT/INN damping ratio versus wave frequency, all amplitudes combined. all panel condition(s); colour = wind condition (full, n
+o); marker size = wave amplitude (0.10\,V, 0.20\,V, 0.30\,V, 0.60\,V). Errorbars: standard deviation across runs."
+  Stub created: ch05_damping_scatter.tex

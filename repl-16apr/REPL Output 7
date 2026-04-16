@@ -1,0 +1,14 @@
+  [✓] quality_flag gate: excluded 24 flagged run(s) (use quality_flag='all' to include)
+--- Starting Filter Process (531 rows) ---
+--- Filter Final: 531 rows remaining (Total removed: 0) ---
+[plot_wind_snr] caption slots: {'n_wave_runs': 531, 'n_fw_psds': 18, 'fft_window': 0.1}
+[plot_wind_snr] caption copied to clipboard — just Cmd+V.
+[plot_wind_snr] formatted caption:
+  "Spectral SNR per probe: ratio of paddle-frequency FFT amplitude to wind-noise amplitude integrated over the 0.1\,Hz FFT windo
+w at each paddle frequency (531 wave runs; wind-noise baseline from 18 full-wind no-wave runs). Horizontal lines: SNR~=~10 (dott
+ed grey), 5 (dashed black), 3 (dotted red, critical). SNR~$<$~3 indicates wind dominates the FFT measurement."
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2917: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+  Saved: output/FIGURES/ch04_wind_snr.pdf
+  Stub created: ch04_wind_snr.tex

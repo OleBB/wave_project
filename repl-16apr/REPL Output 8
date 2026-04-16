@@ -1,0 +1,15 @@
+  [✓] quality_flag gate: excluded 24 flagged run(s) (use quality_flag='all' to include)
+--- Starting Filter Process (531 rows) ---
+--- Filter Final: 531 rows remaining (Total removed: 0) ---
+[plot_td_vs_fft] caption slots: {'n_runs': 531, 'wind_conds': 'full, lowest, no'}
+[plot_td_vs_fft] caption copied to clipboard — just Cmd+V.
+[plot_td_vs_fft] formatted caption:
+  "Time-domain amplitude $A_\mathrm{td}$ vs.\ FFT amplitude $A_\mathrm{FFT}$ at the paddle frequency per probe (531 wave runs; w
+ind: full, lowest, no). Top row: scatter; dashed = 1:1 line. Bottom row: ratio $A_\mathrm{FFT}/A_\mathrm{td}$ vs.\ frequency. Ra
+tio $\to 1$ under no wind; $\to 0$ at the IN probe under full wind (time-domain dominated by wind waves). Confirms $A_\mathrm{FF
+T}$ as the only valid amplitude metric under wind."
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:3039: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+  Saved: output/FIGURES/ch04_td_vs_fft.pdf
+  Stub created: ch04_td_vs_fft.tex

@@ -195,9 +195,13 @@ processed_dfs = load_processed_dfs(*ALL_PROCESSED_DIRS)
 # ── Results subset (CH05) ─────────────────────────────────────────────────────
 # meta_results: only the two validated folders, used for all CH05 result figures.
 # combined_meta: all sessions, used for CH04 methodology characterisation.
-_results_dir_names = {p.name for p in RESULTS_PROCESSED_DIRS}
+#
+# NOTE: combined_meta["path"] points to the raw CSV in wavedata/<date>-<exp>/file.csv.
+# RESULTS_PROCESSED_DIRS names are PROCESSED-<date>-<exp> — the "PROCESSED-" prefix
+# does not appear in the path strings. Strip it to match the wavedata folder name.
+_results_wavedata_names = {p.name.removeprefix("PROCESSED-") for p in RESULTS_PROCESSED_DIRS}
 meta_results = combined_meta[
-    combined_meta["path"].apply(lambda p: any(d in str(p) for d in _results_dir_names))
+    combined_meta["path"].apply(lambda p: any(d in str(p) for d in _results_wavedata_names))
 ].copy()
 # Merge mooring rubber band variants — validated equal for 1.3–1.6 Hz (CH04 §3c result).
 # Δ = −3% to +0.4% at 1.4–1.6 Hz, 0.2/0.3V — within ±7% SW measurement uncertainty.
@@ -416,7 +420,7 @@ Full numerical comparison: analysis_scratch/mooring_comparison_findings.md
 """
 
 _mooring_comp_base = combined_meta[
-    combined_meta["path"].apply(lambda p: any(d in str(p) for d in _results_dir_names))
+    combined_meta["path"].apply(lambda p: any(d in str(p) for d in _results_wavedata_names))
 ].copy()
 _mooring_comp_base = _aef(_mooring_comp_base, {
     "filters": {
@@ -1305,3 +1309,13 @@ print("main_save_figures.py — all figure sections complete.")
 
 # TODO: check the phase on the sine vs signal comparison.
 # BIG TODO: change all plots with freq on x-axis to kL.
+
+# %%
+from wavescripts.filters import damping_all_amplitude_grouper
+_g = damping_all_amplitude_grouper(meta_results[
+    meta_results["WaveFrequencyInput [Hz]"].between(1.2, 1.7) &
+    meta_results["PanelCondition"].eq("full") &
+    meta_results["WindCondition"].isin(["no", "full"])
+])
+print(_g[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]",
+          "WindCondition", "OUT/IN (FFT)", "n_runs"]].to_string())

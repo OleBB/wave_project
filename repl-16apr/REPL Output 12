@@ -1,0 +1,15 @@
+  [✓] quality_flag gate: excluded 27 flagged run(s) (use quality_flag='all' to include)
+--- Starting Filter Process (619 rows) ---
+  [✓] WindCondition............ == no......................... kept 312 rows (removed 307)
+  [✓] run_category............. == standard................... kept 263 rows (removed 49)
+--- Filter Final: 263 rows remaining (Total removed: 356) ---
+[plot_parallel_ratio] caption slots: {'n_runs': 259, 'n_panels': 4, 'panel_conditions': ', full, no, reverse'}
+[plot_parallel_ratio] caption copied to clipboard — just Cmd+V.
+[plot_parallel_ratio] formatted caption:
+  "Wall-side to far-side amplitude ratio at matched longitudinal distance, no-wind runs only. A ratio of 1 indicates the paddle
+wave is laterally uniform. Dashed line: ratio = 1."
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2286: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+  Saved: output/FIGURES/ch04_lateral_nowind.pdf
+  Stub created: ch04_lateral_nowind.tex

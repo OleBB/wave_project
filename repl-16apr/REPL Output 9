@@ -1,0 +1,17 @@
+  [✓] quality_flag gate: excluded 27 flagged run(s) (use quality_flag='all' to include)
+--- Starting Filter Process (619 rows) ---
+  [✓] WaveFrequencyInput [Hz].. == 1.3........................ kept 167 rows (removed 452)
+  [✓] WaveAmplitudeInput [Volt] == 0.2........................ kept 39 rows (removed 128)
+  [✓] PanelCondition........... == full....................... kept 21 rows (removed 18)
+--- Filter Final: 21 rows remaining (Total removed: 598) ---
+[plot_timeseries_overview] caption slots: {'n_runs': 4, 'freq_hz': '1.30', 'wind_conds': 'full, lowest, no', 'probe_list': '9373
+/170, 12400/250'}
+[plot_timeseries_overview] caption copied to clipboard — just Cmd+V.
+[plot_timeseries_overview] formatted caption:
+  "Time series of free-surface elevation at 2 probes for 4 selected runs (f = 1.30\,Hz; wind: full, lowest, no). Grey shading ma
+rks the detected stable-wave window used for amplitude and FFT analysis."
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2654: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+  Saved: output/FIGURES/ch04_timeseries_overview.pdf
+  Stub created: ch04_timeseries_overview.tex

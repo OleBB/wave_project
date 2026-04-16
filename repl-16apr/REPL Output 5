@@ -1,0 +1,20 @@
+  [✓] quality_flag gate: excluded 3 flagged run(s) (use quality_flag='all' to include)
+--- Starting Filter Process (88 rows) ---
+  [✓] exclude_run_keywords ['nestenstille', 'mstop'] kept 37 rows (removed 51)
+--- Filter Final: 37 rows remaining (Total removed: 51) ---
+[plot_frequency_spectrum] caption slots: {'n_runs': 37, 'n_wind': 7, 'n_stillwater': 23, 'wind_conds': ', full, no', 'panel_cond
+s': ', full, no', 'probes': '9373/170, 12400/250, 9373/340, 8804/250', 'xlim_lo': 0, 'xlim_hi': 5, 'data_type': 'PSD'}
+[plot_frequency_spectrum] caption copied to clipboard — just Cmd+V.
+[plot_frequency_spectrum] formatted caption:
+  "POWER spectral density (PSD) of the free surface at each wave gauge during wind-only runs (no paddle waves). All 37 nowave ru
+ns overlaid; colour encodes wind condition. Stillwater runs (no wind) shown as baseline. Wind energy is concentrated above 2\,Hz
+ — the paddle frequency range (0.65--1.9\,Hz) is unaffected."
+  Saved: output/FIGURES/ch04_wind_psd.pdf
+  Saved: output/FIGURES/ch04_wind_psd.pdf
+  Saved: output/FIGURES/ch04_wind_psd.pdf
+  Saved: output/FIGURES/ch04_wind_psd.pdf
+  Stub created: ch04_wind_psd.tex
+Wind PSD plot took 1.7507 s
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:1212: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()

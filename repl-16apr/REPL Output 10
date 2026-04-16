@@ -1,0 +1,13 @@
+[plot_first_arrival] caption slots: {'n_runs': 273, 'threshold': 5.0, 'thresh_strs': '9373/170: 1.03\\,mm, 12400/250: 0.78\\,mm,
+ 9373/340: 0.63\\,mm, 8804/250: 0.90\\,mm', 'window_s': 2.5, 'min_arr': 0.5}
+[plot_first_arrival] caption copied to clipboard — just Cmd+V.
+[plot_first_arrival] formatted caption:
+  "First wave arrival time at each probe vs.\ distance from the paddle, no-wind runs (273 runs). Detection: rolling 2.5\,s windo
+w exceeds 5.0$\times$ stillwater noise floor (9373/170: 1.03\,mm, 12400/250: 0.78\,mm, 9373/340: 0.63\,mm, 8804/250: 0.90\,mm).
+Arrivals $\leq$0.5\,s excluded as instrument transients. Error bars: half-range across parallel probes at the same longitudinal
+distance."
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:3197: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+  Saved: output/FIGURES/ch04_first_arrival.pdf
+  Stub created: ch04_first_arrival.tex

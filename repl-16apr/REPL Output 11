@@ -1,0 +1,16 @@
+  [✓] quality_flag gate: excluded 27 flagged run(s) (use quality_flag='all' to include)
+--- Starting Filter Process (619 rows) ---
+  [✓] WaveFrequencyInput [Hz].. range(0.9 to 1.6)............. kept 394 rows (removed 225)
+  [✓] PanelCondition........... == full....................... kept 309 rows (removed 85)
+--- Filter Final: 309 rows remaining (Total removed: 310) ---
+[plot_wave_stability] caption slots: {'n_runs': 309, 'threshold': 0.85, 'n_probes': 4}
+[plot_wave_stability] caption copied to clipboard — just Cmd+V.
+[plot_wave_stability] formatted caption:
+  "Wave-train stability (autocorrelation at lag-1-period) versus wave frequency for 4 probes, 309 wave runs. Colour = wind condi
+tion; linestyle = wave amplitude. Error bars: standard deviation across repeated runs at the same (frequency, amplitude). Dashed
+ line: quality threshold 0.85 — runs below this are dominated by wind-wave noise at the IN probe."
+/Users/ole/Kodevik/wave_project/wavescripts/plotter.py:2464: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be
+ shown
+  plt.show()
+  Saved: output/FIGURES/ch04_wave_stability.pdf
+  Stub created: ch04_wave_stability.tex
