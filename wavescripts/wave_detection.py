@@ -158,12 +158,18 @@ def find_wave_range(
 
     # How many periods to trim from each end of the snarvei window.
     # Start trim: removes the ramp-exit transition period(s) still building to full amplitude.
-    # End trim:   removes the wavemaker deceleration / mstop onset period(s).
-    # These are applied to the snarvei reference BEFORE the upcrossing snap,
-    # so wave_upcrossings, debug_info, and the range_plot all see the same trimmed window.
-    # High-frequency runs (≥1.6 Hz) need more trimming at both ends:
-    # — start: ramp transition is slower, more buildup bleeds in (+2 extra)
-    # — end:   ramp-down begins earlier and swell tail is longer (+3 extra)
+    # End trim:   removes the mstop decay tail period(s).
+    #
+    # IMPORTANT: the end trim is applied to n_periods_target in the upcrossing path (below),
+    # NOT to the snarvei good_end_idx. The upcrossing snapping overwrites good_end_idx, so
+    # any trim applied only to the snarvei output has no effect for runs with detected
+    # upcrossings (i.e. all normal wave runs). Fix applied 2026-04-16.
+    #
+    # High-frequency runs (≥1.6 Hz):
+    # — end: per40 runs at 1.6 Hz confirmed (2026-04-16) to include ~3s of mstop decay
+    #   tail in the 12400/250 (OUT) analysis window. Cutting 2 periods removes ~1.25s.
+    #   This is a pragmatic improvement; a full fix requires per-probe-group end calibration
+    #   or explicit mstop-onset detection.
     _TRIM_START_PERIODS = (RAMP.TRIM_START_PERIODS_HIGH_FREQ if importertfrekvens >= RAMP.HIGH_FREQ_TRIM_HZ
                            else RAMP.TRIM_START_PERIODS_DEFAULT)
     _TRIM_END_PERIODS   = (RAMP.TRIM_END_PERIODS_HIGH_FREQ   if importertfrekvens >= RAMP.HIGH_FREQ_TRIM_HZ
@@ -211,8 +217,11 @@ def find_wave_range(
         # 1. Snap start: nearest upcrossing to snarvei guess
         refined_start = int(all_upcrossings[np.argmin(np.abs(all_upcrossings - ref_start))])
 
-        # 2. Expected end from WavePeriodInput: start + n_periods_target full periods
-        expected_end  = min(refined_start + int(n_periods_target * samples_per_period),
+        # 2. Expected end from WavePeriodInput: start + (n_periods_target − trim_end) full periods.
+        #    _TRIM_END_PERIODS is subtracted here so the upcrossing snap lands at the trimmed end.
+        #    (The snarvei good_end_idx is overwritten below, so trim must be applied here.)
+        n_periods_trimmed = max(5, n_periods_target - _TRIM_END_PERIODS)
+        expected_end  = min(refined_start + int(n_periods_trimmed * samples_per_period),
                             len(signal_smooth) - 1)
 
         # 3. Snap end: nearest upcrossing to expected end

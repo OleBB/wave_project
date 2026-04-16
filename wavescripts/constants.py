@@ -111,7 +111,11 @@ class RampDetectionParams:
     TRIM_START_PERIODS_DEFAULT: int = 1
     TRIM_START_PERIODS_HIGH_FREQ: int = 1   # was 3 — eyeballed too late; start 2 periods earlier
     TRIM_END_PERIODS_DEFAULT: int = 1
-    TRIM_END_PERIODS_HIGH_FREQ: int = 9     # was 4 — ramp-down at 1.7 Hz grabbed too much end
+    TRIM_END_PERIODS_HIGH_FREQ: int = 2     # 2026-04-16: was 9 but had no effect (bug: upcrossing
+                                             # snap overwrote snarvei good_end without trim).
+                                             # Bug fixed — end trim now applied in upcrossing path.
+                                             # 2 periods removes ~1.25s at 1.6 Hz, partially clearing
+                                             # the mstop decay tail visible in 12400/250 windows.
     HIGH_FREQ_TRIM_HZ: float = 1.6
 
 RAMP = RampDetectionParams()
