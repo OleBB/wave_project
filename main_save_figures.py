@@ -33,7 +33,8 @@ CHAPTER 04 — METHODOLOGY
   §2   ch04_stillwater_timing      ✗  Swell decay time vs wait time  [TODO]
   §3   ch04_parallel_ratio         ~  Wall/far-side amplitude ratio vs frequency
   §3b  ch04_probe_height           ✗  Probe height validity range    [TODO]
-  §3c  ch04_sound_speed            ~  Speed-of-sound / lab temperature drift
+  §3c  ch04_mooring_comparison     ~  Mooring rubber band length: loose230 vs loose300
+  §3d  ch04_sound_speed            ~  Speed-of-sound / lab temperature drift
   §4-1 ch04_wind_psd               ~  Wind PSD per probe (nowave runs)
   §4-2 ch04_wind_reflection        ✗  Wind reflection from panel     [TODO]
   §4-3 ch04_fft_wave               ~  FFT spectrum at paddle freq (1.3 Hz example)
@@ -121,57 +122,90 @@ except NameError:
     file_dir = Path.cwd()
 os.chdir(file_dir)
 
-# ── Dataset(s) ────────────────────────────────────────────────────────────────
-# Only the two most recent folders active — most reliable data (lowrange, h100, mooring30).
-# Earlier folders have interpolation artefacts at high frequencies (≥1.6 Hz).
-PROCESSED_DIRS = [
+# ── Datasets ──────────────────────────────────────────────────────────────────
+# Two named datasets from a single load:
+#   ALL_PROCESSED_DIRS   → combined_meta  — all sessions → CH04 methodology
+#   RESULTS_PROCESSED_DIRS → meta_results — two validated sessions → CH05 results
+#
+# Why single load: loading FFT/PSD parquets twice costs ~5 min vs ~3 min once.
+# meta_results is a filtered DataFrame subset — essentially free to derive.
+#
+# Why two sets: older sessions have interpolation artefacts at ≥1.6 Hz but are
+# valid for noise floor, probe characterisation, wind PSD, etc. (CH04). Result
+# figures (OUT/IN vs freq/kL, damping vs amplitude) must use only the two
+# validated lowrange/h100 folders.
+
+ALL_PROCESSED_DIRS = [
     # ── Nov 2025: probe 1 at 18000 mm, roof not fully sealed ──────────────────
-    # Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"),        # probe 1 på 18000 mm; tak ikke tetta helt
+    Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"),
     # ── Nov 2025: probe 1 moved to 8804 mm, lowMooring ────────────────────────
-    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),          # mange kjøringer med -per15
-    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),            # noen kjøringer med -per30
-    # Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),          # et par kjøringer med -per15
-    # Path("waveprocessed/PROCESSED-20251112-tett6roof"),
-    # Path("waveprocessed/PROCESSED-20251113-tett6roof"),
-    # Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
-    # Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),
+    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),
+    Path("waveprocessed/PROCESSED-20251112-tett6roof"),
+    Path("waveprocessed/PROCESSED-20251113-tett6roof"),
+    Path("waveprocessed/PROCESSED-20251113-tett6roof-loosepaneltaped"),
+    Path("waveprocessed/PROCESSED-20251113-tett6roof-probeadjusted"),
     # ── Mar 2026: new probe positions (march2026_rearranging config) ───────────
-    # Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),           # in=9373/170, out=11800/250 — transitional
-    # Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),           # in=9373/170, out=11800/250 — transitional
+    Path("waveprocessed/PROCESSED-20260305-newProbePos-tett6roof"),           # in=9373/170, out=11800/250 — transitional
+    Path("waveprocessed/PROCESSED-20260306-newProbePos-tett6roof"),           # in=9373/170, out=11800/250 — transitional
     # ── Mar 2026: final probe positions (march2026_better_rearranging) ─────────
-    # Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),    # disse bør være greie bortsett fra de steile
-    # Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),    # noen filer med FALSEDATE (riktig dato fra mappe)
-    # Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),   # noen filer med FALSEDATE?
-    # Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),   # noen filer med FALSEDATE?
-    # Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),   # noen filer med FALSEDATE?
-    # Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
-    # Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
-    # Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED"),
+    Path("waveprocessed/PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof"),
+    Path("waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring"),
+    Path("waveprocessed/PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED"),
     # ── Mar 2026: probe lowered — height136 (transitional, 1 dag) ─────────────
-    # Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),  # h136/high, 1 dag
+    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136"),
     # ── Mar 2026: probe lowered to height100 ──────────────────────────────────
-    # Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
-    # Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
-    # Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
-    # Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
+    Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100"),
     # ── Mar 2026: lowrange switch enabled ─────────────────────────────────────
     Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
     Path("waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
 ]
 
-# Register dataset names globally so every stub's immutable block records them.
+# Only the two validated sessions — results analysis (CH05)
+# lowrange mode, h100, final probe config (march2026_better_rearranging)
+RESULTS_PROCESSED_DIRS = [
+    Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
+    Path("waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
+]
+PROCESSED_DIRS = ALL_PROCESSED_DIRS  # backward-compat alias
+
+# Register results-quality datasets for figure stubs
 import wavescripts.plot_utils as _pu
-_pu.ACTIVE_DATASETS = [p.name for p in PROCESSED_DIRS]
+_pu.ACTIVE_DATASETS = [p.name for p in RESULTS_PROCESSED_DIRS]
 
 # ── Load from cache ───────────────────────────────────────────────────────────
 print("Loading analysis data...")
 combined_meta, _, combined_fft_dict, combined_psd_dict = load_analysis_data(
-    *PROCESSED_DIRS
+    *ALL_PROCESSED_DIRS
 )
 
 # %%
 # processed_dfs is heavy (~75 MB). Loaded when needed by sections below.
-processed_dfs = load_processed_dfs(*PROCESSED_DIRS)
+processed_dfs = load_processed_dfs(*ALL_PROCESSED_DIRS)
+
+# ── Results subset (CH05) ─────────────────────────────────────────────────────
+# meta_results: only the two validated folders, used for all CH05 result figures.
+# combined_meta: all sessions, used for CH04 methodology characterisation.
+_results_dir_names = {p.name for p in RESULTS_PROCESSED_DIRS}
+meta_results = combined_meta[
+    combined_meta["path"].apply(lambda p: any(d in str(p) for d in _results_dir_names))
+].copy()
+# Merge mooring rubber band variants — validated equal for 1.3–1.6 Hz (CH04 §3c result).
+# Δ = −3% to +0.4% at 1.4–1.6 Hz, 0.2/0.3V — within ±7% SW measurement uncertainty.
+# See analysis_scratch/mooring_comparison_findings.md.
+meta_results["Mooring"] = meta_results["Mooring"].replace({
+    "below_90_loose230": "below_90_loose",
+    "below_90_loose300": "below_90_loose",
+})
 
 
 # ── Placeholder helper ────────────────────────────────────────────────────────
@@ -369,7 +403,105 @@ _save_placeholder("ch04_probe_height", "CH04 §3b — Probe height validity rang
 
 # %%
 """
-── CH04 § 3c — Speed-of-sound / lab temperature ─────────────────────────────
+── CH04 § 3c — Mooring rubber band length: loose230 vs loose300 ─────────────
+Scientific result: rubber band length (230 mm vs 300 mm, below-water at −90 mm)
+has NO detectable effect on OUT/IN(FFT) within the main range.
+
+Δ = −3% to +0.4% at 1.4–1.6 Hz, 0.2/0.3V — within ±7% standing-wave uncertainty.
+The 1.3 Hz anomaly (OUT/IN > 1 for nowind loose230) is mooring-independent —
+it is a probe measurement bias (IN probe near standing-wave node), not mechanical.
+
+Data: combined_meta, results folders only, mooring labels kept separate (pre-merge).
+Full numerical comparison: analysis_scratch/mooring_comparison_findings.md
+"""
+
+_mooring_comp_base = combined_meta[
+    combined_meta["path"].apply(lambda p: any(d in str(p) for d in _results_dir_names))
+].copy()
+_mooring_comp_base = _aef(_mooring_comp_base, {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": [0.2, 0.3],
+        "WaveFrequencyInput [Hz]":   (1.2, 1.7),
+        "WindCondition":             ["no", "full"],
+        "PanelCondition":            "full",
+    },
+    "plotting": {},
+})
+
+if not _mooring_comp_base.empty and "Mooring" in _mooring_comp_base.columns:
+    from wavescripts.filters import damping_all_amplitude_grouper as _dag
+    _mc_grouped = _dag(_mooring_comp_base)
+
+    _MOORING_COLOR  = {"below_90_loose230": "#1f77b4", "below_90_loose300": "#ff7f0e"}
+    _WIND_LS        = {"no": "-", "full": "--"}
+    _WIND_LABEL     = {"no": "no wind", "full": "full wind"}
+
+    apply_thesis_style()
+    fig_mc, ax_mc = plt.subplots(figsize=(7, 4))
+
+    for (freq_hz, amp, wind, panel, mooring), grp in _mc_grouped.groupby(
+        ["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]",
+         "WindCondition", "PanelCondition", "Mooring"]
+    ):
+        if mooring not in _MOORING_COLOR:
+            continue
+        outin_col = "OUT/IN (FFT)"
+        if outin_col not in grp.columns or grp[outin_col].isna().all():
+            continue
+        val  = grp[outin_col].median()
+        err  = grp[outin_col].std() if len(grp) > 1 else val * 0.10
+        ax_mc.errorbar(
+            freq_hz, val, yerr=err,
+            color=_MOORING_COLOR[mooring],
+            linestyle=_WIND_LS.get(wind, "-"),
+            marker="o", markersize=5, capsize=3, linewidth=1.2,
+        )
+
+    # Legend
+    from matplotlib.lines import Line2D
+    _handles = [
+        Line2D([0], [0], color=_MOORING_COLOR["below_90_loose230"], marker="o",
+               label="loose230 (230 mm)"),
+        Line2D([0], [0], color=_MOORING_COLOR["below_90_loose300"], marker="o",
+               label="loose300 (300 mm)"),
+        Line2D([0], [0], color="k", linestyle="-",  label="no wind"),
+        Line2D([0], [0], color="k", linestyle="--", label="full wind"),
+    ]
+    ax_mc.legend(handles=_handles, fontsize=8, loc="lower left")
+    ax_mc.axhline(1.0, color="k", linewidth=0.6, linestyle=":")
+    ax_mc.set_xlabel("Frequency [Hz]")
+    ax_mc.set_ylabel("OUT/IN (FFT)")
+    ax_mc.set_title("Mooring rubber band length: loose230 vs loose300", fontsize=9)
+
+    _pv_mc = {
+        "filters": {},
+        "plotting": {
+            "figure_name": "ch04_mooring_comparison",
+            "draft":       True,
+            "save_plot":   True,
+            "force_stub":  True,
+            "caption": (
+                "OUT/IN(FFT) damping ratio at 0.2\\,V and 0.3\\,V for two below-water "
+                "mooring rubber band lengths: 230\\,mm (blue) and 300\\,mm (orange), "
+                "both attached 90\\,mm below the still-water surface. "
+                "Solid lines: no-wind runs; dashed lines: full-wind runs. "
+                "The two mooring types are indistinguishable within measurement uncertainty "
+                "($|\\Delta| < 3\\%$ at 1.4--1.6\\,Hz, 0.2/0.3\\,V). "
+                "Panel geometry dominates wave transmission; mooring compliance does not. "
+                "Datasets may therefore be merged as \\texttt{below\\_90\\_loose} for result figures."
+            ),
+        },
+    }
+    _meta_mc = build_fig_meta(_pv_mc, chapter="04")
+    save_and_stub(fig_mc, _meta_mc, plot_type="ch04_mooring_comparison", force_stub=True)
+    plt.close(fig_mc)
+else:
+    _save_placeholder("ch04_mooring_comparison",
+                      "CH04 §3c — Mooring comparison (loose230 vs loose300)", chapter="04")
+
+# %%
+"""
+── CH04 § 3d — Speed-of-sound / lab temperature drift ───────────────────────
 Goal: show that lab temperature variation introduces < 0.4 % amplitude scale
 error, and that this cancels exactly for OUT/IN ratios.
 Data: sound_speed_mean_ms / sound_speed_std_ms in combined_meta (pipeline).
@@ -819,7 +951,7 @@ _pv_damping_freq = {
     },
 }
 
-_damping_meta   = _aef(combined_meta, _pv_damping_freq)
+_damping_meta   = _aef(meta_results, _pv_damping_freq)
 _damping_grouped = damping_all_amplitude_grouper(_damping_meta)
 plot_damping_freq(_damping_grouped, _pv_damping_freq)
 
@@ -855,7 +987,7 @@ _pv_damping_scatter = {
         "caption": "UT/INN damping ratio versus wave frequency, all amplitudes combined. all panel condition(s); colour = wind condition (full, no); marker size = wave amplitude (0.10\,V, 0.20\,V, 0.30\,V, 0.60\,V). Errorbars: standard deviation across runs."
 }}
 
-_scatter_meta   = _aef(combined_meta, _pv_damping_scatter)
+_scatter_meta   = _aef(meta_results, _pv_damping_scatter)
 _scatter_grouped = damping_all_amplitude_grouper(_scatter_meta)
 plot_damping_scatter(_scatter_grouped, _pv_damping_scatter)
 
@@ -892,7 +1024,7 @@ _pv_damping_wind_delta = {
     },
 }
 
-_wind_delta_meta    = _aef(combined_meta, _pv_damping_wind_delta)
+_wind_delta_meta    = _aef(meta_results, _pv_damping_wind_delta)
 _wind_delta_grouped = damping_all_amplitude_grouper(_wind_delta_meta)
 plot_damping_wind_delta(_wind_delta_grouped, _pv_damping_wind_delta, chapter="05")
 
@@ -940,7 +1072,7 @@ _pv_swell_scatter = {
     },
 }
 
-plot_swell_scatter(combined_meta, _pv_swell_scatter, chapter="05")
+plot_swell_scatter(meta_results, _pv_swell_scatter, chapter="05")
 
 # %%
 """
@@ -973,7 +1105,7 @@ _pv_reconstructed = {
     },
 }
 
-_recon_meta  = apply_experimental_filters(combined_meta, _pv_reconstructed)
+_recon_meta  = apply_experimental_filters(meta_results, _pv_reconstructed)
 _recon_paths = {p: combined_fft_dict[p]
                 for p in _recon_meta["path"] if p in combined_fft_dict}
 if _recon_paths:
