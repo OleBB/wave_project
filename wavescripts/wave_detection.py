@@ -114,19 +114,48 @@ def find_wave_range(
     # TODO: re-eyeball and add more calibration points, especially for intermediate freqs.
     _SNARVEI_CALIB = {
         # ~8800 mm from paddle
+        # 1.40/1.50: not yet eyeballed — interpolated from surrounding points
         "8804":  [(0.65, 3975), (1.30, 4700), (1.80, 6000)],
         # ~9373 mm from paddle
-        "9373":  [(0.65, 4075), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
+        # 2026-04-16 (re-eyeballed from RampDetectionBrowser, nowind per40 runs, all amplitudes):
+        #   Conservative good_start (latest across amplitudes, post-trim):
+        #     1.3 Hz: 22 s  1.4 Hz: 22 s  1.5 Hz: 24 s  1.6 Hz: 26 s
+        #   Pre-trim calibration samples = (good_start_s - 1/freq_hz) × 250:
+        #     1.3 Hz: 5308  1.4 Hz: 5321  1.5 Hz: 5833  1.6 Hz: 6344
+        #   Raw notes: analysis_scratch/snarvei_eyeballing.md
+        "9373":  [(0.65, 4075), (0.70, 3750), (1.30, 5308), (1.40, 5321), (1.50, 5833), (1.60, 6344)],
         # ~11800 mm from paddle (march2026_rearranging config, 4–6 Mar 2026 only)
         # Values interpolated from 9373 and 12400 at distance fraction 0.802 — eyeball-refine
         # in RampDetectionBrowser once confirmed.
         # 1.70/1.80: estimated, needs eyeballing
         "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700), (1.70, 6700), (1.80, 6650)],
         # ~12400 mm from paddle
-        # 1.60: reduced from 7000 → 6700 (~2 periods earlier, artifact at tail was misleading)
+        # 2026-04-16 (re-eyeballed from RampDetectionBrowser, nowind per40 runs, all amplitudes):
+        #   Conservative good_start (latest across amplitudes, post-trim):
+        #     1.3 Hz: 28 s  1.4 Hz: 29 s  1.5 Hz: 30 s  1.6 Hz: 31 s
+        #   Pre-trim calibration samples = (good_start_s - 1/freq_hz) × 250:
+        #     1.3 Hz: 6808  1.4 Hz: 7071  1.5 Hz: 7333  1.6 Hz: 7594
+        #   Raw notes: analysis_scratch/snarvei_eyeballing.md
         # 1.70: estimated, needs eyeballing in RampDetectionBrowser
-        # 1.80: extrapolated ~7350 minus 4 periods (4×139=556) → 6800 — verify in browser
-        "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 6700), (1.70, 6750), (1.80, 6800)],
+        # 1.80: extrapolated — verify in browser
+        "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6808), (1.40, 7071), (1.50, 7333), (1.60, 7594), (1.70, 6750), (1.80, 6800)],
+    }
+
+    # End-position caps: absolute sample index of the last clean period.
+    # Derived from the same eyeballing session as _SNARVEI_CALIB (2026-04-16).
+    # Conservative = earliest good_end across amplitudes (0.1V/0.2V/0.3V)
+    # so the window never creeps into the mstop decay tail for ANY amplitude.
+    #
+    # Format: list of (freq_hz, end_sample) sorted by frequency.
+    # Uses the same _snarvei_start() interpolation function.
+    # good_end_sample = good_end_s × 250  (absolute, not relative to good_start)
+    #
+    #   9373  : 1.3 Hz→39s, 1.4 Hz→38s, 1.5 Hz→36s, 1.6 Hz→36s
+    #   12400 : 1.3 Hz→42s, 1.4 Hz→42s, 1.5 Hz→40s, 1.6 Hz→40s
+    #   8804  : not yet eyeballed — no entry, no cap applied
+    _SNARVEI_END_CALIB = {
+        "9373":  [(1.30, 9750), (1.40, 9500), (1.50, 9000), (1.60, 9000)],
+        "12400": [(1.30, 10500), (1.40, 10500), (1.50, 10000), (1.60, 10000)],
     }
 
     # Map every probe column name to a distance group — auto-generated from PROBE_CONFIGS
@@ -223,6 +252,21 @@ def find_wave_range(
         n_periods_trimmed = max(5, n_periods_target - _TRIM_END_PERIODS)
         expected_end  = min(refined_start + int(n_periods_trimmed * samples_per_period),
                             len(signal_smooth) - 1)
+
+        # Cap expected_end using eyeballed end calibration (absolute sample position).
+        # This prevents the window from extending into the mstop decay tail for probes
+        # that have been eyeballed. Only applied within the calibrated frequency range —
+        # polynomial extrapolation beyond the range is unreliable and is suppressed.
+        if _group is not None and _group in _SNARVEI_END_CALIB:
+            _end_calib = _SNARVEI_END_CALIB[_group]
+            _end_freqs = [p[0] for p in _end_calib]
+            if min(_end_freqs) <= importertfrekvens <= max(_end_freqs):
+                calib_end = _snarvei_start(importertfrekvens, _end_calib)
+                if calib_end < expected_end:
+                    if debug:
+                        print(f"[snarvei_end] {data_col}: expected_end {expected_end} → {calib_end} "
+                              f"(calib cap, Δ={expected_end-calib_end} samples)")
+                    expected_end = calib_end
 
         # 3. Snap end: nearest upcrossing to expected end
         refined_end   = int(all_upcrossings[np.argmin(np.abs(all_upcrossings - expected_end))])
