@@ -373,6 +373,15 @@ STILLWATER_EXCLUDE: tuple[str, ...] = ()
 
 
 # =============================================================================
+# WAVEMAKER VOLTAGE → EXPECTED AMPLITUDE CALIBRATION
+# =============================================================================
+# Approximate linear calibration: 0.1 V → 8 mm, 0.2 V → 16 mm, 0.3 V → 24 mm.
+# Used to compute "Expected ka (input)" = k(dispersion) × a(voltage),
+# independent of probe measurements (unaffected by probe faults or wind contamination).
+# Scale factor: 80 mm/V.
+VOLTAGE_TO_AMP_MM_PER_V: float = 80.0  # mm per volt (wavemaker calibration)
+
+# =============================================================================
 # WAVENUMBER CALCULATION (DISPERSION RELATION)
 # =============================================================================
 
@@ -518,6 +527,7 @@ class GlobalColumns:
     WAVELENGTH = "Expected Wavelength"
     KL = "Expected kL"
     KA = "Expected ka"
+    KA_INPUT = "Expected ka (input)"  # k(dispersion) × a(voltage calibration) — unaffected by probe faults
     KH = "Expected kH"
     TANH_KH = "Expected tanh(kH)"
     CELERITY = "Expected Celerity"

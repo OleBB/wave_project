@@ -18,7 +18,7 @@ from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_f
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
 from scipy.interpolate import PchipInterpolator
-from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, STILLWATER, STILLWATER_EXCLUDE, get_smoothing_window, PROBE_RANGE_MODES, PROBE_HEIGHT_DEFAULT_MM
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, CLIP, STILLWATER, STILLWATER_EXCLUDE, get_smoothing_window, PROBE_RANGE_MODES, PROBE_HEIGHT_DEFAULT_MM, VOLTAGE_TO_AMP_MM_PER_V
 from wavescripts.constants import (
     ProbeColumns as PC,
     GlobalColumns as GC,
@@ -1092,6 +1092,18 @@ def _update_all_metrics(
     )
     meta_indexed[CG.GLOBAL_WAVE_DIMENSION_COLS] = global_res[RC.WAVE_DIMENSION_COLS_WITH_KH]
     meta_indexed[[GC.FROUDE, GC.WIND_CELERITY, GC.F_PM_RATIO, GC.URSELL]] = global_res[RC.PHYSICS_COLS]
+
+    # Expected ka (input) — k(dispersion) × a(voltage calibration).
+    # Unlike "Expected ka" which uses the measured IN probe amplitude, this uses
+    # the wavemaker voltage setting converted to mm via a fixed calibration factor.
+    # It is therefore unaffected by probe faults or wind contamination at the IN probe,
+    # making it suitable for thesis tables and cross-run comparisons.
+    volt_col = GC.WAVE_AMPLITUDE_INPUT
+    if volt_col in meta_indexed.columns:
+        volts = pd.to_numeric(meta_indexed[volt_col], errors="coerce")
+        amp_from_voltage = volts * VOLTAGE_TO_AMP_MM_PER_V / 1000.0  # mm → m
+        k_series = meta_indexed[GC.WAVENUMBER]
+        meta_indexed[GC.KA_INPUT] = k_series * amp_from_voltage
 
     # Stillwater columns are already per-row values set by ensure_stillwater_columns
 
