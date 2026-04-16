@@ -281,6 +281,7 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
   - Stillwater: `WindCondition == "no"`
   - Wind-only: `WindCondition in {"full", "lowest"}`
 - Both amp and freq tags must be present in filename to set wave parameters
+- **`experimental-fromZeroToMaxWin` / `fromZeroToMaxWind` runs** — wind ramp-up runs (no paddle). Wind increases from zero to maximum while all probes record. Used to characterise wind setup (water level tilt), wind-wave growth, and time constants. Dates: 20260314, 20260326, 20260327. NOT standard wave or nowave runs — treat separately.
 
 ---
 
@@ -422,6 +423,42 @@ Measured noise floor per probe (excluding row 1 outlier):
   - `"Probe {pos} Amplitude"` = (P97.5−P2.5)/2 of time-domain signal — includes wind waves
   - `"Probe {pos} Amplitude (FFT)"` = FFT peak within 0.1 Hz of target — paddle-wave only
 - The **OUT/IN ratio** must always be computed from `"Probe {pos} Amplitude (FFT)"` (paddle frequency only). Time-domain amplitude includes wind-wave energy which inflates the IN probe under fullwind conditions, making OUT/IN meaningless for damping. Wind waves are a real physical phenomenon to characterize separately, not noise to average into the damping ratio.
+
+### FFT-based OUT/IN under fullwind — two competing biases (CRITICAL)
+
+When wind is on during a paddle-wave run, two competing biases act on the FFT amplitude at the paddle frequency. Both affect the **IN probe** (9373/170, fully exposed to wind). The **OUT probe** (12400/250) is sheltered by the panel and largely unaffected by both.
+
+**(1) Spectral contamination — biases OUT/IN DOWNWARD**
+Wind has a broadband PSD with a low-frequency tail. Even though most wind energy is at 3–5 Hz, there is non-zero wind energy within the 0.1 Hz FFT window at the paddle frequency. This adds spurious amplitude to A_IN_FFT:
+- A_IN_FFT is inflated → OUT/IN appears lower than the true transmission
+- Effect is larger at lower paddle frequencies (where the wind PSD tail is higher) and at low wave amplitudes (0.1 V), where wind energy can dominate A_IN
+- The asymmetry is key: IN probe is contaminated, OUT probe is not → the bias is always downward
+
+**(2) Phase jitter (coherence loss) — biases OUT/IN UPWARD**
+Wind-induced turbulence and wind waves cause small cycle-to-cycle phase variations in the paddle wave. This spreads FFT energy away from the exact paddle frequency, reducing the FFT peak:
+- A_IN_FFT is deflated → OUT/IN appears higher than true transmission
+- Quantified by `wave_stability` column in `combined_meta` (values < 1 indicate jitter)
+- More pronounced at higher frequencies and for longer runs
+
+**Net effect:** At 0.1 V fullwind, bias (1) likely dominates (IN reads high → OUT/IN deflated). At 0.2–0.3 V, bias (2) may be comparable. The observed wind *increase* in OUT/IN at 1.5–1.6 Hz survives both biases — bias (1) would suppress it, yet the increase is still clearly seen, meaning the true effect is at least as large as measured and probably larger.
+
+**Implication:** Measured OUT/IN under fullwind is a conservative (lower-bound) estimate of true transmission when bias (1) dominates. Never report fullwind OUT/IN without acknowledging this.
+
+**Data reliability limit:** `WaveAmplitudeInput > 1.6 Hz` at 0.2 V or 0.3 V is unreliable — frequent dropouts at high amplitude + high frequency. Exclude from main results. See `memory/feedback_freq_amp_limits.md`.
+
+### Wind setup — tank water level tilt under fullwind
+
+Wind pushes water leeward (toward the panel / OUT probe side). This creates a mean water level slope along the tank:
+- OUT probe (12400/250, leeward, sheltered from wind noise) shows a **noticeable mean level rise** under fullwind
+- IN probe (9373/170, upwind) shows a corresponding mean level drop
+- The effect is visible and measurable in the `eta_` time series as a nonzero mean during wind-only runs
+
+**Effect on amplitude metrics:**
+- FFT amplitude at paddle frequency: **unaffected** — DC level shift is at f=0, not at the paddle frequency
+- Time-domain percentile amplitude (P97.5−P2.5)/2: **unaffected** — symmetric percentiles cancel any mean offset
+- Wave speed / dispersion: minor effect via slightly changed local depth at each probe
+
+**Dataset for quantifying this:** `experimental-fromZeroToMaxWin` / `fromZeroToMaxWind` runs (multiple dates: 20260314, 20260326, 20260327). These ramp wind from zero to maximum while recording all probes — the mean level drift at OUT probe (12400/250) is directly visible as the wind ramps up. Use these to characterise the setup magnitude and its time constant.
 
 ### Probe geometry
 - Parallel probes at the same longitudinal distance (e.g. `9373/170` and `9373/340`) are **not redundant** — they measure lateral wave non-uniformity. A factor-of-2 difference between them is physically meaningful and must be explained, not averaged away silently.
