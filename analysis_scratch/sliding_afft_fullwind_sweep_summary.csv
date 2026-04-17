@@ -1,0 +1,9 @@
+freq_hz,amp_V,fullwind_path,pipeline_AFFT,stable_mean,depression,nowind_path,nowind_stable
+1.300,0.100,fullpanel-fullwind-amp0100-freq1300-per240-depth580-mstop30-run1.csv,5.208,5.240,0.994,fullpanel-nowind-amp0100-freq1300-per240-depth580-mstop30-run1.csv,4.573
+1.300,0.200,fullpanel-fullwind-amp0200-freq1300-per240-depth580-mstop30-run1.csv,15.798,10.102,1.564,fullpanel-nowind-amp0200-freq1300-per240-depth580-mstop30-run1.csv,9.574
+1.400,0.100,fullpanel-fullwind-amp0100-freq1400-per240-depth580-mstop30-run2.csv,8.337,8.391,0.994,fullpanel-nowind-amp0100-freq1400-per240-depth580-mstop30-run1.csv,7.741
+1.400,0.200,fullpanel-fullwind-amp0200-freq1400-per240-depth580-mstop30-run1.csv,16.147,17.183,0.940,fullpanel-nowind-amp0200-freq1400-per240-depth580-mstop30-run1.csv,14.427
+1.500,0.100,fullpanel-fullwind-amp0100-freq1500-per240-depth580-mstop30-run1.csv,8.608,5.029,1.712,fullpanel-nowind-amp0100-freq1500-per240-depth580-mstop30-run2.csv,5.526
+1.500,0.200,fullpanel-fullwind-amp0200-freq1500-per240-depth580-mstop30-run1.csv,14.524,8.573,1.694,fullpanel-nowind-amp0200-freq1500-per240-depth580-mstop30-run1.csv,9.438
+1.600,0.100,fullpanel-fullwind-amp0100-freq1600-per240-depth580-mstop30-run1.csv,9.117,9.803,0.930,fullpanel-nowind-amp0100-freq1600-per240-depth580-mstop30-run1.csv,9.057
+1.600,0.200,fullpanel-fullwind-amp0200-freq1600-per240-depth580-mstop30-run1.csv,19.911,19.792,1.006,fullpanel-nowind-amp0200-freq1600-per240-depth580-mstop30-run1.csv,14.964

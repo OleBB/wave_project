@@ -67,3 +67,16 @@ freq1700: N/A
 
 
 note: seems this run was completely falsely ranged. Its 240 periods, but mstop330, and someehow the ramp browser says end is at #45639, or over 100seconds after the signal ended. /Users/ole/Kodevik/wave_project/wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-nowind-amp0100-freq1300-per240-depth580-mstop330-run3.csv
+
+
+Day 2 of eyeballing. 
+These will be looked at. 
+fullpanel-nowind-amp0200-freq1300-per40-depth580-mstop30-run1.csv   ← 1.3 Hz
+fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv   ← 1.4 Hz
+fullpanel-nowind-amp0200-freq1500-per40-depth580-mstop30-run1.csv   ← 1.5 Hz
+fullpanel-nowind-amp0200-freq1600-per40-depth580-mstop30-run1.csv   ← 1.6 Hz
+
+freq1300: 19-37
+freq1400: 20-37
+freq1500: 21-36
+freq1600: 22-35
