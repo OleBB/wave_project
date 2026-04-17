@@ -1,6 +1,6 @@
 # FFT peak-bin bias: impact on OUT/IN ratio
 
-Generated: 2026-04-17T11:40:34Z
+Generated: 2026-04-17T13:04:53Z
 
 **Runs analyzed**: 367 fullpanel wave runs (in=9373/170, out=12400/250, quality_flag=ok)
 
