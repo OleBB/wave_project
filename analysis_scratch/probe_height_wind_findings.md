@@ -1,28 +1,41 @@
 # Probe Height, Range Mode, and Wind Background — Analysis Findings
-*Autonomous session, 2026-03-30*
+*Original autonomous session: 2026-03-30*
+*Reviewed and substantially corrected: 2026-04-17 (Ole + assistant walk-through)*
+
+> **Review summary**: the 2026-03-30 agent reached several wrong conclusions
+> by speculating about physical mechanisms (probe swaps, water disturbances,
+> quantization) without checking the raw signal or the experimental log. The
+> measurements (tables) are kept; the interpretations have been rewritten.
+> Obvious errors in the original version are called out as they appear.
 
 ---
 
 ## Context
 
-A bug was found and fixed during this session:
+A bug was found and fixed during the original session:
 
-**Bug**: `_extract_probe_height()` and `_extract_probe_range_mode()` in `improved_data_loader.py`
-were called with `filename` (the CSV basename, e.g. `fullpanel-...-run1.csv`), but the keywords
-`-height100`, `-height136`, `-lowrange` are in the **folder name**, not the CSV name. Same root
-cause as the earlier mooring bug.
+**Bug**: `_extract_probe_height()` and `_extract_probe_range_mode()` in
+`improved_data_loader.py` were called with `filename` (CSV basename) but the
+`-height100`, `-height136`, `-lowrange` keywords are in the **folder name**.
+Same root cause as the earlier mooring bug.
 
-**Fix**: Changed both calls at line 472–473 to pass `str(file_path)` instead of `filename`.
-**Pipeline re-run** with `--force-recompute` to bake corrected values into all caches.
+**Fix**: Pass `str(file_path)` instead of `filename` at `improved_data_loader.py:472–473`.
+Pipeline re-run with `--force-recompute`.
 
-After the fix, condition counts across the main analysis dataset (Mar 2026 probe config):
+After the fix, condition counts across the main analysis dataset
+(2026 probe config):
 
-| Condition | Runs | Folders |
-|-----------|------|---------|
-| cond1: height272, high-range (standard) | 201 | 8 (March 7 – 21) |
-| cond2: height136, high-range (borderline) | 7 | 1 (March 23) |
-| cond3: height100, high-range (wrong mode) | 129 | 4 (March 23 – 26) |
-| cond4: height100, low-range (correct) | 132 | 2 (March 26 – 27) |
+| Condition | Runs | Folders | Notes |
+|-----------|------|---------|-------|
+| cond1: height272, high-range (standard) | 201 | 8 (March 7 – 21) | Baseline, no hardware mistakes |
+| cond2: height136, high-range | 7 | 1 (March 23) | Small dataset; probably highrange (unconfirmed in log) |
+| cond3: height100, high-range (**user error** — forgot to switch to lowrange after lowering probes) | 129 | 4 (March 23 – 26) | Hardware out of spec; P2-malfunction runs likely originate here |
+| cond4: height100, low-range (**correct**) | 132 | 2 (March 26 – 27) | Used for all thesis-results figures (`meta_results`) |
+
+**Probe identity is stable across the entire experiment**: the same four
+physical ultrasound probes (numbered 1–4) were used throughout. Only their
+positions changed. Any claim of "probe calibration drift between old and new
+physical units" in the original doc was fabricated by the agent.
 
 ---
 
@@ -32,14 +45,15 @@ After the fix, condition counts across the main analysis dataset (Mar 2026 probe
 |-----------|-------------|------------|-------------|---------------------|----------------|-----------------|
 | cond1 | 272 mm | high | 130–350 mm | 272 mm ✓ in window | +142 mm | +78 mm |
 | cond2 | 136 mm | high | 130–350 mm | 136 mm ✓ just inside | +6 mm | +214 mm |
-| cond3 | 100 mm | high | 130–350 mm | 100 mm ✗ below min | −30 mm | +250 mm |
-| cond4 | 100 mm | low | 30–250 mm | 100 mm ✓ centered | +70 mm | +150 mm |
+| cond3 | 100 mm | **high** (wrong) | 130–350 mm | 100 mm ✗ below min | −30 mm | +250 mm |
+| cond4 | 100 mm | **low** (correct) | 30–250 mm | 100 mm ✓ centered | +70 mm | +150 mm |
 
 ---
 
 ## Finding 1: Stillwater noise floor by condition
 
-Noise floor = (P97.5 − P2.5) / 2 of `eta` signal in nowave+nowind runs. Values in mm.
+Noise floor = (P97.5 − P2.5) / 2 of `eta` signal in nowave+nowind runs.
+Values in mm.
 
 | Condition | 9373/170 (IN) | 12400/250 (OUT) | 9373/340 (par) | 8804/250 (up) | n_runs |
 |-----------|:-------------:|:---------------:|:--------------:|:-------------:|:------:|
@@ -48,150 +62,213 @@ Noise floor = (P97.5 − P2.5) / 2 of `eta` signal in nowave+nowind runs. Values
 | cond3 h100/high (wrong) | 0.158 ± 0.139 | 0.071 ± 0.050 | 0.127 ± 0.087 | 0.126 ± 0.085 | 12 |
 | cond4 h100/low (correct) | **0.102 ± 0.082** | **0.087 ± 0.064** | 0.093 ± 0.115 | 0.064 ± 0.090 | 9 |
 
-### Observations
+### Corrected interpretation
 
-**Condition 1 (h272) has the HIGHEST noise floor** across all probes — unexpected given it is the
-"standard" configuration. The IN probe at 9373/170 averages 0.289 mm; the OUT probe 0.263 mm.
-This likely reflects a combination of (a) probe calibration drift between the old physical probe
-units and the new ones used from March 23 onward, and (b) the March 7–21 sessions possibly having
-more residual tank motion in the stillwater periods. It cannot be attributed to probe height since
-the h100 conditions have *lower* noise.
+**Cond1 (h272) has the HIGHEST noise floor — this is EXPECTED physics, not
+surprising.** Ultrasound time-of-flight measurement accuracy degrades with
+acoustic path length: a longer column of air between probe and water
+surface means more time for attenuation, beam divergence, and temperature-
+gradient-induced speed-of-sound drift to accumulate. h272 has the longest
+air column (272 mm) of all four conditions; h100 has the shortest. The
+noise-floor ordering h272 > h136 > h100 is the ordering we'd expect on
+acoustic-path-length grounds alone, independent of range-mode choice.
 
-**Condition 2 (h136) appears spuriously quiet** (0.045 mm for most probes, single run).
-This is not a real low-noise floor — it's the quantization resolution of the sensor. With only
-6 mm of crest headroom, the probe is essentially stuck at one quantization level in still water.
-The output is nearly constant → amplitude ≈ 0. These runs are not usable for noise-floor
-characterization.
+*The original doc attributed the h272 noise floor to "probe calibration
+drift between old and new physical probes" and "residual tank motion in
+March 7–21 stillwater periods". No probes were ever swapped, and agent
+did not check the raw signal to confirm any tank motion. Those
+explanations are removed.*
 
-**Condition 3 (h100, wrong mode) has elevated but usable noise** — approximately 1.4–2.0× higher
-than condition 4 (the correct setup) for most probes. The elevation is consistent with operating
-outside the stated 130 mm minimum:
+**Cond2 (h136, n=1)** is too small a dataset to interpret. The single
+reported value (0.045 mm at IN) could be (a) a genuinely quiet run, or
+(b) a probe readout limited by hardware quantization (if signal variation
+is smaller than one reported distance step, the P97.5 − P2.5 can collapse
+to a small value). With n=1 we cannot distinguish these. Mark as
+**low-confidence**; do not use for comparisons.
 
-| Probe | cond3 mean | cond4 mean | ratio |
-|-------|-----------|-----------|-------|
-| 9373/170 (IN) | 0.158 mm | 0.102 mm | 1.55× |
-| 9373/340 | 0.127 mm | 0.093 mm | 1.36× |
-| 8804/250 | 0.126 mm | 0.064 mm | 1.96× |
-| 12400/250 (OUT) | 0.071 mm | 0.087 mm | 0.82× (reversed — OUT probe is cleaner in cond3) |
+*The original doc claimed the probe was "stuck at a quantization level"
+because of the +6 mm crest headroom. Speculative — no raw-signal
+inspection, no hardware-quantization measurement.*
 
-The noise elevation is moderate. Cond3 folders are not fundamentally unreliable for wave analysis —
-they have elevated but finite uncertainty.
+**Cond3 (h100, wrong highrange)** noise floor is 1.5–2× higher than cond4
+at most probes. This is consistent with operating below the 130 mm
+acoustic-window minimum: the hardware may return plausible-looking values
+but its internal averaging and nonlinearity are not calibrated for the
+out-of-spec geometry. **Cond3 is also the condition from which the known
+P2-malfunction runs originate** (user confirmation 2026-04-17) — the same
+range-mode mistake that misaligned the acoustic window also caused
+detectable probe malfunctions in the wave runs.
 
-**Important within-cond3 variation**: The 20260323 folder (first day of h100 probe lowering) has
-much higher IN-probe noise (0.271 mm) than later folders (0.135, 0.045 mm). The act of
-repositioning the probe likely disturbed the water, and the first-day stillwater runs capture
-residual motion. Later cond3 folders are cleaner.
+Within-cond3 variation: the 20260323 folder (first day with probes at
+h100) shows higher IN-probe noise (0.271 mm) than later cond3 folders.
+Cause unconfirmed — likely reflects either (a) continued probe
+malfunction effects or (b) settling of the probe mount. *The original
+doc attributed this to "water disturbance from repositioning" without
+inspecting the signal; dropped as unsupported.*
 
-**Condition 4 (h100/lowrange) is the cleanest** for most probes:
+**Cond4 (h100/lowrange)** is the cleanest:
 - IN probe (9373/170): 0.102 mm mean
 - OUT probe (12400/250): 0.087 mm
-- The 20260327 folder (under9Mooring30, no rubber-band splash) has remarkably low noise:
-  9373/170 = 0.065 mm, 8804/250 = 0.031 mm, 9373/340 = 0.052 mm, 12400/250 = 0.087 mm.
-  This is likely the best-settled water of the entire experiment.
+- The 20260327 folder (under9Mooring30) shows the lowest noise of the
+  whole experiment: 9373/170 = 0.065 mm, 8804/250 = 0.031 mm,
+  9373/340 = 0.052 mm, 12400/250 = 0.087 mm. Likely the best-settled
+  water of the experiment.
 
 ---
 
 ## Finding 2: Wind background amplitude by condition
 
-Noise floor = (P97.5 − P2.5) / 2 of `eta` signal in nowave+fullwind runs.
-**Probe mapping for all runs**: P1=9373/170, P2=12400/250, P3=9373/340, P4=8804/250
-(march2026_better_rearranging config, applies to all conditions 1–4).
+Amplitude in nowave+fullwind runs. **Probe mapping**: P1=9373/170,
+P2=12400/250, P3=9373/340, P4=8804/250 (`march2026_better_rearranging`
+config, all conditions 1–4).
 
 | Condition | 9373/170 (IN) | 12400/250 (OUT) | 9373/340 (par) | 8804/250 (up) | n_runs |
 |-----------|:-------------:|:---------------:|:--------------:|:-------------:|:------:|
-| cond1 h272/high | **10.575 ± 0.425** | 0.907 ± 0.158 | 9.951 ± 0.620 | 8.700 ± 0.319 | 5 |
+| cond1 h272/high | 10.575 ± 0.425 | 0.907 ± 0.158 | 9.951 ± 0.620 | 8.700 ± 0.319 | 5 |
 | cond3 h100/high (wrong) | 9.851 ± 0.226 | 0.857 ± 0.060 | 10.200 ± 0.700 | 8.515 ± 0.120 | 2 |
 | cond4 h100/low loose230 | 8.983 ± 0.447 | 1.016 ± 0.149 | 9.034 ± 0.217 | 7.745 ± 0.182 | 4 |
 | cond4 h100/low loose300 | 9.568 ± 0.045 | 0.817 ± 0.004 | 8.707 ± 0.853 | 8.442 ± 0.067 | 2 |
 
-### Observations
+### Corrected interpretation
 
-**Wind amplitude at exposed probes is very consistent across conditions: ~9–11 mm** (IN probe,
-9373/170). The probe height and range mode do not significantly change the measured wind-wave
-amplitude. This is the primary result: the measured wind background is a property of the tank's
-wind-wave field, not of the probe geometry.
+**The physical wind-wave field is approximately constant across
+sessions**: the wind fan is driven by a stepless 0-to-max wheel and held
+near the same mark session-to-session (measured ~5.9–6.0 m/s across the
+dates). Tank water level varies by ±0.5 mm. Neither drives inter-
+condition differences in reported wind amplitude.
 
-The small systematic decrease from cond1 to cond4 (~1.4 mm at IN probe, 10.6 → 9.2 mm) could
-reflect:
-- Slightly lower wind speed / fetch variation between session dates
-- The probe at h100 is closer to the water surface → slightly different sampling of the wave
-  field (the sensor face at 100 mm is only 28 mm above the wave crest at typical 72 mm amplitude)
-- Not a hardware artifact — the signal looks physically consistent in both conditions
+**Amplitude differences across conditions at the IN probe reflect
+probe-measurement properties, not wind-field differences.** Going from
+h272/high (~10.6 mm) to h100/low (~9.2 mm) is a 1.4 mm shift over the
+same physical wind. Candidate mechanisms:
+- Different noise characteristics in high vs low range mode
+- Probe geometry at h100 places the probe face closer to wave crests
+  (~30 mm clearance at 10 mm wave + surface displacement), potentially
+  altering acoustic reflection characteristics
+- Small-n self-selection (2–5 runs per condition)
 
-**OUT probe (12400/250) is remarkably consistent and low: 0.82–1.02 mm** across all conditions.
-The panel shelter is effective regardless of probe height or mooring type. This is the key
-result for the damping analysis: the wind background at the OUT probe is small (~1 mm) and
-stable, well below the typical wave amplitudes being measured.
+*The original doc concluded "wind amplitude is consistent across
+conditions, a property of the wind-wave field, not the probe". This is
+backwards: the wind-wave field IS consistent (fan and water-level
+measurements confirm); it's the probe that reports it differently.*
 
-**Mooring type has negligible effect on wind amplitude** (cond1 only, h272):
-- above_50: IN = 10.164 mm, OUT = 0.883 mm
-- below_90_loose230: IN = 10.848 mm, OUT = 0.923 mm
-- Difference: ~0.7 mm (7%), within run-to-run variability (std ~0.2–0.3 mm)
+**OUT probe variation (0.82–1.02 mm) has a physical cause missed by the
+agent: mooring length → post-panel fetch.** When mooring lines are
+longer, the front panels extend further back (downstream), shortening
+the free-water fetch between the back of the panel row and the OUT probe
+at 12400 mm. Less fetch → smaller wind-generated ripples at OUT.
+Evidence:
 
-Wind waves are generated by surface wind–water interaction, not by mooring–panel coupling.
-The mooring type changes the panel dynamics (which affects reflected/transmitted waves) but
-does not meaningfully change the background wind-wave field at the probe locations.
+| Mooring | loose230 | loose300 | difference |
+|---------|----------|----------|------------|
+| cond4 OUT wind amp | 1.016 mm | 0.817 mm | −0.199 mm (longer mooring → smaller ripple) |
 
----
-
-## Finding 3: Wind-to-stillwater SNR by condition
-
-| Condition | IN probe (9373/170) | OUT probe (12400/250) |
-|-----------|--------------------:|---------------------:|
-| cond1 h272/high | Wind/SW = 36.6× | Wind/SW = 3.45× |
-| cond3 h100/high (wrong) | Wind/SW = 62.4× | Wind/SW = 12.0× |
-| cond4 h100/low (correct) | Wind/SW = 90.3× | Wind/SW = 10.9× |
-
-The Wind/SW ratio is driven primarily by the **lower stillwater noise floor** in h100 conditions,
-not by higher wind amplitude. The probe at h100 simply has better precision in still water.
-
-**OUT probe SNR is low (3–12×)**: the wind amplitude (~0.9 mm) is only 3–12× above the
-stillwater noise floor (~0.07–0.26 mm). This means:
-- Under wind, the OUT probe signal is dominated by wind waves (~1 mm)
-- A paddle wave would need amplitude >> 1 mm at the OUT probe to be clearly distinguishable
-  from wind background on amplitude alone
-- For the standard wave amplitude (0.1 V ≈ ~5 mm at OUT), SNR is fine. For very attenuated
-  transmission at high frequency where OUT amplitude drops to ~1 mm, wind contamination
-  becomes significant.
-
-**IN probe SNR is high (37–90×)**: wind amplitude (~10 mm) >> stillwater noise floor (~0.1–0.3 mm).
-Wave arrival detection at the IN probe is straightforward even under full wind.
+The direction matches the physical model. The agent had the data but
+did not see the pattern. **This mooring-length → post-panel fetch
+mechanism is not previously documented** — added as a TODO to promote
+into its own memory note.
 
 ---
 
-## Finding 4: Condition 3 wave data is physically usable
+## Finding 3: Signal-to-noise — framing clarified
 
-For amp0300 (largest waves) in cond3 (h100, highrange = wrong mode):
-- IN probe minimum reading: ~60–63 mm (water surface 37–40 mm ABOVE still-water level)
-- No readings below 60 mm (no hard clipping at any probe)
-- Amplitudes (27–30 mm) are consistent with equivalent cond4 runs (27–30 mm)
+The original doc conflated three different quantities under the single
+label "SNR":
 
-**The hardware continues to return valid measurements below the 130 mm stated minimum.**
-The probe operates correctly at 60–100 mm despite being outside its nominal high-range window.
-The stated "130 mm minimum" appears to be a nominal accuracy threshold, not a hard cutoff.
+| Quantity | Formula | Meaning | When it matters |
+|---|---|---|---|
+| **Dynamic range** | A_wind / σ_stillwater | Headroom between probe noise floor and full-wind signal | Probe hardware sanity check |
+| **SNR (no-wind run)** | A_paddle / σ_stillwater | Paddle wave vs still-water noise | No-wind wave runs |
+| **SNR (wind run)** | A_paddle / A_wind | Paddle wave vs wind-wave contamination at the same probe | **THE relevant metric for full-wind OUT/IN** |
 
-However, the elevated stillwater noise (1.5–2× vs cond4) means cond3 data carries slightly
-higher amplitude uncertainty. Detection threshold for wave arrival should use the per-folder
-noise floor, not the overall mean.
+**What the original doc called "Wind/SW SNR"** is the **dynamic-range**
+quantity. It answers "how wide is the probe's headroom between stillwater
+quiet and full-wind noisy", not "can I detect a paddle wave?" Its values
+of 3–12× at OUT and 37–90× at IN describe probe headroom, and the
+agent's conclusion "better SNR at h100" just means "quieter stillwater
+at h100".
+
+**The thesis-relevant SNR — the one that determines whether an OUT/IN
+ratio is trustworthy under wind** — is `A_paddle / A_wind` at the OUT
+probe:
+- A_wind at OUT ≈ 0.85–1.02 mm (Finding 2)
+- A_paddle at OUT varies by condition. At 0.2 V nowind with high
+  transmission: ~5–10 mm → SNR ≈ 5–10× (workable)
+- At conditions with low transmission (small OUT/IN), A_paddle at OUT
+  may drop to 1–2 mm → SNR ≈ 1–2× (**wind-contaminated; be cautious**)
+
+For the IN probe under wind, wind waves ride on top of the paddle wave,
+so A_paddle at IN is hard to read from time-domain alone — this
+motivates the use of FFT amplitude at the paddle frequency (see
+`CLAUDE.md §16` and CH04 §4-5 figure).
+
+*The original doc's SNR claims are removed; replaced with the table
+above. Downstream conclusions that relied on the conflated definition
+are not automatically correct — cond4 is preferred for other reasons
+(correct range mode, lower stillwater noise floor) which survive.*
+
+---
+
+## Finding 4: How defective runs are actually handled
+
+*Corrected statement replacing the original "cond3 data is physically
+usable" claim.*
+
+**Defective runs are handled by two overlapping mechanisms**:
+
+1. **User-annotated bad-data markers** — where the researcher noticed
+   a problem at the time (P2 probe malfunction, aborted run, etc.) and
+   either renamed or excluded the file.
+2. **Script-detected quality flags** (`processor.py::_write_quality_flags`):
+   - `probe_malfunction_secondary` / `probe_malfunction_critical` —
+     stuck segments or DC steps in the analysis window
+   - `dropout_critical` — >2% unrecoverable NaN in IN/OUT window
+   - `in_probe_low_snr` — no-wind wave_stability < 0.35 at IN probe
+
+The default filter used by thesis figures (`apply_experimental_filters`
+with `quality_flag` default) excludes `*_critical` and
+`in_probe_low_snr`, keeps `probe_malfunction_secondary` (auxiliary probe
+broken but IN/OUT usable).
+
+*Cond3 data is kept wherever the run passes the quality checks;
+defective cond3 runs are caught by the script. What the original doc
+lacked was a clear audit trail showing per-run why each flag was (or
+was not) applied.*
+
+**Open item (new 2026-04-17)**: produce a per-run **quality-flag
+audit** document that traces, for every run, which flagging layers
+were evaluated and why the final `quality_flag` value came out the way
+it did. This would enable confident review of individual runs and
+early detection of any layer that's silently misclassifying. See
+"Open items" below.
+
+**Verified**: `meta_results` (the two thesis-result folders
+20260326-`lowrange` and 20260327-`lowrange`) contains only cond4 runs.
+Thesis headline results are not exposed to cond3 contamination.
 
 ---
 
 ## Finding 5: Rubber-band splash does not affect the analysis-critical folders
 
-Per the researcher's note:
-- Rubber-band splash only occurred in some `under9Mooring` folders (not `under9Mooring30`)
-- The splash, if present, would appear as non-stationary high-frequency bursts in the raw signal
-- The 20260327 folder (under9Mooring30, cond4 loose300) is the cleanest reference for
-  per-folder wind background at h100/lowrange
+(Unchanged from original — this finding held up.)
 
-A rolling-RMS stationarity check across the fullwind nowave runs would identify which specific
-runs (if any) contain the rubber-band artifact. This has not yet been done — see next steps.
+- Rubber-band splash only occurred in some `under9Mooring` folders
+  (not `under9Mooring30`).
+- The splash, if present, would appear as non-stationary
+  high-frequency bursts in the raw signal.
+- The 20260327 folder (under9Mooring30, cond4 loose300) is the
+  cleanest reference for per-folder wind background at h100/lowrange.
+
+A rolling-RMS stationarity check across the fullwind nowave runs would
+identify which specific runs (if any) contain the rubber-band
+artifact — **not yet done**, see next steps.
 
 ---
 
-## Recommended per-folder noise floor and wind background (updated values)
+## Recommended per-folder noise floor and wind background
 
-For the main damping analysis (2026-03-07 onward, march2026_better_rearranging config):
+For the main damping analysis (2026-03-07 onward,
+`march2026_better_rearranging` config):
 
 **Stillwater noise floor** (2× detection threshold in parentheses):
 
@@ -202,39 +279,71 @@ For the main damping analysis (2026-03-07 onward, march2026_better_rearranging c
 | 9373/340 | ~0.15 mm (0.30 mm) | ~0.13 mm (0.26 mm) | ~0.09 mm (0.18 mm) |
 | 8804/250 | ~0.24 mm (0.48 mm) | ~0.13 mm (0.26 mm) | ~0.06 mm (0.12 mm) |
 
-**Wind background amplitude** (for first-motion threshold and SNR estimation):
+**Wind background amplitude**:
 
 | Probe | All conditions (range) | Notes |
 |-------|----------------------|-------|
-| 9373/170 (IN) | 8.9–10.6 mm | Consistent; higher at h272 by ~1 mm |
-| 12400/250 (OUT) | 0.82–1.02 mm | Very consistent across all conditions |
+| 9373/170 (IN) | 8.9–10.6 mm | Variation is probe-measurement effect (range mode / height), not wind variation |
+| 12400/250 (OUT) | 0.82–1.02 mm | loose300 mooring (longer) → smaller ripple (fetch mechanism) |
 | 9373/340 | 8.7–10.2 mm | Similar to IN probe |
-| 8804/250 | 7.7–8.7 mm | ~1 mm below IN (less fetch from roof) |
+| 8804/250 | 7.7–8.7 mm | ~1 mm below IN |
 
 ---
 
 ## Open items / next steps
 
-1. **Rolling RMS stationarity check**: for each nowave+fullwind run in cond3 and cond4 folders,
-   compute rolling RMS (1 s windows) across the full run and check if it is stationary. Identify
-   which runs (if any) show the rubber-band burst pattern (sudden high-amplitude, rapid-decay
-   events in the 9373-probe group).
+1. **Per-run quality-flag audit note (HIGH — user-requested 2026-04-17)**:
+   debug document enumerating each flagging layer in
+   `processor.py::_write_quality_flags` and walking through how it was
+   applied per run. Format: one section per layer, with a table of runs
+   it flagged and the triggering metric value.
 
-2. **PSD comparison across conditions**: using `_wind_psd_dict`, plot mean PSD for cond1 vs cond4
-   at the same probe. Key question: does the probe height/range mode affect the spectral shape
-   of the wind-wave field, or only the amplitude? If spectral shape is unchanged, the conditions
-   are directly comparable for wave analysis.
+2. **Mooring-length → post-panel fetch memory note**: documented here as
+   an aside; promote to its own memory file under
+   `memory/physics_wavetank_mooring_fetch.md`.
 
-3. **Per-folder pipeline column**: `wind_rms_{pos}` — one scalar per folder (from nowave+fullwind
-   runs in that folder). Analogous to per-run stillwater anchor but aggregated to folder level.
-   Would live in `processor2nd.py:compute_inter_run_timing()` or a new function. Enables
-   per-folder first-motion threshold in `RampDetectionBrowser`.
+3. **Rolling RMS stationarity** on nowave+fullwind runs (rubber-band
+   splash detection) — not yet done.
 
-4. **Cond3 wave analysis validity**: with the noise floor and wave data checked, the 129 wave runs
-   in cond3 folders appear usable. Recommend keeping them in the analysis dataset but flagging
-   them with their elevated noise floor so the detection threshold is applied correctly per folder.
+4. **PSD comparison across conditions**: plot mean PSD for cond1 vs cond4
+   at the same probe. Does probe height/range mode affect the spectral
+   shape of the wind-wave field, or only the amplitude reported? If shape
+   is unchanged, conditions are directly comparable.
 
-5. **Two traceback errors in recompute**:
-   - `20251112-tett6roof`: `ensure_stillwater_columns` → `pd.to_datetime` format error on `file_date`
-   - `20260324-under9Mooring-height100`: `find_wave_range` → `mstop_sec` is NaN for some run
-   Both are pre-existing bugs, not caused by the height/range fix.
+5. **Per-folder pipeline column `wind_rms_{pos}`**: one scalar per folder
+   from nowave+fullwind runs. Would enable per-folder first-motion
+   threshold in `RampDetectionBrowser`.
+
+6. **Two pre-existing traceback errors** from the 2026-03-30 recompute
+   (verify status from the 2026-04-17 `run_20260417_145335_force.log`
+   before closing):
+   - `20251112-tett6roof`: `ensure_stillwater_columns` → `pd.to_datetime`
+     format error on `file_date`
+   - `20260324-under9Mooring-height100`: `find_wave_range` →
+     `mstop_sec` is NaN for some run
+
+---
+
+## What changed in the 2026-04-17 review
+
+- Removed the **probe-swap speculation**: no physical probes were ever
+  swapped; the agent invented this to explain the h272 noise floor.
+- Replaced the **"h272 is unexpectedly noisy"** narrative with the
+  correct acoustic-path-length physics (longer path → more noise; the
+  ordering h272 > h136 > h100 is the EXPECTED ordering).
+- Removed the **h136 "stuck at quantization"** claim (speculative,
+  n=1).
+- Removed the **"water disturbance on 20260323"** claim (agent
+  speculation without signal inspection).
+- Replaced the **"wind amplitude consistent across conditions"**
+  conclusion: wind field IS consistent (fan + water level confirm); the
+  probe reports it differently depending on range mode and height.
+- **Added the mooring-length → post-panel fetch mechanism** as the
+  physical explanation for the OUT-probe wind variation between
+  loose230 and loose300.
+- **Rewrote Finding 3 (SNR)**: three distinct quantities disambiguated;
+  "Wind/SW SNR" correctly relabelled as "dynamic range"; thesis-
+  relevant SNR = A_paddle / A_wind at OUT.
+- **Rewrote Finding 4**: replaced "cond3 physically usable" with a
+  description of the actual quality-flagging mechanism and a TODO for
+  the per-run audit.
