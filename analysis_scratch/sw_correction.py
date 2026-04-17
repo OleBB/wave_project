@@ -64,6 +64,11 @@ R_NOMINAL = 0.20   # assumed panel reflection coefficient
 BASE    = Path(__file__).parent.parent
 OUT_PNG = Path(__file__).parent / "sw_correction.png"
 OUT_MD  = Path(__file__).parent / "sw_correction_findings.md"
+# Thesis outputs (auto-dropped for main_save_figures.py to reference)
+THESIS_NAME = "ch04_sw_correction_test"
+OUT_PDF     = BASE / "output" / "FIGURES" / f"{THESIS_NAME}.pdf"
+OUT_STUB    = BASE / "output" / "TEXFIGU" / f"{THESIS_NAME}.tex"
+CHAPTER     = "04"
 
 # ── Dispersion helpers ─────────────────────────────────────────────────────────
 def solve_k(f, d=DEPTH):
@@ -472,6 +477,48 @@ ax_we.set_xticklabels([f"{f:.1f}" for f in shared_freqs], rotation=45, fontsize=
 
 fig.savefig(OUT_PNG, dpi=150, bbox_inches="tight")
 print(f"   Saved → {OUT_PNG}")
+
+# ── Thesis outputs: PDF + .tex stub ─────────────────────────────────────────
+OUT_PDF.parent.mkdir(parents=True, exist_ok=True)
+OUT_STUB.parent.mkdir(parents=True, exist_ok=True)
+fig.savefig(OUT_PDF, bbox_inches="tight")
+print(f"   Saved → {OUT_PDF.relative_to(BASE)}")
+
+if not OUT_STUB.exists():
+    _caption = (
+        f"Standing-wave correction test at R={R_NOMINAL:.2f} on measured OUT/IN ratios. "
+        "If the panel reflected a significant fraction of the incident wave, "
+        "the OUT/IN(FFT) vs frequency curve would carry a node/antinode "
+        "fingerprint with characteristic spacing $\\Delta f = c_g/(4 x_\\mathrm{{IN}})$. "
+        "Applying a correction at R=0.20 to the raw OUT/IN curve creates a "
+        "violent zigzag (top-right panel) — the raw data shows NO such pattern. "
+        "This puts an upper bound of $R\\lesssim0.05$ on the panel's reflection "
+        "coefficient, consistent with the direct Mansard--Funke measurement "
+        "(see CH04 \\S4c). Conclusion: the raw OUT/IN(FFT) values require no "
+        "standing-wave correction; the existing methodology is safe."
+    )
+    _stub = (
+        "%! TEX root = ../main.tex\n"
+        "% =============================================================\n"
+        "% IMMUTABLE — generated automatically, do not edit this block\n"
+        f"%   script          : analysis_scratch/sw_correction.py\n"
+        f"%   plot_type       : sw_correction_test\n"
+        f"%   chapter         : {CHAPTER}\n"
+        f"%   R_nominal       : {R_NOMINAL}\n"
+        "% =============================================================\n"
+        "\\begin{figure}[htbp]\n"
+        "  \\centering\n"
+        f"  \\includegraphics[width=0.95\\linewidth]{{FIGURES/{THESIS_NAME}.pdf}}\n"
+        "  \\caption[Standing-wave correction test]{%\n"
+        f"    {_caption}\n"
+        "  }\n"
+        f"  \\label{{fig:{THESIS_NAME}}}\n"
+        "\\end{figure}\n"
+    )
+    OUT_STUB.write_text(_stub)
+    print(f"   Wrote stub → {OUT_STUB.relative_to(BASE)}")
+else:
+    print(f"   Stub exists (not overwritten): {OUT_STUB.relative_to(BASE)}")
 
 # ── 8. Write findings markdown ─────────────────────────────────────────────────
 print("8. Writing findings markdown...")

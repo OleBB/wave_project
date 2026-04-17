@@ -72,6 +72,12 @@ AMP_WARN     = 0.3    # non-linear risk at high freq, show with warning
 BASE    = Path(__file__).parent.parent
 OUT_PNG = Path(__file__).parent / "mansard_funke.png"
 OUT_MD  = Path(__file__).parent / "mansard_funke_findings.md"
+# Thesis outputs — dropped into the standard folders so main_save_figures.py
+# does not have to regenerate anything.  Rename in one place if needed.
+THESIS_NAME = "ch04_mansard_funke_reflection"
+OUT_PDF     = BASE / "output" / "FIGURES" / f"{THESIS_NAME}.pdf"
+OUT_STUB    = BASE / "output" / "TEXFIGU" / f"{THESIS_NAME}.tex"
+CHAPTER     = "04"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def solve_k(f, d=DEPTH):
@@ -544,6 +550,65 @@ ax_sw.tick_params(labelsize=7)
 
 fig.savefig(OUT_PNG, dpi=150, bbox_inches="tight")
 print(f"   Saved → {OUT_PNG}")
+
+# ── Thesis outputs: PDF + .tex stub ─────────────────────────────────────────
+# Drop a PDF into output/FIGURES/ so main_save_figures.py can reference it
+# without having to regenerate the figure itself. Write the LaTeX stub once.
+OUT_PDF.parent.mkdir(parents=True, exist_ok=True)
+OUT_STUB.parent.mkdir(parents=True, exist_ok=True)
+fig.savefig(OUT_PDF, bbox_inches="tight")
+print(f"   Saved → {OUT_PDF.relative_to(BASE)}")
+
+if not OUT_STUB.exists():
+    # Headline numbers for the caption (from the primary group — 0.2 V nowind)
+    r_medians = primary[primary["wind"] == "no"].groupby("mooring")["R"].median()
+    n_primary = int((primary["wind"] == "no").sum())
+    # Underscores in mooring labels must be escaped for LaTeX caption.
+    _med_by_moor = ", ".join(
+        f"{m.replace('below_90_', 'b90_').replace('_', r'\_')} {v:.3f}"
+        for m, v in r_medians.items()
+    )
+    _caption = (
+        "Mansard--Funke two-probe reflection analysis using 8804/250 (upstream) "
+        "and 9373/170 (IN probe), $\\Delta x = {delta_mm}$\\,mm. Panels: (A) MF "
+        "conditioning $|\\sin(k\\Delta x)|$ vs frequency (dashed: "
+        "ill-conditioned threshold {ict}); (B) R vs freq, nowind 0.2\\,V, by "
+        "mooring; (C) R vs freq, fullwind 0.2\\,V, by mooring; (D) R histogram "
+        "all moorings; (E--G) amplitude-tier diagnostics; (H) R distribution "
+        "box-plot by mooring and wind; (I) run-level R scatter. "
+        "Result: at 0.2\\,V nowind, median R per mooring = {meds} "
+        "(n={n}). R$\\ll$0.20 supports the decision to apply no standing-wave "
+        "correction to OUT/IN (FFT)."
+    ).format(
+        delta_mm=f"{DELTA*1000:.0f}",
+        ict=f"{ILL_COND_THRESHOLD:.2f}",
+        meds=_med_by_moor if _med_by_moor else "—",
+        n=n_primary,
+    )
+    _stub = (
+        "%! TEX root = ../main.tex\n"
+        "% =============================================================\n"
+        "% IMMUTABLE — generated automatically, do not edit this block\n"
+        f"%   script          : analysis_scratch/mansard_funke.py\n"
+        f"%   plot_type       : mansard_funke_reflection\n"
+        f"%   chapter         : {CHAPTER}\n"
+        f"%   probes          : 8804/250, 9373/170\n"
+        f"%   delta_mm        : {DELTA*1000:.0f}\n"
+        f"%   n_primary_nowind: {n_primary}\n"
+        "% =============================================================\n"
+        "\\begin{figure}[htbp]\n"
+        "  \\centering\n"
+        f"  \\includegraphics[width=0.95\\linewidth]{{FIGURES/{THESIS_NAME}.pdf}}\n"
+        "  \\caption[Mansard--Funke reflection analysis]{%\n"
+        f"    {_caption}\n"
+        "  }\n"
+        f"  \\label{{fig:{THESIS_NAME}}}\n"
+        "\\end{figure}\n"
+    )
+    OUT_STUB.write_text(_stub)
+    print(f"   Wrote stub → {OUT_STUB.relative_to(BASE)}")
+else:
+    print(f"   Stub exists (not overwritten): {OUT_STUB.relative_to(BASE)}")
 
 # ── 7. Write findings ─────────────────────────────────────────────────────────
 print("7. Writing findings markdown...")
