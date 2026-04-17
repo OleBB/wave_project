@@ -691,13 +691,23 @@ def filter_dataframe(
 
 
 
-def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+def damping_grouper(
+    combined_meta_df: pd.DataFrame,
+    collapse_panels: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Aggregates OUT/IN ratio (and optional probe amplitudes) by:
       - WaveAmplitudeInput [Volt]
       - Frequency (to be replaced with kL later?)
-      - PanelConditionGrouped (full|reverse -> all; no stays no)
+      - PanelCondition   (default — physical configurations kept separate)
       - WindCondition
+
+    Panel collapsing is OPT-IN via `collapse_panels=True`, which maps
+    full+reverse → "all" (and "no" stays "no"). Opt-in because the
+    physical damping of fullpanel vs reversepanel is an open question
+    (see memory/open_question_fullpanel_vs_reversepanel.md) — the two
+    panels have different immediate-damping characteristics that should
+    not be averaged together silently.
 
     Returns:
         tuple: (stats, wide) where stats is the aggregated DataFrame
@@ -783,22 +793,28 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
 
     rmdf = cmdf[columns].copy()
 
-    # ─── Panel grouping step ───
-    PANEL_CONDITION_GROUPED = "PanelConditionGrouped"  # Temporary column name
-    rmdf[PANEL_CONDITION_GROUPED] = rmdf[GC.PANEL_CONDITION].replace({
-        "full": "all",
-        "reverse": "all"
-    })
-
-    print("\nAfter PanelCondition grouping:")
-    print(rmdf[PANEL_CONDITION_GROUPED].value_counts().to_string())
+    # ─── Panel grouping (opt-in; see docstring) ────────────────────────────
+    # Default: keep PanelCondition as-is so fullpanel vs reversepanel are
+    # separate groups. If the caller asked for collapse, map full+reverse→"all"
+    # and LOUDLY announce it so the reader knows an explicit grouping was made.
+    _panel_key = GC.PANEL_CONDITION
+    if collapse_panels:
+        print("\n  [damping_grouper] collapse_panels=True — merging full + reverse "
+              "→ 'all'. This HIDES any physical damping difference between "
+              "fullpanel and reversepanel configurations.")
+        rmdf[GC.PANEL_CONDITION_GROUPED] = rmdf[GC.PANEL_CONDITION].replace({
+            "full": "all",
+            "reverse": "all",
+        })
+        _panel_key = GC.PANEL_CONDITION_GROUPED
+        print(rmdf[_panel_key].value_counts().to_string())
 
     # Define grouping keys — include physical in/out probe positions so runs from
     # different probe configurations are never averaged together.
     grouping_keys = [
         GC.WAVE_AMPLITUDE_INPUT,
         GC.WAVE_FREQUENCY_INPUT,
-        PANEL_CONDITION_GROUPED,
+        _panel_key,
         GC.WIND_CONDITION,
     ]
     # Mooring tension is an experimental variable — keep separate groups
@@ -847,14 +863,14 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
         print(low_n[[
             GC.WAVE_AMPLITUDE_INPUT,
             GC.WAVE_FREQUENCY_INPUT,
-            PANEL_CONDITION_GROUPED,
+            _panel_key,
             GC.WIND_CONDITION,
             "n_runs"
         ]])
 
     # ─── Pivot ───
     wide = stats.pivot_table(
-        index=[GC.WAVE_AMPLITUDE_INPUT, PANEL_CONDITION_GROUPED],
+        index=[GC.WAVE_AMPLITUDE_INPUT, _panel_key],
         columns=GC.WIND_CONDITION,
         values=["mean_out_in", "std_out_in"]
     )
@@ -927,14 +943,22 @@ def damping_grouper(combined_meta_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
 # from your_probe_constants import PC
 # CG.FFT_AMPLITUDE_COLS = [PC.AMPLITUDE_FFT.format(i=i) for i in 1..4]
 
-def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFrame:
+def damping_all_amplitude_grouper(
+    combined_meta_df: pd.DataFrame,
+    collapse_panels: bool = False,
+) -> pd.DataFrame:
     """
     Aggregates damping-related metrics (mainly OUT/IN ratio + probe amplitudes)
     grouped by:
       - WaveAmplitudeInput [Volt]
       - WaveFrequencyInput [Hz]  (can later switch to kL)
-      - PanelConditionGrouped ("full" & "reverse" → "all"; "no" stays "no")
+      - PanelCondition   (default — physical configurations kept separate)
       - WindCondition
+
+    Panel collapsing is OPT-IN via `collapse_panels=True`, which maps
+    full+reverse → "all" (and "no" stays "no"). Opt-in because the
+    physical damping of fullpanel vs reversepanel is an open question
+    (see memory/open_question_fullpanel_vs_reversepanel.md).
 
     Returns:
         pd.DataFrame: aggregated statistics (means, stds, run counts, etc.)
@@ -972,21 +996,24 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
 
     rmdf = cmdf[columns].copy()
 
-    # ─── Panel grouping (same logic as damping_grouper) ───
-    PANEL_CONDITION_GROUPED = "PanelConditionGrouped"
-    rmdf[PANEL_CONDITION_GROUPED] = rmdf[GC.PANEL_CONDITION].replace({
-        "full": "all",
-        "reverse": "all"
-    })
-
-    print(f"\nAfter {PANEL_CONDITION_GROUPED} mapping:")
-    print(rmdf[PANEL_CONDITION_GROUPED].value_counts().to_string())
+    # ─── Panel grouping (opt-in; see docstring) ────────────────────────────
+    _panel_key = GC.PANEL_CONDITION
+    if collapse_panels:
+        print("\n  [damping_all_amplitude_grouper] collapse_panels=True — "
+              "merging full + reverse → 'all'. This HIDES any physical damping "
+              "difference between fullpanel and reversepanel configurations.")
+        rmdf[GC.PANEL_CONDITION_GROUPED] = rmdf[GC.PANEL_CONDITION].replace({
+            "full": "all",
+            "reverse": "all",
+        })
+        _panel_key = GC.PANEL_CONDITION_GROUPED
+        print(rmdf[_panel_key].value_counts().to_string())
 
     # ─── Grouping keys ───
     grouping_keys = [
         GC.WAVE_AMPLITUDE_INPUT,
         GC.WAVE_FREQUENCY_INPUT,
-        PANEL_CONDITION_GROUPED,
+        _panel_key,
         GC.WIND_CONDITION,
     ]
     if "Mooring" in rmdf.columns and rmdf["Mooring"].notna().any():
@@ -1029,7 +1056,7 @@ def damping_all_amplitude_grouper(combined_meta_df: pd.DataFrame) -> pd.DataFram
         print(low_n[[
             GC.WAVE_AMPLITUDE_INPUT,
             GC.WAVE_FREQUENCY_INPUT,
-            PANEL_CONDITION_GROUPED,
+            _panel_key,
             GC.WIND_CONDITION,
             "n_runs"
         ]].to_string(index=True))

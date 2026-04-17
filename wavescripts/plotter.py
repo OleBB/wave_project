@@ -183,7 +183,7 @@ def _draw_damping_freq_ax(
     Draw damping ratio OUT/IN vs frequency onto a single axes.
     Shared primitive used by both show_plot grid and save_plot loop.
     """
-    mask = (stats_df[GC.PANEL_CONDITION_GROUPED] == panel) & (
+    mask = (stats_df[GC.PANEL_CONDITION] == panel) & (
         stats_df[GC.WIND_CONDITION] == wind
     )
     subset = stats_df[mask]
@@ -240,7 +240,7 @@ def _make_damping_freq_fig(
     Colour = wind condition. No internal faceting — LaTeX arranges subfigures.
     """
     subset = stats_df[
-        (stats_df[GC.PANEL_CONDITION_GROUPED] == panel) &
+        (stats_df[GC.PANEL_CONDITION] == panel) &
         (stats_df[GC.WAVE_AMPLITUDE_INPUT] == amp)
     ]
     fig, ax = plt.subplots(figsize=figsize)
@@ -283,7 +283,7 @@ def plot_damping_freq(
     save_plot = plotting.get("save_plot", False)
     figsize   = plotting.get("figsize", (5, 4))
 
-    panel_conditions = sorted(stats_df[GC.PANEL_CONDITION_GROUPED].unique())
+    panel_conditions = sorted(stats_df[GC.PANEL_CONDITION].unique())
     amplitudes       = sorted(stats_df[GC.WAVE_AMPLITUDE_INPUT].unique())
     wind_conditions  = sorted(stats_df[GC.WIND_CONDITION].unique())
     n_runs           = int(stats_df["n_runs"].sum()) if "n_runs" in stats_df.columns else len(stats_df)
@@ -352,7 +352,7 @@ def _make_damping_scatter_fig(
     Colour = wind condition. Marker size = amplitude. No internal faceting.
     """
     import seaborn as sns
-    subset = stats_df[stats_df[GC.PANEL_CONDITION_GROUPED] == panel].copy()
+    subset = stats_df[stats_df[GC.PANEL_CONDITION] == panel].copy()
     subset["kL"] = freq_to_kL(subset[GC.WAVE_FREQUENCY_INPUT].values)
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -406,7 +406,7 @@ def plot_damping_scatter(
     save_plot = plotting.get("save_plot", False)
     figsize   = plotting.get("figsize", (5, 4))
 
-    panel_conditions = sorted(stats_df[GC.PANEL_CONDITION_GROUPED].unique())
+    panel_conditions = sorted(stats_df[GC.PANEL_CONDITION].unique())
     amplitudes       = sorted(stats_df[GC.WAVE_AMPLITUDE_INPUT].unique())
     wind_conditions  = sorted(stats_df[GC.WIND_CONDITION].unique())
     n_runs           = int(stats_df["n_runs"].sum()) if "n_runs" in stats_df.columns else len(stats_df)
@@ -616,7 +616,7 @@ def _make_damping_wind_delta_fig(
     Colour = wind condition (top only). Delta bar chart with sign-coded fill.
     """
     subset = stats_df[
-        (stats_df[GC.PANEL_CONDITION_GROUPED] == panel)
+        (stats_df[GC.PANEL_CONDITION] == panel)
         & (stats_df[GC.WAVE_AMPLITUDE_INPUT] == amp)
     ]
 
@@ -702,7 +702,7 @@ def plot_damping_wind_delta(
     ref_wind    = plotting.get("ref_wind",    "no")
     target_wind = plotting.get("target_wind", "full")
 
-    panel_conditions = sorted(stats_df[GC.PANEL_CONDITION_GROUPED].unique())
+    panel_conditions = sorted(stats_df[GC.PANEL_CONDITION].unique())
     amplitudes       = sorted(stats_df[GC.WAVE_AMPLITUDE_INPUT].unique())
     wind_conditions  = sorted(stats_df[GC.WIND_CONDITION].unique())
     n_runs           = int(stats_df["n_runs"].sum()) if "n_runs" in stats_df.columns else len(stats_df)

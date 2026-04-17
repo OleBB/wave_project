@@ -146,7 +146,12 @@ m_filtrert = apply_experimental_filters(combined_meta, amplitudeplotvariables)
 plot_all_probes(m_filtrert, amplitudeplotvariables)
 
 # %% ── damping grouper + interactive HTML ─────────────────────────────────────
-damping_groupedruns_df, damping_pivot_wide = damping_grouper(combined_meta)
+# collapse_panels=True → fullpanel + reversepanel merged into "all" for
+# exploratory plots below. The thesis-path grouper in main_save_figures.py
+# keeps them separate; this collapse is opt-in here for REPL convenience.
+damping_groupedruns_df, damping_pivot_wide = damping_grouper(
+    combined_meta, collapse_panels=True
+)
 save_interactive_plot(damping_groupedruns_df)
 # %%
 import importlib
@@ -202,7 +207,9 @@ dampingplotvariables_all = {
 
 #TODO: fix this to handle actual input... doesnt seem to react to filters.
 #TODO: seems like the other plots does it as well..
-damping_groupedallruns_df = damping_all_amplitude_grouper(combined_meta)
+damping_groupedallruns_df = damping_all_amplitude_grouper(
+    combined_meta, collapse_panels=True
+)
 plot_damping_freq(damping_groupedallruns_df, dampingplotvariables_all)
 
 # %% ── damping scatter ────────────────────────────────────────────────────────
