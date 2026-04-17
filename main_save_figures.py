@@ -1415,6 +1415,9 @@ print("main_save_figures.py — all figure sections complete.")
 # BIG TODO: change all plots with freq on x-axis to kL.
 
 # %%
+# Quick sanity-check: aggregated OUT/IN at 1.2-1.7 Hz, fullpanel, no/full wind.
+# Note: damping_all_amplitude_grouper renames OUT/IN (FFT) → mean_out_in
+# (with std_out_in) in its aggregated output.
 from wavescripts.filters import damping_all_amplitude_grouper
 _g = damping_all_amplitude_grouper(meta_results[
     meta_results["WaveFrequencyInput [Hz]"].between(1.2, 1.7) &
@@ -1422,4 +1425,4 @@ _g = damping_all_amplitude_grouper(meta_results[
     meta_results["WindCondition"].isin(["no", "full"])
 ])
 print(_g[["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]",
-          "WindCondition", "OUT/IN (FFT)", "n_runs"]].to_string())
+          "WindCondition", "mean_out_in", "std_out_in", "n_runs"]].to_string())
