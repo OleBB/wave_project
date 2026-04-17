@@ -463,6 +463,142 @@ def plot_damping_scatter(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# KA AXIS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _make_damping_ka_fig(
+    meta_df: pd.DataFrame, panel: str, figsize: tuple = (5, 4)
+) -> plt.Figure:
+    """
+    Scatter: OUT/IN (FFT) vs IN ka (FFT) — wave steepness axis.
+    Each point is one run. Colour = WindCondition. Marker = WaveAmplitudeInput.
+    """
+    import matplotlib.lines as mlines
+
+    KA_COL = "IN ka (FFT)"
+    amp_markers = ["o", "s", "^", "D"]
+
+    subset = meta_df[
+        meta_df[GC.PANEL_CONDITION] == panel
+    ][[KA_COL, GC.OUT_IN_FFT, GC.WIND_CONDITION, GC.WAVE_AMPLITUDE_INPUT]].dropna()
+
+    fig, ax = plt.subplots(figsize=figsize)
+    amplitudes = sorted(subset[GC.WAVE_AMPLITUDE_INPUT].unique())
+    wind_conditions = sorted(subset[GC.WIND_CONDITION].unique())
+
+    for i, amp in enumerate(amplitudes):
+        amp_sub = subset[subset[GC.WAVE_AMPLITUDE_INPUT] == amp].sort_values(KA_COL)
+        for wind in wind_conditions:
+            wind_sub = amp_sub[amp_sub[GC.WIND_CONDITION] == wind]
+            if wind_sub.empty:
+                continue
+            ax.scatter(
+                wind_sub[KA_COL], wind_sub[GC.OUT_IN_FFT],
+                marker=amp_markers[i % len(amp_markers)],
+                color=WIND_COLOR_MAP.get(wind, "gray"),
+                s=40, alpha=0.75,
+            )
+
+    ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
+    ax.set_xlabel("$ka$ (IN probe, measured)", fontsize=9)
+    ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
+    ax.set_title(
+        f"Wave transmission vs. wave steepness — {panel} panel",
+        fontsize=9,
+    )
+    ax.grid(True, alpha=0.3)
+
+    # Two-section legend: wind condition (colour) + amplitude (marker shape)
+    wind_handles = [
+        mlines.Line2D([], [], color=WIND_COLOR_MAP.get(w, "gray"),
+                      marker="o", linestyle="None", markersize=6, label=f"{w} wind")
+        for w in wind_conditions
+    ]
+    amp_handles = [
+        mlines.Line2D([], [], color="gray",
+                      marker=amp_markers[i % len(amp_markers)],
+                      linestyle="None", markersize=6, label=f"{amp:.2f} V")
+        for i, amp in enumerate(amplitudes)
+    ]
+    ax.legend(handles=wind_handles + amp_handles, fontsize=7,
+              title="condition / amplitude", title_fontsize=7)
+
+    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
+    return fig
+
+
+def plot_damping_ka(
+    meta_df: pd.DataFrame,
+    plotvariables: Optional[dict] = None,
+    chapter: str = "05",
+) -> None:
+    """
+    OUT/IN (FFT) vs IN ka (FFT) — wave steepness as x-axis.
+    Each point is one run. Colour = WindCondition. Marker = WaveAmplitudeInput.
+    One figure per panel condition (LaTeX arranges subfigures).
+
+    Input: raw combined_meta / meta_results (not grouped stats_df).
+    """
+    if plotvariables is None:
+        plotvariables = {"plotting": {"show_plot": True, "save_plot": False}}
+
+    plotting  = plotvariables.get("plotting", {})
+    show_plot = plotting.get("show_plot", False)
+    save_plot = plotting.get("save_plot", False)
+    figsize   = plotting.get("figsize", (5, 4))
+
+    wave_df = meta_df[meta_df[GC.WAVE_FREQUENCY_INPUT].notna()].copy()
+    panel_conditions = sorted(wave_df[GC.PANEL_CONDITION].dropna().unique())
+    wind_conditions  = sorted(wave_df[GC.WIND_CONDITION].dropna().unique())
+    amplitudes       = sorted(wave_df[GC.WAVE_AMPLITUDE_INPUT].dropna().unique())
+    n_runs           = len(wave_df)
+
+    _caption_slots = {
+        "n_runs":     n_runs,
+        "panels":     ", ".join(panel_conditions),
+        "wind_conds": ", ".join(wind_conditions),
+        "amps":       ", ".join(f"{a:.2f}\\,V" for a in amplitudes),
+    }
+    _default_caption = (
+        "OUT/IN damping ratio versus wave steepness $ka$ at the incident probe "
+        "(9373/170), for {panels} panel condition(s). "
+        "Colour encodes wind condition ({wind_conds}); "
+        "marker encodes wave amplitude ({amps}). "
+        "Each point is one run. Dashed line: ratio = 1 (no damping)."
+    )
+    _caption = resolve_caption(plotting, _default_caption, _caption_slots,
+                               fn_name="plot_damping_ka")
+
+    if show_plot:
+        for panel in panel_conditions:
+            fig = _make_damping_ka_fig(wave_df, panel, figsize=figsize)
+            plt.show()
+
+    if save_plot:
+        subfig_filenames = []
+        meta_base = build_fig_meta(
+            {**plotvariables, "plotting": {**plotting, "caption": _caption}},
+            chapter=chapter,
+            extra={"script": "plotter.py::plot_damping_ka"},
+        )
+        figure_name     = plotting.get("figure_name") or build_filename("damping_ka", meta_base)
+        subfig_captions = []
+        for panel in panel_conditions:
+            fig_s = _make_damping_ka_fig(wave_df, panel, figsize=figsize)
+            fname = f"{figure_name}_{panel}"
+            _save_figure(fig_s, fname, save_pgf=True)
+            subfig_filenames.append(fname)
+            subfig_captions.append(f"{panel.capitalize()} panel")
+            plt.close(fig_s)
+
+        stub_meta = {**meta_base, "panel": panel_conditions, "wind": "allwind"}
+        write_figure_stub(stub_meta, "damping_ka", subfig_filenames=subfig_filenames,
+                          subfig_captions=subfig_captions,
+                          force=plotting.get("force_stub", False))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # WIND DELTA
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -2224,6 +2360,7 @@ def plot_parallel_ratio(
     show_plot   = plotting.get("show_plot",   False)
     save_plot   = plotting.get("save_plot",   False)
     figure_name = plotting.get("figure_name", "ch04_parallel_ratio")
+    scatter     = plotting.get("scatter",     False)
     # Allow caption at plotvariables top level (string) as a convenience
     _top_caption = plotvariables.get("caption")
     if isinstance(_top_caption, str) and "caption" not in plotting:
@@ -2247,12 +2384,13 @@ def plot_parallel_ratio(
     )
 
     wind_order = ["no", "lowest", "full"]
-
     amp_linestyles = ["-", "--", ":", "-."]
+    amp_markers    = ["o", "s", "^", "D"]
 
     for ax, panel in zip(axes[0], panel_vals):
         sub = df[df["PanelCondition"] == panel]
         amps = sorted(sub["WaveAmplitudeInput [Volt]"].dropna().unique())
+        seen_labels: set = set()
         for wind in wind_order:
             grp = sub[sub["WindCondition"] == wind]
             if grp.empty:
@@ -2262,17 +2400,27 @@ def plot_parallel_ratio(
                 amp_grp = grp[grp["WaveAmplitudeInput [Volt]"] == amp]
                 if amp_grp.empty:
                     continue
-                # std within same (freq, wind, amplitude) — pure run-to-run noise,
-                # not inflated by mixing different amplitude inputs.
-                stats = amp_grp.groupby("WaveFrequencyInput [Hz]")["parallel_ratio"].agg(["mean", "std", "count"])
-                ls = amp_linestyles[i % len(amp_linestyles)]
                 label = f"{wind} / {amp:.2f} V" if len(amps) > 1 else wind
-                ax.errorbar(
-                    freq_to_kL(stats.index.values), stats["mean"],
-                    yerr=stats["std"].fillna(0),
-                    fmt=f"o{ls}", capsize=3, lw=1.4, ms=5,
-                    color=color, label=label,
-                )
+                kL_vals = freq_to_kL(amp_grp["WaveFrequencyInput [Hz]"].values)
+                if scatter:
+                    mk = amp_markers[i % len(amp_markers)]
+                    ax.scatter(
+                        kL_vals, amp_grp["parallel_ratio"].values,
+                        s=18, alpha=0.55, color=color, marker=mk,
+                        label=label if label not in seen_labels else "_nolegend_",
+                    )
+                    seen_labels.add(label)
+                else:
+                    # std within same (freq, wind, amplitude) — pure run-to-run noise,
+                    # not inflated by mixing different amplitude inputs.
+                    stats = amp_grp.groupby("WaveFrequencyInput [Hz]")["parallel_ratio"].agg(["mean", "std", "count"])
+                    ls = amp_linestyles[i % len(amp_linestyles)]
+                    ax.errorbar(
+                        freq_to_kL(stats.index.values), stats["mean"],
+                        yerr=stats["std"].fillna(0),
+                        fmt=f"o{ls}", capsize=3, lw=1.4, ms=5,
+                        color=color, label=label,
+                    )
         ax.axhline(1.0, color="black", lw=0.8, ls="--", alpha=0.5)
         ax.set_title(f"panel: {panel}", fontsize=10)
         ax.set_xlabel("$kL$")
@@ -2280,7 +2428,8 @@ def plot_parallel_ratio(
 
     axes[0][0].set_ylabel("Parallel ratio (wall / far)")
     axes[0][0].legend(title="Wind", fontsize=8)
-    fig.suptitle("Lateral symmetry — parallel probe ratio", fontsize=11)
+    _mode = "scatter" if scatter else "mean ± SD"
+    fig.suptitle(f"Lateral symmetry — parallel probe ratio  [{_mode}]", fontsize=11)
 
     if show_plot:
         plt.show()
@@ -2956,6 +3105,7 @@ def plot_td_vs_fft(
     force_stub = plotting.get("force_stub", False)
     probes     = plotting.get("probes",     [])
     figsize    = plotting.get("figsize",    None)
+    scatter    = plotting.get("scatter",    False)
 
     wave_meta = _aef(
         combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()].copy(),
@@ -3008,9 +3158,14 @@ def plot_td_vs_fft(
                 c = WIND_COLOR_MAP.get(wc, "grey")
                 ax_sc.scatter(grp[td_col], grp[fft_col],
                               s=12, alpha=0.45, color=c, label=wc)
-                agg = grp.groupby("WaveFrequencyInput [Hz]")["ratio"].median()
-                ax_rt.plot(freq_to_kL(agg.index.values), agg.values,
-                           marker="o", lw=1.0, markersize=5, color=c, label=wc)
+                if scatter:
+                    kL_vals = freq_to_kL(grp["WaveFrequencyInput [Hz]"].values)
+                    ax_rt.scatter(kL_vals, grp["ratio"].values,
+                                  s=12, alpha=0.45, color=c, label=wc)
+                else:
+                    agg = grp.groupby("WaveFrequencyInput [Hz]")["ratio"].median()
+                    ax_rt.plot(freq_to_kL(agg.index.values), agg.values,
+                               marker="o", lw=1.0, markersize=5, color=c, label=wc)
 
             lim = sub[[td_col, fft_col]].max().max() * 1.08
             ax_sc.plot([0, lim], [0, lim], "k--", lw=0.7, alpha=0.4)

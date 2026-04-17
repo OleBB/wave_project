@@ -152,10 +152,11 @@ def find_wave_range(
     #
     #   9373  : 1.3 Hz→39s, 1.4 Hz→38s, 1.5 Hz→36s, 1.6 Hz→36s
     #   12400 : 1.3 Hz→42s, 1.4 Hz→42s, 1.5 Hz→40s, 1.6 Hz→40s
-    #   8804  : not yet eyeballed — no entry, no cap applied
+    #   8804  : 1.3 Hz→37s, 1.4 Hz→37s, 1.5 Hz→36s, 1.6 Hz→35s  (eyeballed 2026-04-17)
     _SNARVEI_END_CALIB = {
         "9373":  [(1.30, 9750), (1.40, 9500), (1.50, 9000), (1.60, 9000)],
         "12400": [(1.30, 10500), (1.40, 10500), (1.50, 10000), (1.60, 10000)],
+        "8804":  [(1.30, 9250), (1.40, 9250), (1.50, 9000), (1.60, 8750)],
     }
 
     # Map every probe column name to a distance group — auto-generated from PROBE_CONFIGS
@@ -296,16 +297,28 @@ def find_wave_range(
         else (meta_row["Extra seconds"].iloc[0] if "Extra seconds" in meta_row.columns else None)
     )
     _mstop_float  = float(_mstop_raw) if _mstop_raw is not None else 0.0
-    mstop_sec     = 0.0 if (np.isnan(_mstop_float) or np.isinf(_mstop_float)) else _mstop_float
-    mstop_samples = int(mstop_sec * Fs)
+    mstop_sec_tag = 0.0 if (np.isnan(_mstop_float) or np.isinf(_mstop_float)) else _mstop_float
     signal_length = len(signal_smooth)
+
+    # mstop from filename is manually typed and may exceed the actual recording.
+    # Clamp to the signal actually available after good_end so warnings are honest.
+    if mstop_sec_tag > 0 and good_end_idx is not None:
+        actual_post_end_sec = max(0.0, (signal_length - good_end_idx) / Fs)
+        if mstop_sec_tag > actual_post_end_sec + 1.0:  # +1 s tolerance
+            print(f"  NOTE [{data_col}]: filename mstop={mstop_sec_tag:.0f} s but only "
+                  f"{actual_post_end_sec:.0f} s available after analysis window — "
+                  f"recording was cut short.")
+        mstop_sec = min(mstop_sec_tag, actual_post_end_sec)
+    else:
+        mstop_sec = mstop_sec_tag
+    mstop_samples = int(mstop_sec * Fs)
 
     if mstop_samples > 0 and good_end_idx is not None:
         # Only warn when periods are actually missing — sitting inside the mstop
         # tail is normal for short runs and is not itself a problem.
         if n_found < n_periods_target:
             print(f"  WARNING [{data_col}]: only {n_found}/{n_periods_target} periods found – "
-                  f"signal may be cut short (mstop={mstop_sec:.0f} s, "
+                  f"signal may be cut short (mstop={mstop_sec:.0f} s actual, "
                   f"probe at {meta_row[PC.MM_FROM_PADDLE.format(i=probe_num_int)]:.0f} mm from paddle).")
 
     # Safety fallback if nothing was set (snarvei miss + no upcrossing found)

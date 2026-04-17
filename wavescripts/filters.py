@@ -332,9 +332,33 @@ def apply_experimental_filters(
         out = out[mask]
         print(f"  [✓] exclude_run_keywords {list(exclude_keywords)} kept {len(out)} rows (removed {before - len(out)})")
 
+    # 2a-2. Minimum periods in analysis window.
+    # Filters out wave runs whose stable window contains fewer than min_periods
+    # wave cycles — too few for a reliable FFT peak.  Non-wave rows (nowave) are
+    # kept regardless.  Specify in filters: {"min_periods": 10}.
+    _min_periods = filters.get("min_periods")
+    if _min_periods is not None:
+        from wavescripts.constants import MEASUREMENT as _M
+        _in_pos = out["in_position"].iloc[0] if "in_position" in out.columns and len(out) else None
+        _start_col = f"Computed Probe {_in_pos} start" if _in_pos else None
+        _end_col   = f"Computed Probe {_in_pos} end"   if _in_pos else None
+        if _start_col and _start_col in out.columns and _end_col in out.columns:
+            _freq_col = "WaveFrequencyInput [Hz]"
+            _wave_mask = out[_freq_col].notna() & (out[_freq_col] > 0)
+            _window_periods = (
+                (out[_end_col] - out[_start_col]) / _M.SAMPLING_RATE
+                * out[_freq_col]
+            )
+            _too_few = _wave_mask & (_window_periods < _min_periods)
+            before = len(out)
+            out = out[~_too_few]
+            removed = before - len(out)
+            if removed:
+                print(f"  [✓] min_periods < {_min_periods}: excluded {removed} run(s) with too-short analysis window")
+
     # 2b. Sequential column filtering
     for col, val in filters.items():
-        if col in ("exclude_run_keywords", "quality_flag"):
+        if col in ("exclude_run_keywords", "quality_flag", "min_periods"):
             continue  # handled above
         if val is None:
             continue

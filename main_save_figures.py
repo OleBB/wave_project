@@ -98,6 +98,7 @@ from wavescripts.plot_utils import (WIND_COLOR_MAP, apply_thesis_style,
 from wavescripts.plotter import (
     plot_all_probes,
     plot_damping_freq,
+    plot_damping_ka,
     plot_damping_scatter,
     plot_damping_wind_delta,
     plot_first_arrival,
@@ -376,6 +377,21 @@ start = time.perf_counter()
 _fig_pr = plot_parallel_ratio(combined_meta, _pv_parallel_ratio)
 end = time.perf_counter()
 print(f"Lateral symmetry of plot_parallel_ratio {end-start:.4f} seconds")
+
+_pv_parallel_ratio_scatter = {
+    "filters": {},
+    "plotting": {
+        **_pv_parallel_ratio["plotting"],
+        "scatter":     True,
+        "figure_name": "ch04_parallel_ratio_scatter",
+        "caption": (
+            "Same data as the parallel-ratio figure, plotted as individual run "
+            "points (no grouping). Each dot = one run. Colour = wind condition; "
+            "marker shape = wave amplitude. Use to identify outlier runs."
+        ),
+    },
+}
+plot_parallel_ratio(combined_meta, _pv_parallel_ratio_scatter)
 
 # %%
 """
@@ -716,6 +732,7 @@ Data: combined_meta wave rows (Probe {pos} Amplitude and Probe {pos} Amplitude (
 
 _pv_td_vs_fft = {
     "filters": {
+        "min_periods":               10,
         "WaveAmplitudeInput [Volt]": None,
         "WaveFrequencyInput [Hz]":   None,
         "WindCondition":             None,
@@ -732,6 +749,21 @@ _pv_td_vs_fft = {
 }
 
 plot_td_vs_fft(combined_meta, _pv_td_vs_fft, chapter="04")
+
+_pv_td_vs_fft_scatter = {
+    "filters": {**_pv_td_vs_fft["filters"]},
+    "plotting": {
+        **_pv_td_vs_fft["plotting"],
+        "scatter":     True,
+        "figure_name": "ch04_td_vs_fft_scatter",
+        "caption": (
+            "Same data as the td-vs-fft figure. "
+            "Bottom row: individual run ratios as scatter (no median line). "
+            "Use to identify outlier runs driving dips at specific kL."
+        ),
+    },
+}
+plot_td_vs_fft(combined_meta, _pv_td_vs_fft_scatter, chapter="04")
 
 # %%
 """
@@ -818,6 +850,7 @@ Figures:
 
 _pv_wave_stability = {
     "filters": {
+        "min_periods":               10,
         "WaveAmplitudeInput [Volt]": None,
         "WaveFrequencyInput [Hz]":   (0.9,1.6),
         "WindCondition":             None,
@@ -871,6 +904,20 @@ _pv_lateral_nowind = {
     },
 }
 _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)
+
+_pv_lateral_nowind_scatter = {
+    "filters": {**_pv_lateral_nowind["filters"]},
+    "plotting": {
+        **_pv_lateral_nowind["plotting"],
+        "scatter":     True,
+        "figure_name": "ch04_lateral_nowind_scatter",
+        "caption": (
+            "Same data as the lateral-nowind figure, plotted as individual run "
+            "points (no grouping). Each dot = one run. Use to identify outliers."
+        ),
+    },
+}
+plot_parallel_ratio(combined_meta, _pv_lateral_nowind_scatter)
 
 # %% - perhaps skip this one. its the physical plot.
 # """
@@ -1048,9 +1095,32 @@ IN-side ka and OUT-side ka.
 
 Requires: wavenumber column in combined_meta (computed in processor2nd).
 """
-# TODO: verify wavenumber column is populated for all runs, then replace
-#       Hz x-axis with ka where appropriate in CH05 §1-3
-_save_placeholder("ch05_damping_ka", "CH05 §4 — Damping vs ka (wave steepness axis)", chapter="05")
+# IN ka (FFT) is fully populated (108/108 wave runs, verified 2026-04-17).
+# plot_damping_ka takes raw meta_df, no grouper needed — each run is one scatter point.
+_pv_damping_ka = {
+    "filters": {
+        "PanelCondition": "full",
+        "min_periods": 10,
+    },
+    "plotting": {
+        "show_plot": False,
+        "save_plot": True,
+        "draft": True,
+        "figure_name": "ch05_damping_ka",
+        "force_stub": False,
+        "caption": (
+            "OUT/IN damping ratio versus wave steepness $ka$ at the incident probe "
+            "(9373/170), full panel condition. "
+            "Colour encodes wind condition; marker encodes wave amplitude. "
+            "Each point is one run. Dashed line: ratio = 1 (no damping). "
+            "Data: two validated sessions (2026-03-26/27, lowrange mode)."
+        ),
+    },
+}
+
+_ka_meta = apply_experimental_filters(meta_results, _pv_damping_ka)
+from wavescripts.plotter import plot_damping_ka
+plot_damping_ka(_ka_meta, _pv_damping_ka, chapter="05")
 
 # %%
 """
