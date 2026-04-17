@@ -460,9 +460,12 @@ if not _mooring_comp_base.empty and "Mooring" in _mooring_comp_base.columns:
     apply_thesis_style()
     fig_mc, ax_mc = plt.subplots(figsize=(7, 4))
 
+    # Note: damping_all_amplitude_grouper renames PanelCondition →
+    # PanelConditionGrouped (full/reverse → "all"). The filter above already
+    # restricts to PanelCondition == "full" so this key is effectively single-valued.
     for (freq_hz, amp, wind, panel, mooring), grp in _mc_grouped.groupby(
         ["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]",
-         "WindCondition", "PanelCondition", "Mooring"]
+         "WindCondition", "PanelConditionGrouped", "Mooring"]
     ):
         if mooring not in _MOORING_COLOR:
             continue
