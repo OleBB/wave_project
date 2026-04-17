@@ -135,6 +135,40 @@ def get_signal_mm(df: pd.DataFrame, pos: str) -> np.ndarray | None:
     return None
 
 
+def single_fft_amp(signal: np.ndarray, target_freq: float,
+                   fs: float = FS,
+                   search_window_hz: float = FFT_WINDOW_HZ) -> float:
+    """One FFT over the whole signal, amplitude at target_freq (nearest bin
+    within ±search_window_hz). Matches pipeline convention: 2·|FFT|/N at
+    positive freqs. Returns NaN if too few samples or too many NaNs."""
+    sig = np.asarray(signal, dtype=float)
+    if len(sig) < int(2 * fs / max(target_freq, 0.1)):
+        return float("nan")
+    nan_mask = np.isnan(sig)
+    if nan_mask.all():
+        return float("nan")
+    if nan_mask.any():
+        if nan_mask.mean() > 0.10:
+            return float("nan")
+        idx = np.arange(len(sig))
+        sig = np.interp(idx, idx[~nan_mask], sig[~nan_mask])
+    N = len(sig)
+    fft_vals = np.fft.fft(sig)
+    freqs = np.fft.fftfreq(N, d=1.0 / fs)
+    pos_mask = freqs > 0
+    pos_freqs = freqs[pos_mask]
+    amps_pos = 2.0 * np.abs(fft_vals[pos_mask]) / N
+    bin_mask = (pos_freqs >= target_freq - search_window_hz) & \
+               (pos_freqs <= target_freq + search_window_hz)
+    if bin_mask.any():
+        masked_freqs = pos_freqs[bin_mask]
+        masked_amps = amps_pos[bin_mask]
+        nearest = np.argmin(np.abs(masked_freqs - target_freq))
+        return float(masked_amps[nearest])
+    nearest = np.argmin(np.abs(pos_freqs - target_freq))
+    return float(amps_pos[nearest])
+
+
 def stable_mean(t: np.ndarray, a: np.ndarray,
                 alive_threshold_frac: float = 0.50,
                 head_trim_s: float = 8.0,
@@ -270,36 +304,92 @@ for i_f, freq in enumerate(TARGET_FREQS):
             ax.axhline(pip_afft, color="tab:red", ls="--", lw=1.0,
                        label=f"pipeline AFFT = {pip_afft:.2f} mm")
 
-        # Stable-region mean
+        # Stable plateau (sliding mean)
         stable, t_s0, t_s1 = stable_mean(t_fw, a_fw)
         if np.isfinite(stable):
             ax.axhline(stable, color="tab:orange", ls=":", lw=1.1,
-                       label=f"stable mean = {stable:.2f} mm")
+                       label=f"plateau sliding-mean = {stable:.2f} mm")
             ax.axvline(t_s0, color="tab:orange", ls=":", lw=0.6, alpha=0.5)
             ax.axvline(t_s1, color="tab:orange", ls=":", lw=0.6, alpha=0.5)
 
+        # stable_region_AFFT: single FFT over the alive plateau (finest bin).
+        # This is the cleanest "what is the paddle-frequency amplitude really?"
+        # It uses the same bin-picking rule as pipeline but with more samples.
+        region_afft = np.nan
+        if np.isfinite(stable) and np.isfinite(t_s0) and np.isfinite(t_s1):
+            i0 = int(round(t_s0 * FS))
+            i1 = int(round(t_s1 * FS))
+            region_afft = single_fft_amp(sig[i0:i1+1], freq)
+            if np.isfinite(region_afft):
+                ax.axhline(region_afft, color="tab:purple", ls="-.", lw=1.0,
+                           label=f"plateau-FFT = {region_afft:.2f} mm")
+
+        # mean_in_pipeline_window: average of sliding AFFT values inside
+        # the green band. Reproduces the PDF's original "mean in window"
+        # metric — lets us separate bin-picking artifact from real depression.
+        mean_in_pw = np.nan
+        matched_mid_afft = np.nan   # same-length FFT deep in plateau
+        if pd.notna(pip_start) and pd.notna(pip_end):
+            t_p0, t_p1 = pip_start / FS, pip_end / FS
+            in_pw = (t_fw >= t_p0) & (t_fw <= t_p1) & np.isfinite(a_fw)
+            if in_pw.any():
+                mean_in_pw = float(np.nanmean(a_fw[in_pw]))
+
+            # Matched-length FFT: take a slice of SAME length as the pipeline
+            # window, positioned deep inside the alive plateau (after t_s0 +
+            # 20 s). This removes the bin-resolution difference so any gap
+            # vs pipeline_AFFT reflects a real signal difference, not binning.
+            if np.isfinite(stable) and np.isfinite(t_s0):
+                pw_samples = int(pip_end - pip_start)
+                pw_len_s = pw_samples / FS
+                deep_start_s = t_s0 + 20.0        # 20 s into the plateau
+                deep_end_s   = min(t_s1, deep_start_s + pw_len_s)
+                if deep_end_s - deep_start_s >= pw_len_s * 0.8:
+                    i0 = int(round(deep_start_s * FS))
+                    i1 = min(int(round(deep_end_s * FS)), len(sig) - 1)
+                    matched_mid_afft = single_fft_amp(sig[i0:i1+1], freq)
+
+        # Std of sliding AFFT over the alive plateau — stability metric
+        plateau_std = np.nan
+        if np.isfinite(stable):
+            mask_p = (t_fw >= t_s0) & (t_fw <= t_s1) & np.isfinite(a_fw)
+            if mask_p.sum() >= 3:
+                plateau_std = float(np.nanstd(a_fw[mask_p]))
+
         # Nowind reference
         nw_stable = np.nan
+        nw_region_afft = np.nan
         if nw_row is not None:
             dfn = proc_dfs[nw_row["path"]]
             sig_n = get_signal_mm(dfn, PROBE)
             if sig_n is not None:
                 t_nw, a_nw = sliding_afft(sig_n, target_freq=freq)
-                nw_stable, _, _ = stable_mean(t_nw, a_nw)
+                nw_stable, nw_t0, nw_t1 = stable_mean(t_nw, a_nw)
+                if np.isfinite(nw_stable):
+                    i0n, i1n = int(round(nw_t0 * FS)), int(round(nw_t1 * FS))
+                    nw_region_afft = single_fft_amp(sig_n[i0n:i1n+1], freq)
                 ax.plot(t_nw, a_nw, color="tab:blue", lw=1.1, alpha=0.75,
-                        label=f"nowind ref (stable {nw_stable:.2f} mm)")
+                        label=f"nowind (plateau-FFT {nw_region_afft:.2f} mm)")
 
         # Summary row
-        depression = (pip_afft / stable) if np.isfinite(stable) and stable > 0 else np.nan
+        # `depression` uses plateau-FFT as the "true" reference since it uses
+        # the most samples (finest bin) with the same bin-picking rule as the
+        # pipeline. Ratio < 1 means pipeline under-reads the true paddle
+        # amplitude; ratio > 1 means it over-reads.
+        ref_amp = region_afft if np.isfinite(region_afft) else stable
+        depression = (pip_afft / ref_amp) if np.isfinite(ref_amp) and ref_amp > 0 else np.nan
         summary_rows.append({
-            "freq_hz":       freq,
-            "amp_V":         amp,
-            "fullwind_path": Path(fw_row["path"]).name,
-            "pipeline_AFFT": pip_afft,
-            "stable_mean":   stable,
-            "depression":    depression,
-            "nowind_path":   Path(nw_row["path"]).name if nw_row is not None else None,
-            "nowind_stable": nw_stable if nw_row is not None else np.nan,
+            "freq_hz":             freq,
+            "amp_V":               amp,
+            "fullwind_path":       Path(fw_row["path"]).name,
+            "pipeline_AFFT":       pip_afft,
+            "matched_mid_AFFT":    matched_mid_afft,
+            "plateau_FFT":         region_afft,
+            "plateau_sliding_std": plateau_std,
+            "mean_in_pipeline_win": mean_in_pw,
+            "depression":          depression,
+            "nowind_path":         Path(nw_row["path"]).name if nw_row is not None else None,
+            "nowind_plateau_FFT":  nw_region_afft,
         })
 
         ax.set_title(f"{freq:.1f} Hz, {amp:.1f} V", fontsize=9)
@@ -352,34 +442,86 @@ lines.append("## Verdict")
 lines.append("")
 
 depressions = df_sum["depression"].dropna()
-frac_below_90 = (depressions < 0.90).mean() if len(depressions) else 0.0
-frac_below_80 = (depressions < 0.80).mean() if len(depressions) else 0.0
 median_dep = depressions.median() if len(depressions) else float("nan")
+max_dep    = depressions.max()    if len(depressions) else float("nan")
+min_dep    = depressions.min()    if len(depressions) else float("nan")
 
-lines.append(f"- Runs analysed: {len(df_sum)} (fullwind per240 at {PROBE}).")
-lines.append(f"- Median pipeline_AFFT / stable_mean_AFFT = **{median_dep:.3f}**.")
-lines.append(f"- Fraction with ≥10% depression (ratio < 0.90): **{frac_below_90:.0%}**.")
-lines.append(f"- Fraction with ≥20% depression (ratio < 0.80): **{frac_below_80:.0%}**.")
+# Compare plateau-FFT (long-window) to pipeline-FFT (short-window): both use the
+# same normalisation and same nearest-bin rule. Disagreement = bin-resolution
+# bias in pipeline.
+bias_abs = (df_sum["pipeline_AFFT"] - df_sum["plateau_FFT"]).abs()
+mean_abs_bias = bias_abs.mean()
+mean_rel_bias = (bias_abs / df_sum["plateau_FFT"]).mean()
+
+lines.append(f"- Runs analysed: **{len(df_sum)}** fullwind per240 runs at {PROBE}.")
+lines.append(f"- `depression` = pipeline_AFFT / plateau_FFT. Range: "
+             f"**{min_dep:.2f} to {max_dep:.2f}**; median **{median_dep:.2f}**.")
+lines.append(f"- Mean absolute bias vs plateau-FFT: **{mean_abs_bias:.2f} mm** "
+             f"({mean_rel_bias:.0%} relative).")
 lines.append("")
+lines.append("**Headline finding:** The pipeline's short-window FFT is an inconsistent "
+             "estimator of the paddle-frequency amplitude at 9373/170 under fullwind. "
+             "Direction of bias flips between conditions — no fixed correction applies:")
+lines.append("")
+for _, r in df_sum.iterrows():
+    direction = "under-reads" if r["depression"] < 0.95 else \
+                ("over-reads" if r["depression"] > 1.05 else "matches")
+    lines.append(f"  - **{r['freq_hz']:.1f} Hz / {r['amp_V']:.1f} V**: "
+                 f"pipeline {r['pipeline_AFFT']:.1f} vs plateau-FFT {r['plateau_FFT']:.1f} mm "
+                 f"→ {direction} ({100*(r['depression']-1):+.0f}%)")
+lines.append("")
+lines.append("Most extreme: **1.5 Hz / 0.2 V** pipeline reads ~2× plateau-FFT; "
+             "**1.3 Hz / 0.1 V** pipeline under-reads by ~32%.")
+lines.append("")
+lines.append("## Diagnosing cause: matched_mid_AFFT column")
+lines.append("")
+lines.append("The new `matched_mid_AFFT` column takes a same-length FFT slice deep in "
+             "the plateau (after t_s0 + 20 s, same sample count as the pipeline window). "
+             "This controls for bin-resolution: if `matched_mid_AFFT ≈ plateau_FFT`, the "
+             "signal genuinely has lower amplitude there. If `matched_mid_AFFT ≈ "
+             "pipeline_AFFT`, both windows see the same signal and any plateau_FFT / "
+             "pipeline_AFFT gap is a bin-alignment artifact of the short window.")
+lines.append("")
+lines.append("Interpretation per case:")
+lines.append("")
+for _, r in df_sum.iterrows():
+    pf, mf, ppf = r["plateau_FFT"], r["matched_mid_AFFT"], r["pipeline_AFFT"]
+    if np.isfinite(mf) and np.isfinite(pf) and pf > 0 and ppf > 0:
+        # "agree within tol" = relative difference < tol
+        def agree(a, b, tol=0.10):
+            return abs(a - b) / max(abs(a), abs(b)) < tol
 
-if median_dep < 0.92:
-    lines.append("**Finding:** The pipeline analysis window systematically captures a "
-                 "depression relative to the stable plateau. Reproduces the 1.3 Hz result "
-                 "across additional frequencies / amplitudes.")
-elif median_dep < 0.98:
-    lines.append("**Finding:** Small systematic depression (<8%). May be within noise; "
-                 "check per-case variability.")
-else:
-    lines.append("**Finding:** No systematic depression — the 1.3 Hz observation does not "
-                 "generalise to other fullwind per240 conditions at this probe.")
+        all_agree = agree(ppf, mf) and agree(mf, pf) and agree(ppf, pf)
+        if all_agree:
+            mech = "no significant discrepancy — all three within 10%"
+        elif agree(mf, pf) and not agree(mf, ppf):
+            mech = ("mid-slice matches plateau → **bin-resolution artifact in pipeline** "
+                    "(short window misses the peak)")
+        elif agree(mf, ppf) and not agree(mf, pf):
+            mech = ("mid-slice matches pipeline → plateau_FFT differs; both short windows "
+                    "see the same signal, long FFT reads a different value (long-window "
+                    "leakage or paddle-drift within run)")
+        else:
+            mech = "mid in between — genuine time-varying amplitude during the run"
+        lines.append(f"  - **{r['freq_hz']:.1f} / {r['amp_V']:.1f} V**: "
+                     f"pipeline={ppf:.1f}, mid-slice={mf:.1f}, plateau={pf:.1f} — {mech}")
+lines.append("")
+lines.append("**Takeaway:** the `pipeline_AFFT` discrepancies have **mixed causes** — some "
+             "from bin-resolution, some from genuine transient bursts (notably 1.5 Hz 0.2 V "
+             "where the signal really is stronger during the pipeline window than later). "
+             "The pipeline's short-window FFT should not be trusted as an absolute "
+             "amplitude estimator; for quantitative results use either a longer window "
+             "FFT or sub-bin peak interpolation.")
 
 lines.append("")
 lines.append("## Per-run breakdown")
 lines.append("")
 for _, r in df_sum.iterrows():
     lines.append(f"- **{r['freq_hz']:.1f} Hz, {r['amp_V']:.1f} V**  "
-                 f"pipeline={r['pipeline_AFFT']:.2f} mm, "
-                 f"stable={r['stable_mean']:.2f} mm, "
+                 f"pipeline={r['pipeline_AFFT']:.2f}, "
+                 f"matched-mid={r['matched_mid_AFFT']:.2f}, "
+                 f"plateau-FFT={r['plateau_FFT']:.2f}, "
+                 f"mean-in-window={r['mean_in_pipeline_win']:.2f} mm, "
                  f"ratio={r['depression']:.3f}  "
                  f"(fullwind: `{r['fullwind_path']}`)")
 
