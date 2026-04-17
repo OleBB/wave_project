@@ -62,9 +62,8 @@ R_NOMINAL = 0.20   # assumed panel reflection coefficient
 
 # ── I/O paths ──────────────────────────────────────────────────────────────────
 BASE    = Path(__file__).parent.parent
-OUT_PNG = Path(__file__).parent / "sw_correction.png"
 OUT_MD  = Path(__file__).parent / "sw_correction_findings.md"
-# Thesis outputs (auto-dropped for main_save_figures.py to reference)
+# Thesis outputs (PDF is quick-view + thesis figure, no PNG kept).
 THESIS_NAME = "ch04_sw_correction_test"
 OUT_PDF     = BASE / "output" / "FIGURES" / f"{THESIS_NAME}.pdf"
 OUT_STUB    = BASE / "output" / "TEXFIGU" / f"{THESIS_NAME}.tex"
@@ -475,10 +474,7 @@ ax_we.tick_params(labelsize=7)
 ax_we.set_xticks(shared_freqs)
 ax_we.set_xticklabels([f"{f:.1f}" for f in shared_freqs], rotation=45, fontsize=7)
 
-fig.savefig(OUT_PNG, dpi=150, bbox_inches="tight")
-print(f"   Saved → {OUT_PNG}")
-
-# ── Thesis outputs: PDF + .tex stub ─────────────────────────────────────────
+# ── Output: PDF + .tex stub (PDF is both quick-view and thesis figure) ──────
 OUT_PDF.parent.mkdir(parents=True, exist_ok=True)
 OUT_STUB.parent.mkdir(parents=True, exist_ok=True)
 fig.savefig(OUT_PDF, bbox_inches="tight")

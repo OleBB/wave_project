@@ -70,10 +70,10 @@ AMP_LOW_SNR  = 0.1    # lower SNR, include with flag
 AMP_WARN     = 0.3    # non-linear risk at high freq, show with warning
 
 BASE    = Path(__file__).parent.parent
-OUT_PNG = Path(__file__).parent / "mansard_funke.png"
 OUT_MD  = Path(__file__).parent / "mansard_funke_findings.md"
 # Thesis outputs — dropped into the standard folders so main_save_figures.py
-# does not have to regenerate anything.  Rename in one place if needed.
+# does not have to regenerate anything. The thesis PDF IS the quick-view PDF;
+# no separate PNG copy is kept.
 THESIS_NAME = "ch04_mansard_funke_reflection"
 OUT_PDF     = BASE / "output" / "FIGURES" / f"{THESIS_NAME}.pdf"
 OUT_STUB    = BASE / "output" / "TEXFIGU" / f"{THESIS_NAME}.tex"
@@ -548,12 +548,8 @@ ax_sw.legend(fontsize=6.5)
 ax_sw.set_ylim(0, 0.6)
 ax_sw.tick_params(labelsize=7)
 
-fig.savefig(OUT_PNG, dpi=150, bbox_inches="tight")
-print(f"   Saved → {OUT_PNG}")
-
-# ── Thesis outputs: PDF + .tex stub ─────────────────────────────────────────
-# Drop a PDF into output/FIGURES/ so main_save_figures.py can reference it
-# without having to regenerate the figure itself. Write the LaTeX stub once.
+# ── Output: PDF + .tex stub ─────────────────────────────────────────────────
+# PDF is both the quick-view file and the thesis figure (no PNG kept).
 OUT_PDF.parent.mkdir(parents=True, exist_ok=True)
 OUT_STUB.parent.mkdir(parents=True, exist_ok=True)
 fig.savefig(OUT_PDF, bbox_inches="tight")

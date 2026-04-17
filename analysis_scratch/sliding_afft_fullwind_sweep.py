@@ -69,9 +69,15 @@ PLATEAU_HEAD_FRAC    = 0.25
 PLATEAU_TAIL_FRAC    = 0.10
 
 BASE    = Path(__file__).parent.parent
-OUT_PNG = Path(__file__).parent / "sliding_afft_fullwind_sweep.png"
+OUT_PDF = Path(__file__).parent / "sliding_afft_fullwind_sweep.pdf"
 OUT_MD  = Path(__file__).parent / "sliding_afft_fullwind_sweep_findings.md"
 OUT_CSV = Path(__file__).parent / "sliding_afft_fullwind_sweep_summary.csv"
+# Thesis outputs — dropped into the standard folders so main_save_figures.py
+# does not have to regenerate anything. PDF is both quick-view and thesis file.
+THESIS_NAME      = "ch04_sliding_afft_stability"
+THESIS_OUT_PDF   = BASE / "output" / "FIGURES" / f"{THESIS_NAME}.pdf"
+THESIS_OUT_STUB  = BASE / "output" / "TEXFIGU" / f"{THESIS_NAME}.tex"
+CHAPTER          = "04"
 
 
 # ── Sliding-AFFT helper ───────────────────────────────────────────────────────
@@ -403,9 +409,57 @@ fig.suptitle(f"Sliding AFFT at {PROBE} — fullwind per240 vs nowind reference\n
              f"bin search=±{FFT_WINDOW_HZ/2*2:.2f}Hz)",
              fontsize=10, y=0.995)
 fig.tight_layout(rect=[0, 0, 1, 0.98])
-fig.savefig(OUT_PNG, dpi=110, bbox_inches="tight")
+fig.savefig(OUT_PDF, bbox_inches="tight")
+print(f"   PDF → {OUT_PDF.relative_to(BASE)}")
+
+# ── Thesis output: PDF + .tex stub ──────────────────────────────────────────
+THESIS_OUT_PDF.parent.mkdir(parents=True, exist_ok=True)
+THESIS_OUT_STUB.parent.mkdir(parents=True, exist_ok=True)
+fig.savefig(THESIS_OUT_PDF, bbox_inches="tight")
+print(f"   Thesis PDF → {THESIS_OUT_PDF.relative_to(BASE)}")
 plt.close(fig)
-print(f"   PNG → {OUT_PNG.relative_to(BASE)}")
+
+if not THESIS_OUT_STUB.exists():
+    _stub_caption = (
+        f"Sliding-window FFT at the IN probe ({PROBE}) for fullwind per240 "
+        "wave runs at 1.3--1.6 Hz, 0.1/0.2 V. Each panel: red = fullwind "
+        "run, blue = nowind reference, green band = pipeline analysis "
+        "window. Dashed red = pipeline AFFT; orange dotted = mean over "
+        "the alive plateau; purple dash-dot = one-shot FFT over the full "
+        "plateau. The sliding AFFT is stable across the run in 7/8 "
+        "conditions (no within-run transient). Apparent discrepancies "
+        "between pipeline AFFT and plateau-FFT reflect FFT bin-grid "
+        "alignment (see CH04 \\S4b), not physical signal variation. "
+        "Window = {win}\\,s, step = {step}\\,s, bin search = $\\pm$"
+        "{halfbin}\\,Hz."
+    ).format(
+        win=f"{SLIDING_WINDOW_S:.0f}",
+        step=f"{SLIDING_STEP_S:.0f}",
+        halfbin=f"{FFT_WINDOW_HZ:.2f}",
+    )
+    _stub = (
+        "%! TEX root = ../main.tex\n"
+        "% =============================================================\n"
+        "% IMMUTABLE — generated automatically, do not edit this block\n"
+        "%   script          : analysis_scratch/sliding_afft_fullwind_sweep.py\n"
+        "%   plot_type       : sliding_afft_stability\n"
+        f"%   chapter         : {CHAPTER}\n"
+        f"%   probe           : {PROBE}\n"
+        f"%   window_s        : {SLIDING_WINDOW_S}\n"
+        "% =============================================================\n"
+        "\\begin{figure}[htbp]\n"
+        "  \\centering\n"
+        f"  \\includegraphics[width=0.95\\linewidth]{{FIGURES/{THESIS_NAME}.pdf}}\n"
+        "  \\caption[Sliding-window FFT at the IN probe]{%\n"
+        f"    {_stub_caption}\n"
+        "  }\n"
+        f"  \\label{{fig:{THESIS_NAME}}}\n"
+        "\\end{figure}\n"
+    )
+    THESIS_OUT_STUB.write_text(_stub)
+    print(f"   Wrote stub → {THESIS_OUT_STUB.relative_to(BASE)}")
+else:
+    print(f"   Stub exists (not overwritten): {THESIS_OUT_STUB.relative_to(BASE)}")
 
 # ── 5. Write summary CSV + findings markdown ──────────────────────────────────
 df_sum = pd.DataFrame(summary_rows)

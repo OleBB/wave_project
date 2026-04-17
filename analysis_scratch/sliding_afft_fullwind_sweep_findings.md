@@ -1,6 +1,6 @@
 # Sliding AFFT @ 9373/170 — fullwind per240 sweep
 
-Generated: 2026-04-17T11:17:00Z
+Generated: 2026-04-17T13:58:27Z
 
 ## Summary table
 
