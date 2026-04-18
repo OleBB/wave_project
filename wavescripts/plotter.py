@@ -468,6 +468,59 @@ def plot_damping_scatter(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+def _pie_wedge_path(start_deg: float, end_deg: float, n: int = 24):
+    """Pie-wedge marker path (radius 1, centered at origin). Angles CCW,
+    0° = +x axis. Full circle comes out as a valid closed wedge too."""
+    import matplotlib.path as _mpath
+    thetas = np.linspace(np.deg2rad(start_deg), np.deg2rad(end_deg), n)
+    arc = np.column_stack([np.cos(thetas), np.sin(thetas)])
+    verts = np.vstack([[[0.0, 0.0]], arc, [[0.0, 0.0]]])
+    codes = [_mpath.Path.MOVETO] + [_mpath.Path.LINETO] * n + [_mpath.Path.CLOSEPOLY]
+    return _mpath.Path(verts, codes)
+
+
+def _rect_path(w: float, h: float, rotation_deg: float = 0):
+    """Rectangle marker path, rotated CCW around origin."""
+    import matplotlib.path as _mpath
+    hw, hh = w / 2.0, h / 2.0
+    corners = np.array([
+        [-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh], [-hw, -hh],
+    ])
+    theta = np.deg2rad(rotation_deg)
+    c, s = np.cos(theta), np.sin(theta)
+    rotated = corners @ np.array([[c, -s], [s, c]]).T
+    codes = [_mpath.Path.MOVETO, _mpath.Path.LINETO, _mpath.Path.LINETO,
+             _mpath.Path.LINETO, _mpath.Path.CLOSEPOLY]
+    return _mpath.Path(rotated, codes)
+
+
+def _freq_marker(amp: float, freq_idx: int):
+    """
+    Per-(amp, freq_idx) marker for the ka scatter. freq_idx 0..3 maps to
+    the four thesis-scope frequencies sorted ascending (1.3 → 1.6 Hz).
+
+    Shape families keep amp visually distinct (circle/rect/triangle) and
+    orientation/fill encodes frequency so the per-amp variants are
+    self-documenting without text labels:
+
+      0.10 V (circles):    full → 3/4 (left wedge cut) → right half → upper-right quarter
+      0.20 V (rectangles): 0° → 45° → 90° → 135° rotations of a 1:2 tall rect
+      0.30 V (triangles):  up → left → down → right
+    """
+    if np.isclose(amp, 0.1):
+        if freq_idx == 0: return "o"                        # full circle
+        if freq_idx == 1: return _pie_wedge_path(225, 495)  # 3/4 — left 90° removed
+        if freq_idx == 2: return _pie_wedge_path(-90, 90)   # right half
+        return _pie_wedge_path(0, 90)                        # upper-right quarter
+    if np.isclose(amp, 0.2):
+        # 1:2 tall rectangle rotated 0/45/90/135°
+        angles = [0, 45, 90, 135]
+        return _rect_path(w=0.55, h=1.1, rotation_deg=angles[freq_idx])
+    if np.isclose(amp, 0.3):
+        return ["^", "<", "v", ">"][freq_idx]
+    return "o"
+
+
 def _make_damping_ka_fig(
     meta_df: pd.DataFrame,
     panel: str,
@@ -487,9 +540,10 @@ def _make_damping_ka_fig(
 
     Pass ``xlim``/``ylim`` to share axes across per-amp variants.
 
-    ``show_freq_labels`` annotates each frequency cluster with its value
-    in Hz — useful on per-amp variants where all markers are the same
-    shape and the frequency axis is otherwise implicit in ka.
+    ``show_freq_labels`` — when True on a per-amp variant, uses distinct
+    per-frequency marker shapes (see ``_freq_marker``) and adds a
+    frequency legend. Off by default on the all-amps overview (where
+    shape already encodes amplitude and per-freq markers would collide).
     """
     import matplotlib.lines as mlines
 
@@ -513,6 +567,14 @@ def _make_damping_ka_fig(
 
     fig, ax = plt.subplots(figsize=figsize)
     wind_conditions = sorted(subset[GC.WIND_CONDITION].unique())
+    # Rank each frequency present 0..N-1 for per-freq marker lookup
+    unique_freqs = sorted(subset[GC.WAVE_FREQUENCY_INPUT].unique())
+    freq_idx = {f: i for i, f in enumerate(unique_freqs)}
+
+    # Per-freq markers only make sense when each figure shows one amp
+    # (the shape family is tied to amp). On the all-amps overview fall
+    # back to the index-based amp markers.
+    per_freq_markers = show_freq_labels and (amp is not None)
 
     for amp_val in amplitudes:
         # Marker shape is tied to the *global* amplitude index so per-amp
@@ -524,36 +586,27 @@ def _make_damping_ka_fig(
             wind_sub = amp_sub[amp_sub[GC.WIND_CONDITION] == wind]
             if wind_sub.empty:
                 continue
-            ax.scatter(
-                wind_sub[KA_COL], wind_sub[GC.OUT_IN_FFT],
-                marker=amp_markers[i % len(amp_markers)],
-                color=WIND_COLOR_MAP.get(wind, "gray"),
-                s=40, alpha=0.75,
-            )
-
-    # Frequency annotations — one per cluster (pooled across wind
-    # conditions, since fullwind and nowind at the same freq sit at
-    # nearly the same ka). Placed at the cluster median to avoid
-    # outlier-driven label drift (e.g. 1.3 Hz / 0.1 V fullwind has
-    # wind-contamination points above OUT/IN = 1.0 that would otherwise
-    # push the label above the plot area).
-    if show_freq_labels and not subset.empty:
-        for freq, freq_grp in subset.groupby(GC.WAVE_FREQUENCY_INPUT):
-            cx = float(freq_grp[KA_COL].median())
-            cy = float(freq_grp[GC.OUT_IN_FFT].median())
-            ax.annotate(
-                f"{freq:.1f}\u202fHz",
-                xy=(cx, cy),
-                xytext=(0, 16),
-                textcoords="offset points",
-                ha="center", va="bottom",
-                fontsize=7, color="#333",
-                arrowprops=dict(arrowstyle="-", lw=0.4, color="#888",
-                                shrinkA=0, shrinkB=3),
-                bbox=dict(boxstyle="round,pad=0.18",
-                          facecolor="white", alpha=0.80, edgecolor="none"),
-                zorder=5,
-            )
+            if per_freq_markers:
+                # One scatter call per (freq, wind) so each cluster gets
+                # its own marker shape.
+                for freq in unique_freqs:
+                    fg = wind_sub[np.isclose(wind_sub[GC.WAVE_FREQUENCY_INPUT], freq)]
+                    if fg.empty:
+                        continue
+                    ax.scatter(
+                        fg[KA_COL], fg[GC.OUT_IN_FFT],
+                        marker=_freq_marker(amp_val, freq_idx[freq]),
+                        color=WIND_COLOR_MAP.get(wind, "gray"),
+                        s=55, alpha=0.85,
+                        edgecolors="black", linewidths=0.35,
+                    )
+            else:
+                ax.scatter(
+                    wind_sub[KA_COL], wind_sub[GC.OUT_IN_FFT],
+                    marker=amp_markers[i % len(amp_markers)],
+                    color=WIND_COLOR_MAP.get(wind, "gray"),
+                    s=40, alpha=0.75,
+                )
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax.set_xlabel("$ka$ (IN probe, measured)", fontsize=9)
@@ -574,15 +627,14 @@ def _make_damping_ka_fig(
     if ylim is not None:
         ax.set_ylim(ylim)
 
-    # Legend: wind colour always; amplitude-marker legend only on the
-    # all-amps overview (redundant on per-amp variants since only one
-    # marker shape is present).
+    # ── Legend(s) ──
     wind_handles = [
         mlines.Line2D([], [], color=WIND_COLOR_MAP.get(w, "gray"),
                       marker="o", linestyle="None", markersize=6, label=f"{w} wind")
         for w in wind_conditions
     ]
     if amp is None:
+        # All-amps overview: wind + amplitude legend together.
         amp_handles = [
             mlines.Line2D([], [], color="gray",
                           marker=amp_markers[i % len(amp_markers)],
@@ -591,6 +643,24 @@ def _make_damping_ka_fig(
         ]
         ax.legend(handles=wind_handles + amp_handles, fontsize=7,
                   title="condition / amplitude", title_fontsize=7)
+    elif per_freq_markers and unique_freqs:
+        # Per-amp variant with per-freq markers — show a frequency
+        # legend beside the wind legend.
+        freq_handles = [
+            mlines.Line2D([], [], color="gray",
+                          marker=_freq_marker(amp, fi),
+                          linestyle="None", markersize=7,
+                          markeredgecolor="black", markeredgewidth=0.35,
+                          label=f"{f:.1f} Hz")
+            for fi, f in enumerate(unique_freqs)
+        ]
+        leg_wind = ax.legend(handles=wind_handles, fontsize=7,
+                              title="wind", title_fontsize=7,
+                              loc="upper right", framealpha=0.92)
+        ax.add_artist(leg_wind)
+        ax.legend(handles=freq_handles, fontsize=7,
+                  title="frequency", title_fontsize=7,
+                  loc="upper left", framealpha=0.92)
     else:
         ax.legend(handles=wind_handles, fontsize=7,
                   title="wind", title_fontsize=7)
