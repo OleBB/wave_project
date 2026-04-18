@@ -32,3 +32,6 @@ waveprocessed/
 
 # environment
 .env
+
+# Claude Code per-project state (settings, worktree metadata) — per-machine
+.claude/
