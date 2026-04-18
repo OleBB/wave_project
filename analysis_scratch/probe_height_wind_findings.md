@@ -168,6 +168,29 @@ did not see the pattern. **This mooring-length → post-panel fetch
 mechanism is not previously documented** — added as a TODO to promote
 into its own memory note.
 
+### Addendum 2026-04-18: PSD shape comparison sharpens the picture
+
+A direct cond1-vs-cond4 PSD comparison at all four probes
+(`analysis_scratch/wind_psd_shape_cond1_vs_cond4.{py,pdf,_findings.md}`)
+shows that the wind-wave **peak itself** (~3.7 Hz, 10–20 mm²/Hz at
+wind-exposed probes) is essentially identical between conditions —
+which **confirms** the "wind field is constant" claim above. The
+amplitude difference between cond1 and cond4 at the IN probe (10.575
+mm vs 9.178 mm = +1.4 mm) is **not** due to a different wind field; it
+is due to a **drift skirt** below ~3 Hz that is present in cond1's
+spectrum and absent from cond4's. The longer 272 mm acoustic path is
+more vulnerable to slow temperature/medium drift, producing
+low-frequency content that the percentile-based amplitude metric
+(P97.5 − P2.5)/2 aggregates into the reported "amplitude".
+
+This sharpens the framing: the difference is not a uniform amplitude
+scaling factor between conditions — it is **frequency-localised
+artefact energy below the wind band, exclusive to cond1**. Practical
+consequence: cond1 IN-probe time-domain amplitudes are systematically
+inflated by about 1–1.5 mm relative to the actual wind. FFT-based
+OUT/IN at the paddle frequency is not affected (narrow-band window
+excludes the drift skirt).
+
 ---
 
 ## Finding 3: Signal-to-noise — framing clarified
