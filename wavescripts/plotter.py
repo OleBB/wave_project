@@ -805,10 +805,13 @@ def _make_damping_wind_delta_fig(
     ref_wind: str = "no",
     target_wind: str = "full",
     figsize: tuple = (6, 5),
+    ylim_top: Optional[Tuple[float, float]] = None,
+    ylim_bot: Optional[Tuple[float, float]] = None,
 ) -> plt.Figure:
     """
     Two-row figure: top = OUT/IN per wind condition; bottom = delta (target − ref).
     Colour = wind condition (top only). Delta bar chart with sign-coded fill.
+    Shared y-limits across voltage panels via ylim_top/ylim_bot overrides.
     """
     subset = stats_df[
         (stats_df[GC.PANEL_CONDITION] == panel)
@@ -868,8 +871,63 @@ def _make_damping_wind_delta_fig(
     ax_bot.set_xlabel("$kL$", fontsize=9)
     ax_bot.grid(True, alpha=0.3)
 
+    if ylim_top is not None:
+        ax_top.set_ylim(ylim_top)
+    if ylim_bot is not None:
+        ax_bot.set_ylim(ylim_bot)
+
     fig.subplots_adjust(left=0.14, right=0.97, top=0.83, bottom=0.11)
     return fig
+
+
+def _compute_damping_wind_delta_ylims(
+    stats_df: pd.DataFrame,
+    panel_conditions: list,
+    amplitudes: list,
+    ref_wind: str,
+    target_wind: str,
+    pad_frac: float = 0.05,
+) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+    """
+    Compute shared y-limits for the top (OUT/IN) and bottom (Δ) panels
+    across every (panel × amp) combination, so the per-voltage PDFs use
+    identical axes for direct visual comparison.
+    """
+    top_lo, top_hi = np.inf, -np.inf
+    bot_lo, bot_hi = np.inf, -np.inf
+    for panel in panel_conditions:
+        for amp in amplitudes:
+            sub = stats_df[
+                (stats_df[GC.PANEL_CONDITION] == panel)
+                & (stats_df[GC.WAVE_AMPLITUDE_INPUT] == amp)
+            ]
+            if sub.empty:
+                continue
+            std = sub.get("std_out_in", pd.Series(0, index=sub.index)).fillna(0)
+            y = sub["mean_out_in"].astype(float)
+            top_lo = min(top_lo, float((y - std).min()))
+            top_hi = max(top_hi, float((y + std).max()))
+
+            ref_mean = (sub[sub[GC.WIND_CONDITION] == ref_wind]
+                        .groupby(GC.WAVE_FREQUENCY_INPUT)["mean_out_in"].mean())
+            tgt_mean = (sub[sub[GC.WIND_CONDITION] == target_wind]
+                        .groupby(GC.WAVE_FREQUENCY_INPUT)["mean_out_in"].mean())
+            common = ref_mean.index.intersection(tgt_mean.index)
+            if len(common):
+                delta = (tgt_mean.loc[common] - ref_mean.loc[common]).astype(float)
+                bot_lo = min(bot_lo, float(delta.min()))
+                bot_hi = max(bot_hi, float(delta.max()))
+
+    if not np.isfinite(top_lo):
+        top_lo, top_hi = 0.0, 1.2
+    if not np.isfinite(bot_lo):
+        bot_lo, bot_hi = -0.2, 0.2
+
+    top_pad = (top_hi - top_lo) * pad_frac or 0.02
+    bot_span = max(abs(bot_lo), abs(bot_hi))
+    bot_pad = bot_span * pad_frac or 0.02
+    bot_sym = bot_span + bot_pad
+    return (top_lo - top_pad, top_hi + top_pad), (-bot_sym, bot_sym)
 
 
 def plot_damping_wind_delta(
@@ -902,6 +960,10 @@ def plot_damping_wind_delta(
     wind_conditions  = sorted(stats_df[GC.WIND_CONDITION].unique())
     n_runs           = int(stats_df["n_runs"].sum()) if "n_runs" in stats_df.columns else len(stats_df)
 
+    ylim_top, ylim_bot = _compute_damping_wind_delta_ylims(
+        stats_df, panel_conditions, amplitudes, ref_wind, target_wind,
+    )
+
     _top_caption = plotvariables.get("caption")
     if isinstance(_top_caption, str) and "caption" not in plotting:
         plotting = {**plotting, "caption": _top_caption}
@@ -928,7 +990,8 @@ def plot_damping_wind_delta(
         for panel in panel_conditions:
             for amp in amplitudes:
                 fig = _make_damping_wind_delta_fig(
-                    stats_df, panel, amp, ref_wind, target_wind, figsize=figsize
+                    stats_df, panel, amp, ref_wind, target_wind, figsize=figsize,
+                    ylim_top=ylim_top, ylim_bot=ylim_bot,
                 )
                 plt.show()
 
@@ -945,7 +1008,8 @@ def plot_damping_wind_delta(
         for panel in panel_conditions:
             for amp in amplitudes:
                 fig_s = _make_damping_wind_delta_fig(
-                    stats_df, panel, amp, ref_wind, target_wind, figsize=figsize
+                    stats_df, panel, amp, ref_wind, target_wind, figsize=figsize,
+                    ylim_top=ylim_top, ylim_bot=ylim_bot,
                 )
                 amp_tag = f"{int(round(amp * 100)):02d}V"
                 fname = f"{figure_name}_{panel}_{amp_tag}"
@@ -1607,14 +1671,12 @@ def plot_reconstructed(
         print(f"ERROR: invalid target frequency {target_freq}")
         return None, None
 
-    color_swell = WIND_COLOR_MAP.get(windcond, "black")
-    # Wind+noise component must visually contrast with the swell line.
-    # Swell color is tied to WindCondition (e.g. red for full wind), so a
-    # red wind-color collides. Use a neutral charcoal that reads against
-    # both the red and blue wind-color choices.
-    color_wind = "#3A3A3A" if dual_yaxis else "orange"
+    color_wave = WIND_COLOR_MAP.get(windcond, "black")
+    # Wind+noise residual must visually contrast with the paddle-wave line.
+    # Wave colour is blue (nowind) or red (fullwind) from WIND_COLOR_MAP;
+    # orange reads distinctly against both.
+    color_wind = "#FF7F0E"
     color_full = "gray"
-    lstyle = {"no": "-", "full": "--", "reverse": "-."}.get(panelcond, "-")
 
     n_subplots = len(probes) if facet_by == "probe" else 1
     if n_subplots == 0:
@@ -1624,10 +1686,14 @@ def plot_reconstructed(
     fig, axes = plt.subplots(n_subplots, 1, figsize=figsize, squeeze=False, dpi=120)
     axes = axes.flatten()
     amplitude_comparison = []
+    ax_s_list: list = []
+    ax_w_list: list = []
 
     for subplot_idx in range(n_subplots):
         ax_s = axes[subplot_idx]
         ax_w = ax_s.twinx() if dual_yaxis else ax_s
+        ax_s_list.append(ax_s)
+        ax_w_list.append(ax_w)
         probes_here = [probes[subplot_idx]] if facet_by == "probe" else probes
         title = (
             f"Probe {probes[subplot_idx]}"
@@ -1686,31 +1752,33 @@ def plot_reconstructed(
             ax_s.plot(
                 time_axis,
                 signal_swell,
-                lw=linewidth * 1.5,
+                lw=linewidth * 2.5,
                 label=f"{lp}wave ({actual_freq:.4f}Hz)",
-                linestyle=lstyle,
-                color=color_swell,
-                alpha=0.9,
+                linestyle="-",
+                color=color_wave,
+                alpha=0.95,
                 zorder=3,
             )
             ax_w.plot(
                 time_axis,
                 signal_wind,
                 lw=linewidth,
-                label=f"{lp}wind",
-                linestyle=":" if dual_yaxis else "--",
+                label=f"{lp}wind+noise",
+                linestyle="-",
                 color=color_wind,
-                alpha=0.7,
+                alpha=0.75,
                 zorder=2,
             )
 
         ax_s.set_title(title, fontsize=fontsize + 2, fontweight="bold", pad=15)
         ax_s.set_xlabel("Time [s]", fontsize=fontsize)
         if dual_yaxis:
-            ax_s.set_ylabel("Swell Amplitude", fontsize=fontsize, color=color_swell)
-            ax_w.set_ylabel("Wind+Noise Amplitude", fontsize=fontsize, color=color_wind)
+            ax_s.set_ylabel("Reconstructed paddle-frequency wave [mm]",
+                            fontsize=fontsize, color=color_wave)
+            ax_w.set_ylabel("Wind + noise residual [mm]",
+                            fontsize=fontsize, color=color_wind)
         else:
-            ax_s.set_ylabel("Amplitude", fontsize=fontsize)
+            ax_s.set_ylabel("Amplitude [mm]", fontsize=fontsize)
         if show_grid:
             ax_s.grid(which="major", linestyle="--", alpha=0.3)
             ax_s.grid(which="minor", linestyle=":", alpha=0.15)
@@ -1726,6 +1794,32 @@ def plot_reconstructed(
                 framealpha=0.95,
             )
         ax_s.axhline(0, color="black", lw=0.5, alpha=0.3)
+
+    # Shared y-limits across facets so the two probe panels are directly
+    # comparable by eye (signal_swell and signal_wind each get their own
+    # symmetric, common scale).
+    def _shared_symmetric_ylim(axs, pad_frac=0.05):
+        lo, hi = np.inf, -np.inf
+        for ax in axs:
+            y0, y1 = ax.get_ylim()
+            lo = min(lo, y0)
+            hi = max(hi, y1)
+        if not np.isfinite(lo):
+            return None
+        span = max(abs(lo), abs(hi))
+        span *= (1 + pad_frac)
+        return (-span, span)
+
+    if len(ax_s_list) > 1:
+        lim_s = _shared_symmetric_ylim(ax_s_list)
+        if lim_s is not None:
+            for ax in ax_s_list:
+                ax.set_ylim(lim_s)
+        if dual_yaxis:
+            lim_w = _shared_symmetric_ylim(ax_w_list)
+            if lim_w is not None:
+                for ax in ax_w_list:
+                    ax.set_ylim(lim_w)
 
     plt.suptitle(
         f"{Path(path).stem}\n{windcond} / {panelcond} / {target_freq:.2f} Hz",
