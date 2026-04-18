@@ -422,27 +422,38 @@ def build_fig_meta(plotvariables: dict,
                 if uniq:
                     meta[col] = uniq if len(uniq) > 1 else uniq[0]
         # Probe config names if available. Falls back to mapping via
-        # file_date + ProbeConfiguration when absent from the frame.
+        # file_date (per-row) or file_dates (per-group, list; from
+        # damping_all_amplitude_grouper).
         if "probe_config_name" in data_df.columns:
             uniq = sorted({str(v) for v in data_df["probe_config_name"].dropna().unique() if str(v).strip()})
             if uniq:
                 meta["probe_configs"] = uniq if len(uniq) > 1 else uniq[0]
-        elif "file_date" in data_df.columns:
+        elif "file_date" in data_df.columns or "file_dates" in data_df.columns:
             try:
                 from wavescripts.improved_data_loader import (
                     get_configuration_for_date, PROBE_CONFIGS,
                 )
                 from datetime import datetime as _dt
                 final_name = PROBE_CONFIGS[-1].name
+                # Collect date strings (per-row or pooled from per-group lists)
+                date_strs = []
+                if "file_date" in data_df.columns:
+                    date_strs = [str(v) for v in data_df["file_date"].dropna()]
+                if "file_dates" in data_df.columns:
+                    for cell in data_df["file_dates"].dropna():
+                        if isinstance(cell, (list, tuple)):
+                            date_strs.extend(str(v) for v in cell)
+                        else:
+                            date_strs.append(str(cell))
                 cfg_names = set()
                 non_final = 0
-                for v in data_df["file_date"].dropna().unique():
+                for s in date_strs:
                     try:
-                        fd = _dt.fromisoformat(str(v))
+                        fd = _dt.fromisoformat(s)
                         cfg = get_configuration_for_date(fd)
                         cfg_names.add(cfg.name)
                         if cfg.name != final_name:
-                            non_final += int((data_df["file_date"] == v).sum())
+                            non_final += 1
                     except Exception:
                         continue
                 if cfg_names:

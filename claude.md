@@ -254,6 +254,20 @@ Always use `"Probe {pos} Amplitude"` (no suffix) for OUT/IN ratio computation.
 
 `find_wave_range` in `wave_detection.py` uses `_PROBE_GROUP` dict to map all lateral variants of a probe to a distance group (e.g. `"Probe 12400/170"` → `"12400"`). If a new probe position is added, it **must** be added to `_PROBE_GROUP` — otherwise range detection falls back to `2 * samples_per_period` (stillwater phase), giving near-zero amplitudes and OUT/IN ≈ 0.1.
 
+### Lessons from 2026-04-18 (big canonicalization session)
+
+General principles learned the hard way this day — worth internalising before you refactor the data model:
+
+**Post-load hooks are fragile.** The morning's `mean_in_probe.py` was a post-load transformation applied only inside `main_save_figures.py`. It worked but left `meta.json` and in-memory `meta_results` with different definitions of `OUT/IN (FFT)` — and any script that loaded meta *without* calling the hook silently used the single-probe ratio. **Rule**: if a change affects the *semantic meaning* of a metadata column, put it in the pipeline (`processor2nd.py`), not in a post-load hook. One source of truth, readable from meta.json.
+
+**Silent merging is the enemy.** When a metric is computed by combining multiple probes / runs / conditions, the merge *must* be visible. Mechanism we settled on: `build_fig_meta(data_df=…)` auto-writes `in_probes_used`, `out_probes_used`, `probe_configs`, `non_final_config_n` into the TEXFIGU stub's IMMUTABLE comment block. Every plotter in `plotter.py` passes its filtered frame (`meta_df`, `stats_df`, or `band_amplitudes`) through this channel so the stub *always* documents which probes contributed. **Rule**: when you write a new plotter, pass the filtered data via `data_df=` to `build_fig_meta`.
+
+**Averaging can still hide bias.** If two parallel probes are *systematically* different (e.g. wall-side vs far-side under wind), the mean is still biased, just *less* than a single probe. The `probe_bias_diagnostic.py` found significant directional bias at fullwind ≥ 1.5 Hz (wall-side reads +7–18 % higher, wind-contamination-driven). Nowind is clean. The mean is still defensible but is a conservative approximation; T_cross is the honest fullwind metric at high freq. **Rule**: after any multi-probe averaging, run a signed-difference + t-test check to confirm the residual bias is acceptable.
+
+**Recomputes are not free but are often right.** A `python main.py --force-recompute` takes ~20 min for 25 datasets and updates every `meta.json`. When a canonical column changes meaning, *do the recompute* so the on-disk state matches the new science. Keeping the old hook around for "convenience" breeds divergence.
+
+**Archive, don't delete.** Retired scripts go to `analysis_scratch/archive/<yyyy-mm-dd>_<name>/` with a README explaining why, what replaced them, and when the archived pattern could still be useful. Git history is authoritative but archive folders are faster to scan when looking for precedent.
+
 ---
 
 ## 7. Wave range detection (`_SNARVEI_CALIB`)

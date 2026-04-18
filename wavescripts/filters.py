@@ -769,6 +769,15 @@ def damping_grouper(
     for _pos_col in ("in_position", "out_position"):
         if _pos_col in cmdf.columns:
             base_columns.append(_pos_col)
+    # Canonical IN/OUT amplitudes and their probe-composition provenance
+    # — ride through the grouper so stats_df carries them forward into
+    # figure-stub metadata (see plot_utils.build_fig_meta).
+    for _col in ("IN Amplitude (FFT)", "OUT Amplitude (FFT)",
+                 "in_probes_used", "out_probes_used",
+                 "ain_disagree_frac", "aout_disagree_frac",
+                 "file_date"):
+        if _col in cmdf.columns:
+            base_columns.append(_col)
     columns = base_columns + fft_amp_cols
 
     # Quick safety check
@@ -831,6 +840,21 @@ def damping_grouper(
     for col in fft_amp_cols:
         pos = col.replace("Probe ", "").replace(" Amplitude (FFT)", "")
         agg_dict[f"mean_A_{pos}"] = (col, "mean")
+    # Preserve the probe-composition provenance (added to base_columns
+    # above). Groups share a probe config by construction (in_position
+    # is a grouping key and uniquely determines the rest), so `first`
+    # is safe here.
+    for _col in ("in_probes_used", "out_probes_used"):
+        if _col in rmdf.columns:
+            agg_dict[_col] = (_col, "first")
+    for _col in ("ain_disagree_frac", "aout_disagree_frac"):
+        if _col in rmdf.columns:
+            agg_dict[f"{_col}_mean"] = (_col, "mean")
+    # Distinct file dates in each group → probe config can be inferred
+    # later. Keep as a list so downstream code sees all contributing
+    # dates.
+    if "file_date" in rmdf.columns:
+        agg_dict["file_dates"] = ("file_date", lambda s: sorted({str(v) for v in s.dropna()}))
 
     stats = (
         rmdf.groupby(grouping_keys, dropna=False)
@@ -973,6 +997,19 @@ def damping_all_amplitude_grouper(
     ]
     if "Mooring" in cmdf.columns:
         base_columns.append("Mooring")
+    # Include physical probe-position columns (written by processor2nd)
+    for _pos_col in ("in_position", "out_position"):
+        if _pos_col in cmdf.columns:
+            base_columns.append(_pos_col)
+    # Canonical IN/OUT amplitudes and their probe-composition provenance —
+    # ride through the grouper so stats_df carries them into figure-stub
+    # metadata (see plot_utils.build_fig_meta).
+    for _col in ("IN Amplitude (FFT)", "OUT Amplitude (FFT)",
+                 "in_probes_used", "out_probes_used",
+                 "ain_disagree_frac", "aout_disagree_frac",
+                 "file_date"):
+        if _col in cmdf.columns:
+            base_columns.append(_col)
     columns = base_columns + fft_amp_cols
 
     missing_cols = [c for c in columns if c not in cmdf.columns]
@@ -1025,6 +1062,20 @@ def damping_all_amplitude_grouper(
     for col in fft_amp_cols:
         pos = col.replace("Probe ", "").replace(" Amplitude (FFT)", "")
         agg_dict[f"mean_A_{pos}"] = (col, "mean")
+    # Preserve probe-composition provenance (added to base_columns above).
+    # Groups share a probe config by construction (same file_date → same
+    # ProbeConfiguration → same in/out_probes_used), so ``first`` is safe.
+    for _col in ("in_probes_used", "out_probes_used",
+                 "in_position", "out_position"):
+        if _col in rmdf.columns:
+            agg_dict[_col] = (_col, "first")
+    for _col in ("ain_disagree_frac", "aout_disagree_frac"):
+        if _col in rmdf.columns:
+            agg_dict[f"{_col}_mean"] = (_col, "mean")
+    if "file_date" in rmdf.columns:
+        agg_dict["file_dates"] = (
+            "file_date", lambda s: sorted({str(v) for v in s.dropna()})
+        )
 
     stats = (
         rmdf.groupby(grouping_keys)

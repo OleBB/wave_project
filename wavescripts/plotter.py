@@ -162,6 +162,7 @@ def plot_all_probes(
             plotvariables,
             chapter=chapter,
             extra={"script": "plotter.py::plot_all_probes"},
+            data_df=meta_df,
         )
         save_and_stub(fig, meta, plot_type="amplitude_probes")
 
@@ -325,6 +326,7 @@ def plot_damping_freq(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_freq"},
+            data_df=stats_df,
         )
         figure_name    = plotting.get("figure_name") or build_filename("damping_freq", meta_base)
         subfig_captions = []
@@ -446,6 +448,7 @@ def plot_damping_scatter(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_scatter"},
+            data_df=stats_df,
         )
         figure_name     = plotting.get("figure_name") or build_filename("damping_scatter", meta_base)
         subfig_captions = []
@@ -756,6 +759,7 @@ def plot_damping_ka(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_ka"},
+            data_df=wave_df,
         )
         figure_name     = plotting.get("figure_name") or build_filename("damping_ka", meta_base)
         subfig_captions = []
@@ -934,6 +938,7 @@ def plot_damping_wind_delta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_wind_delta"},
+            data_df=stats_df,
         )
         figure_name = plotting.get("figure_name") or build_filename("damping_wind_delta", meta_base)
         subfig_captions = []
@@ -1217,6 +1222,7 @@ def plot_swell_scatter(
             plotvariables,
             chapter=chapter,
             extra={"script": "plotter.py::plot_swell_scatter"},
+            data_df=band_amplitudes,
         )
         # Use figure_name as base; per-band suffix prevents the three saves
         # from overwriting each other (build_filename returns figure_name
@@ -1433,6 +1439,7 @@ def plot_frequency_spectrum(
         meta_base = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
+            data_df=meta_df,
             extra={
                 "script": "plotter.py::plot_frequency_spectrum",
                 "data_type": data_type,
@@ -1732,6 +1739,7 @@ def plot_reconstructed(
             freqplotvariables,
             chapter=chapter,
             extra={"script": "plotter.py::plot_reconstructed"},
+            data_df=meta_df,
         )
         save_and_stub(fig, meta, plot_type="reconstructed")
 
@@ -2497,6 +2505,7 @@ def plot_probe_noise_floor(
         meta_base = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
+            data_df=combined_meta,
         )
         force_stub = plotting.get("force_stub", False)
         if len(figs) == 1:
@@ -2660,6 +2669,7 @@ def plot_parallel_ratio(
         meta = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
+            data_df=combined_meta,
         )
         save_and_stub(fig, meta, plot_type="parallel_ratio",
                       force_stub=plotting.get("force_stub", False))
@@ -2824,6 +2834,7 @@ def plot_wave_stability(
                                            "figure_name": figure_name,
                                            "caption": _caption}},
             chapter=chapter,
+            data_df=combined_meta,
         )
         write_figure_stub(
             meta, plot_type="wave_stability",
@@ -3014,6 +3025,7 @@ def plot_timeseries_overview(
                                            "figure_name": figure_name,
                                            "caption": _caption}},
             chapter=chapter,
+            data_df=combined_meta,
         )
         write_figure_stub(
             meta, plot_type="timeseries_overview",
@@ -3114,6 +3126,7 @@ def plot_sound_speed(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_sound_speed"},
+            data_df=combined_meta,
         )
         save_and_stub(fig, meta, plot_type="sound_speed",
                       force_stub=force_stub)
@@ -3270,6 +3283,7 @@ def plot_wind_snr(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_wind_snr"},
+            data_df=combined_meta,
         )
         save_and_stub(fig, meta, plot_type="wind_snr", force_stub=force_stub)
 
@@ -3398,6 +3412,7 @@ def plot_td_vs_fft(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_td_vs_fft"},
+            data_df=combined_meta,
         )
         save_and_stub(fig, meta, plot_type="td_vs_fft", force_stub=force_stub)
 
@@ -3762,6 +3777,7 @@ def plot_first_arrival(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_first_arrival"},
+            data_df=combined_meta,
         )
         save_and_stub(fig, meta, plot_type="first_arrival",
                       force_stub=force_stub)
