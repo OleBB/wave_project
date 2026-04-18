@@ -37,11 +37,73 @@
 | 0.3 V | full | 0.761 | 0.755 | -0.006 | 0.778 |
 | 0.3 V |   no | 0.696 | 0.937 | +0.241 | 0.701 |
 
-## Quick take (user to refine)
+## The 0.3 V nowind outlier is a 9373/170 probe glitch, NOT physics
 
-- If the three OUT/IN columns agree within a few percent, the pipeline window is already giving H&G-equivalent numbers at 1.4 Hz. That would confirm our methodology is consistent with the published standard.
-- If the H&G window yields systematically different OUT/IN values, it points at a window-dependent bias — most likely because the pipeline window (typically 19–39 s, samples 4800–9750) is longer than 10T and may include regions before the wave train has fully settled, or it is contaminated by reflections / parasitic waves at its tail end.
-- The sliding-AFFT sweep shows where A settles vs window-start time. If H&G-window AFFT sits on the stable plateau of the sweep, it is trustworthy; if it sits on a transient, it is not.
+The single Δ = +0.24 outlier at (0.3 V, nowind) looked suspicious. Adding
+the parallel 9373/340 probe (same longitudinal distance, other lateral
+position) as a sanity check (`huseby_grue_window.pdf`, middle column of
+the bottom row) resolves it:
+
+- **9373/170** at 0.3 V nowind: drops from ~22 mm to ~17 mm between
+  window-start 30 s and 36 s, recovers after 36 s. The H&G single-shot
+  window catches this dip → IN reads 17 mm → OUT/IN inflated to 0.94.
+- **9373/340** at 0.3 V nowind: flat at ~22 mm across the entire run.
+  **No dip whatsoever.**
+
+Two probes looking at the same longitudinal position of the same
+wavefield: a dip on one and not the other is **instrumentation noise**,
+not physics. The H&G OUT/IN = 0.94 is an artefact of a single-probe
+false reading in the short window.
+
+Recomputing H&G OUT/IN using 9373/340 as the IN reference for this
+run: 15.5 mm / 22 mm ≈ 0.70 — matches the pipeline (0.696) and
+sliding-median (0.701) exactly.
+
+**Takeaway for the thesis**: using both 9373 probes (not just the
+pipeline's single 9373/170) as cross-checks catches this kind of
+single-probe glitch. The parallel probe is a redundancy sanity check
+whenever the two disagree by more than expected lateral variability.
+See follow-up scope below.
+
+## Overall take
+
+- **For 8 of 9 runs**: pipeline, H&G and sliding-median all agree
+  within ±0.05 OUT/IN. The pipeline window is giving H&G-equivalent
+  numbers at 1.4 Hz — methodology validated against the published
+  standard.
+- **For the one outlier (0.3 V nowind)**: the H&G window is
+  mathematically fine; the IN probe reading in that window is the
+  problem. Cross-check with the parallel probe is what caught it.
+- The sliding-AFFT curves confirm the wave train settles onto a stable
+  plateau by ~20–25 s and stays there through 100 s. Both window
+  choices (pipeline 19–39 s, H&G 35–42 s) sit on this plateau when the
+  probe is behaving.
+
+## Follow-up scope (the user's "big topic")
+
+> "we should really use BOTH 9373 probes for all these plots"
+
+Concrete options, in order of increasing scope:
+
+1. **Redundancy quality flag** — add `ain_probe_disagreement` column:
+   when |A(9373/170) − A(9373/340)| / mean(A) > threshold (e.g. 10%),
+   flag the run. Agents / plots can then opt in to exclude.
+2. **Sanity-check overlay** — on any CH05 figure that uses A(9373/170),
+   add the A(9373/340) value as a faint marker (or errorbar range).
+   Reader sees disagreement at a glance without changing the
+   quantitative claim.
+3. **Redefine IN reference** — use mean(9373/170, 9373/340) as the
+   canonical IN amplitude everywhere. Simple, robust, but blurs genuine
+   lateral asymmetry (CLAUDE.md §16 warns against averaging without
+   thought). Would require re-deriving OUT/IN, ka, T_cross, everything.
+4. **Per-run best-probe selection** — keep 9373/170 as default, swap
+   to 9373/340 when the former has a detected anomaly and the latter
+   doesn't. Preserves lateral-asymmetry discussion in CH04 while
+   letting CH05 reap the robustness benefit.
+
+Option (2) is the lightest. Option (3) is the heaviest but arguably
+the cleanest science. Recommend option (2) first, then option (3)
+if the user wants to go all-in after seeing (2).
 
 ## Caveats
 

@@ -82,8 +82,13 @@ SLIDING_START_S = 10.0
 SLIDING_END_S   = 100.0
 
 FFT_BAND_HZ     = 0.05   # ±half-width for nearest-bin pick (matches pipeline)
-PROBES          = ["9373/170", "12400/250"]
-IN_POS, OUT_POS = PROBES
+PROBES          = ["9373/170", "9373/340", "12400/250"]
+IN_POS, OUT_POS = "9373/170", "12400/250"
+# Parallel IN probe at the same longitudinal distance, different lateral
+# position — used here to cross-check single-probe artefacts in the IN
+# signal (e.g. the 0.3 V nowind transient dip visible in the first
+# iteration at 9373/170 around t_start ≈ 30–34 s).
+IN_PARALLEL_POS = "9373/340"
 
 RESULTS_DIRS = [
     Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
@@ -246,20 +251,33 @@ for _, r in df_out.iterrows():
           f"OUTIN_pipe={r['OUTIN_pipe']:.3f}  OUTIN_hg={r['OUTIN_hg']:.3f} (Δ={d_hg:+.3f})  "
           f"OUTIN_slide={r['OUTIN_slide_median']:.3f} (Δ={d_sm:+.3f})")
 
-# ── 3. Plot ───────────────────────────────────────────────────────────────────
+# ── 3. Plot — 3 rows (amp) × 3 cols (probes) ─────────────────────────────────
 print("\n6. Plotting …")
 WIND_COLOR = {"no": "#2980B9", "full": "#E74C3C"}
+# Column order: IN (9373/170), parallel IN (9373/340), OUT (12400/250)
+PROBE_ORDER = [IN_POS, IN_PARALLEL_POS, OUT_POS]
+PROBE_LABELS = {
+    IN_POS:          f"{IN_POS}  IN (pipeline reference)",
+    IN_PARALLEL_POS: f"{IN_PARALLEL_POS}  parallel IN (lateral sanity check)",
+    OUT_POS:         f"{OUT_POS}  OUT",
+}
 
-fig, axes = plt.subplots(3, 2, figsize=(16, 11), sharex=True)
+fig, axes = plt.subplots(3, 3, figsize=(20, 11), sharex=True)
+# Link y-axis of the two 9373 probes per row so a side-by-side glance
+# immediately reveals divergences. OUT (col 2) gets its own scale because
+# it's ~5× smaller than IN.
+for row in range(3):
+    axes[row, 0].sharey(axes[row, 1])
 fig.suptitle(
     f"Huseby & Grue window applied to per240 {TARGET_FREQ:.1f} Hz — "
-    f"sliding 10T AFFT vs H&G single-shot [35, {HG_END_S:.2f}] s",
+    f"sliding 10T AFFT vs H&G single-shot [35, {HG_END_S:.2f}] s  "
+    f"(parallel 9373 probe added as lateral sanity check)",
     fontsize=12, fontweight="bold",
 )
 
 amps_order = [0.1, 0.2, 0.3]
 for i, amp in enumerate(amps_order):
-    for j, probe in enumerate(PROBES):
+    for j, probe in enumerate(PROBE_ORDER):
         ax = axes[i, j]
         for _, r in target[target["WaveAmplitudeInput [Volt]"] == amp].iterrows():
             path = r["path"]
@@ -301,7 +319,7 @@ for i, amp in enumerate(amps_order):
 
         ax.set_xlim(SLIDING_START_S, SLIDING_END_S)
         ax.grid(True, alpha=0.3)
-        ax.set_title(f"{amp:.1f} V — probe {probe}", fontsize=9, fontweight="bold")
+        ax.set_title(f"{amp:.1f} V — {PROBE_LABELS[probe]}", fontsize=9, fontweight="bold")
         if i == 2:
             ax.set_xlabel("window start [s from wavemaker start]", fontsize=9)
         if j == 0:
