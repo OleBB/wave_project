@@ -59,7 +59,6 @@ import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
-from wavescripts.mean_in_probe import apply_mean_in_reference, probe_agreement_summary
 
 # ── I/O ────────────────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "parallel_probe_agreement.pdf"
@@ -76,14 +75,17 @@ RESULTS_DIRS = [
 
 THRESHOLD = 0.10
 
-# ── 1. Load + decorate ─────────────────────────────────────────────────────────
+# ── 1. Load ─────────────────────────────────────────────────────────────────
+# Canonical IN/OUT amplitudes and ain_disagree_frac / aout_disagree_frac
+# now live in meta.json directly (pipeline-level as of 2026-04-18). The
+# old mean_in_probe hook has been archived.
 print("1. Loading …")
 meta, _, _, _ = load_analysis_data(*RESULTS_DIRS, load_processed=False)
 meta["Mooring"] = meta["Mooring"].replace({
     "below_90_loose230": "below_90_loose",
     "below_90_loose300": "below_90_loose",
 })
-apply_mean_in_reference(meta, disagreement_threshold_frac=THRESHOLD)
+meta["ain_probe_consistent"] = meta["ain_disagree_frac"] < THRESHOLD
 
 # Scope: thesis band only (1.3–1.6 Hz), full-panel quality-ok wave runs
 scope = meta[
@@ -97,7 +99,16 @@ scope = meta[
 print(f"   {len(scope)} quality-ok fullpanel wave runs in thesis scope")
 
 # ── 2. Per-run summary ─────────────────────────────────────────────────────────
-summary = probe_agreement_summary(meta[meta["WaveFrequencyInput [Hz]"].notna()])
+wave_all = meta[meta["WaveFrequencyInput [Hz]"].notna()].copy()
+wave_all["freq_r"] = wave_all["WaveFrequencyInput [Hz]"].round(2)
+wave_all["amp_r"]  = wave_all["WaveAmplitudeInput [Volt]"].round(2)
+summary = (wave_all.groupby(["amp_r", "freq_r", "WindCondition"])
+                   .agg(n=("ain_disagree_frac", "size"),
+                        disagree_frac_mean=("ain_disagree_frac", "mean"),
+                        disagree_frac_max=("ain_disagree_frac", "max"),
+                        n_inconsistent=("ain_probe_consistent",
+                                        lambda s: int((~s).sum())))
+                   .reset_index())
 summary.to_csv(SCRATCH_CSV, index=False)
 print(f"   Summary → {SCRATCH_CSV.relative_to(BASE)}")
 

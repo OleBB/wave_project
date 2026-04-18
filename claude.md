@@ -187,7 +187,33 @@ Every probe position is always written as `"longitudinal/lateral"` — even for 
 
 - Set by `processor2nd.py` from `ProbeConfiguration.in_probe` / `out_probe` via `probe_col_name()`
 - Stored as position strings: `"9373/250"`, `"12400/170"`, etc.
-- Used by `damping_grouper` to recompute OUT/IN ratio on-the-fly from plain amplitude columns
+- Refer to the **reference probe** — still a single-probe identifier
+- The canonical IN/OUT values are in the generic `IN Amplitude (FFT)` / `OUT Amplitude (FFT)` columns (see below)
+
+### Canonical IN/OUT = mean of all probes sharing the reference distance (CRITICAL, 2026-04-18)
+
+The pipeline's `OUT/IN (FFT)` is computed as `A_out_canonical / A_in_canonical`, where each canonical amplitude is the **mean of all probes at the same longitudinal distance as the reference probe**:
+
+- `march2026_better_rearranging`: IN = mean(9373/170, 9373/340); OUT = 12400/250 alone
+- `march2026_rearranging`:        IN = mean(9373/170, 9373/340); OUT = 11800/250 alone
+- `nov_normalt_oppsett`:          IN = 9373/250 alone; OUT = mean(12400/170, 12400/340)
+- `initial_setup`:                IN = 9373/250 alone; OUT = mean(12400/170, 12400/340)
+
+The single-probe ratio (old behaviour) is gone — it's replaced everywhere in meta.json by the mean-based ratio. Per-probe `Probe {pos} Amplitude (FFT)` columns still exist for oddity inspection.
+
+**Columns written to meta.json by `processor2nd.py::_update_more_metrics`**:
+
+- `IN Amplitude (FFT)` / `OUT Amplitude (FFT)` — canonical means
+- Same pattern for `IN ka (FFT)`, `IN Wavenumber (FFT)`, `IN Wavelength (FFT)`, `IN WavePeriod (FFT)`, `IN Celerity (FFT)`, `IN Significant Wave Height Hm0`, `IN Significant Wave Height Hs`, `IN Froude (FFT)`, `IN Wind/Celerity (FFT)`, `IN f/f_PM (FFT)`, `IN Ursell (FFT)` — also means
+- `IN wave_stability`, `IN period_amplitude_cv` — **reference-probe only** (per-probe quality metrics; averaging makes less sense)
+- `in_probes_used` / `out_probes_used` — e.g. `"9373/170+9373/340"` — tells the reader which probes contributed per row
+- `ain_disagree_frac` / `aout_disagree_frac` — `(max − min) / mean` over the contributing probes; 0 when the side has a single probe
+
+**`damping_grouper`** (`filters.py`) recomputes OUT/IN from the generic `IN Amplitude (FFT)` / `OUT Amplitude (FFT)` columns, **not** from `Probe {in_position} Amplitude (FFT)` anymore.
+
+**Don't silently merge**: `build_fig_meta(plotvariables, data_df=...)` automatically adds `in_probes_used`, `out_probes_used`, `probe_configs`, `non_final_config_n` to the stub's immutable comment block whenever the dataframe is passed in. That way every figure documents which probes contributed to its data.
+
+**Archived**: the earlier post-load hook `wavescripts/mean_in_probe.py` lives under `analysis_scratch/archive/2026-04-18_mean_in_probe_hook/`. Superseded by the pipeline-level computation.
 
 ---
 

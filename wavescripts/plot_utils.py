@@ -373,7 +373,8 @@ def build_filename(plot_type: str, meta: dict) -> str:
 
 def build_fig_meta(plotvariables: dict,
                    chapter: str = "05",
-                   extra: Optional[dict] = None) -> dict:
+                   extra: Optional[dict] = None,
+                   data_df=None) -> dict:
     """
     Extract figure metadata from a plotvariables dict.
 
@@ -386,6 +387,16 @@ def build_fig_meta(plotvariables: dict,
     extra : dict, optional
         Additional immutable fields for the stub comments,
         e.g. {"run_id": "2024-11-03_run2", "script": "main.py"}.
+    data_df : pandas.DataFrame, optional
+        The filtered dataframe that went into the figure. When provided,
+        probe-provenance fields are derived from it and added to the
+        metadata so the resulting stub documents exactly what data the
+        figure reflects. Extracted fields (when the columns are present):
+          - probe_configs       : unique probe configurations (e.g. "march2026_better_rearranging")
+          - n_runs              : total row count
+          - in_probes_used      : unique IN-probe compositions (e.g. "9373/170+9373/340")
+          - out_probes_used     : unique OUT-probe compositions
+          - non_final_config_n  : count of rows not using the latest probe config
     """
     f = plotvariables.get("filters", {})
     p = plotvariables.get("plotting", {})
@@ -401,6 +412,46 @@ def build_fig_meta(plotvariables: dict,
         "figure_name": p.get("figure_name"),
         "draft":       p.get("draft", False),
     }
+    if data_df is not None and hasattr(data_df, "columns") and len(data_df):
+        meta["n_runs"] = int(len(data_df))
+        # Probe composition per row — distinct strings tell the reader
+        # which probes contributed. If >1 distinct, the data spans eras.
+        for col in ("in_probes_used", "out_probes_used"):
+            if col in data_df.columns:
+                uniq = sorted({str(v) for v in data_df[col].dropna().unique() if str(v).strip()})
+                if uniq:
+                    meta[col] = uniq if len(uniq) > 1 else uniq[0]
+        # Probe config names if available. Falls back to mapping via
+        # file_date + ProbeConfiguration when absent from the frame.
+        if "probe_config_name" in data_df.columns:
+            uniq = sorted({str(v) for v in data_df["probe_config_name"].dropna().unique() if str(v).strip()})
+            if uniq:
+                meta["probe_configs"] = uniq if len(uniq) > 1 else uniq[0]
+        elif "file_date" in data_df.columns:
+            try:
+                from wavescripts.improved_data_loader import (
+                    get_configuration_for_date, PROBE_CONFIGS,
+                )
+                from datetime import datetime as _dt
+                final_name = PROBE_CONFIGS[-1].name
+                cfg_names = set()
+                non_final = 0
+                for v in data_df["file_date"].dropna().unique():
+                    try:
+                        fd = _dt.fromisoformat(str(v))
+                        cfg = get_configuration_for_date(fd)
+                        cfg_names.add(cfg.name)
+                        if cfg.name != final_name:
+                            non_final += int((data_df["file_date"] == v).sum())
+                    except Exception:
+                        continue
+                if cfg_names:
+                    uniq = sorted(cfg_names)
+                    meta["probe_configs"] = uniq if len(uniq) > 1 else uniq[0]
+                if non_final > 0:
+                    meta["non_final_config_n"] = non_final
+            except Exception:
+                pass
     if extra:
         meta.update(extra)
     return meta

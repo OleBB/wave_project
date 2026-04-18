@@ -719,46 +719,32 @@ def damping_grouper(
     print(f"Unique PanelCondition values: {cmdf[GC.PANEL_CONDITION].unique().tolist()}")
     print(f"Unique WindCondition values: {cmdf[GC.WIND_CONDITION].unique().tolist()}")
 
-    # ─── Recompute OUT/IN from FFT probe amplitudes ──────────────────────────
-    # FFT amplitude at the paddle frequency isolates the paddle wave from wind
-    # waves. Time-domain (percentile) amplitude includes wind-wave energy, which
-    # inflates the IN probe amplitude under full-wind conditions and makes OUT/IN
-    # meaningless for damping analysis. Use "Probe {pos} Amplitude (FFT)" always.
-    _have_positions = (
-        "in_position" in cmdf.columns
-        and "out_position" in cmdf.columns
-        and cmdf["in_position"].notna().any()
+    # ─── Recompute OUT/IN from the canonical IN/OUT FFT-amplitude columns ────
+    # ``IN Amplitude (FFT)`` and ``OUT Amplitude (FFT)`` are written by
+    # processor2nd._update_more_metrics as the mean across all probes sharing
+    # the same longitudinal distance as the reference IN/OUT probe. For
+    # march2026_better_rearranging that's IN = mean(9373/170, 9373/340) and
+    # OUT = 12400/250 alone. For nov_normalt_oppsett it's IN = 9373/250 alone
+    # and OUT = mean(12400/170, 12400/340). Re-computing here cross-checks
+    # the cached value and picks up any downstream column edits.
+    _have_canonical = (
+        "IN Amplitude (FFT)" in cmdf.columns
+        and "OUT Amplitude (FFT)" in cmdf.columns
     )
-    if _have_positions:
-        _fft_amp_cols = {
-            c for c in cmdf.columns
-            if c.startswith("Probe ") and c.endswith(" Amplitude (FFT)")
-        }
-        def _row_out_in(row):
-            in_pos  = row.get("in_position")
-            out_pos = row.get("out_position")
-            if pd.isna(in_pos) or pd.isna(out_pos):
-                return np.nan
-            in_col  = f"Probe {in_pos} Amplitude (FFT)"
-            out_col = f"Probe {out_pos} Amplitude (FFT)"
-            if in_col not in _fft_amp_cols or out_col not in _fft_amp_cols:
-                return np.nan
-            in_amp  = row.get(in_col,  np.nan)
-            out_amp = row.get(out_col, np.nan)
-            if pd.isna(in_amp) or pd.isna(out_amp) or in_amp == 0:
-                return np.nan
-            return out_amp / in_amp
-        recomputed = cmdf.apply(_row_out_in, axis=1)
-        n_valid = recomputed.notna().sum()
+    if _have_canonical:
+        in_amp  = cmdf["IN Amplitude (FFT)"]
+        out_amp = cmdf["OUT Amplitude (FFT)"]
+        recomputed = (out_amp / in_amp.where(in_amp > 0, np.nan)).replace(
+            [np.inf, -np.inf], np.nan
+        )
+        n_valid = int(recomputed.notna().sum())
         if n_valid > 0:
             cmdf[GC.OUT_IN_FFT] = recomputed
-            print(f"   Recomputed OUT/IN from FFT probe amplitudes ({n_valid} valid rows)")
+            print(f"   Recomputed OUT/IN from canonical IN/OUT Amplitude (FFT) "
+                  f"({n_valid} valid rows)")
         else:
-            # Fallback: FFT amplitude columns didn't match in_position strings —
-            # print diagnostic and keep the cached OUT/IN (FFT) values
-            sample_in  = cmdf["in_position"].dropna().iloc[0] if cmdf["in_position"].notna().any() else "N/A"
-            print(f"   WARNING: OUT/IN recompute yielded 0 valid rows — keeping cached values")
-            print(f"   Sample in_position: '{sample_in}' | FFT amp cols: {sorted(_fft_amp_cols)[:4]}")
+            print(f"   WARNING: OUT/IN recompute yielded 0 valid rows — "
+                  f"keeping cached values")
 
     # Detect position-based FFT amplitude columns dynamically (skip all-null columns)
     fft_amp_cols = [

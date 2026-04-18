@@ -71,14 +71,13 @@ RESULTS_DIRS = [
     Path("waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
 ]
 
-# Canonical IN reference is the mean of 9373/170 and 9373/340 (added by
-# wavescripts/mean_in_probe.apply_mean_in_reference below). T_cross was
-# originally prototyped on 9373/170 alone; using the mean eliminates the
-# single-probe-glitch risk (e.g. the 0.3 V nowind 1.6 Hz outlier that
-# the H&G window check caught).
-IN_POS, OUT_POS = "9373_mean", "12400/250"
-IN_FFT  = f"Probe {IN_POS} Amplitude (FFT)"
-OUT_FFT = f"Probe {OUT_POS} Amplitude (FFT)"
+# Canonical IN reference is the mean of 9373/170 and 9373/340, written
+# by processor2nd.py as "IN Amplitude (FFT)" (pipeline-level since
+# 2026-04-18; see CLAUDE.md §5). OUT is the per-era canonical as well,
+# in "OUT Amplitude (FFT)".
+IN_POS, OUT_POS = "IN", "OUT"
+IN_FFT  = "IN Amplitude (FFT)"
+OUT_FFT = "OUT Amplitude (FFT)"
 
 FREQS = [1.3, 1.4, 1.5, 1.6]   # thesis scope
 AMPS  = [0.1, 0.2, 0.3]
@@ -91,10 +90,8 @@ meta["Mooring"] = meta["Mooring"].replace({
     "below_90_loose230": "below_90_loose",
     "below_90_loose300": "below_90_loose",
 })
-# Match main_save_figures.py: use the mean of 9373/170 and 9373/340 as the
-# canonical IN reference. Adds the "Probe 9373_mean Amplitude (FFT)" column.
-from wavescripts.mean_in_probe import apply_mean_in_reference
-apply_mean_in_reference(meta, disagreement_threshold_frac=0.10)
+# Canonical IN/OUT now live in meta.json (pipeline-level since
+# 2026-04-18). No runtime hook needed.
 
 wave = meta[
     meta["WaveFrequencyInput [Hz]"].notna()

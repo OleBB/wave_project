@@ -39,6 +39,8 @@ NON_FLOAT_COLUMNS = {
     "file_date": str,
     "in_position": str,    # e.g. "9373/250" — slash breaks pd.to_numeric
     "out_position": str,   # e.g. "12400/170" — must stay as string
+    "in_probes_used":  str, # e.g. "9373/170+9373/340" — canonical-IN contributors (processor2nd)
+    "out_probes_used": str, # e.g. "12400/170+12400/340" — canonical-OUT contributors
     "in_probe": "Int64",   # probe index 1–4, nullable integer
     "out_probe": "Int64",
     "run_category": str,        # "standard" | "nowave_control" | "diagnostic" | "wind_decay" | "partial" | "experimental"

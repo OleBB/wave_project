@@ -216,18 +216,15 @@ meta_results["Mooring"] = meta_results["Mooring"].replace({
     "below_90_loose300": "below_90_loose",
 })
 
-# ── Canonical IN reference: mean of 9373/170 and 9373/340 ────────────────────
-# The pipeline's default IN probe is 9373/170 alone, but its parallel 9373/340
-# sits at the same longitudinal distance and should see the same incident
-# wave. Averaging them makes OUT/IN robust to single-probe glitches (see
-# analysis_scratch/huseby_grue_window.pdf — 0.3 V nowind exposed a
-# 9373/170-only transient dip that 9373/340 didn't see). Post-load hook,
-# applied only to meta_results; combined_meta (CH04 methodology) is untouched.
-# Adds a pseudo-probe column "Probe 9373_mean Amplitude (FFT)", sets
-# in_position = "9373_mean", overwrites "IN ka (FFT)" with the mean, and
-# adds ain_probe_consistent / ain_disagree_frac columns for QA.
-from wavescripts.mean_in_probe import apply_mean_in_reference
-apply_mean_in_reference(meta_results, disagreement_threshold_frac=0.10)
+# ── Canonical IN/OUT reference = mean of all probes at the same distance ─────
+# As of 2026-04-18 this is computed in processor2nd.py::_update_more_metrics
+# and stored permanently in meta.json. The mean lives in "IN Amplitude (FFT)"
+# and "OUT Amplitude (FFT)"; per-era contributors are listed in
+# "in_probes_used" / "out_probes_used". The earlier post-load hook
+# (wavescripts/mean_in_probe.py) has been archived under
+# analysis_scratch/archive/2026-04-18_mean_in_probe_hook/.
+# No runtime transformation needed — meta_results already carries the
+# canonical columns as loaded from cache.
 
 
 # ── Placeholder helper ────────────────────────────────────────────────────────

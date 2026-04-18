@@ -282,6 +282,26 @@ def compute_inter_run_timing(
     return meta_df
 
 
+def _probes_at_same_distance(cfg, ref_probe_num: int) -> list:
+    """Return position strings of all probes sharing the same longitudinal
+    distance as ``ref_probe_num`` (the reference probe is included).
+
+    Example (``march2026_better_rearranging``):
+        ref_probe_num = 1  (9373/170)
+        → ['9373/170', '9373/340']       # probe 1 + probe 3, same 9373 distance
+
+    Example (``nov_normalt_oppsett``):
+        ref_probe_num = 3  (12400/170)
+        → ['12400/170', '12400/340']     # probe 3 + probe 4, same 12400 distance
+    """
+    ref_dist = cfg.distances_mm[ref_probe_num]
+    return [
+        cfg.probe_col_name(p)
+        for p in sorted(cfg.distances_mm)
+        if cfg.distances_mm[p] == ref_dist
+    ]
+
+
 def _update_more_metrics(
     psd_dict: dict,
     fft_dict: dict,
@@ -304,26 +324,50 @@ def _update_more_metrics(
         out_in      = pd.Series(index=meta_indexed.index, dtype=float)
         in_pos_ser  = pd.Series(index=meta_indexed.index, dtype=object)
         out_pos_ser = pd.Series(index=meta_indexed.index, dtype=object)
+        in_probes_used  = pd.Series(index=meta_indexed.index, dtype=object)
+        out_probes_used = pd.Series(index=meta_indexed.index, dtype=object)
+
+        # Canonical IN/OUT amplitudes = mean across ALL probes at the
+        # same longitudinal distance as the reference probe. See the
+        # module docstring and CLAUDE.md §5 for the rationale.
         for (in_p, out_p), idx in meta_indexed.groupby(["in_probe", "out_probe"]).groups.items():
-            in_pos  = col_names[int(in_p)]
-            out_pos = col_names[int(out_p)]
-            in_col  = f"Probe {in_pos} Amplitude (FFT)"
-            out_col = f"Probe {out_pos} Amplitude (FFT)"
-            in_pos_ser.loc[idx]  = in_pos
-            out_pos_ser.loc[idx] = out_pos
-            if in_col in meta_indexed.columns and out_col in meta_indexed.columns:
-                out_in.loc[idx] = (
-                    meta_indexed.loc[idx, out_col] / meta_indexed.loc[idx, in_col]
-                )
+            in_ref_pos  = col_names[int(in_p)]
+            out_ref_pos = col_names[int(out_p)]
+            in_pos_ser.loc[idx]  = in_ref_pos
+            out_pos_ser.loc[idx] = out_ref_pos
+
+            in_positions  = _probes_at_same_distance(cfg, int(in_p))
+            out_positions = _probes_at_same_distance(cfg, int(out_p))
+            in_probes_used.loc[idx]  = "+".join(in_positions)
+            out_probes_used.loc[idx] = "+".join(out_positions)
+
+            in_amp_cols  = [f"Probe {p} Amplitude (FFT)" for p in in_positions
+                            if f"Probe {p} Amplitude (FFT)" in meta_indexed.columns]
+            out_amp_cols = [f"Probe {p} Amplitude (FFT)" for p in out_positions
+                            if f"Probe {p} Amplitude (FFT)" in meta_indexed.columns]
+            if in_amp_cols and out_amp_cols:
+                in_mean  = meta_indexed.loc[idx, in_amp_cols].mean(axis=1, skipna=True)
+                out_mean = meta_indexed.loc[idx, out_amp_cols].mean(axis=1, skipna=True)
+                out_in.loc[idx] = out_mean / in_mean
         out_in = out_in.replace([np.inf, -np.inf], np.nan)
-        meta_indexed[GC.OUT_IN_FFT]   = out_in
-        meta_indexed["in_position"]   = in_pos_ser
-        meta_indexed["out_position"]  = out_pos_ser
+        meta_indexed[GC.OUT_IN_FFT]        = out_in
+        meta_indexed["in_position"]        = in_pos_ser
+        meta_indexed["out_position"]       = out_pos_ser
+        meta_indexed["in_probes_used"]     = in_probes_used
+        meta_indexed["out_probes_used"]    = out_probes_used
 
         # ── Generic IN / OUT columns ─────────────────────────────────
-        # Copy position-specific columns into probe-agnostic names so
-        # downstream code doesn't need to know which probe was IN/OUT.
-        _GENERIC_SUFFIXES = [
+        # Canonical wave-measurement columns, each the mean across all
+        # probes at the same longitudinal distance (≥1 probe per side).
+        # Per-probe "Probe {pos} ..." columns remain in the table for
+        # oddity inspection.
+        #
+        # For each suffix we also emit {IN,OUT}_disagree_frac — the
+        # (max − min) / mean across the contributing probes. 0 when
+        # only one probe shares the distance. Only computed for
+        # Amplitude (FFT), since other quantities (k, λ, T) should
+        # match between parallel probes to within a tiny fraction.
+        _MEAN_SUFFIXES = [
             "Amplitude (FFT)",
             "WavePeriod (FFT)",
             "Wavenumber (FFT)",
@@ -336,23 +380,54 @@ def _update_more_metrics(
             "Wind/Celerity (FFT)",
             "f/f_PM (FFT)",
             "Ursell (FFT)",
+        ]
+        # Quality-metric suffixes — averaging makes less sense here, so
+        # copy the reference probe value (preserves historical behaviour).
+        _REF_ONLY_SUFFIXES = [
             "wave_stability",
             "period_amplitude_cv",
         ]
-        for suffix in _GENERIC_SUFFIXES:
+        for suffix in _MEAN_SUFFIXES + _REF_ONLY_SUFFIXES:
             in_vals  = pd.Series(index=meta_indexed.index, dtype=float)
             out_vals = pd.Series(index=meta_indexed.index, dtype=float)
+            emit_spread = suffix == "Amplitude (FFT)"
+            in_spread  = pd.Series(index=meta_indexed.index, dtype=float)
+            out_spread = pd.Series(index=meta_indexed.index, dtype=float)
+
             for (in_p, out_p), idx in meta_indexed.groupby(["in_probe", "out_probe"]).groups.items():
-                in_pos  = col_names[int(in_p)]
-                out_pos = col_names[int(out_p)]
-                src_in  = f"Probe {in_pos} {suffix}"
-                src_out = f"Probe {out_pos} {suffix}"
-                if src_in in meta_indexed.columns:
-                    in_vals.loc[idx]  = meta_indexed.loc[idx, src_in]
-                if src_out in meta_indexed.columns:
-                    out_vals.loc[idx] = meta_indexed.loc[idx, src_out]
+                if suffix in _MEAN_SUFFIXES:
+                    in_positions  = _probes_at_same_distance(cfg, int(in_p))
+                    out_positions = _probes_at_same_distance(cfg, int(out_p))
+                else:
+                    in_positions  = [col_names[int(in_p)]]
+                    out_positions = [col_names[int(out_p)]]
+                in_src  = [f"Probe {p} {suffix}" for p in in_positions
+                           if f"Probe {p} {suffix}" in meta_indexed.columns]
+                out_src = [f"Probe {p} {suffix}" for p in out_positions
+                           if f"Probe {p} {suffix}" in meta_indexed.columns]
+                if in_src:
+                    sub = meta_indexed.loc[idx, in_src]
+                    in_vals.loc[idx] = sub.mean(axis=1, skipna=True)
+                    if emit_spread and len(in_src) > 1:
+                        m = sub.mean(axis=1, skipna=True)
+                        spread = sub.max(axis=1, skipna=True) - sub.min(axis=1, skipna=True)
+                        in_spread.loc[idx] = spread / m.where(m > 0, np.nan)
+                    elif emit_spread:
+                        in_spread.loc[idx] = 0.0
+                if out_src:
+                    sub = meta_indexed.loc[idx, out_src]
+                    out_vals.loc[idx] = sub.mean(axis=1, skipna=True)
+                    if emit_spread and len(out_src) > 1:
+                        m = sub.mean(axis=1, skipna=True)
+                        spread = sub.max(axis=1, skipna=True) - sub.min(axis=1, skipna=True)
+                        out_spread.loc[idx] = spread / m.where(m > 0, np.nan)
+                    elif emit_spread:
+                        out_spread.loc[idx] = 0.0
             meta_indexed[f"IN {suffix}"]  = in_vals
             meta_indexed[f"OUT {suffix}"] = out_vals
+            if emit_spread:
+                meta_indexed["ain_disagree_frac"]  = in_spread
+                meta_indexed["aout_disagree_frac"] = out_spread
 
     # ── Parallel probe ratio ─────────────────────────────────────────
     # parallel_ratio = wall-side amplitude / far-side amplitude
