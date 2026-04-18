@@ -469,11 +469,22 @@ def plot_damping_scatter(
 
 
 def _make_damping_ka_fig(
-    meta_df: pd.DataFrame, panel: str, figsize: tuple = (5, 4)
+    meta_df: pd.DataFrame,
+    panel: str,
+    amp: Optional[float] = None,
+    figsize: tuple = (5, 4),
+    xlim: Optional[tuple] = None,
+    ylim: Optional[tuple] = None,
 ) -> plt.Figure:
     """
     Scatter: OUT/IN (FFT) vs IN ka (FFT) — wave steepness axis.
     Each point is one run. Colour = WindCondition. Marker = WaveAmplitudeInput.
+
+    If ``amp`` is given, the subset is restricted to that single amplitude
+    (used by the per-amplitude variants); otherwise all amplitudes are
+    overlaid with distinct marker shapes.
+
+    Pass ``xlim``/``ylim`` to share axes across per-amp variants.
     """
     import matplotlib.lines as mlines
 
@@ -484,12 +495,22 @@ def _make_damping_ka_fig(
         meta_df[GC.PANEL_CONDITION] == panel
     ][[KA_COL, GC.OUT_IN_FFT, GC.WIND_CONDITION, GC.WAVE_AMPLITUDE_INPUT]].dropna()
 
+    all_amps = sorted(subset[GC.WAVE_AMPLITUDE_INPUT].unique())
+    if amp is not None:
+        subset = subset[np.isclose(subset[GC.WAVE_AMPLITUDE_INPUT], amp)]
+        amplitudes = [amp] if not subset.empty else []
+    else:
+        amplitudes = all_amps
+
     fig, ax = plt.subplots(figsize=figsize)
-    amplitudes = sorted(subset[GC.WAVE_AMPLITUDE_INPUT].unique())
     wind_conditions = sorted(subset[GC.WIND_CONDITION].unique())
 
-    for i, amp in enumerate(amplitudes):
-        amp_sub = subset[subset[GC.WAVE_AMPLITUDE_INPUT] == amp].sort_values(KA_COL)
+    for amp_val in amplitudes:
+        # Marker shape is tied to the *global* amplitude index so per-amp
+        # variants use the same marker as the corresponding marker in the
+        # all-amps overview — visual consistency across figures.
+        i = all_amps.index(amp_val) if amp_val in all_amps else 0
+        amp_sub = subset[np.isclose(subset[GC.WAVE_AMPLITUDE_INPUT], amp_val)].sort_values(KA_COL)
         for wind in wind_conditions:
             wind_sub = amp_sub[amp_sub[GC.WIND_CONDITION] == wind]
             if wind_sub.empty:
@@ -504,26 +525,42 @@ def _make_damping_ka_fig(
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax.set_xlabel("$ka$ (IN probe, measured)", fontsize=9)
     ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
-    ax.set_title(
-        f"Wave transmission vs. wave steepness — {panel} panel",
-        fontsize=9,
-    )
+    if amp is not None:
+        ax.set_title(
+            f"Wave transmission vs. wave steepness — {panel} panel, {amp:.2f}\u202fV",
+            fontsize=9,
+        )
+    else:
+        ax.set_title(
+            f"Wave transmission vs. wave steepness — {panel} panel",
+            fontsize=9,
+        )
     ax.grid(True, alpha=0.3)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
 
-    # Two-section legend: wind condition (colour) + amplitude (marker shape)
+    # Legend: wind colour always; amplitude-marker legend only on the
+    # all-amps overview (redundant on per-amp variants since only one
+    # marker shape is present).
     wind_handles = [
         mlines.Line2D([], [], color=WIND_COLOR_MAP.get(w, "gray"),
                       marker="o", linestyle="None", markersize=6, label=f"{w} wind")
         for w in wind_conditions
     ]
-    amp_handles = [
-        mlines.Line2D([], [], color="gray",
-                      marker=amp_markers[i % len(amp_markers)],
-                      linestyle="None", markersize=6, label=f"{amp:.2f} V")
-        for i, amp in enumerate(amplitudes)
-    ]
-    ax.legend(handles=wind_handles + amp_handles, fontsize=7,
-              title="condition / amplitude", title_fontsize=7)
+    if amp is None:
+        amp_handles = [
+            mlines.Line2D([], [], color="gray",
+                          marker=amp_markers[i % len(amp_markers)],
+                          linestyle="None", markersize=6, label=f"{a:.2f} V")
+            for i, a in enumerate(all_amps)
+        ]
+        ax.legend(handles=wind_handles + amp_handles, fontsize=7,
+                  title="condition / amplitude", title_fontsize=7)
+    else:
+        ax.legend(handles=wind_handles, fontsize=7,
+                  title="wind", title_fontsize=7)
 
     fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
     return fig
@@ -571,10 +608,38 @@ def plot_damping_ka(
     _caption = resolve_caption(plotting, _default_caption, _caption_slots,
                                fn_name="plot_damping_ka")
 
+    # Opt-in: split the scatter by amplitude so each figure contains only
+    # one amplitude. Filenames gain a "_{amp_tag}" suffix matching the
+    # plot_damping_freq convention ("_10V", "_20V", "_30V"). Default is
+    # the existing overview (all amplitudes on the same axes).
+    facet_by_amp = plotting.get("facet_by_amp", False)
+    # Shared axes across per-amp variants keep the plots directly
+    # comparable. Derive from the full wave_df so each facet sees the
+    # same x/y range.
+    KA_COL = "IN ka (FFT)"
+    full_subset = wave_df[[KA_COL, GC.OUT_IN_FFT]].dropna()
+    if facet_by_amp and not full_subset.empty:
+        _ka = full_subset[KA_COL].to_numpy()
+        _oi = full_subset[GC.OUT_IN_FFT].to_numpy()
+        _pad_x = 0.05 * (_ka.max() - _ka.min())
+        _pad_y = 0.05 * (_oi.max() - _oi.min())
+        shared_xlim = (_ka.min() - _pad_x, _ka.max() + _pad_x)
+        shared_ylim = (_oi.min() - _pad_y, _oi.max() + _pad_y)
+    else:
+        shared_xlim = shared_ylim = None
+
     if show_plot:
         for panel in panel_conditions:
-            fig = _make_damping_ka_fig(wave_df, panel, figsize=figsize)
-            plt.show()
+            if facet_by_amp:
+                for amp in amplitudes:
+                    fig = _make_damping_ka_fig(
+                        wave_df, panel, amp=amp, figsize=figsize,
+                        xlim=shared_xlim, ylim=shared_ylim,
+                    )
+                    plt.show()
+            else:
+                fig = _make_damping_ka_fig(wave_df, panel, figsize=figsize)
+                plt.show()
 
     if save_plot:
         subfig_filenames = []
@@ -586,14 +651,29 @@ def plot_damping_ka(
         figure_name     = plotting.get("figure_name") or build_filename("damping_ka", meta_base)
         subfig_captions = []
         for panel in panel_conditions:
-            fig_s = _make_damping_ka_fig(wave_df, panel, figsize=figsize)
-            fname = f"{figure_name}_{panel}"
-            _save_figure(fig_s, fname, save_pgf=True)
-            subfig_filenames.append(fname)
-            subfig_captions.append(f"{panel.capitalize()} panel")
-            plt.close(fig_s)
+            if facet_by_amp:
+                for amp in amplitudes:
+                    fig_s = _make_damping_ka_fig(
+                        wave_df, panel, amp=amp, figsize=figsize,
+                        xlim=shared_xlim, ylim=shared_ylim,
+                    )
+                    amp_tag = f"{int(round(amp * 100)):02d}V"
+                    fname = f"{figure_name}_{panel}_{amp_tag}"
+                    _save_figure(fig_s, fname, save_pgf=True)
+                    subfig_filenames.append(fname)
+                    subfig_captions.append(f"{panel.capitalize()} panel, ${amp:.2f}$\\,V")
+                    plt.close(fig_s)
+            else:
+                fig_s = _make_damping_ka_fig(wave_df, panel, figsize=figsize)
+                fname = f"{figure_name}_{panel}"
+                _save_figure(fig_s, fname, save_pgf=True)
+                subfig_filenames.append(fname)
+                subfig_captions.append(f"{panel.capitalize()} panel")
+                plt.close(fig_s)
 
         stub_meta = {**meta_base, "panel": panel_conditions, "wind": "allwind"}
+        if facet_by_amp:
+            stub_meta["amplitude"] = amplitudes
         write_figure_stub(stub_meta, "damping_ka", subfig_filenames=subfig_filenames,
                           subfig_captions=subfig_captions,
                           force=plotting.get("force_stub", False))

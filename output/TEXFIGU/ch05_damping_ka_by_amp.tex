@@ -1,0 +1,49 @@
+%! TEX root = ../main.tex
+% ============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%   script          : plotter.py::plot_damping_ka
+%   plot_type       : damping_ka
+%   chapter         : 05
+%   panel           : full
+%   wind            : allwind
+%   amplitude       : 0.1, 0.2, 0.3
+%   frequency       : (1.3, 1.6)
+%   probes          : None
+%   draft           : True
+%
+% DATASETS:
+%   PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%   PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%
+% SUBFIGURES AVAILABLE:
+%   FIGURES/ch05_damping_ka_by_amp_full_10V.pdf
+%   FIGURES/ch05_damping_ka_by_amp_full_20V.pdf
+%   FIGURES/ch05_damping_ka_by_amp_full_30V.pdf
+% ============================================================
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{FIGURES/ch05_damping_ka_by_amp_full_10V.pdf}
+    \caption{Full panel, $0.10$\,V}
+    \label{fig:TODO_1}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{FIGURES/ch05_damping_ka_by_amp_full_20V.pdf}
+    \caption{Full panel, $0.20$\,V}
+    \label{fig:TODO_2}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{FIGURES/ch05_damping_ka_by_amp_full_30V.pdf}
+    \caption{Full panel, $0.30$\,V}
+    \label{fig:TODO_3}
+  \end{subfigure}
+  \caption[OUT/IN damping ratio versus wave steepness $ka$ at the incident probe (9373/170), full panel condition, split by input amplitude (0]{
+    OUT/IN damping ratio versus wave steepness $ka$ at the incident probe (9373/170), full panel condition, split by input amplitude (0.10/0.20/0.30 V). Colour encodes wind condition. Axes are shared across the three sub-figures for direct comparison. Each point is one run. Dashed line: ratio = 1 (no damping). Data: two validated sessions (2026-03-26/27, lowrange mode).
+  }
+  \label{fig:ch05_damping_ka_by_amp}
+\end{figure}

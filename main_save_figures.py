@@ -1245,6 +1245,29 @@ _ka_meta = apply_experimental_filters(meta_results, _pv_damping_ka)
 from wavescripts.plotter import plot_damping_ka
 plot_damping_ka(_ka_meta, _pv_damping_ka, chapter="05")
 
+# Per-amplitude variants of the same plot — one figure per input voltage
+# (0.10/0.20/0.30 V). Shared x/y limits across the three so they read as
+# panels of the same underlying figure. Same filtered data as the all-amps
+# overview above.
+_pv_damping_ka_by_amp = {
+    **_pv_damping_ka,
+    "plotting": {
+        **_pv_damping_ka["plotting"],
+        "figure_name": "ch05_damping_ka_by_amp",
+        "facet_by_amp": True,
+        "force_stub": True,
+        "caption": (
+            "OUT/IN damping ratio versus wave steepness $ka$ at the incident probe "
+            "(9373/170), full panel condition, split by input amplitude "
+            "(0.10/0.20/0.30\\,V). Colour encodes wind condition. Axes are "
+            "shared across the three sub-figures for direct comparison. "
+            "Each point is one run. Dashed line: ratio = 1 (no damping). "
+            "Data: two validated sessions (2026-03-26/27, lowrange mode)."
+        ),
+    },
+}
+plot_damping_ka(_ka_meta, _pv_damping_ka_by_amp, chapter="05")
+
 # %%
 """
 ── CH05 § 5 — Swell / band amplitude scatter (IN vs OUT) ────────────────────
