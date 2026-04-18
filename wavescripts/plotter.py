@@ -475,6 +475,7 @@ def _make_damping_ka_fig(
     figsize: tuple = (5, 4),
     xlim: Optional[tuple] = None,
     ylim: Optional[tuple] = None,
+    show_freq_labels: bool = False,
 ) -> plt.Figure:
     """
     Scatter: OUT/IN (FFT) vs IN ka (FFT) — wave steepness axis.
@@ -485,15 +486,23 @@ def _make_damping_ka_fig(
     overlaid with distinct marker shapes.
 
     Pass ``xlim``/``ylim`` to share axes across per-amp variants.
+
+    ``show_freq_labels`` annotates each frequency cluster with its value
+    in Hz — useful on per-amp variants where all markers are the same
+    shape and the frequency axis is otherwise implicit in ka.
     """
     import matplotlib.lines as mlines
 
     KA_COL = "IN ka (FFT)"
     amp_markers = ["o", "s", "^", "D"]
 
+    subset_cols = [
+        KA_COL, GC.OUT_IN_FFT, GC.WIND_CONDITION,
+        GC.WAVE_AMPLITUDE_INPUT, GC.WAVE_FREQUENCY_INPUT,
+    ]
     subset = meta_df[
         meta_df[GC.PANEL_CONDITION] == panel
-    ][[KA_COL, GC.OUT_IN_FFT, GC.WIND_CONDITION, GC.WAVE_AMPLITUDE_INPUT]].dropna()
+    ][subset_cols].dropna()
 
     all_amps = sorted(subset[GC.WAVE_AMPLITUDE_INPUT].unique())
     if amp is not None:
@@ -520,6 +529,30 @@ def _make_damping_ka_fig(
                 marker=amp_markers[i % len(amp_markers)],
                 color=WIND_COLOR_MAP.get(wind, "gray"),
                 s=40, alpha=0.75,
+            )
+
+    # Frequency annotations — one per cluster (pooled across wind
+    # conditions, since fullwind and nowind at the same freq sit at
+    # nearly the same ka). Placed at the cluster median to avoid
+    # outlier-driven label drift (e.g. 1.3 Hz / 0.1 V fullwind has
+    # wind-contamination points above OUT/IN = 1.0 that would otherwise
+    # push the label above the plot area).
+    if show_freq_labels and not subset.empty:
+        for freq, freq_grp in subset.groupby(GC.WAVE_FREQUENCY_INPUT):
+            cx = float(freq_grp[KA_COL].median())
+            cy = float(freq_grp[GC.OUT_IN_FFT].median())
+            ax.annotate(
+                f"{freq:.1f}\u202fHz",
+                xy=(cx, cy),
+                xytext=(0, 16),
+                textcoords="offset points",
+                ha="center", va="bottom",
+                fontsize=7, color="#333",
+                arrowprops=dict(arrowstyle="-", lw=0.4, color="#888",
+                                shrinkA=0, shrinkB=3),
+                bbox=dict(boxstyle="round,pad=0.18",
+                          facecolor="white", alpha=0.80, edgecolor="none"),
+                zorder=5,
             )
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
@@ -613,6 +646,11 @@ def plot_damping_ka(
     # plot_damping_freq convention ("_10V", "_20V", "_30V"). Default is
     # the existing overview (all amplitudes on the same axes).
     facet_by_amp = plotting.get("facet_by_amp", False)
+    # Frequency-cluster annotations — default on for the per-amp variants
+    # (since they collapse to a single marker shape, freq is otherwise
+    # implicit in ka), default off for the all-amps overview. User can
+    # force either with plotvariables["plotting"]["show_freq_labels"].
+    show_freq_labels = plotting.get("show_freq_labels", facet_by_amp)
     # Shared axes across per-amp variants keep the plots directly
     # comparable. Derive from the full wave_df so each facet sees the
     # same x/y range.
@@ -635,6 +673,7 @@ def plot_damping_ka(
                     fig = _make_damping_ka_fig(
                         wave_df, panel, amp=amp, figsize=figsize,
                         xlim=shared_xlim, ylim=shared_ylim,
+                        show_freq_labels=show_freq_labels,
                     )
                     plt.show()
             else:
@@ -656,6 +695,7 @@ def plot_damping_ka(
                     fig_s = _make_damping_ka_fig(
                         wave_df, panel, amp=amp, figsize=figsize,
                         xlim=shared_xlim, ylim=shared_ylim,
+                        show_freq_labels=show_freq_labels,
                     )
                     amp_tag = f"{int(round(amp * 100)):02d}V"
                     fname = f"{figure_name}_{panel}_{amp_tag}"
