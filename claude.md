@@ -423,7 +423,7 @@ These are not negotiable. Every analysis decision must be consistent with them.
 
 ### Measurement precision
 - **Target resolution: 0.25 mm** (quarter millimeter). No discrepancy is too small to investigate.
-- Stillwater noise floor is **probe-dependent** — measured as `"Probe {pos} Amplitude"` = (P97.5−P2.5)/2 from no-wind, no-wave runs:
+- Stillwater noise floor is **probe-dependent** — measured as `"Probe {pos} Amplitude"` = (P99.5−P0.5)/2 from no-wind, no-wave runs:
 
 Reference data: `wave_project/dtale-probe-uncertainty.csv` (5 rows, paths included).
 
@@ -460,7 +460,7 @@ Measured noise floor per probe (excluding row 1 outlier):
 - **Wind waves exist only above ~2 Hz** — no wind-wave energy at paddle frequencies (0.65–1.8 Hz) in the PSD sense.
 - BUT wind waves (3–5 Hz, broad, erratic) **ride on top** of the paddle wave in the time domain. Time-domain percentile amplitudes include ALL frequency content. FFT amplitude at the target frequency does not.
 - **Two amplitude types are not interchangeable**:
-  - `"Probe {pos} Amplitude"` = (P97.5−P2.5)/2 of time-domain signal — includes wind waves
+  - `"Probe {pos} Amplitude"` = (P99.5−P0.5)/2 of time-domain signal — includes wind waves
   - `"Probe {pos} Amplitude (FFT)"` = FFT peak within 0.1 Hz of target — paddle-wave only
 - The **OUT/IN ratio** must always be computed from `"Probe {pos} Amplitude (FFT)"` (paddle frequency only). Time-domain amplitude includes wind-wave energy which inflates the IN probe under fullwind conditions, making OUT/IN meaningless for damping. Wind waves are a real physical phenomenon to characterize separately, not noise to average into the damping ratio.
 
@@ -495,7 +495,7 @@ Wind pushes water leeward (toward the panel / OUT probe side). This creates a me
 
 **Effect on amplitude metrics:**
 - FFT amplitude at paddle frequency: **unaffected** — DC level shift is at f=0, not at the paddle frequency
-- Time-domain percentile amplitude (P97.5−P2.5)/2: **unaffected** — symmetric percentiles cancel any mean offset
+- Time-domain percentile amplitude (P99.5−P0.5)/2: **unaffected** — symmetric percentiles cancel any mean offset
 - Wave speed / dispersion: minor effect via slightly changed local depth at each probe
 
 **Dataset for quantifying this:** `experimental-fromZeroToMaxWin` / `fromZeroToMaxWind` runs (multiple dates: 20260314, 20260326, 20260327). These ramp wind from zero to maximum while recording all probes — the mean level drift at OUT probe (12400/250) is directly visible as the wind ramps up. Use these to characterise the setup magnitude and its time constant.
