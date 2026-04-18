@@ -379,8 +379,9 @@ def _make_damping_scatter_fig(
     ax.set_title(f"{panel} panel", fontsize=9)
     ax.legend(title="wind / amp", fontsize=7, title_fontsize=7)
     ax.grid(True, alpha=0.3)
-    # Fixed margins — see subfigure sizing rule in _make_damping_freq_fig
-    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
+    add_freq_axis(ax)
+    # top=0.84 to leave room for the secondary frequency axis above the title
+    fig.subplots_adjust(left=0.14, right=0.97, top=0.84, bottom=0.13)
     return fig
 
 
@@ -1027,6 +1028,10 @@ def plot_swell_scatter(
             chapter=chapter,
             extra={"script": "plotter.py::plot_swell_scatter"},
         )
+        # Use figure_name as base; per-band suffix prevents the three saves
+        # from overwriting each other (build_filename returns figure_name
+        # verbatim when set, so previously all bands wrote one file).
+        fig_name_base = plotting.get("figure_name") or build_filename("swell_scatter", meta_base)
 
         for band_name, template in _BAND_COLS.items():
             fig_s, ax_s = plt.subplots(figsize=(4.5, 4.2))
@@ -1042,13 +1047,14 @@ def plot_swell_scatter(
             ax_s.set_xlabel(f"Probe {in_pos} IN amplitude [mm]", fontsize=9)
             ax_s.set_ylabel(f"Probe {out_pos} OUT amplitude [mm]", fontsize=9)
 
-            band_meta = {**meta_base, "band": band_name.lower()}
-            fname = build_filename(f"swell_{band_name.lower()}", band_meta)
+            fname = f"{fig_name_base}_{band_name.lower()}"
             _save_figure(fig_s, fname, save_pgf=True)
             subfig_filenames.append(fname)
             plt.close(fig_s)
 
-        write_figure_stub(meta_base, "swell_scatter", subfig_filenames=subfig_filenames)
+        write_figure_stub(meta_base, "swell_scatter",
+                          subfig_filenames=subfig_filenames,
+                          force=plotting.get("force_stub", False))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1405,7 +1411,11 @@ def plot_reconstructed(
         return None, None
 
     color_swell = WIND_COLOR_MAP.get(windcond, "black")
-    color_wind = "darkred" if dual_yaxis else "orange"
+    # Wind+noise component must visually contrast with the swell line.
+    # Swell color is tied to WindCondition (e.g. red for full wind), so a
+    # red wind-color collides. Use a neutral charcoal that reads against
+    # both the red and blue wind-color choices.
+    color_wind = "#3A3A3A" if dual_yaxis else "orange"
     color_full = "gray"
     lstyle = {"no": "-", "full": "--", "reverse": "-."}.get(panelcond, "-")
 
