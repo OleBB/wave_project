@@ -1087,8 +1087,12 @@ Figures:
 
 _pv_damping_freq = {
     "filters": {
-        "WaveAmplitudeInput [Volt]": (0.1,0.3),
-        "WaveFrequencyInput [Hz]":   (0.8,1.7),
+        "WaveAmplitudeInput [Volt]": (0.1, 0.3),
+        # Scope: f < 1 Hz is out of scope (only fullwind exists there →
+        # no comparison possible). f > 1.6 Hz is dubious at 0.2/0.3 V
+        # (dropout zone, plus the lone 1.7 Hz/0.30V point has no nowind
+        # counterpart). See memory/MEMORY.md "Scope boundary".
+        "WaveFrequencyInput [Hz]":   (1.0, 1.6),
         "WindCondition":             None,
         "PanelCondition":            None,
     },
@@ -1133,7 +1137,8 @@ Figures:
 _pv_damping_scatter = {
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   (0.1, 1.8),
+        # Scope: 1.0–1.6 Hz (see _pv_damping_freq).
+        "WaveFrequencyInput [Hz]":   (1.0, 1.6),
         "WindCondition":             None,
         "PanelCondition":            None,
         # "run_category":            "standard",   # re-enable after --force-recompute
@@ -1169,6 +1174,8 @@ Figures:
 _pv_damping_wind_delta = {
     "filters": {
         "WaveAmplitudeInput [Volt]": None,
+        # Scope: 1.0–1.6 Hz (see _pv_damping_freq).
+        "WaveFrequencyInput [Hz]":   (1.0, 1.6),
         "WindCondition":             ["no", "full"],
         "PanelCondition":            None,
     },
@@ -1209,6 +1216,8 @@ Requires: wavenumber column in combined_meta (computed in processor2nd).
 _pv_damping_ka = {
     "filters": {
         "PanelCondition": "full",
+        # Scope: 1.0–1.6 Hz (see _pv_damping_freq).
+        "WaveFrequencyInput [Hz]": (1.0, 1.6),
         "min_periods": 10,
     },
     "plotting": {
@@ -1242,7 +1251,8 @@ Data: combined_meta band amplitude columns (Probe {pos} Swell Amplitude (PSD) et
 _pv_swell_scatter = {
     "filters": {
         "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],
-        "WaveFrequencyInput [Hz]":   None,
+        # Scope: 1.0–1.6 Hz (see _pv_damping_freq).
+        "WaveFrequencyInput [Hz]":   (1.0, 1.6),
         "WindCondition":             None,
         "PanelCondition":            None,
     },
