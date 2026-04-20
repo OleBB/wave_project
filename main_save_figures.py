@@ -26,41 +26,61 @@ OUTPUT KEYS (measured results):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FIGURE INDEX
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Status legend:  ✓ ready   ~ draft (DRAFT stamp)   ✗ placeholder (blank fig)
+Status legend:    ✓ ready   ~ draft (DRAFT stamp)   ✗ placeholder (blank fig)
+                  — dropped (cell kept as a marker)
+
+Data-class tag:   [META]  combined_meta + FFT/PSD dicts — all loaded up front (~2 s)
+                  [DFS]   additionally needs processed_dfs — loaded at the heavy
+                          gate near the bottom of the file (~+45 s, ~75 MB)
+                  [DELEG] subprocess-calls a scratch script; data-agnostic here
+                  [CSV]   reads a pre-computed CSV (regenerated via [DELEG] helper)
+
+Every cell starts with a `# [DATA: X]` line matching one of the four tags. If
+you add a cell, add its tag too; the heavy gate relies on [DFS] cells sitting
+below it. Figures in the index are listed in thesis order — the two [DFS]
+entries are flagged "(below heavy gate)" to signal their physical file location.
 
 CHAPTER 04 — METHODOLOGY
-  §1   ch04_probe_noise_floor      ~  Stillwater noise floor per probe / hw config
-  §2   ch04_stillwater_timing      ✗  Swell decay time vs wait time  [TODO]
-  §3   ch04_parallel_ratio         ~  Wall/far-side amplitude ratio vs frequency
-  §3b  ch04_probe_height           ~  Probe height & range-mode validity (4 cond × 4 probe)
-  §3c  ch04_mooring_comparison     ✓  Mooring rubber band length: loose230 vs loose300 (delegated)
-  §3d  ch04_sound_speed             ~  Speed-of-sound / lab temperature drift
-  §3e  ch04_parallel_probe_agreement ~  9373/170 vs 9373/340 — justifies mean-IN canonical ref
-  §4-1 ch04_wind_psd               ~  Wind PSD per probe (nowave runs)
-  §4-2 ch04_wind_reflection        ✗  Wind reflection from panel     [TODO]
-  §4-3 ch04_fft_wave               ~  FFT spectrum at paddle freq (1.3 Hz example)
-  §4-4 ch04_wind_snr               ~  Spectral SNR: paddle / wind noise per probe
-  §4-5 ch04_td_vs_fft              ~  A_td vs A_FFT: why FFT is required
-  §4f  ch04_reconstruction_AvsB    ~  Peak-bin (A) vs band-integrated (B) reconstruction equivalence
-  §4g  ch04_reconstruction_pure_wind ~ Pure wind via no-wind residual subtraction (Stokes removal)
-  §5   ch04_timeseries_overview    ~  Full time-series with stable-window band
-  §6   ch04_first_arrival          ~  First wave arrival vs probe distance
-  §7   ch04_wave_stability         ~  Wave stability and period_cv vs frequency
-  §8   ch04_lateral_nowind         ~  Lateral equality (parallel ratio, no-wind)
-  §9   ch04_amplitude_profile      ~  Amplitude at every probe, all runs
+  §1    ch04_probe_noise_floor           [META]  ~  Stillwater noise floor per probe / hw config
+  §2    ch04_stillwater_timing           [META]  ✗  Swell decay time vs wait time  [TODO]
+  §3    ch04_parallel_ratio              [META]  ~  Wall/far-side amplitude ratio vs frequency
+        ch04_parallel_ratio_scatter      [META]  ~     └─ per-run scatter sibling
+  §3b   ch04_probe_height                [DELEG] ✓  Probe height & range-mode validity
+  §3c   ch04_mooring_comparison          [DELEG] ✓  Mooring rubber band length: loose230 vs loose300
+  §3d   ch04_sound_speed                 [META]  ~  Speed-of-sound / lab temperature drift
+  §3e   ch04_parallel_probe_agreement    [DELEG] ✓  9373/170 vs 9373/340 — mean-IN canonical ref
+  §4-1  ch04_wind_psd                    [META]  ~  Wind PSD per probe (nowave runs)
+  §4-2  ch04_wind_reflection             [META]  ✗  Wind reflection from panel  [TODO]
+  §4-3  ch04_fft_wave                    [META]  ~  FFT spectrum at paddle freq (1.3 Hz example)
+  §4-4  ch04_wind_snr                    [META]  ~  Spectral SNR: paddle / wind noise per probe
+  §4-5  ch04_td_vs_fft                   [META]  ~  A_td vs A_FFT: why FFT is required
+        ch04_td_vs_fft_scatter           [META]  ~     └─ per-run scatter sibling
+  §4b   ch04_fft_peak_bias_cancellation  [CSV]   ~  Peak-bin FFT bias cancels in OUT/IN ratio
+  §4c   ch04_mansard_funke_reflection    [DELEG] ✓  Mansard–Funke reflection coefficient
+  §4d   ch04_sw_correction_test          [DELEG] ✓  Standing-wave correction test — negative evidence
+  §4e   ch04_sliding_afft_stability      [DELEG] ✓  Sliding-window FFT stability at IN probe
+  §4f   ch04_reconstruction_AvsB         [DELEG] ✓  Peak-bin (A) vs band-integrated (B) equivalence
+  §4g   ch04_reconstruction_pure_wind    [DELEG] ✓  Pure wind via no-wind residual subtraction
+  §5    ch04_timeseries_overview         [DFS]   ~  Full time-series with stable-window band  (below heavy gate)
+  §6    ch04_first_arrival               [DFS]   ~  First wave arrival vs probe distance      (below heavy gate)
+  §7    ch04_wave_stability              [META]  ~  Wave stability and period_cv vs frequency
+  §8    ch04_lateral_nowind              [META]  ~  Lateral equality (parallel ratio, no-wind)
+        ch04_lateral_nowind_scatter      [META]  ~     └─ per-run scatter sibling
+  §9    ch04_amplitude_profile           [META]  ✗  Amplitude at every probe, all runs  [cell commented]
 
 CHAPTER 05 — RESULTS
-  §1   ch05_damping_freq           ✓  OUT/IN (FFT) vs frequency  ← primary result
-  §2   ch05_damping_scatter        ✓  OUT/IN scatter vs amplitude
-  §3   ch05_damping_wind_delta     ~  Wind effect on damping (delta plot)
-  §3b  ch05_t_cross                ~  T_cross: honest wind effect via clean nowind reference
-  §4   ch05_damping_ka             ✗  Damping vs ka (wavenumber × amplitude) [TODO]
-  §5   ch05_swell_scatter          —  DROPPED — kept commented in place; see §5 cell
-  §6   ch05_reconstructed          ~  FFT-reconstructed paddle signal
-  §7   ch05_damping_all_data_scatter  ~  Supplementary: OUT/IN across ALL conditions (combined_meta)
+  §1    ch05_damping_freq                [META]  ✓  OUT/IN (FFT) vs frequency  ← primary result
+  §2    ch05_damping_scatter             [META]  ✓  OUT/IN scatter vs amplitude
+  §3    ch05_damping_wind_delta          [META]  ~  Wind effect on damping (delta plot)
+  §3b   ch05_t_cross                     [DELEG] ✓  T_cross: honest wind effect via clean nowind ref
+  §4    ch05_damping_ka                  [META]  ~  Damping vs ka (wavenumber × amplitude)
+        ch05_damping_ka_by_amp           [META]  ~     └─ split by input amplitude
+  §5    ch05_swell_scatter               [META]  —  DROPPED (cell commented in place)
+  §6    ch05_reconstructed               [META]  ~  FFT-reconstructed paddle signal (fft_dict, not DFS)
+  §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions
 
 DIAGNOSTICS
-  D1   diag_13hz_consistency        ✗  1.3 Hz cross-session consistency check [TODO]
+  D1    diag_13hz_consistency            [META]  ✗  1.3 Hz cross-session consistency  [TODO]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -270,14 +290,15 @@ import wavescripts.plot_utils as _pu
 _pu.ACTIVE_DATASETS = [p.name for p in RESULTS_PROCESSED_DIRS]
 
 # ── Load from cache ───────────────────────────────────────────────────────────
-print("Loading analysis data...")
+# combined_meta + FFT/PSD dicts are cheap (~2 s, a few MB). Loaded up front.
+# processed_dfs (raw 250 Hz time series, ~75 MB) is deferred — only the
+# [DATA: DFS] cells below the Heavy load gate need it. See the gate cell
+# for where the deferred load actually happens.
+print("Loading analysis data (meta + FFT/PSD; deferring processed_dfs)...")
 combined_meta, _, combined_fft_dict, combined_psd_dict = load_analysis_data(
-    *ALL_PROCESSED_DIRS
+    *ALL_PROCESSED_DIRS, load_processed=False
 )
-
-# %%
-# processed_dfs is heavy (~75 MB). Loaded when needed by sections below.
-processed_dfs = load_processed_dfs(*ALL_PROCESSED_DIRS)
+processed_dfs: dict = {}   # placeholder; real load happens at the Heavy load gate
 
 # ── Results subset (CH05) ─────────────────────────────────────────────────────
 # meta_results: only the two validated folders, used for all CH05 result figures.
@@ -334,8 +355,7 @@ def _save_placeholder(figure_name: str, section_label: str, chapter: str) -> Non
 # CHAPTER 04 — METHODOLOGY
 # =============================================================================
 # %%
-
-# %%
+# [DATA: META]
 """
 ── CH04 § 1 — Probe uncertainty / noise floor ───────────────────────────────
 Goal: show the stillwater noise amplitude per probe and hardware configuration,
@@ -414,6 +434,7 @@ print(f"probe uncertainty-plot took {end - start:.4f} s")
 
 
 # %%
+# [DATA: META]  — [TODO] cell currently empty
 """
 ── CH04 § 2 — Stillwater timing (how long to wait between runs) ─────────────
 Goal: show that long-wave swell from previous runs decays over time, and that
@@ -432,6 +453,7 @@ _save_placeholder("ch04_stillwater_timing", "CH04 §2 — Stillwater timing", ch
 
 
 # %%
+# [DATA: META]
 """
 ── CH04 § 3 — Probe placement: longitudinal and lateral effects ─────────────
 Goal: show what parallel probes tell us — lateral uniformity without wind,
@@ -490,6 +512,7 @@ _pv_parallel_ratio_scatter = {
 plot_parallel_ratio(combined_meta, _pv_parallel_ratio_scatter)
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/probe_height_figure.py
 """
 ── CH04 § 3b — Probe height & range-mode validity ────────────────────────────
 Goal: characterise how probe height above the water surface and the
@@ -521,6 +544,7 @@ _run_delegated_if_missing(
 )
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/mooring_comparison.py
 """
 ── CH04 § 3c — Mooring rubber band length: loose230 vs loose300 ─────────────
 Scientific result: rubber band length (230 mm vs 300 mm, below-water at −90 mm)
@@ -544,6 +568,7 @@ _run_delegated_if_missing(
 )
 
 # %%
+# [DATA: META]
 """
 ── CH04 § 3d — Speed-of-sound / lab temperature drift ───────────────────────
 Goal: show that lab temperature variation introduces < 0.4 % amplitude scale
@@ -566,6 +591,7 @@ _pv_sound_speed = {
 plot_sound_speed(combined_meta, _pv_sound_speed, chapter="04")
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/parallel_probe_agreement.py
 """
 ── CH04 § 3e — Parallel-probe agreement (mean-IN validation) ────────────────
 Methodology support for the CH05 decision to use mean(9373/170, 9373/340)
@@ -603,6 +629,7 @@ _run_delegated_if_missing(
 # }
 
 # %%
+# [DATA: META]  — reads combined_psd_dict (loaded alongside combined_meta)
 """
 ── CH04 § 4-1 — Wind characterisation ─────────────────────────────────────────
 Goal: characterise what the wind does to the water surface — spectrum, spatial
@@ -675,6 +702,7 @@ print(f"Wind PSD plot took {end - start:.4f} s")
 
 
 # %%
+# [DATA: META]  — [TODO] cell currently empty
 """
 ── CH04 § 4-2 — Wind wave-reflection from panel ─────────────────────────────────────────
 Goal: find out the reflection — spectrum, spatial
@@ -689,6 +717,7 @@ Figures:
 _save_placeholder("ch04_wind_reflection", "CH04 §4-2 — Wind reflection from panel", chapter="04")
 
 # %%
+# [DATA: META]  — reads combined_fft_dict
 """
 ── CH04 § 4-3 — FFT spectrum: paddle frequency peak ────────────────────────
 Goal: show what the FFT looks like for a wave run — narrow peak at the paddle
@@ -744,6 +773,7 @@ _fig_fft_wave, _ = plot_frequency_spectrum(
 )
 
 # %%
+# [DATA: META]  — reads combined_fft_dict + combined_psd_dict
 """
 ── CH04 § 4-4 — Spectral SNR: paddle signal vs wind noise ───────────────────
 Goal: quantify how much of the FFT amplitude at paddle frequencies is
@@ -773,6 +803,7 @@ _pv_wind_snr = {
 plot_wind_snr(combined_meta, combined_psd_dict, _pv_wind_snr, chapter="04")
 
 # %%
+# [DATA: META]
 """
 ── CH04 § 4-5 — Time-domain vs FFT amplitude: why A_FFT is required ─────────
 Goal: demonstrate that time-domain amplitude is wind-dominated at the IN probe
@@ -817,6 +848,8 @@ _pv_td_vs_fft_scatter = {
 plot_td_vs_fft(combined_meta, _pv_td_vs_fft_scatter, chapter="04")
 
 # %%
+# [DATA: CSV]  — analysis_scratch/fft_peak_bias_outin_impact.py regens CSV;
+#                then plotter reads it
 """
 ── CH04 § 4b — FFT peak-bin bias cancels in OUT/IN ──────────────────────────
 Goal: establish that although nearest-bin FFT amplitudes are biased by
@@ -853,6 +886,7 @@ _pv_fft_peak_bias = {
 plot_fft_peak_bias_cancellation(_pv_fft_peak_bias, chapter="04")
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/mansard_funke.py
 """
 ── CH04 § 4c — Mansard-Funke reflection coefficient ─────────────────────────
 Goal: direct measurement of the panel's reflection coefficient R using the
@@ -877,6 +911,7 @@ _run_delegated_if_missing(
 )
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/sw_correction.py
 """
 ── CH04 § 4d — Standing-wave correction test (negative evidence) ────────────
 Goal: show that applying a standing-wave correction at R = 0.20 to the raw
@@ -897,6 +932,7 @@ _run_delegated_if_missing(
 )
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/sliding_afft_fullwind_sweep.py
 """
 ── CH04 § 4e — Sliding-window FFT stability at the IN probe ─────────────────
 Goal: show that the paddle-frequency FFT amplitude at the IN probe
@@ -921,6 +957,7 @@ _run_delegated_if_missing(
 )
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/reconstruction_A_vs_B.py (same script as §4g)
 """
 ── CH04 § 4f — Reconstruction A vs B: wind-separation safety check ──────────
 Goal: justify the peak-bin FFT reconstruction (method A) that underpins the
@@ -951,6 +988,7 @@ _run_delegated_if_missing(
 )
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/reconstruction_A_vs_B.py (same script as §4f)
 """
 ── CH04 § 4g — Pure-wind PSD via no-wind residual subtraction ───────────────
 Goal: quantify the Stokes-harmonic contamination of the 2–6 Hz "wind band"
@@ -980,75 +1018,12 @@ _run_delegated_if_missing(
     label="ch04_reconstruction_pure_wind",
 )
 
-# %%
-"""
-── CH04 § 5 — What does a full signal look like? ────────────────────────────
-Goal: show the full signal for a select few runs — stillwater baseline,
-wavemaker ramp, stable wavetrain, decay. Wind-wave noise visible at IN probe
-vs clean signal at OUT probe.
-
-Layout: rows = probes, columns = runs selected by filters.
-Grey band = detected stable-window used for all amplitude/FFT analysis.
-"""
-
-_pv_timeseries = {
-    "filters": {
-        # Pick a representative condition — adjust as needed:
-        "WaveFrequencyInput [Hz]": 1.3,
-        "WaveAmplitudeInput [Volt]": 0.2,
-        "WindCondition": None,      # None = all wind conditions
-        "PanelCondition": "full",
-        # "run_category": "standard",
-    },
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,           # DRAFT — timeseries overview not yet polished
-        "draft":       True,
-        "figure_name": "ch04_timeseries_overview",
-        "force_stub":  True,
-        "probes":      ["9373/170", "12400/250"],   # IN and OUT only
-        "max_runs":    4,           # cap columns; reduce if too crowded
-        "xlim":        None,        # e.g. (0, 60) to zoom; None = full run
-        "ylim":        None,        # e.g. (-30, 30); None = auto per row
-        # caption printed on first run — paste the one-liner here:
-        # "caption": "...",
-    },
-}
-
-_fig_ts = plot_timeseries_overview(combined_meta, processed_dfs, _pv_timeseries)
+# NOTE: CH04 §5 (ch04_timeseries_overview) and §6 (ch04_first_arrival) have
+# been relocated to below the Heavy load gate at the bottom of this file.
+# They are the only two figure cells that need processed_dfs (raw time series).
 
 # %%
-"""
-── CH04 § 6 — Wave-range detection ──────────────────────────────────────────
-Goal: explain and validate _SNARVEI_CALIB. Show how the stable wavetrain
-window is detected: (1) threshold crossing, (2) ramp-up skip, (3) n periods.
-
-Data: processed_dfs, Computed Probe {pos} start/end columns.
-
-Figures:
-  - Plot:  single run with detected start/end marked, one probe panel per row
-  - Plot:  start sample vs frequency (all probes) — show _SNARVEI_CALIB points
-"""
-
-_pv_first_arrival = {
-    "filters": {},
-    "plotting": {
-        "show_plot":        True,
-        "save_plot":        True,       # DRAFT — threshold not yet calibrated
-        "draft":            True,
-        "figure_name":      "ch04_first_arrival",
-        "force_stub":       True,
-        "probes":           ANALYSIS_PROBES,
-        "threshold_factor": 5.0,        # TODO: calibrate per-probe after noise floor analysis
-        "window_s":         2.5,
-        "min_arrival_s":    0.5,
-        "figsize":          (9, 5),
-    },
-}
-
-plot_first_arrival(combined_meta, processed_dfs, _pv_first_arrival, chapter="04")
-
-# %%
+# [DATA: META]
 """
 ── CH04 § 7 — Autocorrelation A: wavetrain stability ────────────────────────
 Goal: show wave_stability and period_cv as quality metrics. Demonstrate that
@@ -1088,6 +1063,7 @@ _pv_wave_stability = {
 _fig_stab = plot_wave_stability(combined_meta, ANALYSIS_PROBES, _pv_wave_stability)
 
 # %%
+# [DATA: META]
 """
 ── CH04 § 8 — Autocorrelation B: lateral wave equality ──────────────────────
 Goal: show that the paddle wave is laterally uniform (parallel probes agree)
@@ -1134,7 +1110,8 @@ _pv_lateral_nowind_scatter = {
 }
 plot_parallel_ratio(combined_meta, _pv_lateral_nowind_scatter)
 
-# %% - perhaps skip this one. its the physical plot.
+# %%
+# [DATA: META]  — cell body currently commented out ("perhaps skip this one")
 # """
 # ── CH04 § 9 — Amplitude profile across all probes ───────────────────────────
 # Goal: show measured amplitude at each probe position for all runs, giving a
@@ -1171,6 +1148,7 @@ plot_parallel_ratio(combined_meta, _pv_lateral_nowind_scatter)
 # =============================================================================
 
 # %%
+# [DATA: META]
 """
 ── CH05 § 1 — Damping overview: OUT/IN vs frequency ─────────────────────────
 THE central result. "How much is left of the paddle-frequency wave after
@@ -1230,6 +1208,7 @@ _damping_grouped = damping_all_amplitude_grouper(_damping_meta)
 plot_damping_freq(_damping_grouped, _pv_damping_freq)
 
 # %%
+# [DATA: META]
 """
 ── CH05 § 2 — Damping vs amplitude ──────────────────────────────────────────
 Secondary result. Is there an amplitude dependence? (Expected: small effect
@@ -1267,6 +1246,7 @@ _scatter_grouped = damping_all_amplitude_grouper(_scatter_meta)
 plot_damping_scatter(_scatter_grouped, _pv_damping_scatter)
 
 # %%
+# [DATA: META]
 """
 ── CH05 § 3 — Wind effect on damping ────────────────────────────────────────
 The single key question of the thesis, isolated:
@@ -1306,6 +1286,7 @@ _wind_delta_grouped = damping_all_amplitude_grouper(_wind_delta_meta)
 plot_damping_wind_delta(_wind_delta_grouped, _pv_damping_wind_delta, chapter="05")
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/t_cross_figure.py
 """
 ── CH05 § 3b — T_cross: wind effect via clean nowind reference ──────────────
 Alternative wind-effect metric. Plots three transmission curves per
@@ -1338,6 +1319,7 @@ _run_delegated_if_missing(
 )
 
 # %%
+# [DATA: META]
 """
 ── CH05 § 4 — Wave steepness: ka as axis variable ───────────────────────────
 All damping plots should optionally show ka on the x-axis instead of Hz.
@@ -1406,6 +1388,7 @@ _pv_damping_ka_by_amp = {
 plot_damping_ka(_ka_meta, _pv_damping_ka_by_amp, chapter="05")
 
 # %%
+# [DATA: META]  — cell body DROPPED (kept as a marker)
 """
 ── CH05 § 5 — DROPPED: Swell / wind / total band amplitude scatter ──────────
 Kept here commented-out as a reminder of what we tried and rejected.
@@ -1453,6 +1436,7 @@ plot_swell_scatter(meta_results, _pv_swell_scatter, chapter="05")
 """
 
 # %%
+# [DATA: META]  — reads combined_fft_dict (NOT processed_dfs); lives above gate
 """
 ── CH05 § 6 — Reconstructed wave signal ─────────────────────────────────────
 Goal: show the FFT-reconstructed paddle-frequency signal alongside the raw
@@ -1493,6 +1477,7 @@ else:
     print("ch05_reconstructed: no matching runs found — check filters.")
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/all_data_damping_scatter.py
 """
 ── CH05 § 7 — All-data damping scatter (supplementary) ──────────────────────
 The thesis-headline CH05 figures (§1–§6) use meta_results — two validated
@@ -1523,6 +1508,8 @@ _run_delegated_if_missing(
 # =============================================================================
 
 # %%
+# [DATA: META]  — legacy exploration, superseded by CH04 §6 (ch04_first_arrival).
+#                 Plotting all commented out; still computes _noise_floor from meta.
 """
 ── First wave arrival ────────────────────────────────────────────────────────
 Detection of first wave energy arriving at each probe. Useful for validating
@@ -1646,7 +1633,103 @@ if not arrival_df.empty:
 #     save_and_stub(fig, _meta, "first_arrival")
 #     plt.show()
 
+
+# %% ═══════════════════════════════════════════════════════════════════════════
+# ███████████████████████████████████████████████████████████████████████████████
+# █                                                                             █
+# █   HEAVY LOAD GATE — everything below this line needs processed_dfs          █
+# █   (raw 250 Hz time series, ~75 MB, ~45 s to load for the full dataset)      █
+# █                                                                             █
+# █   If you only need the light figures, STOP executing cells here.            █
+# █   All cells above this gate use combined_meta + FFT/PSD dicts only.         █
+# █                                                                             █
+# ███████████████████████████████████████████████████████████████████████████████
+# ═══════════════════════════════════════════════════════════════════════════════
+# [DATA: DFS gate]
+if not processed_dfs:
+    print("Heavy load gate — loading processed_dfs (~75 MB, ~45 s)…")
+    _t_gate = time.time()
+    processed_dfs = load_processed_dfs(*ALL_PROCESSED_DIRS)
+    print(f"  loaded {len(processed_dfs)} DataFrames in {time.time() - _t_gate:.1f} s")
+else:
+    print(f"Heavy load gate — processed_dfs already populated "
+          f"({len(processed_dfs)} DataFrames), skipping load")
+
+
+# %%
+# [DATA: DFS]
+"""
+── CH04 § 5 — What does a full signal look like? ────────────────────────────
+Goal: show the full signal for a select few runs — stillwater baseline,
+wavemaker ramp, stable wavetrain, decay. Wind-wave noise visible at IN probe
+vs clean signal at OUT probe.
+
+Layout: rows = probes, columns = runs selected by filters.
+Grey band = detected stable-window used for all amplitude/FFT analysis.
+"""
+
+_pv_timeseries = {
+    "filters": {
+        # Pick a representative condition — adjust as needed:
+        "WaveFrequencyInput [Hz]": 1.3,
+        "WaveAmplitudeInput [Volt]": 0.2,
+        "WindCondition": None,      # None = all wind conditions
+        "PanelCondition": "full",
+        # "run_category": "standard",
+    },
+    "plotting": {
+        "show_plot":   True,
+        "save_plot":   True,           # DRAFT — timeseries overview not yet polished
+        "draft":       True,
+        "figure_name": "ch04_timeseries_overview",
+        "force_stub":  True,
+        "probes":      ["9373/170", "12400/250"],   # IN and OUT only
+        "max_runs":    4,           # cap columns; reduce if too crowded
+        "xlim":        None,        # e.g. (0, 60) to zoom; None = full run
+        "ylim":        None,        # e.g. (-30, 30); None = auto per row
+        # caption printed on first run — paste the one-liner here:
+        # "caption": "...",
+    },
+}
+
+_fig_ts = plot_timeseries_overview(combined_meta, processed_dfs, _pv_timeseries)
+
+
+# %%
+# [DATA: DFS]
+"""
+── CH04 § 6 — Wave-range detection ──────────────────────────────────────────
+Goal: explain and validate _SNARVEI_CALIB. Show how the stable wavetrain
+window is detected: (1) threshold crossing, (2) ramp-up skip, (3) n periods.
+
+Data: processed_dfs, Computed Probe {pos} start/end columns.
+
+Figures:
+  - Plot:  single run with detected start/end marked, one probe panel per row
+  - Plot:  start sample vs frequency (all probes) — show _SNARVEI_CALIB points
+"""
+
+_pv_first_arrival = {
+    "filters": {},
+    "plotting": {
+        "show_plot":        True,
+        "save_plot":        True,       # DRAFT — threshold not yet calibrated
+        "draft":            True,
+        "figure_name":      "ch04_first_arrival",
+        "force_stub":       True,
+        "probes":           ANALYSIS_PROBES,
+        "threshold_factor": 5.0,        # TODO: calibrate per-probe after noise floor analysis
+        "window_s":         2.5,
+        "min_arrival_s":    0.5,
+        "figsize":          (9, 5),
+    },
+}
+
+plot_first_arrival(combined_meta, processed_dfs, _pv_first_arrival, chapter="04")
+
+
 # %% ── DIAGNOSTICS ───────────────────────────────────────────────────────────
+# [DATA: META]  — [TODO] cells below are placeholders for diagnostic checks
 # D1 — 1.3 Hz cross-session consistency check
 # ─────────────────────────────────────────────────────────────────────────────
 # PURPOSE: 1.3 Hz is the most over-represented frequency — many early sessions
@@ -1710,6 +1793,7 @@ print("main_save_figures.py — all figure sections complete.")
 # BIG TODO: change all plots with freq on x-axis to kL.
 
 # %%
+# [DATA: META]  — Quick sanity-check, prints only (no figure saved).
 # Quick sanity-check: aggregated OUT/IN at 1.2-1.7 Hz, fullpanel, no/full wind.
 # Note: damping_all_amplitude_grouper renames OUT/IN (FFT) → mean_out_in
 # (with std_out_in) in its aggregated output.
