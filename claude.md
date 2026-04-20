@@ -709,3 +709,7 @@ At 580 mm depth, the regime depends on frequency. Higher frequencies (shorter λ
 - When touching data loading: go through `load_analysis_data()` unless there is a clear reason not to
 - Propose a branch name (`exp/<topic>`) for any non-trivial change
 - If this file disagrees with the actual code, ask for clarification
+
+
+
+# TODO 20. april: - need a variant of a windprofile plot which is perfectly square. Im trying to copy the profile in VOLLESTAD: '/Users/ole/Kodevik/wave_litterature_backup/Vollestad and Jensen - 2021 - Modification of Airflow Structure Due to Wave Breaking on a Submerged Topography.pdf'
