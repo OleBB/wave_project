@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from datetime import datetime
 from collections import defaultdict
+from scipy.stats import linregress
 
 AIR_DENSITY    = 1.225
 height_pattern = re.compile(r"moh(\d+)", re.IGNORECASE)
@@ -244,15 +245,31 @@ def process_folder(folder_path, fname_filter=None, exclude_filter=None):
 
         v_per_s    = pa_to_v(ma_to_pa(d["Arit"]))
         mean_speed = np.mean(v_per_s)
-        total_unc  = np.sqrt(
-            np.std(v_per_s, ddof=1)**2 +
-            (1/np.sqrt(2*np.maximum(np.mean(ma_to_pa(d["Arit"])), 0.001)*AIR_DENSITY)
-             * (100/16) * np.mean(d["Stan"]) / np.sqrt(d["Arit"].size))**2
-        )
+        drift_std  = float(np.std(v_per_s, ddof=1)) if v_per_s.size > 1 else 0.0
+        pa_mean    = max(float(np.mean(ma_to_pa(d["Arit"]))), 0.001)
+        dv_dma     = (1 / np.sqrt(2 * pa_mean * AIR_DENSITY)) * (100 / 16)
+        sem_v      = dv_dma * np.mean(d["Stan"]) / np.sqrt(d["Arit"].size)
+        total_unc  = np.sqrt(drift_std**2 + sem_v**2)
+
+        # Within-block fluctuation stats (averaged across blocks):
+        # each block ≈ 1 s at 100 Hz → block skew/kurt characterise the PDF of the
+        # fast fluctuations; their mean across blocks is the run-level descriptor.
+        TI          = (dv_dma * np.mean(d["Stan"])) / mean_speed if mean_speed >= 0.5 else np.nan
+        skew_mean   = float(np.mean(d["Skew"])) if "Skew" in d and d["Skew"].size else np.nan
+        kurt_mean   = float(np.mean(d["Kurt"])) if "Kurt" in d and d["Kurt"].size else np.nan
+        median_v    = float(np.median(v_per_s))
+        mm_gap_norm = (mean_speed - median_v) / drift_std if drift_std > 1e-6 else 0.0
+
         results.append({
-            "height_mm":  height_mm,
-            "mean_speed": mean_speed,
-            "total_unc":  total_unc,
+            "height_mm":   height_mm,
+            "mean_speed":  mean_speed,
+            "median_speed": median_v,
+            "total_unc":   total_unc,
+            "drift_std":   drift_std,
+            "TI":          TI,
+            "skew":        skew_mean,
+            "excess_kurt": kurt_mean - 3.0 if not np.isnan(kurt_mean) else np.nan,
+            "mm_gap_norm": mm_gap_norm,
         })
 
     results.sort(key=lambda x: x["height_mm"])
@@ -581,35 +598,38 @@ if SAVE:
 plt.show()
 
 # --- figure 5: log plot with negated x-axis (−7 to −2) to flip the profiles ---
-fig5, ax5 = plt.subplots(figsize=(7, 7))
-fig5.suptitle("Vindprofil — full og laveste vind kombinert (log høyde, speilet)", fontsize=12)
+# Aspect ratio (6.78, 6.15) mirrors the Vollestad & Jensen (2021) wind-profile figure
+# we reference for thesis comparison.
+fig5, ax5 = plt.subplots(figsize=(6.78, 6.15))
 
+# individual runs: plotted faintly for context, NOT shown in legend
 for (res, label), m in zip(fw_loaded, fw_markers_ind):
     z   = mm_to_m([r["height_mm"]  for r in res])
     spd = -np.array([r["mean_speed"] for r in res])
     ax5.plot(spd, z, marker=m, linestyle='--', color=fw_color, alpha=0.30,
-             linewidth=1, markersize=4, label=f"Full vind – {label}")
+             linewidth=1, markersize=4, label="_nolegend_")
 
 for (res, label), m in zip(lw_loaded, lw_markers_ind):
     z   = mm_to_m([r["height_mm"]  for r in res])
     spd = -np.array([r["mean_speed"] for r in res])
     ax5.plot(spd, z, marker=m, linestyle='--', color=lw_color, alpha=0.30,
-             linewidth=1, markersize=4, label=f"Laveste vind – {label}")
+             linewidth=1, markersize=4, label="_nolegend_")
 
 ax5.errorbar(-fw_speed, fw_heights_m, xerr=fw_spread,
              fmt='D-', color=fw_color, linewidth=2, markersize=6,
-             capsize=4, label=f"Full vind kombinert (n={len(FULLWIND_DATASETS)})", zorder=5)
+             capsize=4, label="Full vind", zorder=5)
 ax5.fill_betweenx(fw_heights_m,
                   -fw_speed - fw_spread, -fw_speed + fw_spread,
                   alpha=0.15, color=fw_color)
 
 ax5.errorbar(-lw_speed, lw_heights_m, xerr=lw_spread,
              fmt='o-', color=lw_color, linewidth=2, markersize=6,
-             capsize=4, label=f"Laveste vind kombinert (n={len(LOWESTWIND_DATASETS)})", zorder=5)
+             capsize=4, label="Laveste vind", zorder=5)
 ax5.fill_betweenx(lw_heights_m,
                   -lw_speed - lw_spread, -lw_speed + lw_spread,
                   alpha=0.15, color=lw_color)
 
+# single-run markers kept on plot but not in legend
 for heights_m, speed_arr, n_arr, color in [
     (fw_heights_m, fw_speed, fw_n, fw_color),
     (lw_heights_m, lw_speed, lw_n, lw_color),
@@ -617,10 +637,9 @@ for heights_m, speed_arr, n_arr, color in [
     single = n_arr == 1
     if single.any():
         ax5.scatter(-speed_arr[single], heights_m[single],
-                    marker='x', color=color, s=50, zorder=6, label='Kun én kjøring')
+                    marker='x', color=color, s=50, zorder=6, label="_nolegend_")
 
 ax5.set_xlabel("Vindfart [m/s]")
-ax5.set_title("Kombinert vindprofil per vindkondisjon (log høyde, speilet)")
 ax5.set_xlim(-7, -2)
 ax5.set_yscale('log')
 ax5.set_ylim(0.001, 1.0)
@@ -629,8 +648,13 @@ ax5.grid(True, which='major', linestyle='--', linewidth=0.5)
 ax5.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.4)
 if SHOW_ROOF:
     ax5.axhline(ROOF_MM / 1000, color='brown', linewidth=1.0, linestyle='-', alpha=0.6,
-                label=f"Tak ({ROOF_MM} mm)")
-ax5.legend(fontsize=8)
+                label="Tak")
+ax5.legend(fontsize=9, loc='best')
+# force axes rectangle to match Vollestad & Jensen (2021) axes aspect.
+# Aspect measured by pixel-scanning the reference PDF axes spines (ignoring a
+# 1-pixel black crop-edge artifact at row 0): h/w ≈ 0.9064, consistent with the
+# hand-measured 615/678 ratio from the cropped PDF.
+ax5.set_box_aspect(0.9064)
 fig5.tight_layout()
 if SAVE:
     out = os.path.join(fig_path, f"windprofile_combined_conditions_log_flipped_{ts}.pdf")
@@ -638,6 +662,7 @@ if SAVE:
     print(f"Saved: {out}")
 plt.show()
 
+# TODO  - need a variant of a windprofile plot which is perfectly square. Im trying to copy the profile in VOLLESTAD: '/Users/ole/Kodevik/wave_litterature_backup/Vollestad and Jensen - 2021 - Modification of Airflow Structure Due to Wave Breaking on a Submerged Topography.pdf'
 
 # %%
 # --- figures 6 & 7: individual runs per condition (for outlier inspection) ---
@@ -811,4 +836,279 @@ if SAVE:
     fig8.savefig(out, bbox_inches='tight')
     print(f"Saved: {out}")
 plt.show()
+
+# %%
+# --- figure 9: 6-tak vs 7-tak lowestwind wind profiles ---
+#
+# The main LOWESTWIND_DATASETS (05.11 / 06.11) were all recorded with the 6-plate
+# roof (normal setup). The 7-plate roof was only used during the 07.11 tunnelTest,
+# and only under lowestwind. The slisse variants (open slit) are NOT a representative
+# sealed-tunnel condition and are excluded here. The 6-roof single-point from
+# ekstratid-pappTett (moh049) is also excluded — it would add one dot on top of
+# the well-sampled 6-roof combined profile and clutter the figure.
+#
+# The profile shapes are what matter — exact height matching between the two
+# configurations is not required.
+
+# 7-tak tett profile: select only 7roof-pappTett files (exclude slisse variants)
+tt_7roof_tett = process_folder(TUNNELTEST_STATS,
+                               fname_filter="7roof-pappTett",
+                               exclude_filter="slisse")
+
+# Combine the 4 main 6-roof lowestwind runs (lw_loaded is already loaded above).
+# Reuse the existing lw_heights_m / lw_speed / lw_spread arrays — these are the
+# combined 6-roof lowestwind profile.
+
+# Build combined 7-roof profile (no across-run averaging needed — single folder,
+# but _combine handles the repeated moh049 entry cleanly).
+def _combine_single(res_list):
+    by_h = defaultdict(list)
+    for r in res_list:
+        by_h[r["height_mm"]].append((r["mean_speed"], r["total_unc"]))
+    heights = sorted(by_h.keys())
+    speed   = np.array([np.mean([v for v, _ in by_h[z]]) for z in heights])
+    spread  = np.array([
+        np.std([v for v, _ in by_h[z]], ddof=1) if len(by_h[z]) > 1
+        else by_h[z][0][1]
+        for z in heights
+    ])
+    return np.array(heights), speed, spread
+
+tt7_heights_mm, tt7_speed, tt7_spread = _combine_single(tt_7roof_tett)
+tt7_heights_m = tt7_heights_mm / 1000.0
+
+roof6_color = "tab:purple"
+roof7_color = "tab:olive"
+
+fig9, ax9 = plt.subplots(figsize=(6.78, 6.15))
+
+# individual 6-roof runs: faint context lines, hidden from legend
+_faint_markers = ['o', 's', '^', 'D', 'v', 'p', 'h']
+for (res, _label), m in zip(lw_loaded, _faint_markers):
+    z   = mm_to_m([r["height_mm"]  for r in res])
+    spd = np.array([r["mean_speed"] for r in res])
+    ax9.plot(spd, z, marker=m, linestyle='--', color=roof6_color, alpha=0.25,
+             linewidth=1, markersize=4, label="_nolegend_")
+
+# combined 6-roof lowestwind profile (4 main runs, already loaded as lw_*)
+ax9.errorbar(lw_speed, lw_heights_m, xerr=lw_spread,
+             fmt='D-', color=roof6_color, linewidth=2, markersize=6,
+             capsize=4, label="6 tak (normalt oppsett)", zorder=5)
+ax9.fill_betweenx(lw_heights_m,
+                  lw_speed - lw_spread, lw_speed + lw_spread,
+                  alpha=0.15, color=roof6_color)
+
+# combined 7-roof lowestwind profile (07.11 tunnelTest pappTett only)
+ax9.errorbar(tt7_speed, tt7_heights_m, xerr=tt7_spread,
+             fmt='o-', color=roof7_color, linewidth=2, markersize=6,
+             capsize=4, label="7 tak (tunneltest 07.11)", zorder=5)
+ax9.fill_betweenx(tt7_heights_m,
+                  tt7_speed - tt7_spread, tt7_speed + tt7_spread,
+                  alpha=0.15, color=roof7_color)
+
+ax9.set_xlabel("Vindfart [m/s]")
+ax9.set_ylabel("Høyde over vannet [m]")
+ax9.set_yscale('log')
+ax9.set_ylim(0.001, 1.0)
+# auto-fit x to both profiles with a small margin
+_all_speeds = np.concatenate([lw_speed, tt7_speed])
+_xpad = 0.2
+ax9.set_xlim(max(0, _all_speeds.min() - _xpad), _all_speeds.max() + _xpad)
+ax9.grid(True, which='major', linestyle='--', linewidth=0.5)
+ax9.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.4)
+if SHOW_ROOF:
+    ax9.axhline(ROOF_MM / 1000, color='brown', linewidth=1.0, linestyle='-', alpha=0.6,
+                label="Tak")
+ax9.legend(fontsize=9, loc='best')
+fig9.tight_layout()
+if SAVE:
+    out = os.path.join(fig_path, f"windprofile_6vs7_roof_lowestwind_{ts}.pdf")
+    fig9.savefig(out, bbox_inches='tight')
+    print(f"Saved: {out}")
+plt.show()
+
+# %%
+# --- figure 10: log-law fit to the mean profiles ---
+#
+# Standard boundary-layer characterisation:
+#     U(z) = (u*/κ) · ln(z/z₀),    κ = 0.41 (von Kármán)
+#
+# Fitting U against ln(z) gives:
+#     slope     = u* / κ              → u* = slope · κ   [m/s]    (friction velocity)
+#     intercept = -(u*/κ) · ln(z₀)    → z₀ = exp(-intercept/slope) [m]  (roughness length)
+#
+# Full measurement range is used (tallest point 245 mm, still 135 mm below roof).
+
+KAPPA = 0.41
+
+def fit_loglaw(heights_m, speeds):
+    """Linear regression of U vs ln(z). Returns (u_star, z0, r2, predict_fn)."""
+    heights_m = np.asarray(heights_m)
+    speeds    = np.asarray(speeds)
+    mask = (heights_m > 0) & np.isfinite(speeds)
+    lnz  = np.log(heights_m[mask])
+    U    = speeds[mask]
+    reg  = linregress(lnz, U)
+    u_star = reg.slope * KAPPA
+    z0     = float(np.exp(-reg.intercept / reg.slope))
+    predict = lambda z: reg.slope * np.log(z) + reg.intercept
+    return u_star, z0, reg.rvalue ** 2, predict
+
+fw_ustar, fw_z0, fw_r2, fw_fit = fit_loglaw(fw_heights_m, fw_speed)
+lw_ustar, lw_z0, lw_r2, lw_fit = fit_loglaw(lw_heights_m, lw_speed)
+
+print(f"\nLog-law fit  (κ={KAPPA})")
+print(f"  Full vind:     u* = {fw_ustar:.3f} m/s,  z₀ = {fw_z0*1000:.3f} mm,  R² = {fw_r2:.4f}")
+print(f"  Laveste vind:  u* = {lw_ustar:.3f} m/s,  z₀ = {lw_z0*1000:.3f} mm,  R² = {lw_r2:.4f}")
+
+fig10, ax10 = plt.subplots(figsize=(6.78, 6.15))
+
+# measured profiles with errorbars
+def _fmt_z0(z0_m):
+    """Format z₀ so very small values are readable (mm + scientific in m)."""
+    z0_mm = z0_m * 1000
+    if z0_mm >= 0.01:
+        return f"{z0_mm:.3f} mm"
+    return f"{z0_m:.2e} m"
+
+ax10.errorbar(fw_speed, fw_heights_m, xerr=fw_spread,
+              fmt='D', color=fw_color, markersize=6, capsize=4,
+              linestyle='none',
+              label=f"Full vind  (u*={fw_ustar:.3f} m/s, z₀={_fmt_z0(fw_z0)})",
+              zorder=5)
+ax10.errorbar(lw_speed, lw_heights_m, xerr=lw_spread,
+              fmt='o', color=lw_color, markersize=6, capsize=4,
+              linestyle='none',
+              label=f"Laveste vind  (u*={lw_ustar:.3f} m/s, z₀={_fmt_z0(lw_z0)})",
+              zorder=5)
+
+# fitted log-law lines: sample z across the data range, extrapolate slightly
+z_fit = np.logspace(np.log10(0.005), np.log10(0.4), 200)
+ax10.plot(fw_fit(z_fit), z_fit, '--', color=fw_color, linewidth=1.4, alpha=0.8,
+          label="_nolegend_")
+ax10.plot(lw_fit(z_fit), z_fit, '--', color=lw_color, linewidth=1.4, alpha=0.8,
+          label="_nolegend_")
+
+ax10.set_xlabel("Vindfart [m/s]")
+ax10.set_ylabel("Høyde over vannet [m]")
+ax10.set_yscale('log')
+ax10.set_ylim(0.001, 1.0)
+ax10.set_xlim(left=0)
+ax10.grid(True, which='major', linestyle='--', linewidth=0.5)
+ax10.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.4)
+if SHOW_ROOF:
+    ax10.axhline(ROOF_MM / 1000, color='brown', linewidth=1.0, linestyle='-',
+                 alpha=0.6, label="Tak")
+
+# R² annotation box
+ann = (f"$U(z) = \\frac{{u_*}}{{\\kappa}}\\,\\ln(z/z_0)$,  $\\kappa={KAPPA}$\n"
+       f"Full vind:     R² = {fw_r2:.3f}\n"
+       f"Laveste vind:  R² = {lw_r2:.3f}")
+ax10.text(0.98, 0.02, ann, transform=ax10.transAxes, ha='right', va='bottom',
+          fontsize=8, family='serif',
+          bbox=dict(facecolor='white', alpha=0.85, edgecolor='gray', boxstyle='round,pad=0.4'))
+
+ax10.legend(fontsize=8, loc='upper left')
+ax10.set_box_aspect(0.9064)
+fig10.tight_layout()
+if SAVE:
+    out = os.path.join(fig_path, f"windprofile_loglaw_fit_{ts}.pdf")
+    fig10.savefig(out, bbox_inches='tight')
+    print(f"Saved: {out}")
+plt.show()
+
+# %%
+# --- figure 11: turbulence character (TI, skew, excess kurtosis vs height) ---
+#
+# Wind-tunnel quality / turbulence-PDF characterisation. Each quantity is the
+# mean across all runs at each height, so it mirrors the combined profile.
+#
+# Reference lines mark Gaussian turbulence: skew = 0, excess kurt = 0.
+# Shaded "quiet" bands show typical wind-tunnel acceptance ranges:
+#   - TI:         <5% is considered low-turbulence
+#   - |skew|:     <0.3 passes a symmetry check
+#   - |exc kurt|: <1.0 passes a Gaussian-tail check
+
+def combine_stat(loaded, key):
+    """For each height, return mean value of `key` across runs that measured it."""
+    by_h = defaultdict(list)
+    for res, _ in loaded:
+        for r in res:
+            if key in r and not (isinstance(r[key], float) and np.isnan(r[key])):
+                by_h[r["height_mm"]].append(r[key])
+    heights = sorted(by_h.keys())
+    means   = np.array([np.mean(by_h[z]) for z in heights])
+    return np.array(heights) / 1000.0, means
+
+fw_z_TI,   fw_TI   = combine_stat(fw_loaded, "TI")
+fw_z_sk,   fw_sk   = combine_stat(fw_loaded, "skew")
+fw_z_ek,   fw_ek   = combine_stat(fw_loaded, "excess_kurt")
+lw_z_TI,   lw_TI   = combine_stat(lw_loaded, "TI")
+lw_z_sk,   lw_sk   = combine_stat(lw_loaded, "skew")
+lw_z_ek,   lw_ek   = combine_stat(lw_loaded, "excess_kurt")
+
+# 3 panels stacked horizontally, shared y-axis (log)
+fig11, axes11 = plt.subplots(1, 3, figsize=(11.5, 6.15), sharey=True)
+axT, axS, axK = axes11
+
+def _plot_metric(ax, xlabel, fw_z, fw_v, lw_z, lw_v):
+    """Scatter (no connecting lines — height points aren't monotonic enough)."""
+    ax.scatter(fw_v, fw_z, marker='D', color=fw_color, s=35,
+               edgecolor='white', linewidth=0.5, zorder=4, label="Full vind")
+    ax.scatter(lw_v, lw_z, marker='o', color=lw_color, s=35,
+               edgecolor='white', linewidth=0.5, zorder=4, label="Laveste vind")
+    ax.set_xlabel(xlabel)
+    ax.grid(True, which='major', linestyle='--', linewidth=0.5)
+    ax.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.4)
+    if SHOW_ROOF:
+        ax.axhline(ROOF_MM / 1000, color='brown', linewidth=1.0, alpha=0.6)
+
+# TI panel (as %)
+_plot_metric(axT, "TI [%]", fw_z_TI, fw_TI * 100, lw_z_TI, lw_TI * 100)
+axT.axvspan(0, 5, color='green', alpha=0.07, label='_nolegend_')
+axT.axvline(5, color='green', linestyle=':', linewidth=1, alpha=0.7, label="TI = 5 %")
+_TI_max = np.nanmax(np.concatenate([fw_TI, lw_TI])) * 100
+axT.set_xlim(0, max(8, _TI_max * 1.1))
+
+# Skew panel — Gaussian at 0
+_plot_metric(axS, "Skewness", fw_z_sk, fw_sk, lw_z_sk, lw_sk)
+axS.axvspan(-0.3, 0.3, color='green', alpha=0.07, label='_nolegend_')
+axS.axvline(0, color='black', linestyle=':', linewidth=1, alpha=0.7, label="Gauss (skew = 0)")
+_sk_absmax = np.nanmax(np.abs(np.concatenate([fw_sk, lw_sk])))
+axS.set_xlim(-max(0.5, _sk_absmax * 1.1), max(0.5, _sk_absmax * 1.1))
+
+# Excess kurtosis panel — Gaussian at 0 (kurt = 3)
+_plot_metric(axK, "Excess kurtosis (kurt − 3)", fw_z_ek, fw_ek, lw_z_ek, lw_ek)
+axK.axvspan(-1, 1, color='green', alpha=0.07, label='_nolegend_')
+axK.axvline(0, color='black', linestyle=':', linewidth=1, alpha=0.7, label="Gauss (exc.kurt = 0)")
+_ek_max = np.nanmax(np.concatenate([fw_ek, lw_ek]))
+_ek_min = np.nanmin(np.concatenate([fw_ek, lw_ek]))
+axK.set_xlim(min(-1.5, _ek_min * 1.1), max(2.0, _ek_max * 1.1))
+
+axT.set_yscale('log')
+axT.set_ylim(0.001, 1.0)
+axT.set_ylabel("Høyde over vannet [m]")
+
+# legends: show each axis's Gaussian reference plus data lines; compact
+for ax in (axT, axS, axK):
+    ax.legend(fontsize=8, loc='best')
+
+fig11.suptitle("Turbulenskarakter — TI, skevhet og ekstra kurtose mot høyde", fontsize=12)
+fig11.tight_layout()
+if SAVE:
+    out = os.path.join(fig_path, f"windprofile_turbulence_character_{ts}.pdf")
+    fig11.savefig(out, bbox_inches='tight')
+    print(f"Saved: {out}")
+plt.show()
+
+# %%
+# --- final step: regenerate the Vollestad comparison overlay ---
+# Side-effect script: rasterises the fig5 PDF we just wrote and aligns it
+# pixel-wise with Vollestad & Jensen (2021)'s published profile.
+if SAVE:
+    try:
+        from vollestad_overlay import main as _overlay_main
+        _overlay_main()
+    except Exception as e:
+        print(f"Overlay step skipped ({type(e).__name__}: {e})")
 # %%
