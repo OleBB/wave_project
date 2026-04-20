@@ -1,28 +1,23 @@
 %! TEX root = ../main.tex
-% ============================================================
+% =============================================================
 % IMMUTABLE — generated automatically, do not edit this block
-%   script          : plotter.py
-%   plot_type       : ch04_mooring_comparison
+%   script          : analysis_scratch/mooring_comparison.py
+%   plot_type       : mooring_comparison
 %   chapter         : 04
-%   panel           : None
-%   wind            : None
-%   amplitude       : None
-%   frequency       : None
-%   probes          : None
-%   draft           : True
-%
-% DATASETS:
-%   PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
-%   PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
-%
-% SUBFIGURES AVAILABLE:
-%   FIGURES/ch04_mooring_comparison.pdf
-% ============================================================
+%   freq_range_hz   : 1.25-1.65
+%   amplitudes_v    : [0.2, 0.3]
+%   winds           : no, full
+%   moorings        : below_90_loose230, below_90_loose300
+%   n_conditions_all    : 16   (incl. 1.3 Hz)
+%   n_conditions_clean  : 12   (1.4-1.6 Hz)
+%   max_abs_delta_clean : 5.90%%
+%   findings_doc    : analysis_scratch/mooring_comparison_findings.md
+% =============================================================
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.9\linewidth]{FIGURES/ch04_mooring_comparison.pdf}
-  \caption[OUT/IN(FFT) damping ratio at 0]{
-    OUT/IN(FFT) damping ratio at 0.2\,V and 0.3\,V for two below-water mooring rubber band lengths: 230\,mm (blue) and 300\,mm (orange), both attached 90\,mm below the still-water surface. Solid lines: no-wind runs; dashed lines: full-wind runs. The two mooring types are indistinguishable within measurement uncertainty ($|\Delta| < 3\%$ at 1.4--1.6\,Hz, 0.2/0.3\,V). Panel geometry dominates wave transmission; mooring compliance does not. Datasets may therefore be merged as \texttt{below\_90\_loose} for result figures.
+  \caption[Mooring rubber band length has no detectable effect on OUT/IN]{%
+    OUT/IN(FFT) damping ratio at 0.2\,V (left) and 0.3\,V (right) paddle drive for two below-water mooring rubber band lengths: 230\,mm (blue) and 300\,mm (orange), both attached 90\,mm below the still-water surface. Solid markers: no-wind runs; dashed connectors: full-wind runs. Error bars are run-to-run standard deviation when $n\geq 2$. Across the clean thesis range ($f \in [1.40, 1.60]$\,Hz, $n=12$ matched (frequency, amplitude, wind) conditions), the two mooring types agree to within $|\Delta| \leq 5.9\,\%$. The 1.3\,Hz column is retained in the figure for completeness; the loose230 no-wind point at $\textrm{OUT}/\textrm{IN}>0.9$ is a known mooring-independent standing-wave artefact (IN probe near a pressure node) and is discussed separately in the methodology. Panel geometry dominates wave transmission; rubber band length does not produce a detectable systematic effect. Datasets may therefore be merged as \texttt{below\_90\_loose} for the CH05 main results. See \texttt{analysis\_scratch/mooring\_comparison\_findings.md} for the full per-condition comparison and 0.1\,V low-SNR caveats.
   }
   \label{fig:ch04_mooring_comparison}
 \end{figure}

@@ -46,6 +46,14 @@ BASE = Path(__file__).parent.parent
 OUT_PNG = Path(__file__).parent / "mooring_comparison.png"
 OUT_MD  = Path(__file__).parent / "mooring_comparison_findings.md"
 
+# Thesis figure (delegated-promotion pattern; main_save_figures.py verifies
+# existence of these files, does not re-generate).
+THESIS_NAME     = "ch04_mooring_comparison"
+THESIS_PDF      = BASE / "output" / "FIGURES" / f"{THESIS_NAME}.pdf"
+THESIS_STUB     = BASE / "output" / "TEXFIGU" / f"{THESIS_NAME}.tex"
+THESIS_PDF.parent.mkdir(parents=True, exist_ok=True)
+THESIS_STUB.parent.mkdir(parents=True, exist_ok=True)
+
 # ── 1. Load data ───────────────────────────────────────────────────────────────
 print("1. Loading all processed folders...")
 dirs = sorted(glob.glob(str(BASE / "waveprocessed" / "PROCESSED-*")))
@@ -301,7 +309,169 @@ Dashed lines mark the ±0.05 threshold (5% of a typical OUT/IN ≈ 1).
 - If |Δ%| > 10%: do NOT merge; treat mooring as a separate experimental variable.
 """
 
-OUT_MD.write_text(md_intro + "```\n" + md_table + "\n```\n" + md_conclusion, encoding="utf-8")
-print(f"   Saved → {OUT_MD}")
+# Write-once guard: the hand-written interpretation in this file is
+# valuable and the auto-generated scaffold (intro + table + generic
+# "next steps") is quickly re-derivable. Never overwrite unless the
+# explicit sidecar file is used.
+OUT_MD_AUTO = Path(__file__).parent / "mooring_comparison_auto_report.md"
+OUT_MD_AUTO.write_text(
+    md_intro + "```\n" + md_table + "\n```\n" + md_conclusion, encoding="utf-8"
+)
+print(f"   Saved auto-report → {OUT_MD_AUTO}")
+if not OUT_MD.exists():
+    OUT_MD.write_text(
+        md_intro + "```\n" + md_table + "\n```\n" + md_conclusion,
+        encoding="utf-8",
+    )
+    print(f"   Seeded hand-editable findings → {OUT_MD}")
+else:
+    print(f"   Hand-editable findings exists (not overwritten): {OUT_MD}")
+
+# ── 7. Thesis-grade figure (delegated promotion) ───────────────────────────────
+#
+# Two-panel (0.2 V | 0.3 V), OUT/IN vs frequency in the thesis scope.
+# Color = mooring, line style = wind condition. This is the view that
+# directly supports the merge-moorings decision in CH04 §3c.
+# Written straight to output/FIGURES/ so main_save_figures.py need only
+# verify its existence.
+print("7. Building thesis figure (2-panel clean view)…")
+
+_thesis_amps = [0.2, 0.3]
+_thesis_freq_lo, _thesis_freq_hi = 1.25, 1.65
+_MOORING_COLOR = {
+    "below_90_loose230": "#1f77b4",   # blue  — 230 mm
+    "below_90_loose300": "#ff7f0e",   # orange — 300 mm
+}
+_MOORING_LABEL = {
+    "below_90_loose230": "loose230 (230 mm)",
+    "below_90_loose300": "loose300 (300 mm)",
+}
+_WIND_STYLE = {"no": "-", "full": "--"}
+_WIND_LABEL_T = {"no": "no wind", "full": "full wind"}
+
+_thesis = both[(both["amp"].isin(_thesis_amps))
+               & (both["freq"] >= _thesis_freq_lo)
+               & (both["freq"] <= _thesis_freq_hi)].copy()
+
+_fig_t, _axes_t = plt.subplots(1, 2, figsize=(8.8, 3.6), sharey=True)
+
+# Axis y-range derived from the plotted data with a gentle pad.
+_all_vals = np.concatenate([
+    _thesis["mean_loose230"].dropna().values,
+    _thesis["mean_loose300"].dropna().values,
+])
+if len(_all_vals):
+    _ymin = max(0.0, float(np.min(_all_vals)) - 0.08)
+    _ymax = min(1.15, float(np.max(_all_vals)) + 0.08)
+else:
+    _ymin, _ymax = 0.4, 1.0
+
+for _ax, _amp in zip(_axes_t, _thesis_amps):
+    _sub = _thesis[_thesis["amp"] == _amp]
+    for _m, _c in _MOORING_COLOR.items():
+        _mean_col = f"mean_{_m.split('_')[-1]}"
+        _std_col  = f"std_{_m.split('_')[-1]}"
+        for _wind, _ls in _WIND_STYLE.items():
+            _rows = _sub[(_sub["wind"] == _wind) & _sub[_mean_col].notna()].sort_values("freq")
+            if _rows.empty:
+                continue
+            _fr = _rows["freq"].values
+            _mn = _rows[_mean_col].values
+            _sd = _rows[_std_col].fillna(0).values
+            _ax.errorbar(
+                _fr, _mn, yerr=_sd, fmt="o", color=_c, linestyle=_ls,
+                capsize=3, markersize=4.5, linewidth=1.3, alpha=0.85,
+                zorder=3 if _wind == "no" else 2,
+            )
+    _ax.set_xlabel("Frequency [Hz]", fontsize=9)
+    _ax.set_title(f"{_amp:.1f} V paddle", fontsize=10)
+    _ax.grid(True, linestyle="--", alpha=0.4)
+    _ax.set_xlim(_thesis_freq_lo - 0.02, _thesis_freq_hi + 0.02)
+    _ax.set_ylim(_ymin, _ymax)
+    _ax.axhline(1.0, color="k", lw=0.5, ls=":", alpha=0.5)
+
+_axes_t[0].set_ylabel("OUT/IN (FFT)", fontsize=9)
+
+# Compact legend on the right panel
+from matplotlib.lines import Line2D
+_handles = [
+    Line2D([0], [0], color=_MOORING_COLOR["below_90_loose230"], marker="o",
+           linestyle="", label="loose230 (230 mm)"),
+    Line2D([0], [0], color=_MOORING_COLOR["below_90_loose300"], marker="o",
+           linestyle="", label="loose300 (300 mm)"),
+    Line2D([0], [0], color="k", linestyle="-",  label="no wind"),
+    Line2D([0], [0], color="k", linestyle="--", label="full wind"),
+]
+_axes_t[1].legend(handles=_handles, fontsize=7.5, loc="lower left", frameon=True)
+
+_fig_t.suptitle(
+    "Mooring rubber band length — loose230 vs loose300 (full panel, below-water)",
+    fontsize=10,
+)
+_fig_t.tight_layout(rect=[0, 0, 1, 0.95])
+_fig_t.savefig(THESIS_PDF, bbox_inches="tight")
+print(f"   thesis figure → {THESIS_PDF.relative_to(BASE)}")
+
+# Summary stats for the stub caption.
+# Restrict delta report to 1.4–1.6 Hz to exclude the 1.3 Hz standing-wave
+# anomaly (documented in the findings doc: at nowind 0.3V the IN probe sits
+# near a pressure node and gives OUT/IN > 1, which is mooring-independent).
+_clean = _thesis[(_thesis["freq"] >= 1.40) & (_thesis["freq"] <= 1.60)]
+_max_abs_pct_clean = float(_clean["delta_pct"].abs().max()) if len(_clean) else float("nan")
+_n_conditions_clean = int(len(_clean))
+_n_conditions       = int(len(_thesis))
+
+if not THESIS_STUB.exists():
+    _caption = (
+        "OUT/IN(FFT) damping ratio at 0.2\\,V (left) and 0.3\\,V (right) "
+        "paddle drive for two below-water mooring rubber band lengths: "
+        "230\\,mm (blue) and 300\\,mm (orange), both attached 90\\,mm below "
+        "the still-water surface. Solid markers: no-wind runs; dashed "
+        "connectors: full-wind runs. Error bars are run-to-run standard "
+        "deviation when $n\\geq 2$. Across the clean thesis range "
+        f"($f \\in [1.40, 1.60]$\\,Hz, $n={_n_conditions_clean}$ matched "
+        "(frequency, amplitude, wind) conditions), the two mooring types "
+        f"agree to within $|\\Delta| \\leq {_max_abs_pct_clean:.1f}\\,\\%$. "
+        "The 1.3\\,Hz column is retained in the figure for completeness; the "
+        "loose230 no-wind point at $\\textrm{OUT}/\\textrm{IN}>0.9$ is a known "
+        "mooring-independent standing-wave artefact (IN probe near a pressure "
+        "node) and is discussed separately in the methodology. Panel "
+        "geometry dominates wave transmission; rubber band length does not "
+        "produce a detectable systematic effect. Datasets may therefore be "
+        "merged as \\texttt{below\\_90\\_loose} for the CH05 main results. "
+        "See \\texttt{analysis\\_scratch/mooring\\_comparison\\_findings.md} "
+        "for the full per-condition comparison and 0.1\\,V low-SNR caveats."
+    )
+    _stub = (
+        "%! TEX root = ../main.tex\n"
+        "% =============================================================\n"
+        "% IMMUTABLE — generated automatically, do not edit this block\n"
+        "%   script          : analysis_scratch/mooring_comparison.py\n"
+        "%   plot_type       : mooring_comparison\n"
+        "%   chapter         : 04\n"
+        f"%   freq_range_hz   : {_thesis_freq_lo:.2f}-{_thesis_freq_hi:.2f}\n"
+        f"%   amplitudes_v    : {_thesis_amps}\n"
+        "%   winds           : no, full\n"
+        "%   moorings        : below_90_loose230, below_90_loose300\n"
+        f"%   n_conditions_all    : {_n_conditions}   (incl. 1.3 Hz)\n"
+        f"%   n_conditions_clean  : {_n_conditions_clean}   (1.4-1.6 Hz)\n"
+        f"%   max_abs_delta_clean : {_max_abs_pct_clean:.2f}%%\n"
+        "%   findings_doc    : analysis_scratch/mooring_comparison_findings.md\n"
+        "% =============================================================\n"
+        "\\begin{figure}[htbp]\n"
+        "  \\centering\n"
+        f"  \\includegraphics[width=0.9\\linewidth]{{FIGURES/{THESIS_NAME}.pdf}}\n"
+        "  \\caption[Mooring rubber band length has no detectable effect on "
+        "OUT/IN]{%\n"
+        f"    {_caption}\n"
+        "  }\n"
+        f"  \\label{{fig:{THESIS_NAME}}}\n"
+        "\\end{figure}\n"
+    )
+    THESIS_STUB.write_text(_stub)
+    print(f"   thesis stub   → {THESIS_STUB.relative_to(BASE)}")
+else:
+    print(f"   thesis stub exists (not overwritten): "
+          f"{THESIS_STUB.relative_to(BASE)}")
 
 print("\nDone.")
