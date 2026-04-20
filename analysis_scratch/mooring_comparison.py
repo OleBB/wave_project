@@ -421,57 +421,80 @@ _max_abs_pct_clean = float(_clean["delta_pct"].abs().max()) if len(_clean) else 
 _n_conditions_clean = int(len(_clean))
 _n_conditions       = int(len(_thesis))
 
-if not THESIS_STUB.exists():
-    _caption = (
-        "OUT/IN(FFT) damping ratio at 0.2\\,V (left) and 0.3\\,V (right) "
-        "paddle drive for two below-water mooring rubber band lengths: "
-        "230\\,mm (blue) and 300\\,mm (orange), both attached 90\\,mm below "
-        "the still-water surface. Solid markers: no-wind runs; dashed "
-        "connectors: full-wind runs. Error bars are run-to-run standard "
-        "deviation when $n\\geq 2$. Across the clean thesis range "
-        f"($f \\in [1.40, 1.60]$\\,Hz, $n={_n_conditions_clean}$ matched "
-        "(frequency, amplitude, wind) conditions), the two mooring types "
-        f"agree to within $|\\Delta| \\leq {_max_abs_pct_clean:.1f}\\,\\%$. "
-        "The 1.3\\,Hz column is retained in the figure for completeness; the "
-        "loose230 no-wind point at $\\textrm{OUT}/\\textrm{IN}>0.9$ is a known "
-        "mooring-independent standing-wave artefact (IN probe near a pressure "
-        "node) and is discussed separately in the methodology. Panel "
-        "geometry dominates wave transmission; rubber band length does not "
-        "produce a detectable systematic effect. Datasets may therefore be "
-        "merged as \\texttt{below\\_90\\_loose} for the CH05 main results. "
-        "See \\texttt{analysis\\_scratch/mooring\\_comparison\\_findings.md} "
-        "for the full per-condition comparison and 0.1\\,V low-SNR caveats."
-    )
-    _stub = (
-        "%! TEX root = ../main.tex\n"
-        "% =============================================================\n"
-        "% IMMUTABLE — generated automatically, do not edit this block\n"
-        "%   script          : analysis_scratch/mooring_comparison.py\n"
-        "%   plot_type       : mooring_comparison\n"
-        "%   chapter         : 04\n"
-        f"%   freq_range_hz   : {_thesis_freq_lo:.2f}-{_thesis_freq_hi:.2f}\n"
-        f"%   amplitudes_v    : {_thesis_amps}\n"
-        "%   winds           : no, full\n"
-        "%   moorings        : below_90_loose230, below_90_loose300\n"
-        f"%   n_conditions_all    : {_n_conditions}   (incl. 1.3 Hz)\n"
-        f"%   n_conditions_clean  : {_n_conditions_clean}   (1.4-1.6 Hz)\n"
-        f"%   max_abs_delta_clean : {_max_abs_pct_clean:.2f}%%\n"
-        "%   findings_doc    : analysis_scratch/mooring_comparison_findings.md\n"
-        "% =============================================================\n"
-        "\\begin{figure}[htbp]\n"
-        "  \\centering\n"
-        f"  \\includegraphics[width=0.9\\linewidth]{{FIGURES/{THESIS_NAME}.pdf}}\n"
-        "  \\caption[Mooring rubber band length has no detectable effect on "
-        "OUT/IN]{%\n"
-        f"    {_caption}\n"
-        "  }\n"
-        f"  \\label{{fig:{THESIS_NAME}}}\n"
-        "\\end{figure}\n"
-    )
-    THESIS_STUB.write_text(_stub)
-    print(f"   thesis stub   → {THESIS_STUB.relative_to(BASE)}")
-else:
-    print(f"   thesis stub exists (not overwritten): "
-          f"{THESIS_STUB.relative_to(BASE)}")
+_caption = (
+    "OUT/IN(FFT) damping ratio at 0.2\\,V (left) and 0.3\\,V (right) "
+    "paddle drive for two below-water mooring rubber band lengths: "
+    "230\\,mm (blue) and 300\\,mm (orange), both attached 90\\,mm below "
+    "the still-water surface. Solid markers: no-wind runs; dashed "
+    "connectors: full-wind runs. Error bars are run-to-run standard "
+    "deviation when $n\\geq 2$. Across the clean thesis range "
+    f"($f \\in [1.40, 1.60]$\\,Hz, $n={_n_conditions_clean}$ matched "
+    "(frequency, amplitude, wind) conditions), the two mooring types "
+    f"agree to within $|\\Delta| \\leq {_max_abs_pct_clean:.1f}\\,\\%$. "
+    "The 1.3\\,Hz column is retained in the figure for completeness; the "
+    "loose230 no-wind point at $\\textrm{OUT}/\\textrm{IN}>0.9$ is a known "
+    "mooring-independent standing-wave artefact (IN probe near a pressure "
+    "node) and is discussed separately in the methodology. Panel "
+    "geometry dominates wave transmission; rubber band length does not "
+    "produce a detectable systematic effect. Datasets may therefore be "
+    "merged as \\texttt{below\\_90\\_loose} for the CH05 main results. "
+    "See \\texttt{analysis\\_scratch/mooring\\_comparison\\_findings.md} "
+    "for the full per-condition comparison and 0.1\\,V low-SNR caveats."
+)
+
+# Use the shared plot_utils helpers so the stub matches the canonical
+# schema (provenance / filters / data provenance / method / stats) that
+# every other thesis figure uses. The scratch script runs from the repo
+# root (see BASE), so relative imports work.
+import wavescripts.plot_utils as pu
+pu.ACTIVE_DATASETS = [str(p).split("/")[-1] for p in
+                      sorted(BASE.glob("waveprocessed/PROCESSED-*"))]
+pu.TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
+pu.FIGURES_DIR = BASE / "output" / "FIGURES"
+
+# build_fig_meta reads `data_df` to auto-populate n_runs / in_probes_used /
+# out_probes_used / probe_configs / non_final_config_n / run_paths.
+# We pass the `compare` dataframe (one row per contributing run, both
+# moorings) so n_runs reflects the actual run count.
+_meta_stub = pu.build_fig_meta(
+    {
+        "filters": {
+            "PanelCondition":            "full",
+            "WaveFrequencyInput [Hz]":   [_thesis_freq_lo, _thesis_freq_hi],
+            "WaveAmplitudeInput [Volt]": _thesis_amps,
+            "WindCondition":             ["no", "full"],
+            "quality_flag":              "ok",
+            "Mooring":                   ["below_90_loose230", "below_90_loose300"],
+        },
+        "plotting": {
+            "figure_name": THESIS_NAME,
+            "caption":     _caption,
+        },
+    },
+    chapter="04",
+    data_df=compare,
+    extra={"script": "analysis_scratch/mooring_comparison.py"},
+    computed_in=("analysis_scratch/mooring_comparison.py "
+                 "(groupby freq+amp+wind+Mooring → mean/std of OUT/IN_computed)"),
+    data_class="DELEG",
+    findings_doc="analysis_scratch/mooring_comparison_findings.md",
+    grouper="manual (groupby freq, amp, wind, Mooring)",
+    collapse_panels=False,
+    fft_window_hz=0.1,
+    extra_params=(
+        f"freq_range_hz={_thesis_freq_lo:.2f}-{_thesis_freq_hi:.2f}, "
+        f"amplitudes_V={_thesis_amps}, winds=['no','full'], "
+        "moorings=['below_90_loose230','below_90_loose300']"
+    ),
+    extra_stats={
+        "n_conditions_all":    f"{_n_conditions}   (incl. 1.3 Hz)",
+        "n_conditions_clean":  f"{_n_conditions_clean}   (1.4-1.6 Hz)",
+        "max_abs_delta_clean": f"{_max_abs_pct_clean:.2f} %",
+    },
+)
+
+pu.write_figure_stub(_meta_stub, plot_type="mooring_comparison",
+                     subfig_filenames=[THESIS_NAME])
+print(f"   thesis stub   → {THESIS_STUB.relative_to(BASE)}")
 
 print("\nDone.")

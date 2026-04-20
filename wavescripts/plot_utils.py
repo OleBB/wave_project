@@ -644,7 +644,17 @@ def _build_immutable_block(meta: dict, plot_type: str,
         return f"%   {key:<{width}}: {_fmt_stub_value(val)}"
 
     caption_full  = meta.get("caption") or ""
-    caption_short = caption_full.split(".")[0].strip() if caption_full else ""
+    # Split on ". " (period + space) so decimals like "0.2\,V" don't break
+    # the first-sentence extractor. Fall back to the full first 120 chars
+    # if no proper sentence break is found.
+    caption_short = ""
+    if caption_full:
+        parts = caption_full.split(". ", 1)
+        caption_short = parts[0].strip()
+        if caption_short.endswith("."):
+            caption_short = caption_short[:-1]
+        if len(caption_short) > 200:
+            caption_short = caption_short[:197].rstrip() + "…"
     figure_name   = meta.get("figure_name") or ""
     label         = f"fig:{figure_name}" if figure_name else ""
 

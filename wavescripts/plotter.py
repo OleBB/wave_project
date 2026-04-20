@@ -322,11 +322,35 @@ def plot_damping_freq(
 
     if save_plot:
         subfig_filenames = []
+        # Summary stats cited in the caption — pulled out here so the stub
+        # captures them verbatim. Values derived right below from stats_df.
+        _fw_med = (stats_df[stats_df["WindCondition"] == "full"]["OUT/IN (FFT)"].median()
+                   if "OUT/IN (FFT)" in stats_df.columns else None)
+        _nw_med = (stats_df[stats_df["WindCondition"] == "no"]["OUT/IN (FFT)"].median()
+                   if "OUT/IN (FFT)" in stats_df.columns else None)
+        _extra_stats = {}
+        if _fw_med is not None and not pd.isna(_fw_med):
+            _extra_stats["median_fullwind_OUTIN"] = round(float(_fw_med), 4)
+        if _nw_med is not None and not pd.isna(_nw_med):
+            _extra_stats["median_nowind_OUTIN"]   = round(float(_nw_med), 4)
+        _extra_stats["n_panels"]     = len(panel_conditions)
+        _extra_stats["n_amplitudes"] = len(amplitudes)
+
         meta_base = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_freq"},
             data_df=stats_df,
+            # New-schema fields — make the stub self-documenting per
+            # CLAUDE.md §18 (every question answerable from the stub).
+            computed_in="filters.py::damping_grouper → plotter.py::_make_damping_freq_fig",
+            data_class="META",
+            findings_doc=None,   # CH05 primary result; no dedicated findings doc
+            grouper="damping_grouper",
+            collapse_panels=False,
+            fft_window_hz=0.1,
+            extra_params="window=0.1 Hz, amp_column='OUT/IN (FFT)' (paddle freq only)",
+            extra_stats=_extra_stats,
         )
         figure_name    = plotting.get("figure_name") or build_filename("damping_freq", meta_base)
         subfig_captions = []
