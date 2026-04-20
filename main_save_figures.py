@@ -129,6 +129,86 @@ except NameError:
     file_dir = Path.cwd()
 os.chdir(file_dir)
 
+
+# ── Delegated figure helper ───────────────────────────────────────────────────
+# Some CH04/CH05 figures are built by standalone scripts in analysis_scratch/
+# instead of inline plotter calls — either because the figure is bespoke
+# (e.g. reconstruction A-vs-B has a custom 4-row layout) or because the
+# analysis itself is separate from the plotting (e.g. Mansard–Funke).
+# Each scratch script writes its PDF + TEXFIGU stub directly to output/.
+#
+# `_run_delegated_if_missing` gives main_save_figures.py the "one-stop-shop"
+# property: running this file end-to-end produces every figure, regenerating
+# via subprocess when expected outputs are absent. Set REGENERATE_DELEGATED
+# to True to force every delegated script to re-run (use when the pipeline
+# data changed). Default False: run only when outputs are missing.
+import subprocess
+import sys
+
+REGENERATE_DELEGATED = False
+
+def _run_delegated_if_missing(
+    script_rel: str,
+    outputs: list[Path],
+    label: str | None = None,
+    *,
+    force: bool | None = None,
+    timeout_s: int = 900,
+) -> None:
+    """Run ``analysis_scratch/<script>`` if any expected output is missing.
+
+    Parameters
+    ----------
+    script_rel : str
+        Repo-relative path of the scratch script.
+    outputs : list[Path]
+        Files the script is expected to write. Checked with ``exists()``;
+        write-once stubs + existing PDFs both qualify as "already there".
+    label : str, optional
+        Short label for the status line. Defaults to the first output stem.
+    force : bool, optional
+        Run the script even if all outputs are already present. Defaults
+        to the module-level ``REGENERATE_DELEGATED`` toggle.
+    timeout_s : int
+        Kill the subprocess after this many seconds. Default 900 (15 min).
+
+    Never raises — the cell's downstream existence check still fires a
+    visible warning if the figure truly didn't land.
+    """
+    label = label or Path(outputs[0]).stem
+    missing = [p for p in outputs if not p.exists()]
+    if force is None:
+        force = REGENERATE_DELEGATED
+    if not missing and not force:
+        print(f"  {label}: OK ({len(outputs)} output(s) present)")
+        return
+    reason = "REGENERATE_DELEGATED=True" if force else f"{len(missing)} missing"
+    print(f"  {label}: running {script_rel} ({reason})")
+    try:
+        r = subprocess.run(
+            # sys.executable = the same interpreter this file is running in,
+            # so the subprocess inherits the conda env (draumkvedet) whether
+            # main_save_figures.py is run from CLI, Zed REPL, or a notebook.
+            [sys.executable, script_rel],
+            cwd=str(file_dir),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+        )
+    except subprocess.TimeoutExpired:
+        print(f"    {label}: TIMEOUT after {timeout_s}s — script killed")
+        return
+    if r.returncode != 0:
+        tail = (r.stderr or "(no stderr)")[-400:].rstrip()
+        print(f"    {label}: FAILED (rc={r.returncode}); stderr tail: {tail}")
+        return
+    still_missing = [p.name for p in outputs if not p.exists()]
+    if still_missing:
+        print(f"    {label}: ran but outputs still missing → {still_missing}")
+        return
+    print(f"    {label}: regenerated {len(outputs)} output(s)")
+
 # ── Datasets ──────────────────────────────────────────────────────────────────
 # Two named datasets from a single load:
 #   ALL_PROCESSED_DIRS   → combined_meta  — all sessions → CH04 methodology
@@ -433,13 +513,12 @@ columns. Full per-condition analysis text:
     analysis_scratch/probe_height_wind_findings.md (rewritten 2026-04-17)
 """
 
-_ch04_ph_fig  = Path("output/FIGURES/ch04_probe_height.pdf")
-_ch04_ph_stub = Path("output/TEXFIGU/ch04_probe_height.tex")
-if not (_ch04_ph_fig.exists() and _ch04_ph_stub.exists()):
-    print("  ch04_probe_height missing — run "
-          "`python analysis_scratch/probe_height_figure.py` to generate it.")
-else:
-    print(f"  ch04_probe_height: figure OK → {_ch04_ph_fig}")
+_run_delegated_if_missing(
+    "analysis_scratch/probe_height_figure.py",
+    [Path("output/FIGURES/ch04_probe_height.pdf"),
+     Path("output/TEXFIGU/ch04_probe_height.tex")],
+    label="ch04_probe_height",
+)
 
 # %%
 """
@@ -457,13 +536,12 @@ low-SNR caveats and 1.3 Hz anomaly):
     analysis_scratch/mooring_comparison_findings.md
 """
 
-_ch04_mc_fig  = Path("output/FIGURES/ch04_mooring_comparison.pdf")
-_ch04_mc_stub = Path("output/TEXFIGU/ch04_mooring_comparison.tex")
-if not (_ch04_mc_fig.exists() and _ch04_mc_stub.exists()):
-    print("  ch04_mooring_comparison missing — run "
-          "`python analysis_scratch/mooring_comparison.py` to generate it.")
-else:
-    print(f"  ch04_mooring_comparison: figure OK → {_ch04_mc_fig}")
+_run_delegated_if_missing(
+    "analysis_scratch/mooring_comparison.py",
+    [Path("output/FIGURES/ch04_mooring_comparison.pdf"),
+     Path("output/TEXFIGU/ch04_mooring_comparison.tex")],
+    label="ch04_mooring_comparison",
+)
 
 # %%
 """
@@ -507,13 +585,12 @@ Generated by analysis_scratch/parallel_probe_agreement.py. Writes PDF
 + stub directly into output/.
 """
 
-_ch04_ppa_fig  = Path("output/FIGURES/ch04_parallel_probe_agreement.pdf")
-_ch04_ppa_stub = Path("output/TEXFIGU/ch04_parallel_probe_agreement.tex")
-if not (_ch04_ppa_fig.exists() and _ch04_ppa_stub.exists()):
-    print("  ch04_parallel_probe_agreement missing — run "
-          "`python analysis_scratch/parallel_probe_agreement.py` to generate it.")
-else:
-    print(f"  ch04_parallel_probe_agreement: figure OK → {_ch04_ppa_fig}")
+_run_delegated_if_missing(
+    "analysis_scratch/parallel_probe_agreement.py",
+    [Path("output/FIGURES/ch04_parallel_probe_agreement.pdf"),
+     Path("output/TEXFIGU/ch04_parallel_probe_agreement.tex")],
+    label="ch04_parallel_probe_agreement",
+)
 
 # _pv_probe_height = {
 #     "filters": {"run_category": "standard"},
@@ -756,6 +833,13 @@ This figure documents the headline methodology safeguard: the thesis's
 primary OUT/IN (FFT) result is not an artifact of FFT binning.
 """
 
+# The plotter reads a per-run CSV that the scratch script generates;
+# regenerate the CSV via subprocess if it's missing, then call the plotter.
+_run_delegated_if_missing(
+    "analysis_scratch/fft_peak_bias_outin_impact.py",
+    [Path("analysis_scratch/fft_peak_bias_outin_impact.csv")],
+    label="fft_peak_bias_outin_impact.csv",
+)
 _pv_fft_peak_bias = {
     "filters": {},
     "plotting": {
@@ -785,13 +869,12 @@ no-op placeholder that documents the figure's existence in the thesis
 cell order.
 """
 
-_ch04_mf_fig  = Path("output/FIGURES/ch04_mansard_funke_reflection.pdf")
-_ch04_mf_stub = Path("output/TEXFIGU/ch04_mansard_funke_reflection.tex")
-if not (_ch04_mf_fig.exists() and _ch04_mf_stub.exists()):
-    print("  ch04_mansard_funke_reflection missing — run "
-          "`python analysis_scratch/mansard_funke.py` to generate it.")
-else:
-    print(f"  ch04_mansard_funke_reflection: figure OK → {_ch04_mf_fig}")
+_run_delegated_if_missing(
+    "analysis_scratch/mansard_funke.py",
+    [Path("output/FIGURES/ch04_mansard_funke_reflection.pdf"),
+     Path("output/TEXFIGU/ch04_mansard_funke_reflection.tex")],
+    label="ch04_mansard_funke_reflection",
+)
 
 # %%
 """
@@ -806,13 +889,12 @@ Generated by analysis_scratch/sw_correction.py. Writes figure + stub
 directly to output/. Re-run after any pipeline change that alters OUT/IN.
 """
 
-_ch04_sw_fig  = Path("output/FIGURES/ch04_sw_correction_test.pdf")
-_ch04_sw_stub = Path("output/TEXFIGU/ch04_sw_correction_test.tex")
-if not (_ch04_sw_fig.exists() and _ch04_sw_stub.exists()):
-    print("  ch04_sw_correction_test missing — run "
-          "`python analysis_scratch/sw_correction.py` to generate it.")
-else:
-    print(f"  ch04_sw_correction_test: figure OK → {_ch04_sw_fig}")
+_run_delegated_if_missing(
+    "analysis_scratch/sw_correction.py",
+    [Path("output/FIGURES/ch04_sw_correction_test.pdf"),
+     Path("output/TEXFIGU/ch04_sw_correction_test.tex")],
+    label="ch04_sw_correction_test",
+)
 
 # %%
 """
@@ -831,13 +913,12 @@ PDF + stub directly into output/. A deeper 1.5 Hz / 0.2 V zoom lives
 in analysis_scratch/sliding_afft_15hz_02v_zoom.{py,pdf} for reference.
 """
 
-_ch04_sa_fig  = Path("output/FIGURES/ch04_sliding_afft_stability.pdf")
-_ch04_sa_stub = Path("output/TEXFIGU/ch04_sliding_afft_stability.tex")
-if not (_ch04_sa_fig.exists() and _ch04_sa_stub.exists()):
-    print("  ch04_sliding_afft_stability missing — run "
-          "`python analysis_scratch/sliding_afft_fullwind_sweep.py` to generate it.")
-else:
-    print(f"  ch04_sliding_afft_stability: figure OK → {_ch04_sa_fig}")
+_run_delegated_if_missing(
+    "analysis_scratch/sliding_afft_fullwind_sweep.py",
+    [Path("output/FIGURES/ch04_sliding_afft_stability.pdf"),
+     Path("output/TEXFIGU/ch04_sliding_afft_stability.tex")],
+    label="ch04_sliding_afft_stability",
+)
 
 # %%
 """
@@ -857,13 +938,17 @@ directly into output/. Full analysis:
     analysis_scratch/reconstruction_A_vs_B_findings.md
 """
 
-_ch04_rab_fig  = Path("output/FIGURES/ch04_reconstruction_AvsB.pdf")
-_ch04_rab_stub = Path("output/TEXFIGU/ch04_reconstruction_AvsB.tex")
-if not (_ch04_rab_fig.exists() and _ch04_rab_stub.exists()):
-    print("  ch04_reconstruction_AvsB missing — run "
-          "`python analysis_scratch/reconstruction_A_vs_B.py` to generate it.")
-else:
-    print(f"  ch04_reconstruction_AvsB: figure OK → {_ch04_rab_fig}")
+_run_delegated_if_missing(
+    "analysis_scratch/reconstruction_A_vs_B.py",
+    [Path("output/FIGURES/ch04_reconstruction_AvsB.pdf"),
+     Path("output/TEXFIGU/ch04_reconstruction_AvsB.tex"),
+     # Same script also produces the §4g pair — list all four here so
+     # one invocation satisfies both cells, and the §4g cell below is
+     # a pure existence check that hits the cache.
+     Path("output/FIGURES/ch04_reconstruction_pure_wind.pdf"),
+     Path("output/TEXFIGU/ch04_reconstruction_pure_wind.tex")],
+    label="ch04_reconstruction_AvsB",
+)
 
 # %%
 """
@@ -884,13 +969,16 @@ Generated by analysis_scratch/reconstruction_A_vs_B.py (same script as
     analysis_scratch/reconstruction_pure_wind_findings.md
 """
 
-_ch04_pw_fig  = Path("output/FIGURES/ch04_reconstruction_pure_wind.pdf")
-_ch04_pw_stub = Path("output/TEXFIGU/ch04_reconstruction_pure_wind.tex")
-if not (_ch04_pw_fig.exists() and _ch04_pw_stub.exists()):
-    print("  ch04_reconstruction_pure_wind missing — run "
-          "`python analysis_scratch/reconstruction_A_vs_B.py` to generate it.")
-else:
-    print(f"  ch04_reconstruction_pure_wind: figure OK → {_ch04_pw_fig}")
+# §4g shares its scratch script with §4f above — both figures are produced
+# by the same call to reconstruction_A_vs_B.py. This cell is therefore a
+# pure existence check: if §4f's call succeeded, the pure-wind outputs are
+# already present and the helper short-circuits.
+_run_delegated_if_missing(
+    "analysis_scratch/reconstruction_A_vs_B.py",
+    [Path("output/FIGURES/ch04_reconstruction_pure_wind.pdf"),
+     Path("output/TEXFIGU/ch04_reconstruction_pure_wind.tex")],
+    label="ch04_reconstruction_pure_wind",
+)
 
 # %%
 """
@@ -1242,13 +1330,12 @@ Generated by analysis_scratch/t_cross_figure.py. Writes three PDFs
 (one per amplitude) + a subfigure stub.
 """
 
-_ch05_tcross_stub = Path("output/TEXFIGU/ch05_t_cross.tex")
-_ch05_tcross_pdfs = [Path(f"output/FIGURES/ch05_t_cross_{v}V.pdf") for v in ("10", "20", "30")]
-if not (all(p.exists() for p in _ch05_tcross_pdfs) and _ch05_tcross_stub.exists()):
-    print("  ch05_t_cross missing — run "
-          "`python analysis_scratch/t_cross_figure.py` to generate it.")
-else:
-    print(f"  ch05_t_cross: 3 figures OK → {_ch05_tcross_pdfs[0].parent}")
+_run_delegated_if_missing(
+    "analysis_scratch/t_cross_figure.py",
+    [Path("output/TEXFIGU/ch05_t_cross.tex"),
+     *(Path(f"output/FIGURES/ch05_t_cross_{v}V.pdf") for v in ("10", "20", "30"))],
+    label="ch05_t_cross",
+)
 
 # %%
 """
@@ -1423,13 +1510,12 @@ Generated by analysis_scratch/all_data_damping_scatter.py. Writes PDF
 + stub directly into output/.
 """
 
-_ch05_alldata_fig  = Path("output/FIGURES/ch05_damping_all_data_scatter.pdf")
-_ch05_alldata_stub = Path("output/TEXFIGU/ch05_damping_all_data_scatter.tex")
-if not (_ch05_alldata_fig.exists() and _ch05_alldata_stub.exists()):
-    print("  ch05_damping_all_data_scatter missing — run "
-          "`python analysis_scratch/all_data_damping_scatter.py` to generate it.")
-else:
-    print(f"  ch05_damping_all_data_scatter: figure OK → {_ch05_alldata_fig}")
+_run_delegated_if_missing(
+    "analysis_scratch/all_data_damping_scatter.py",
+    [Path("output/FIGURES/ch05_damping_all_data_scatter.pdf"),
+     Path("output/TEXFIGU/ch05_damping_all_data_scatter.tex")],
+    label="ch05_damping_all_data_scatter",
+)
 
 
 # =============================================================================

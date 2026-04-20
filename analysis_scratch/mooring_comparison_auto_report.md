@@ -23,7 +23,7 @@ Below 1.0 Hz: zero or one loose300 run — no meaningful comparison possible.
 
 ```
 Mooring comparison: below_90_loose230 vs below_90_loose300
-Generated: 2026-04-20 15:53
+Generated: 2026-04-20 16:06
 Runs analysed: 217 (fullpanel, quality_flag==ok, wave runs)
 
 Overlap summary by frequency:
