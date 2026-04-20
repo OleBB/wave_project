@@ -374,9 +374,27 @@ def build_filename(plot_type: str, meta: dict) -> str:
 def build_fig_meta(plotvariables: dict,
                    chapter: str = "05",
                    extra: Optional[dict] = None,
-                   data_df=None) -> dict:
+                   data_df=None,
+                   *,
+                   computed_in: Optional[str] = None,
+                   data_class: Optional[str] = None,
+                   findings_doc: Optional[str] = None,
+                   run_category: Optional[str] = None,
+                   quality_flag: Optional[str] = None,
+                   mooring: Optional[str] = None,
+                   grouper: Optional[str] = None,
+                   collapse_panels: Optional[bool] = None,
+                   fft_window_hz: Optional[float] = None,
+                   extra_params: Optional[str] = None,
+                   extra_stats: Optional[dict] = None,
+                   max_run_paths: int = 20) -> dict:
     """
     Extract figure metadata from a plotvariables dict.
+
+    The returned dict drives ``write_figure_stub`` — it populates the
+    "IMMUTABLE" comment block at the top of every ``output/TEXFIGU/*.tex``
+    stub so the full scientific provenance of the figure is visible
+    without re-reading the generator script.
 
     Parameters
     ----------
@@ -385,32 +403,79 @@ def build_fig_meta(plotvariables: dict,
     chapter : str
         Two-digit chapter prefix, e.g. '05'.
     extra : dict, optional
-        Additional immutable fields for the stub comments,
-        e.g. {"run_id": "2024-11-03_run2", "script": "main.py"}.
+        Additional free-form fields merged into the final meta dict.
     data_df : pandas.DataFrame, optional
-        The filtered dataframe that went into the figure. When provided,
-        probe-provenance fields are derived from it and added to the
-        metadata so the resulting stub documents exactly what data the
-        figure reflects. Extracted fields (when the columns are present):
-          - probe_configs       : unique probe configurations (e.g. "march2026_better_rearranging")
-          - n_runs              : total row count
+        The filtered dataframe that went into the figure. When provided:
+          - n_runs              : int(len(data_df))
           - in_probes_used      : unique IN-probe compositions (e.g. "9373/170+9373/340")
           - out_probes_used     : unique OUT-probe compositions
+          - probe_configs       : unique probe configurations (e.g. "march2026_better_rearranging")
           - non_final_config_n  : count of rows not using the latest probe config
+          - run_paths           : full CSV paths when ``len(data_df) <= max_run_paths``
+                                  (wavedata/<folder>/<file>.csv per row); otherwise
+                                  left blank so the ``datasets`` block carries the
+                                  provenance instead.
+
+    Keyword-only schema fields (all optional, blank when unset):
+
+    computed_in : str
+        Where the plotted values were actually calculated, e.g.
+        ``"filters.py::damping_grouper -> plotter.py::plot_damping_freq"``.
+        Use this to point at the function that did the real aggregation /
+        computation, not just the plotting wrapper.
+    data_class : str
+        One of ``"META"``, ``"DFS"``, ``"DELEG"``, ``"CSV"`` — matches the
+        ``# [DATA: X]`` tag in the main_save_figures.py cell.
+    findings_doc : str
+        Relative path to an ``analysis_scratch/<name>_findings.md`` that
+        discusses the figure in depth (if any).
+    run_category, quality_flag, mooring : str
+        Filter predicates that shaped which runs entered the figure.
+    grouper : str
+        Name of the grouping function used (``"damping_grouper"``,
+        ``"damping_all_amplitude_grouper"``, or ``""`` when none).
+    collapse_panels : bool
+        Whether the grouper collapsed fullpanel + reversepanel runs.
+    fft_window_hz : float
+        Bandwidth of the FFT amplitude window (default 0.1 Hz in
+        ``compute_amplitudes_from_fft``).
+    extra_params : str
+        Free-form line for script-specific numerical parameters, e.g.
+        ``"band_half_hz=0.05, wind_band_hz=2-6, fs=250"``.
+    extra_stats : dict
+        Summary statistics cited in the caption, rendered as ``stat:<key>``
+        lines in the immutable block. Makes the caption numbers
+        reproducible from the stub alone.
+    max_run_paths : int
+        Threshold below which the contributing CSV paths are listed in
+        full. When the data has more rows than this, the ``run_paths``
+        slot stays empty and only ``datasets`` is written.
     """
     f = plotvariables.get("filters", {})
     p = plotvariables.get("plotting", {})
     meta = {
-        "chapter":     chapter,
-        "panel":       f.get("PanelCondition"),
-        "wind":        f.get("WindCondition"),
-        "amplitude":   f.get("WaveAmplitudeInput [Volt]"),
-        "frequency":   f.get("WaveFrequencyInput [Hz]"),
-        "probes":      p.get("probes"),
-        "figsize":     p.get("figsize"),
-        "caption":     p.get("caption"),
-        "figure_name": p.get("figure_name"),
-        "draft":       p.get("draft", False),
+        "chapter":         chapter,
+        "panel":           f.get("PanelCondition"),
+        "wind":            f.get("WindCondition"),
+        "amplitude":       f.get("WaveAmplitudeInput [Volt]"),
+        "frequency":       f.get("WaveFrequencyInput [Hz]"),
+        "probes":          p.get("probes"),
+        "figsize":         p.get("figsize"),
+        "caption":         p.get("caption"),
+        "figure_name":     p.get("figure_name"),
+        "draft":           p.get("draft", False),
+        # New schema fields (blank when the caller doesn't supply them):
+        "computed_in":     computed_in,
+        "data_class":      data_class,
+        "findings_doc":    findings_doc,
+        "run_category":    run_category if run_category is not None else f.get("run_category"),
+        "quality_flag":    quality_flag if quality_flag is not None else f.get("quality_flag"),
+        "mooring":         mooring     if mooring     is not None else f.get("Mooring"),
+        "grouper":         grouper,
+        "collapse_panels": collapse_panels,
+        "fft_window_hz":   fft_window_hz,
+        "extra_params":    extra_params,
+        "extra_stats":     dict(extra_stats) if extra_stats else {},
     }
     if data_df is not None and hasattr(data_df, "columns") and len(data_df):
         meta["n_runs"] = int(len(data_df))
@@ -463,6 +528,21 @@ def build_fig_meta(plotvariables: dict,
                     meta["non_final_config_n"] = non_final
             except Exception:
                 pass
+        # run_paths — full CSV paths when the contributing set is small
+        # enough to be worth listing verbatim. Above the threshold we
+        # leave it blank so the datasets block carries the provenance.
+        if "path" in data_df.columns and meta["n_runs"] <= max_run_paths:
+            paths = [str(v) for v in data_df["path"].dropna().unique() if str(v).strip()]
+            if paths:
+                # Strip any repo-root absolute prefix to keep the stub
+                # portable and the block narrow.
+                rel_paths = []
+                for raw in paths:
+                    raw = raw.strip()
+                    if "wavedata/" in raw:
+                        raw = raw[raw.index("wavedata/"):]
+                    rel_paths.append(raw)
+                meta["run_paths"] = rel_paths
     if extra:
         meta.update(extra)
     return meta
@@ -519,83 +599,218 @@ def _build_subfigure_block(filename: str, label_suffix: str,
     )
 
 
+# ── Immutable-block schema (keeps the stub audit-friendly) ────────────────────
+#
+# A stub's comment block answers "everything you'd ever want to know about
+# this figure" without re-reading the script that generated it. The schema
+# below defines the deterministic set of slots. Every slot is printed even
+# when empty so a future reader always finds the answer in the same place
+# (the user explicitly prefers empty slots over silently-absent slots).
+#
+# When the stub is regenerated, only this block is refreshed — the figure
+# body (\caption text, \label, subfigure layout) is preserved so
+# hand-edited captions survive re-runs. Use force=True in write_figure_stub
+# to clobber the body too (typically only right after the initial write).
+
+_IMMUTABLE_OPEN  = "% =============================================================="
+_IMMUTABLE_CLOSE = "% ── end immutable block ─────────────────────────────────────────"
+
+
+def _fmt_stub_value(val) -> str:
+    """Render a stub-block value — None/empty become '' (blank slot)."""
+    if val is None:
+        return ""
+    if isinstance(val, bool):
+        return str(val)
+    if isinstance(val, (list, tuple)):
+        return ", ".join(str(v) for v in val)
+    return str(val)
+
+
+def _build_immutable_block(meta: dict, plot_type: str,
+                            subfig_filenames: Optional[list[str]] = None) -> list[str]:
+    """
+    Construct the immutable comment block for a figure stub.
+
+    Returns a list of lines (without a trailing newline) ready to be joined
+    with ``"\\n"``. The block starts with ``%! TEX root`` so it's valid at
+    the top of a .tex file; it ends with an explicit close marker so
+    surgical updates can replace it precisely.
+    """
+    from datetime import datetime as _dt
+
+    def L(key, val, *, width=18):
+        """Format one `%   key: val` line with the stub value renderer."""
+        return f"%   {key:<{width}}: {_fmt_stub_value(val)}"
+
+    caption_full  = meta.get("caption") or ""
+    caption_short = caption_full.split(".")[0].strip() if caption_full else ""
+    figure_name   = meta.get("figure_name") or ""
+    label         = f"fig:{figure_name}" if figure_name else ""
+
+    subfig_files  = subfig_filenames or [figure_name] if figure_name else []
+    datasets_list = list(ACTIVE_DATASETS) if ACTIVE_DATASETS else []
+    run_paths     = meta.get("run_paths") or []
+    extra_stats   = meta.get("extra_stats") or {}
+
+    lines = [
+        "%! TEX root = ../main.tex",
+        _IMMUTABLE_OPEN,
+        "% IMMUTABLE — generated automatically, do not edit this block",
+        "%",
+        "% — Provenance ───────────────────────────────────────────────────",
+        L("script",        meta.get("script", "plotter.py")),
+        L("computed_in",   meta.get("computed_in")),
+        L("plot_type",     plot_type),
+        L("data_class",    meta.get("data_class")),
+        L("generated_at",  _dt.now().isoformat(timespec="seconds")),
+        L("findings_doc",  meta.get("findings_doc")),
+        "%",
+        "% — Thesis context ──────────────────────────────────────────────",
+        L("chapter",       meta.get("chapter")),
+        L("caption_label", label),
+        L("caption_short", caption_short),
+        "%",
+        "% — Filters ────────────────────────────────────────────────────",
+        L("panel",         meta.get("panel")),
+        L("wind",          meta.get("wind")),
+        L("amplitude [V]", meta.get("amplitude")),
+        L("frequency [Hz]",meta.get("frequency")),
+        L("probes",        meta.get("probes")),
+        L("run_category",  meta.get("run_category")),
+        L("quality_flag",  meta.get("quality_flag")),
+        L("mooring",       meta.get("mooring")),
+        "%",
+        "% — Data provenance ────────────────────────────────────────────",
+        L("n_runs",              meta.get("n_runs")),
+        L("in_probes_used",      meta.get("in_probes_used")),
+        L("out_probes_used",     meta.get("out_probes_used")),
+        L("probe_configs",       meta.get("probe_configs")),
+        L("non_final_config_n",  meta.get("non_final_config_n")),
+        "%   datasets        :",
+    ]
+    for ds in datasets_list:
+        lines.append(f"%     {ds}")
+    if not datasets_list:
+        lines.append("%     (none registered — set plot_utils.ACTIVE_DATASETS)")
+
+    lines.append("%   run_paths       :")
+    if run_paths:
+        for rp in run_paths:
+            lines.append(f"%     {rp}")
+    else:
+        # Either the figure aggregates too many runs to list (>max_run_paths
+        # passed to build_fig_meta) or the source data is not row-based.
+        lines.append("%     (omitted — aggregate over > threshold runs, see datasets)")
+
+    lines += [
+        "%",
+        "% — Method / numerical parameters ─────────────────────────────",
+        L("grouper",         meta.get("grouper")),
+        L("collapse_panels", meta.get("collapse_panels")),
+        L("fft_window_hz",   meta.get("fft_window_hz")),
+        L("extra_params",    meta.get("extra_params")),
+        "%",
+        "% — Summary stats cited in caption ────────────────────────────",
+    ]
+    if extra_stats:
+        for k, v in extra_stats.items():
+            lines.append(f"%   stat:{k:<12} : {_fmt_stub_value(v)}")
+    else:
+        lines.append("%   (none registered — pass extra_stats=... to build_fig_meta)")
+
+    lines += [
+        "%",
+        "% — Subfigures available ───────────────────────────────────────",
+    ]
+    if subfig_files:
+        for pf in subfig_files:
+            lines.append(f"%     FIGURES/{pf}.pdf")
+    else:
+        lines.append("%     (none)")
+
+    lines += [_IMMUTABLE_CLOSE, ""]
+    return lines
+
+
+def _replace_immutable_block(existing: str, new_block: str) -> str:
+    """
+    Surgically replace the immutable block in an existing stub, preserving
+    the figure body (caption text etc.). Returns the stub text to write.
+
+    The block is delimited by ``_IMMUTABLE_OPEN`` at the top (after ``%! TEX
+    root``) and ``_IMMUTABLE_CLOSE`` at the bottom. If the existing stub
+    was written by an older version of this file (different delimiters or
+    none at all), the whole stub is replaced — captions in that case were
+    already stored in an auto-generated template and will be re-seeded.
+    """
+    close_idx = existing.find(_IMMUTABLE_CLOSE)
+    if close_idx < 0:
+        # No recognisable close marker → legacy stub, replace entirely.
+        return new_block + existing_body_fallback(existing)
+    # Preserve everything after the close marker (and its trailing newline).
+    body_start = existing.find("\n", close_idx) + 1
+    body = existing[body_start:]
+    return new_block + body
+
+
+def existing_body_fallback(existing: str) -> str:
+    """
+    For legacy stubs with no close marker, extract the LaTeX body
+    (``\\begin{figure}`` onwards). Returns empty string if the body isn't
+    found — caller will have the new template inject a fresh TODO body.
+    """
+    m = re.search(r"\\begin\{figure\}", existing)
+    if not m:
+        return ""
+    return existing[m.start():]
+
+
 def write_figure_stub(meta: dict, plot_type: str,
                       subfig_filenames: Optional[list[str]] = None,
                       subfig_captions: Optional[list[str]] = None,
                       force: bool = False) -> None:
     """
-    Write a LaTeX figure stub to TEXFIGU_DIR.
+    Write (or surgically refresh) a LaTeX figure stub in TEXFIGU_DIR.
 
-    Created ONCE — re-running the plot script will NOT overwrite your
-    edited caption unless force=True.
+    Default behaviour (``force=False``):
+      - Stub absent    → write from scratch (immutable block + template body).
+      - Stub present   → refresh ONLY the immutable block between
+                         ``_IMMUTABLE_OPEN`` and ``_IMMUTABLE_CLOSE``.
+                         The LaTeX body (caption text, label, subfigure
+                         layout) is preserved, so hand-edited captions
+                         survive re-runs.
+
+    With ``force=True`` the entire stub is rewritten — captions included.
+    Only use that when you're certain the hand-edits haven't started yet
+    (typically right after the first write) or you've committed to git.
 
     Parameters
     ----------
     meta : dict
-        From build_fig_meta(). Used for filename and immutable comment block.
+        From ``build_fig_meta()``. Drives the immutable block.
     plot_type : str
-        e.g. 'timeseries', 'psd', 'damping_freq', 'swell_scatter'
+        e.g. 'timeseries', 'psd', 'damping_freq', 'swell_scatter'.
     subfig_filenames : list[str], optional
-        Filenames (no extension) of individual subfigure PDFs.
-        1 file  → single \\includegraphics
-        2+ files → \\subfigure layout (arrange freely in Texifier)
-        None → single figure using build_filename(plot_type, meta)
+        1 → single ``\\includegraphics``; 2+ → subfigure layout.
+        None → single figure, filename from ``meta['figure_name']``.
+    subfig_captions : list[str], optional
+        Per-subfigure captions (same length as subfig_filenames).
     force : bool
-        Overwrite existing stub — WIPES caption edits.
-        Tip: commit to git first.
+        Rewrite the entire stub (body included). See above.
     """
     TEXFIGU_DIR.mkdir(parents=True, exist_ok=True)
     stub_filename = meta.get("figure_name") or build_filename(plot_type, meta)
     tex_path      = TEXFIGU_DIR / f"{stub_filename}.tex"
 
-    if tex_path.exists() and not force:
-        print(f"  Stub exists (not overwriting): {tex_path.name}")
-        return
+    new_block_lines = _build_immutable_block(meta, plot_type, subfig_filenames)
+    new_block = "\n".join(new_block_lines)
 
-    # ── Immutable comment block ───────────────────────────────────────────────
-    known_keys = {"chapter", "panel", "wind", "amplitude", "frequency",
-                  "probes", "figsize", "script", "caption", "figure_name"}
-
-    def _line(key, val):
-        if isinstance(val, list):
-            val = ", ".join(str(v) for v in val)
-        return f"%   {key:<16}: {val}"
-
-    comment_lines = [
-        "%! TEX root = ../main.tex",
-        "% " + "=" * 60,
-        "% IMMUTABLE — generated automatically, do not edit this block",
-        f"%   script          : {meta.get('script', 'plotter.py')}",
-        f"%   plot_type       : {plot_type}",
-        _line("chapter",   meta.get("chapter",   "?")),
-        _line("panel",     meta.get("panel",     "?")),
-        _line("wind",      meta.get("wind",      "?")),
-        _line("amplitude", meta.get("amplitude", "?")),
-        _line("frequency", meta.get("frequency", "?")),
-        _line("probes",    meta.get("probes",    "?")),
-    ]
-    for k, v in meta.items():
-        if k not in known_keys and v is not None:
-            comment_lines.append(_line(k, v))
-    if ACTIVE_DATASETS:
-        comment_lines.append("%")
-        comment_lines.append("% DATASETS:")
-        for ds in ACTIVE_DATASETS:
-            comment_lines.append(f"%   {ds}")
-
-    subfig_files = subfig_filenames or [stub_filename]
-    comment_lines += [
-        "%",
-        "% SUBFIGURES AVAILABLE:",
-        *[f"%   FIGURES/{pf}.pdf" for pf in subfig_files],
-        "% " + "=" * 60,
-        "",
-    ]
-
-    # ── Caption and label ─────────────────────────────────────────────────────
+    # ── Caption / figure-body template (used only when we write a new stub
+    # from scratch, or when force=True). Hand-edited captions in existing
+    # stubs are preserved by the surgical-update path above.
     _caption_text = meta.get("caption")
     if _caption_text:
-        # First sentence → short caption for List of Figures
         _short = _caption_text.split(".")[0].strip()
         _caption_block = (
             f"  \\caption[{_short}]{{\n"
@@ -612,7 +827,7 @@ def write_figure_stub(meta: dict, plot_type: str,
     _figure_name = meta.get("figure_name") or stub_filename
     _label = f"fig:{_figure_name}"
 
-    # ── Figure body ───────────────────────────────────────────────────────────
+    subfig_files = subfig_filenames or [stub_filename]
     if len(subfig_files) == 1:
         body = (
             "\\begin{figure}[htbp]\n"
@@ -638,7 +853,17 @@ def write_figure_stub(meta: dict, plot_type: str,
             "\\end{figure}\n"
         )
 
-    tex_path.write_text("\n".join(comment_lines) + body, encoding="utf-8")
+    if tex_path.exists() and not force:
+        existing = tex_path.read_text(encoding="utf-8")
+        refreshed = _replace_immutable_block(existing, new_block)
+        if refreshed == existing:
+            print(f"  Stub already current: {tex_path.name}")
+        else:
+            tex_path.write_text(refreshed, encoding="utf-8")
+            print(f"  Stub immutable block refreshed: {tex_path.name}")
+        return
+
+    tex_path.write_text(new_block + body, encoding="utf-8")
     print(f"  Stub created: {tex_path.name}")
 
 
