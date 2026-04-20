@@ -1,0 +1,22 @@
+%! TEX root = ../main.tex
+% =============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%   script          : analysis_scratch/reconstruction_A_vs_B.py
+%   plot_type       : reconstruction_pure_wind
+%   chapter         : 04
+%   demo_run        : 1.4 Hz, 0.2 V, full panel
+%   wind_band_hz    : 2.0-6.0
+%   probes          : 9373/170, 12400/250
+%   n_groups        : 13
+%   stokes_frac_in  : median 14.3%%, max 59.3%%
+%   stokes_frac_out : median 23.4%%
+%   findings_doc    : analysis_scratch/reconstruction_pure_wind_findings.md
+% =============================================================
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.98\linewidth]{FIGURES/ch04_reconstruction_pure_wind.pdf}
+  \caption[Pure wind via no-wind residual subtraction]{%
+    Mean residual power spectra at the IN probe (left, 9373/170) and OUT probe (right, 12400/250) for the 1.4\,Hz / 0.20\,V / full-panel group. No-wind residuals (blue) carry only paddle-linked Stokes harmonics; full-wind residuals (red) carry Stokes plus wind-wave energy. Subtracting the no-wind baseline from the full-wind residual (black) isolates pure wind. Vertical dotted lines mark $2f$, $3f$ and $4f$, all of which fall inside the wind band (2--6\,Hz, orange) at thesis paddle frequencies. Across the full thesis scope ($n=13$ frequency--amplitude groups with matched no-wind/full-wind coverage), the Stokes-subtraction correction removes a median $14$\,\% of the naive ``wind'' energy at IN and $23$\,\% at OUT (up to $59$\,\% at the IN / 0.3\,V high-frequency corner). Any wind-energy metric that integrates a wave run's residual over 2--6\,Hz without this subtraction mis-attributes paddle Stokes harmonics as wind.
+  }
+  \label{fig:ch04_reconstruction_pure_wind}
+\end{figure}
