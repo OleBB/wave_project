@@ -254,6 +254,11 @@ def process_folder(folder_path, fname_filter=None, exclude_filter=None):
         # Within-block fluctuation stats (averaged across blocks):
         # each block ≈ 1 s at 100 Hz → block skew/kurt characterise the PDF of the
         # fast fluctuations; their mean across blocks is the run-level descriptor.
+        #
+        # LabVIEW's Basic / 1D Sample Statistics VIs (2016) return *excess*
+        # kurtosis — i.e. Gaussian = 0. See NI reference: "kurtosis" is
+        # defined as μ4/σ⁴ − 3.  So the `Kurt` column in the mAstats files
+        # is already the excess kurtosis we want to plot; do NOT subtract 3.
         TI          = (dv_dma * np.mean(d["Stan"])) / mean_speed if mean_speed >= 0.5 else np.nan
         skew_mean   = float(np.mean(d["Skew"])) if "Skew" in d and d["Skew"].size else np.nan
         kurt_mean   = float(np.mean(d["Kurt"])) if "Kurt" in d and d["Kurt"].size else np.nan
@@ -268,7 +273,7 @@ def process_folder(folder_path, fname_filter=None, exclude_filter=None):
             "drift_std":   drift_std,
             "TI":          TI,
             "skew":        skew_mean,
-            "excess_kurt": kurt_mean - 3.0 if not np.isnan(kurt_mean) else np.nan,
+            "excess_kurt": kurt_mean,   # LabVIEW already returns excess kurt
             "mm_gap_norm": mm_gap_norm,
         })
 
@@ -1077,8 +1082,10 @@ axS.axvline(0, color='black', linestyle=':', linewidth=1, alpha=0.7, label="Gaus
 _sk_absmax = np.nanmax(np.abs(np.concatenate([fw_sk, lw_sk])))
 axS.set_xlim(-max(0.5, _sk_absmax * 1.1), max(0.5, _sk_absmax * 1.1))
 
-# Excess kurtosis panel — Gaussian at 0 (kurt = 3)
-_plot_metric(axK, "Excess kurtosis (kurt − 3)", fw_z_ek, fw_ek, lw_z_ek, lw_ek)
+# Excess kurtosis panel — Gaussian at 0. Source column is LabVIEW `Kurt`
+# from the mAstats files, which is *already* excess kurt (NI convention,
+# μ4/σ⁴ − 3). We do not subtract anything further.
+_plot_metric(axK, "Excess kurtosis (Gauss = 0)", fw_z_ek, fw_ek, lw_z_ek, lw_ek)
 axK.axvspan(-1, 1, color='green', alpha=0.07, label='_nolegend_')
 axK.axvline(0, color='black', linestyle=':', linewidth=1, alpha=0.7, label="Gauss (exc.kurt = 0)")
 _ek_max = np.nanmax(np.concatenate([fw_ek, lw_ek]))

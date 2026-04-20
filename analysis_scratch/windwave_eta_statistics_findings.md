@@ -1,10 +1,13 @@
 # Wave-probe surface-elevation statistics under wind-only, no-wave runs
 
-Date: 2026-04-20
+Date: 2026-04-20 (pitot comparison updated same day after the LabVIEW-Kurt
+convention was confirmed and the `-3` bug in `windprofile_combined.py` was
+fixed)
 Scope: wave-probe analogue of `windscripts/windprofile_combined.py` fig11 —
 σ, skewness, excess kurtosis of the eta_{pos} surface-elevation time series
-under wind-only no-wave runs, to test whether the pitot's excess kurt ≈ +3.5
-is physical intermittency of the airflow or an instrument/processing artifact.
+under wind-only no-wave runs, to test whether the pitot's excess kurt ≈ +7
+(NI convention, Gauss = 0) is physical intermittency of the airflow or an
+instrument/processing artifact.
 
 Script:   `analysis_scratch/windwave_eta_statistics.py`
 Figure:   `analysis_scratch/windwave_eta_statistics.pdf`
@@ -54,15 +57,22 @@ sat close to the water surface and dropouts under fullwind are already a
 known issue (see `memory/known_baddata_ultrasound_16hz.md` / `MEMORY.md`).
 Excluding those four runs, every probe's excess kurt falls inside |κ−3| < 1.
 
-## Direct comparison to pitot stats (from 2026-04-20 session)
+## Direct comparison to pitot stats (from 2026-04-20 session, post-kurtosis-fix)
 
-| Quantity              | Pitot fullwind (n=36) | Wave probes fullwind (n=16, excl. 4 outliers) |
+Kurtosis is reported in the NI / Fisher convention (Gaussian = 0). The pitot
+`Kurt` column from LabVIEW is already excess; `windprofile_combined.py` was
+fixed on 2026-04-20 to stop subtracting 3 a second time. The wave-probe
+column is `scipy.stats.kurtosis(fisher=True)`, also excess (Gaussian = 0).
+
+| Quantity              | Pitot fullwind (n=65) | Wave probes fullwind (n=16, excl. 4 outliers) |
 |-----------------------|----------------------|------------------------------------------------|
 | Skewness (median)     | +0.01                | +0.20 (exposed), +0.02 (sheltered)             |
-| Excess kurt (median)  | **+3.44**            | **−0.6 to −0.7** (exposed), +0.14 (sheltered)   |
+| Excess kurt (median)  | **+7.03**            | **−0.6 to −0.7** (exposed), +0.14 (sheltered)   |
 
 The water surface under the same wind is **not** heavy-tailed. It is
-mildly **sub-Gaussian** (flatter than normal) on the three exposed probes.
+mildly **sub-Gaussian** (flatter than normal) on the three exposed probes —
+excess kurtosis ≈ 0 on the sheltered OUT probe, entirely dominated by noise
+floor. The pitot's raw-κ equivalent is ~10; the water-surface raw-κ is ~2.4.
 
 ## Verdict: pitot artifact vs physical intermittency
 
@@ -70,10 +80,17 @@ mildly **sub-Gaussian** (flatter than normal) on the three exposed probes.
   close to Gaussian, with a small positive skew and a mildly sub-Gaussian
   (negative excess kurt) PDF on all three exposed probes. Sheltered OUT is
   near-Gaussian — consistent with noise-floor-dominated signal at σ ≈ 0.35 mm.
-- **The pitot's excess kurt ≈ +3.5 is not matched in the water surface it
-  drives.** If the airflow truly had κ = 6.5 intermittency in its velocity
-  fluctuations, the surface — which is forced by that same airflow — would
-  be expected to inherit at least some heavy-tailedness. It does not.
+- **The pitot's excess kurt ≈ +7 (raw κ ≈ 10) is not matched in the water
+  surface it drives.** The raw-κ gap is ~10 vs ~2.4, i.e. the pitot PDF has
+  far heavier tails than the surface. If the airflow truly had κ ≈ 10
+  intermittency in its velocity fluctuations, the surface — which is forced
+  by that same airflow — would be expected to inherit at least some
+  heavy-tailedness. It does not; the water PDF is near-Gaussian and on the
+  exposed probes slightly sub-Gaussian.
+- The gap is now larger than initially reported in this document (because
+  the pitot kurtosis was previously under-reported by 3). That makes the
+  "pitot artifact, not flow physics" reading more defensible than before,
+  not less.
 - **Best supported conclusion**: the pitot excess-kurt signal is dominated
   by instrument response, not flow physics. Candidates (already listed in
   `wind_statistics_claims_summary.md`): pitot mechanical lag at 100 Hz,
@@ -85,7 +102,7 @@ mildly **sub-Gaussian** (flatter than normal) on the three exposed probes.
 
 ## Caveats
 
-- Water is a low-pass filter. Airflow with κ = 6.5 at 100 Hz could still
+- Water is a low-pass filter. Airflow with κ ≈ 10 at 100 Hz could still
   drive a σ-scale surface with κ ≈ 3 because the surface integrates
   energy across frequencies and the highest-frequency pitot events
   dissipate before coupling to any surface mode. So the wave-probe result

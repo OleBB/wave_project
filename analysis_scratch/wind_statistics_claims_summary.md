@@ -1,31 +1,47 @@
 # Wind-statistics claims — what we can and cannot defend
 
-Date: 2026-04-20
+Date: 2026-04-20 (kurtosis convention corrected same day)
 Scope: what the pitot-based wind stats (TI, skewness, kurtosis, mean/median) in
 `windscripts/windprofile_combined.py` fig11 actually let us claim in the thesis,
 and what references those claims lean on.
 
-## Measured numbers (from fig11, 2026-04-20)
+## Kurtosis convention (important)
 
-| Quantity                | Full vind (red, n=36)  | Laveste vind (green, n=34) |
-|-------------------------|-----------------------|----------------------------|
-| TI [%]                  | median 1.24 (0.6–2.3) | median 1.71 (1.2–4.3)      |
-| Skewness                | median +0.01          | median +0.04               |
-| Excess kurtosis (κ − 3) | median +3.44 (0.7–5.2)| median +3.77 (1.7–5.0)     |
+LabVIEW's **1D Sample Statistics / Basic Statistics** VIs (2016 vintage)
+return **excess kurtosis** — i.e. the kurtosis is defined with
+Gaussian = 0 (NI documentation: `kurtosis = μ4/σ⁴ − 3`).
+The `Kurt` column in the mAstats files is therefore already excess kurt;
+`windprofile_combined.py::process_folder` previously subtracted 3 a *second*
+time (bug fixed same day). All numbers below are excess kurtosis under the
+NI / Fisher convention (Gaussian = 0).
+
+## Measured numbers (from fig11, 2026-04-20, post-fix)
+
+| Quantity                | Full vind (red, n=65)   | Laveste vind (green, n=66) |
+|-------------------------|-------------------------|----------------------------|
+| TI [%]                  | median 1.50 (0.61–2.26) | median 1.76 (1.21–4.45)    |
+| Skewness                | median +0.01            | median +0.04               |
+| Excess kurtosis (Gauss=0)| median **+7.03** (+3.4 … +8.6) | median **+6.80** (+4.7 … +8.6) |
 
 All three metrics are means across 1-second blocks within each run, then
 aggregated across all runs that measured a given height. Blocks are sampled at
 100 Hz → each block carries ~100 samples.
 
+(Previously published numbers in this document — `+3.44` / `+3.77` — were
+under-reported by exactly 3 because the pipeline subtracted 3 from an already-
+excess LabVIEW value. The corrected values are roughly +3 higher.)
+
 ## What the numbers mean
 
-- **Low TI (<3 %)** — the fluctuation magnitude relative to the mean is small at
-  both wind conditions, and low compared to typical fan-driven flows.
-- **Symmetric fluctuations (|skew| ≲ 0.15)** — no systematic gust asymmetry at
+- **Low TI (~1.5–1.8 %)** — the fluctuation magnitude relative to the mean is
+  small at both wind conditions, and low compared to typical fan-driven flows.
+- **Symmetric fluctuations (|skew| ≲ 0.05)** — no systematic gust asymmetry at
   either wind condition. Fast lulls and fast gusts occur with equal frequency.
-- **Heavy tails (excess kurtosis ≈ +3.5, i.e. total κ ≈ 6.5)** — at BOTH wind
-  conditions, not just fullwind. The pitot signal has significantly more
+- **Strongly heavy tails (excess kurtosis ≈ +7, i.e. total κ ≈ 10)** — at BOTH
+  wind conditions, not just fullwind. The pitot signal contains many more
   extreme deviations from the mean than a Gaussian distribution would produce.
+  That κ ≈ 10 is well above canonical turbulence (κ ≈ 3 for velocity) and
+  well above atmospheric boundary-layer values (typically κ ≈ 3–4).
 
 ## Claims and defensibility
 
@@ -55,17 +71,17 @@ References for TI classification:
 
 ### (3) "Fullwind shows more non-Gaussian intermittency than lowestwind"
 
-- **Wrong.** Initially claimed based on misreading fig11. Actual numbers show
-  lowestwind is *slightly* more peaked than fullwind (medians 3.77 vs 3.44).
-  Both are similarly non-Gaussian.
+- **Wrong.** Medians are close (fullwind +7.03 vs lowestwind +6.80, both
+  excess). Both wind conditions are similarly heavy-tailed. Do not claim a
+  monotone wind-strength effect on the tail heaviness.
 - **Do not use** this claim.
 
 ### (4) "Heavy tails indicate sub-second gust intermittency in the wind"
 
-- **Overclaim.** In canonical turbulence, velocity kurtosis ≈ 3
-  (Pope 2000, *Turbulent Flows*, ch. 6). Excess kurt of +3.5 at the *velocity*
-  level is unusual and is at least as likely to be an instrument/processing
-  artifact as real flow intermittency:
+- **Overclaim.** In canonical turbulence, velocity kurtosis ≈ 3 (excess ≈ 0)
+  (Pope 2000, *Turbulent Flows*, ch. 6). Excess kurt of **+7** at the
+  *velocity* level is far above typical flow values and is almost certainly
+  dominated by instrument/processing response rather than flow intermittency:
   - Pitot mechanical response lag at 100 Hz
   - Tubing acoustics or transducer resonance
   - Electrical spike events (the `|skew|<5 & kurt<50` spike filter in
@@ -74,12 +90,21 @@ References for TI classification:
 - True small-scale intermittency in Kolmogorov cascades is found in velocity
   *derivatives*, not in velocity itself (Frisch 1995, *Turbulence: The Legacy
   of A.N. Kolmogorov*).
+- Independent cross-check on the water surface: the wave-probe eta time
+  series measured under the same fullwind shows median excess kurtosis
+  ≈ **−0.6** (exposed probes) to +0.14 (panel-sheltered) — i.e. the water
+  surface driven by this airflow is **near-Gaussian**. If the airflow truly
+  had κ ≈ 10 intermittency at 100 Hz, the surface would be expected to
+  inherit some of it; it does not. See
+  `analysis_scratch/windwave_eta_statistics_findings.md`.
 
 **Safer wording for the thesis:**
-> "Elevated excess kurtosis (median ≈ +3.5) indicates non-Gaussian
-> fluctuations in the pitot signal. Whether this reflects genuine small-scale
-> intermittency of the airflow or instrument-response characteristics of the
-> pitot probe cannot be resolved from block statistics alone."
+> "The pitot signal has elevated excess kurtosis (median ≈ +7 under NI /
+> Fisher convention, equivalent to κ ≈ 10), substantially above canonical
+> turbulent-velocity values. An independent water-surface measurement under
+> the same airflow gives near-Gaussian block statistics, so the pitot
+> heavy-tail signal is most plausibly an instrument-response characteristic
+> rather than a genuine property of the airflow."
 
 ### (5) Log-law fit (fig10, separate concern)
 
