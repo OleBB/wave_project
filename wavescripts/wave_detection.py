@@ -13,13 +13,13 @@ Created on Fri Jan 30 09:44:49 2026
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from wavescripts.improved_data_loader import update_processed_metadata, PROBE_CONFIGS
+from wavescripts.improved_data_loader import update_processed_metadata
 from scipy.signal import find_peaks
 from scipy import signal
 from typing import Dict, List, Tuple, Any
 import matplotlib.pyplot as plt
 
-from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
+from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, HG, hg_window_for_probe, get_smoothing_window
 from wavescripts.constants import (
     ProbeColumns as PC,
     GlobalColumns as GC,
@@ -101,190 +101,73 @@ def find_wave_range(
     good_range = keep_idx
 
     # ==========================================================
-    #  1.b  Snarvei: calibrated per-probe anchors, interpolated across frequency
+    # 1.b  Probe-shifted Huseby–Grue window (pipeline standard 2026-04-21)
     # ==========================================================
-    # Calibration points: eyeballed good-start sample indices at specific frequencies.
-    # All laterals at the same longitudinal distance share the same arrival timing.
-    # Add more points by eyeballing the RampDetectionBrowser — more points = better fit.
+    # H&G window [50 T, 60 T] from wavemaker start, anchored at r = 12.4 m (our
+    # OUT probe position, also the original H&G probe position in the 2000 paper).
+    # For probes closer to the paddle, the same waves arrive earlier by the
+    # group-velocity travel-time, so the window is shifted back per-probe:
     #
-    # Format: list of (freq_hz, start_sample) sorted by frequency.
-    # Interpolation: linear between calibrated points; linear extrapolation beyond range.
-    # Samples at 250 Hz (ms / 4).
+    #     window = [(START_T_REF − ΔT)·T, (END_T_REF − ΔT)·T]
+    #     ΔT    = (REF_R_M − r_probe) / c_group(f, depth) · f   [periods]
     #
-    # TODO: re-eyeball and add more calibration points, especially for intermediate freqs.
-    _SNARVEI_CALIB = {
-        # ~8800 mm from paddle
-        # 1.40/1.50: not yet eyeballed — interpolated from surrounding points
-        "8804":  [(0.65, 3975), (1.30, 4700), (1.80, 6000)],
-        # ~9373 mm from paddle
-        # 2026-04-16 (re-eyeballed from RampDetectionBrowser, nowind per40 runs, all amplitudes):
-        #   Conservative good_start (latest across amplitudes, post-trim):
-        #     1.3 Hz: 22 s  1.4 Hz: 22 s  1.5 Hz: 24 s  1.6 Hz: 26 s
-        #   Pre-trim calibration samples = (good_start_s - 1/freq_hz) × 250:
-        #     1.3 Hz: 5308  1.4 Hz: 5321  1.5 Hz: 5833  1.6 Hz: 6344
-        #   Raw notes: analysis_scratch/snarvei_eyeballing.md
-        "9373":  [(0.65, 4075), (0.70, 3750), (1.30, 5308), (1.40, 5321), (1.50, 5833), (1.60, 6344)],
-        # ~11800 mm from paddle (march2026_rearranging config, 4–6 Mar 2026 only)
-        # Values interpolated from 9373 and 12400 at distance fraction 0.802 — eyeball-refine
-        # in RampDetectionBrowser once confirmed.
-        # 1.70/1.80: estimated, needs eyeballing
-        "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700), (1.70, 6700), (1.80, 6650)],
-        # ~12400 mm from paddle
-        # 2026-04-16 (re-eyeballed from RampDetectionBrowser, nowind per40 runs, all amplitudes):
-        #   Conservative good_start (latest across amplitudes, post-trim):
-        #     1.3 Hz: 28 s  1.4 Hz: 29 s  1.5 Hz: 30 s  1.6 Hz: 31 s
-        #   Pre-trim calibration samples = (good_start_s - 1/freq_hz) × 250:
-        #     1.3 Hz: 6808  1.4 Hz: 7071  1.5 Hz: 7333  1.6 Hz: 7594
-        #   Raw notes: analysis_scratch/snarvei_eyeballing.md
-        # 1.70: estimated, needs eyeballing in RampDetectionBrowser
-        # 1.80: extrapolated — verify in browser
-        "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6808), (1.40, 7071), (1.50, 7333), (1.60, 7594), (1.70, 6750), (1.80, 6800)],
-    }
+    # Math + constants live in wavescripts/constants.py :: HG + c_group() +
+    # hg_window_for_probe().  Old eyeballed SNARVEI calibration archived as
+    # SNARVEI_ARCHIVE_START / _END in the same file.
 
-    # End-position caps: absolute sample index of the last clean period.
-    # Derived from the same eyeballing session as _SNARVEI_CALIB (2026-04-16).
-    # Conservative = earliest good_end across amplitudes (0.1V/0.2V/0.3V)
-    # so the window never creeps into the mstop decay tail for ANY amplitude.
-    #
-    # Format: list of (freq_hz, end_sample) sorted by frequency.
-    # Uses the same _snarvei_start() interpolation function.
-    # good_end_sample = good_end_s × 250  (absolute, not relative to good_start)
-    #
-    #   9373  : 1.3 Hz→39s, 1.4 Hz→38s, 1.5 Hz→36s, 1.6 Hz→36s
-    #   12400 : 1.3 Hz→42s, 1.4 Hz→42s, 1.5 Hz→40s, 1.6 Hz→40s
-    #   8804  : 1.3 Hz→37s, 1.4 Hz→37s, 1.5 Hz→36s, 1.6 Hz→35s  (eyeballed 2026-04-17)
-    _SNARVEI_END_CALIB = {
-        "9373":  [(1.30, 9750), (1.40, 9500), (1.50, 9000), (1.60, 9000)],
-        "12400": [(1.30, 10500), (1.40, 10500), (1.50, 10000), (1.60, 10000)],
-        "8804":  [(1.30, 9250), (1.40, 9250), (1.50, 9000), (1.60, 8750)],
-    }
-
-    # Map every probe column name to a distance group — auto-generated from PROBE_CONFIGS
-    # so this never goes stale when distances are corrected in improved_data_loader.py.
-    # Keys are "Probe dist/lat" strings; values are the distance prefix used as
-    # the _SNARVEI_CALIB key (e.g. "Probe 12400/250" → "12400").
-    _PROBE_GROUP = {
-        f"Probe {pos}": pos.split("/")[0]
-        for cfg in PROBE_CONFIGS
-        for pos in cfg.probe_col_names().values()
-    }
-
-    def _snarvei_start(freq: float, calib: list[tuple[float, int]]) -> int:
-        """Polynomial interp (deg 2) of start sample; linear extrap beyond calibrated range."""
-        fs = np.array([p[0] for p in calib])
-        ss = np.array([p[1] for p in calib], dtype=float)
-        deg = min(2, len(calib) - 1)
-        poly  = np.poly1d(np.polyfit(fs, ss, deg))
-        dpoly = poly.deriv()
-        if freq <= fs[0]:
-            return int(round(float(poly(fs[0])) + float(dpoly(fs[0])) * (freq - fs[0])))
-        if freq >= fs[-1]:
-            return int(round(float(poly(fs[-1])) + float(dpoly(fs[-1])) * (freq - fs[-1])))
-        return int(round(float(poly(freq))))
+    # r_probe in metres — parse from the probe column name "Probe DIST/LAT".
+    try:
+        _r_probe_m = int(data_col.split(" ", 1)[1].split("/")[0]) / 1000.0
+    except (IndexError, ValueError):
+        _r_probe_m = None
 
     good_start_idx   = None
     good_end_idx     = None
     wave_upcrossings = None
+    n_found          = 0
+    n_periods_target = HG.END_T_REF - HG.START_T_REF   # 10 periods
 
-    # How many periods to trim from each end of the snarvei window.
-    # Start trim: removes the ramp-exit transition period(s) still building to full amplitude.
-    # End trim:   removes the mstop decay tail period(s).
-    #
-    # IMPORTANT: the end trim is applied to n_periods_target in the upcrossing path (below),
-    # NOT to the snarvei good_end_idx. The upcrossing snapping overwrites good_end_idx, so
-    # any trim applied only to the snarvei output has no effect for runs with detected
-    # upcrossings (i.e. all normal wave runs). Fix applied 2026-04-16.
-    #
-    # High-frequency runs (≥1.6 Hz):
-    # — end: per40 runs at 1.6 Hz confirmed (2026-04-16) to include ~3s of mstop decay
-    #   tail in the 12400/250 (OUT) analysis window. Cutting 2 periods removes ~1.25s.
-    #   This is a pragmatic improvement; a full fix requires per-probe-group end calibration
-    #   or explicit mstop-onset detection.
-    _TRIM_START_PERIODS = (RAMP.TRIM_START_PERIODS_HIGH_FREQ if importertfrekvens >= RAMP.HIGH_FREQ_TRIM_HZ
-                           else RAMP.TRIM_START_PERIODS_DEFAULT)
-    _TRIM_END_PERIODS   = (RAMP.TRIM_END_PERIODS_HIGH_FREQ   if importertfrekvens >= RAMP.HIGH_FREQ_TRIM_HZ
-                           else RAMP.TRIM_END_PERIODS_DEFAULT)
+    if _r_probe_m is not None:
+        _start_T, _end_T = hg_window_for_probe(_r_probe_m, importertfrekvens)
+        _start_sample = int(round(_start_T * samples_per_period))
+        _end_sample   = int(round(_end_T   * samples_per_period))
 
-    _group = _PROBE_GROUP.get(data_col)
-    if _group is not None and _group in _SNARVEI_CALIB:
-        good_start_idx  = _snarvei_start(importertfrekvens, _SNARVEI_CALIB[_group])
-        good_start_idx += _TRIM_START_PERIODS * samples_per_period
-        good_end_idx    = good_start_idx + int(keep_idx) - _TRIM_END_PERIODS * samples_per_period
-        if debug:
-            print(f"[snarvei] {data_col} (group={_group}): f={importertfrekvens:.3f} Hz → "
-                  f"good_start={good_start_idx} (trim_start={_TRIM_START_PERIODS}p, "
-                  f"trim_end={_TRIM_END_PERIODS}p)")
+        if _start_sample < 0 or _end_sample > len(signal_smooth):
+            if debug:
+                print(f"[H&G] {data_col}: window [{_start_T:.1f}T, {_end_T:.1f}T] "
+                      f"= samples [{_start_sample}, {_end_sample}] "
+                      f"does not fit signal length {len(signal_smooth)} — skip.")
+        else:
+            good_start_idx = _start_sample
+            good_end_idx   = _end_sample
+            n_found        = int(round((_end_sample - _start_sample) / samples_per_period))
+            if debug:
+                print(f"[H&G] {data_col} (r={_r_probe_m:.3f} m, f={importertfrekvens:.3f} Hz) "
+                      f"→ window [{_start_T:.2f}T, {_end_T:.2f}T] "
+                      f"= samples [{good_start_idx}, {good_end_idx}]")
 
 
     # ==========================================================
-    # 1.c  Snap start and end independently to nearest zero-upcrossing
+    # 1.c  Upcrossings within the H&G window — for quality metrics
     # ==========================================================
-    # Foundation: snarvei gives the approximate start; WavePeriodInput gives the duration.
-    # Both endpoints are snapped to the nearest stillwater upcrossing independently.
-    # This is robust for windy signals – no chain-walking required.
-
-    # Use per-run DC mean of the first 2 s as the upcrossing threshold.
-    # The global stillwater can differ from the run-local DC level by 0.1–0.2 mm,
-    # which is enough to delay the first upcrossing by several seconds when waves are
-    # small (e.g. ramp-up phase of nowind runs). The local baseline is always centred
-    # on the actual signal, so the first upcrossing is found reliably.
-    _baseline_n    = int(2 * Fs)
-    upcross_level  = float(np.mean(signal_smooth[:_baseline_n]))
-
-    # All zero-upcrossings in the full smoothed signal
+    # wave_upcrossings in debug_info is consumed by processor.py to compute
+    # per-run quality metrics (wave_stability autocorrelation at lag = 1 T,
+    # period_amplitude_cv). They are NOT used for window selection anymore —
+    # H&G fully determines the window above.
+    #
+    # Use per-run DC mean of the first 2 s as the upcrossing threshold. The
+    # global stillwater can differ from the run-local DC level by 0.1–0.2 mm;
+    # the local baseline is always centred on the actual signal so the first
+    # upcrossing is found reliably.
+    _baseline_n   = int(2 * Fs)
+    upcross_level = float(np.mean(signal_smooth[:_baseline_n]))
     above_still     = signal_smooth > upcross_level
     all_upcrossings = np.where((~above_still[:-1]) & above_still[1:])[0] + 1
 
-    n_periods_target = max(5, int(keep_periods))
-    n_found          = 0
-
-    if len(all_upcrossings) == 0:
-        if debug:
-            print(f"[find_wave_range] {data_col}: no upcrossings found in signal")
-    else:
-        ref_start = good_start_idx if good_start_idx is not None else int(2 * samples_per_period)
-
-        # 1. Snap start: nearest upcrossing to snarvei guess
-        refined_start = int(all_upcrossings[np.argmin(np.abs(all_upcrossings - ref_start))])
-
-        # 2. Expected end from WavePeriodInput: start + (n_periods_target − trim_end) full periods.
-        #    _TRIM_END_PERIODS is subtracted here so the upcrossing snap lands at the trimmed end.
-        #    (The snarvei good_end_idx is overwritten below, so trim must be applied here.)
-        n_periods_trimmed = max(5, n_periods_target - _TRIM_END_PERIODS)
-        expected_end  = min(refined_start + int(n_periods_trimmed * samples_per_period),
-                            len(signal_smooth) - 1)
-
-        # Cap expected_end using eyeballed end calibration (absolute sample position).
-        # This prevents the window from extending into the mstop decay tail for probes
-        # that have been eyeballed. Only applied within the calibrated frequency range —
-        # polynomial extrapolation beyond the range is unreliable and is suppressed.
-        if _group is not None and _group in _SNARVEI_END_CALIB:
-            _end_calib = _SNARVEI_END_CALIB[_group]
-            _end_freqs = [p[0] for p in _end_calib]
-            if min(_end_freqs) <= importertfrekvens <= max(_end_freqs):
-                calib_end = _snarvei_start(importertfrekvens, _end_calib)
-                if calib_end < expected_end:
-                    if debug:
-                        print(f"[snarvei_end] {data_col}: expected_end {expected_end} → {calib_end} "
-                              f"(calib cap, Δ={expected_end-calib_end} samples)")
-                    expected_end = calib_end
-
-        # 3. Snap end: nearest upcrossing to expected end
-        refined_end   = int(all_upcrossings[np.argmin(np.abs(all_upcrossings - expected_end))])
-
-        n_found = int(round((refined_end - refined_start) / samples_per_period))
-
-        good_start_idx   = refined_start
-        good_end_idx     = refined_end
-        good_range       = good_end_idx - good_start_idx
+    if len(all_upcrossings) > 0 and good_start_idx is not None and good_end_idx is not None:
         wave_upcrossings = all_upcrossings[
-            (all_upcrossings >= refined_start) & (all_upcrossings <= refined_end)
+            (all_upcrossings >= good_start_idx) & (all_upcrossings <= good_end_idx)
         ]
-
-        if debug:
-            print(f"[find_wave_range] {data_col}: snarvei→{ref_start}, "
-                  f"start={refined_start}, end={refined_end}, "
-                  f"periods≈{n_found}/{n_periods_target}")
 
 
     # ==========================================================
@@ -321,11 +204,11 @@ def find_wave_range(
                   f"signal may be cut short (mstop={mstop_sec:.0f} s actual, "
                   f"probe at {meta_row[PC.MM_FROM_PADDLE.format(i=probe_num_int)]:.0f} mm from paddle).")
 
-    # Safety fallback if nothing was set (snarvei miss + no upcrossing found)
-    if good_start_idx is None:
-        good_start_idx = int(2 * samples_per_period)
-        good_end_idx   = good_start_idx + int(keep_idx)
-        good_range     = good_end_idx - good_start_idx
+    # No fallback: if the H&G window does not fit the signal (too-short run, or
+    # out-of-pipeline probe at unusual distance), good_start_idx / good_end_idx
+    # remain None. Downstream code (_extract_probe_signal) returns None for that
+    # probe; its AFFT / time-domain amplitude are NaN in meta.json for that run.
+    good_range = (good_end_idx - good_start_idx) if (good_end_idx is not None and good_start_idx is not None) else 0
 
     #fullpanel-fullwind-amp02-freq13- correct @5780
     # no panel, amp03, freq0650: 2300? probe=??

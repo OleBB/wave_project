@@ -145,6 +145,113 @@ MANUAL = ManualDetectionPoints()
 
 
 # =============================================================================
+# HUSEBY & GRUE WAVE ANALYSIS WINDOW (pipeline standard from 2026-04-21)
+# =============================================================================
+# Huseby & Grue (J. Fluid Mech. 2000) chose a 10-period window starting at
+# 50T from wavemaker start, for their probe at r = 12.4 m from the wave
+# paddle. Our tank shares this geometry; our OUT probe sits at exactly
+# r = 12.4 m. The window is chosen so that:
+#   - the leading wavefront has fully passed the measurement point,
+#   - free second-harmonic parasitic waves (travelling at half speed) have
+#     not yet reached the probe,
+#   - reflections from the far-end beach have not returned, and
+#   - the FFT is over exactly 10T → no spectral leakage.
+#
+# For probes CLOSER to the paddle than 12.4 m, the same waves arrive
+# earlier by the group-velocity travel-time. The window is therefore
+# PROBE-SHIFTED: for a probe at r_probe < 12.4 m, the window becomes
+#   [(START_T_REF − ΔT)·T, (END_T_REF − ΔT)·T]
+# with ΔT = (12.4 − r_probe) / c_group(f, depth) · f  [periods].
+#
+# Replaces the earlier SNARVEI eyeballing (archived below) as the pipeline
+# default. See memory/methodology_hg_probe_shifted.md for validation data.
+
+@dataclass(frozen=True)
+class HusebyGrueParams:
+    REF_R_M:     float = 12.400   # H&G anchor distance (also our OUT probe position)
+    START_T_REF: int   = 50       # window start in periods from wavemaker start
+    END_T_REF:   int   = 60       # window end in periods (10T total, integer → no leakage)
+    TANK_DEPTH_M: float = 0.580   # still-water depth
+
+HG = HusebyGrueParams()
+
+
+def c_group(f_hz: float, h_m: float = HG.TANK_DEPTH_M, g: float = 9.81) -> float:
+    """Group velocity for a surface gravity wave at frequency `f_hz` in water of
+    depth `h_m`, using the full dispersion relation ω² = g·k·tanh(k·h).
+
+    At thesis frequencies (≥ 1.3 Hz, h = 0.58 m) this matches the deep-water
+    shortcut `g / (4π f)` to <0.1 %. At sub-1 Hz frequencies the full relation
+    differs significantly (up to ~30 % at 0.65 Hz) — use this function rather
+    than the deep-water approximation everywhere in the pipeline.
+
+    Returns c_group in m/s.
+    """
+    import numpy as np
+    from scipy.optimize import brentq
+
+    omega = 2.0 * np.pi * f_hz
+
+    # Deep-water shortcut — faster and numerically equivalent when kh is big.
+    k_deep = omega ** 2 / g
+    if k_deep * h_m > 10.0:
+        return g / (4.0 * np.pi * f_hz)
+
+    # Full-dispersion: solve ω² = g k tanh(k h) for k.
+    def _disp(k: float) -> float:
+        return omega ** 2 - g * k * np.tanh(k * h_m)
+
+    k = brentq(_disp, 1e-4, 200.0)
+    kh = k * h_m
+    c_phase = np.sqrt(g / k * np.tanh(kh))
+    return 0.5 * c_phase * (1.0 + 2.0 * kh / np.sinh(2.0 * kh))
+
+
+def hg_window_for_probe(r_probe_m: float, f_hz: float,
+                         h_m: float = HG.TANK_DEPTH_M) -> tuple[float, float]:
+    """Probe-shifted H&G window [start_T, end_T] in periods from wavemaker start.
+
+    For a probe at `r_probe_m` < HG.REF_R_M, the window is shifted earlier
+    by ΔT = (HG.REF_R_M − r_probe_m) / c_group(f, h) · f periods. Returns
+    the raw (start, end) pair in periods — caller converts to samples and
+    applies the FFT.
+    """
+    dT = (HG.REF_R_M - r_probe_m) / c_group(f_hz, h_m) * f_hz
+    return (HG.START_T_REF - dT, HG.END_T_REF - dT)
+
+
+# -----------------------------------------------------------------------------
+# SNARVEI eyeballing — archived reference (superseded by H&G above 2026-04-21)
+# -----------------------------------------------------------------------------
+# Retained for historical reference and for RampDetectionBrowser calibration.
+# Values eyeballed from `RampDetectionBrowser` on nowind per40 runs across all
+# amplitudes, 2026-04-16. Format per group:
+#   start: list of (freq_hz, start_sample) at 250 Hz sampling
+#   end:   list of (freq_hz, absolute_end_sample) — conservative = earliest
+#          good_end across amplitudes so the window never leaks into mstop decay.
+
+SNARVEI_ARCHIVE_START: Dict[str, list] = {
+    # ~8800 mm from paddle
+    "8804":  [(0.65, 3975), (1.30, 4700), (1.80, 6000)],
+    # ~9373 mm from paddle
+    "9373":  [(0.65, 4075), (0.70, 3750), (1.30, 5308), (1.40, 5321),
+              (1.50, 5833), (1.60, 6344)],
+    # ~11800 mm from paddle (march2026_rearranging config, 4–6 Mar 2026 only)
+    "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700),
+              (1.70, 6700), (1.80, 6650)],
+    # ~12400 mm from paddle
+    "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6808), (1.40, 7071),
+              (1.50, 7333), (1.60, 7594), (1.70, 6750), (1.80, 6800)],
+}
+
+SNARVEI_ARCHIVE_END: Dict[str, list] = {
+    "9373":  [(1.30, 9750), (1.40, 9500), (1.50, 9000), (1.60, 9000)],
+    "12400": [(1.30, 10500), (1.40, 10500), (1.50, 10000), (1.60, 10000)],
+    "8804":  [(1.30, 9250), (1.40, 9250), (1.50, 9000), (1.60, 8750)],
+}
+
+
+# =============================================================================
 # PHYSICAL GEOMETRY
 # =============================================================================
 
