@@ -480,41 +480,74 @@ OUT_STUB.parent.mkdir(parents=True, exist_ok=True)
 fig.savefig(OUT_PDF, bbox_inches="tight")
 print(f"   Saved → {OUT_PDF.relative_to(BASE)}")
 
-if not OUT_STUB.exists():
-    _caption = (
-        f"Standing-wave correction test at R={R_NOMINAL:.2f} on measured OUT/IN ratios. "
-        "If the panel reflected a significant fraction of the incident wave, "
-        "the OUT/IN(FFT) vs frequency curve would carry a node/antinode "
-        "fingerprint with characteristic spacing $\\Delta f = c_g/(4 x_\\mathrm{{IN}})$. "
-        "Applying a correction at R=0.20 to the raw OUT/IN curve creates a "
-        "violent zigzag (top-right panel) — the raw data shows NO such pattern. "
-        "This puts an upper bound of $R\\lesssim0.05$ on the panel's reflection "
-        "coefficient, consistent with the direct Mansard--Funke measurement "
-        "(see CH04 \\S4c). Conclusion: the raw OUT/IN(FFT) values require no "
-        "standing-wave correction; the existing methodology is safe."
-    )
-    _stub = (
-        "%! TEX root = ../main.tex\n"
-        "% =============================================================\n"
-        "% IMMUTABLE — generated automatically, do not edit this block\n"
-        f"%   script          : analysis_scratch/sw_correction.py\n"
-        f"%   plot_type       : sw_correction_test\n"
-        f"%   chapter         : {CHAPTER}\n"
-        f"%   R_nominal       : {R_NOMINAL}\n"
-        "% =============================================================\n"
-        "\\begin{figure}[htbp]\n"
-        "  \\centering\n"
-        f"  \\includegraphics[width=0.95\\linewidth]{{FIGURES/{THESIS_NAME}.pdf}}\n"
-        "  \\caption[Standing-wave correction test]{%\n"
-        f"    {_caption}\n"
-        "  }\n"
-        f"  \\label{{fig:{THESIS_NAME}}}\n"
-        "\\end{figure}\n"
-    )
-    OUT_STUB.write_text(_stub)
-    print(f"   Wrote stub → {OUT_STUB.relative_to(BASE)}")
-else:
-    print(f"   Stub exists (not overwritten): {OUT_STUB.relative_to(BASE)}")
+_caption = (
+    f"Standing-wave correction test at R={R_NOMINAL:.2f} on measured OUT/IN ratios. "
+    "If the panel reflected a significant fraction of the incident wave, "
+    "the OUT/IN(FFT) vs frequency curve would carry a node/antinode "
+    "fingerprint with characteristic spacing $\\Delta f = c_g/(4 x_\\mathrm{{IN}})$. "
+    "Applying a correction at R=0.20 to the raw OUT/IN curve creates a "
+    "violent zigzag (top-right panel) — the raw data shows NO such pattern. "
+    "This puts an upper bound of $R\\lesssim0.05$ on the panel's reflection "
+    "coefficient, consistent with the direct Mansard--Funke measurement "
+    "(see CH04 \\S4c). Conclusion: the raw OUT/IN(FFT) values require no "
+    "standing-wave correction; the existing methodology is safe."
+)
+
+# Use the shared plot_utils helpers so the stub matches the canonical
+# schema (provenance / filters / data provenance / method / stats).
+import wavescripts.plot_utils as pu
+pu.ACTIVE_DATASETS = [str(p).split("/")[-1] for p in
+                      sorted(BASE.glob("waveprocessed/PROCESSED-*"))]
+pu.TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
+pu.FIGURES_DIR = BASE / "output" / "FIGURES"
+
+# SW factor values at the thesis frequencies — useful in the stub.
+_sw_summary = ", ".join(
+    f"{f:.2f}Hz:{sw_dict[f]:.3f}" for f in sorted(sw_dict.keys())
+    if f in {0.65, 1.0, 1.3, 1.5, 1.7}
+)
+
+_meta_stub = pu.build_fig_meta(
+    {
+        "filters": {
+            "PanelCondition":    "full",
+            "WindCondition":     ["no", "full"],
+            "quality_flag":      "ok",
+            "probes":            "9373/170 (IN), 12400/250 (OUT)",
+        },
+        "plotting": {
+            "figure_name": THESIS_NAME,
+            "caption":     _caption,
+            "caption_short": "Standing-wave correction test",
+        },
+    },
+    chapter=CHAPTER,
+    data_df=wave,
+    extra={"script": "analysis_scratch/sw_correction.py"},
+    computed_in=("analysis_scratch/sw_correction.py "
+                 "(SW_factor(f) = |1+R·exp(2ikΔ)|; per-run T_corr = OUT/IN_obs · SW_factor)"),
+    data_class="META",
+    findings_doc="analysis_scratch/sw_correction_findings.md",
+    grouper="per-frequency mean/std of observed vs corrected OUT/IN",
+    collapse_panels=False,
+    fft_window_hz=0.1,
+    extra_params=(
+        f"R_nominal={R_NOMINAL}, X_IN={X_IN} m, X_panel={X_PANEL} m, "
+        f"delta={DELTA:.3f} m, depth_m={DEPTH}, "
+        "dispersion=full (omega^2 = g*k*tanh(k*d))"
+    ),
+    extra_stats={
+        "R_nominal":           R_NOMINAL,
+        "X_panel_m":           X_PANEL,
+        "delta_m":             round(DELTA, 3),
+        "SW_factor_at_thesis_freqs": _sw_summary or "—",
+        "R_upper_bound":       "<= 0.05",
+    },
+)
+
+pu.write_figure_stub(_meta_stub, plot_type="sw_correction_test",
+                     subfig_filenames=[THESIS_NAME])
+print(f"   Wrote stub → {OUT_STUB.relative_to(BASE)}")
 
 # ── 8. Write findings markdown ─────────────────────────────────────────────────
 print("8. Writing findings markdown...")

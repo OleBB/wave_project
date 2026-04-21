@@ -263,63 +263,85 @@ for amp in AMPS:
 # ── 4. LaTeX stub ─────────────────────────────────────────────────────────────
 print("\n4. Writing .tex stub …")
 STUB_PATH.parent.mkdir(parents=True, exist_ok=True)
-if not STUB_PATH.exists():
-    # Headline number for the caption: max (T_cross − OUT/IN_fw) across the
-    # thesis band. Expresses "how much the standard metric underestimates
-    # the true wind effect at worst".
-    valid = df.dropna(subset=["tcross", "outin_fw"])
-    if not valid.empty:
-        diff = valid["tcross"] - valid["outin_fw"]
-        worst_idx = diff.abs().idxmax()
-        worst = valid.loc[worst_idx]
-        worst_str = (f"{worst['tcross']:.3f} vs {worst['outin_fw']:.3f} at "
-                     f"$f = {worst['freq']:.1f}$\\,Hz, ${worst['amp']:.2f}$\\,V")
-    else:
-        worst_str = "—"
 
-    subfigs = []
-    for name, amp in zip(thesis_names, AMPS):
-        subfigs.append(
-            "  \\begin{subfigure}[b]{0.32\\linewidth}\n"
-            "    \\centering\n"
-            f"    \\includegraphics[width=\\linewidth]{{FIGURES/{name}.pdf}}\n"
-            f"    \\caption{{${amp:.2f}$\\,V}}\n"
-            f"    \\label{{fig:{name}}}\n"
-            "  \\end{subfigure}"
-        )
-    _caption = (
-        r"Wind effect on transmission measured three ways: "
-        r"$(OUT/IN)_{nw}$ (blue, nowind baseline); "
-        r"$T_{\mathrm{cross}} = A_{out}^{fw}/A_{in}^{nw}$ (green, fullwind OUT referenced "
-        r"to the clean nowind IN); and $(OUT/IN)_{fw}$ (red, standard fullwind metric). "
-        r"The green--blue gap is the wind effect measured with the clean incident "
-        r"reference. The red--blue gap is the same effect as reported by the standard "
-        r"ratio; the two disagree where the IN probe is contaminated by wind noise at "
-        r"the paddle frequency (CLAUDE.md \S 16). Worst-case divergence between the "
-        rf"two metrics: {worst_str}. Each subfigure is one input amplitude; "
-        r"$n$ per point in \texttt{analysis\_scratch/t\_cross\_figure\_summary.csv}."
-    )
-    _stub = (
-        "%! TEX root = ../main.tex\n"
-        "% =============================================================\n"
-        "% IMMUTABLE — generated automatically, do not edit this block\n"
-        "%   script          : analysis_scratch/t_cross_figure.py\n"
-        "%   plot_type       : t_cross\n"
-        "%   chapter         : 05\n"
-        f"%   subfigures      : {', '.join(thesis_names)}\n"
-        "% =============================================================\n"
-        "\\begin{figure}[htbp]\n"
-        "  \\centering\n"
-        + "\n  \\hfill\n".join(subfigs) + "\n"
-        "  \\caption[T\\_cross: wind effect via clean nowind reference]{%\n"
-        f"    {_caption}\n"
-        "  }\n"
-        f"  \\label{{fig:{THESIS_BASE}}}\n"
-        "\\end{figure}\n"
-    )
-    STUB_PATH.write_text(_stub)
-    print(f"   Wrote stub    → {STUB_PATH.relative_to(BASE)}")
+# Headline number for the caption: max (T_cross − OUT/IN_fw) across the
+# thesis band. Expresses "how much the standard metric underestimates
+# the true wind effect at worst".
+valid = df.dropna(subset=["tcross", "outin_fw"])
+if not valid.empty:
+    diff = valid["tcross"] - valid["outin_fw"]
+    worst_idx = diff.abs().idxmax()
+    worst = valid.loc[worst_idx]
+    worst_str = (f"{worst['tcross']:.3f} vs {worst['outin_fw']:.3f} at "
+                 f"$f = {worst['freq']:.1f}$\\,Hz, ${worst['amp']:.2f}$\\,V")
+    worst_diff_abs = float(diff.abs().max())
 else:
-    print(f"   Stub exists (not overwritten): {STUB_PATH.relative_to(BASE)}")
+    worst_str = "—"
+    worst_diff_abs = float("nan")
+
+_caption = (
+    r"Wind effect on transmission measured three ways: "
+    r"$(OUT/IN)_{nw}$ (blue, nowind baseline); "
+    r"$T_{\mathrm{cross}} = A_{out}^{fw}/A_{in}^{nw}$ (green, fullwind OUT referenced "
+    r"to the clean nowind IN); and $(OUT/IN)_{fw}$ (red, standard fullwind metric). "
+    r"The green--blue gap is the wind effect measured with the clean incident "
+    r"reference. The red--blue gap is the same effect as reported by the standard "
+    r"ratio; the two disagree where the IN probe is contaminated by wind noise at "
+    r"the paddle frequency (CLAUDE.md \S 16). Worst-case divergence between the "
+    rf"two metrics: {worst_str}. Each subfigure is one input amplitude; "
+    r"$n$ per point in \texttt{analysis\_scratch/t\_cross\_figure\_summary.csv}."
+)
+
+# Use the shared plot_utils helpers so the stub matches the canonical
+# schema (provenance / filters / data provenance / method / stats).
+import wavescripts.plot_utils as pu
+pu.ACTIVE_DATASETS = [str(p).split("/")[-1] for p in RESULTS_DIRS]
+pu.TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
+pu.FIGURES_DIR = BASE / "output" / "FIGURES"
+
+_meta_stub = pu.build_fig_meta(
+    {
+        "filters": {
+            "PanelCondition":            "full",
+            "WaveFrequencyInput [Hz]":   [min(FREQS), max(FREQS)],
+            "WaveAmplitudeInput [Volt]": AMPS,
+            "WindCondition":             ["no", "full"],
+            "quality_flag":              "ok",
+            "Mooring":                   ["below_90_loose"],
+        },
+        "plotting": {
+            "figure_name": THESIS_BASE,
+            "caption":     _caption,
+            "caption_short": "T_cross: wind effect via clean nowind reference",
+        },
+    },
+    chapter="05",
+    data_df=wave,
+    extra={"script": "analysis_scratch/t_cross_figure.py"},
+    computed_in=("analysis_scratch/t_cross_figure.py "
+                 "(groupby freq+amp+wind → mean/std of IN/OUT Amplitude (FFT); "
+                 "T_cross = A_out^fw / mean(A_in^nw))"),
+    data_class="DELEG",
+    findings_doc="analysis_scratch/t_cross_figure_findings.md",
+    grouper="manual (groupby freq, amp, wind)",
+    collapse_panels=False,
+    fft_window_hz=0.1,
+    extra_params=(
+        f"frequencies_hz={FREQS}, amplitudes_V={AMPS}, "
+        "winds=['no','full'], moorings merged to below_90_loose"
+    ),
+    extra_stats={
+        "worst_abs_tcross_minus_outinfw": round(worst_diff_abs, 4) if np.isfinite(worst_diff_abs) else "—",
+        "worst_condition": worst_str,
+        "n_freqs": len(FREQS),
+        "n_amps":  len(AMPS),
+    },
+)
+
+subfig_captions = [f"${a:.2f}$\\,V" for a in AMPS]
+pu.write_figure_stub(_meta_stub, plot_type="t_cross",
+                     subfig_filenames=thesis_names,
+                     subfig_captions=subfig_captions)
+print(f"   Wrote stub    → {STUB_PATH.relative_to(BASE)}")
 
 print("\nDone.")

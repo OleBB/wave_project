@@ -468,11 +468,30 @@ def plot_damping_scatter(
 
     if save_plot:
         subfig_filenames = []
+        _extra_stats = {
+            "n_panels":     len(panel_conditions),
+            "n_amplitudes": len(amplitudes),
+            "n_winds":      len(wind_conditions),
+        }
+        if "mean_out_in" in stats_df.columns:
+            for wind in wind_conditions:
+                _med = stats_df[stats_df[GC.WIND_CONDITION] == wind]["mean_out_in"].median()
+                if pd.notna(_med):
+                    _extra_stats[f"median_{wind}_OUTIN"] = round(float(_med), 4)
+
         meta_base = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_scatter"},
             data_df=stats_df,
+            computed_in="filters.py::damping_all_amplitude_grouper → plotter.py::_make_damping_scatter_fig",
+            data_class="META",
+            findings_doc=None,
+            grouper="damping_all_amplitude_grouper",
+            collapse_panels=False,
+            fft_window_hz=0.1,
+            extra_params="window=0.1 Hz, amp_column='OUT/IN (FFT)' (paddle freq only), x-axis=kL via freq_to_kL()",
+            extra_stats=_extra_stats,
         )
         figure_name     = plotting.get("figure_name") or build_filename("damping_scatter", meta_base)
         subfig_captions = []
@@ -1021,11 +1040,47 @@ def plot_damping_wind_delta(
 
     if save_plot:
         subfig_filenames = []
+        # Headline wind-effect numbers per amplitude (delta = target − ref,
+        # averaged across frequencies within each amplitude).
+        _extra_stats = {
+            "n_panels":     len(panel_conditions),
+            "n_amplitudes": len(amplitudes),
+            "ref_wind":     ref_wind,
+            "target_wind":  target_wind,
+        }
+        for amp in amplitudes:
+            _sub_amp = stats_df[
+                (stats_df[GC.WAVE_AMPLITUDE_INPUT] == amp)
+                & (stats_df[GC.PANEL_CONDITION].isin(panel_conditions))
+            ]
+            _ref = (_sub_amp[_sub_amp[GC.WIND_CONDITION] == ref_wind]
+                    .groupby(GC.WAVE_FREQUENCY_INPUT)["mean_out_in"].mean())
+            _tgt = (_sub_amp[_sub_amp[GC.WIND_CONDITION] == target_wind]
+                    .groupby(GC.WAVE_FREQUENCY_INPUT)["mean_out_in"].mean())
+            _common = _ref.index.intersection(_tgt.index)
+            if len(_common):
+                _delta = (_tgt.loc[_common] - _ref.loc[_common]).astype(float)
+                _amp_tag = f"{int(round(amp * 100)):02d}V"
+                _extra_stats[f"mean_delta_{_amp_tag}"] = round(float(_delta.mean()), 4)
+                _extra_stats[f"max_abs_delta_{_amp_tag}"] = round(float(_delta.abs().max()), 4)
+
         meta_base = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             extra={"script": "plotter.py::plot_damping_wind_delta"},
             data_df=stats_df,
+            computed_in="filters.py::damping_all_amplitude_grouper → plotter.py::_make_damping_wind_delta_fig",
+            data_class="META",
+            findings_doc=None,
+            grouper="damping_all_amplitude_grouper",
+            collapse_panels=False,
+            fft_window_hz=0.1,
+            extra_params=(
+                f"window=0.1 Hz, ref_wind={ref_wind}, target_wind={target_wind}, "
+                "delta=mean_out_in(target)-mean_out_in(ref) aggregated per frequency, "
+                "shared y-lims across voltage subfigures"
+            ),
+            extra_stats=_extra_stats,
         )
         figure_name = plotting.get("figure_name") or build_filename("damping_wind_delta", meta_base)
         subfig_captions = []
@@ -2620,10 +2675,44 @@ def plot_probe_noise_floor(
     )
 
     if save_plot:
+        # Per-probe noise floor stats keyed by probe/config. Only pull the
+        # mean across groups to keep the stub readable — the full per-group
+        # table lives in the returned `summary` DataFrame.
+        _extra_stats: dict = {
+            "n_groups":  len(groups),
+            "n_probes":  len(probe_cols_present),
+            "k_sigma":   k_sigma,
+            "k_q":       k_q,
+        }
+        for pos in probe_cols_present:
+            _rows = summary[summary["probe"] == pos]
+            if not _rows.empty:
+                _mean_noise = float(_rows["noise_95pct_amp_mm"].mean())
+                _mean_thr   = float(_rows["detection_threshold_mm"].mean())
+                if np.isfinite(_mean_noise):
+                    _extra_stats[f"noise_mm_{pos}"]     = round(_mean_noise, 3)
+                if np.isfinite(_mean_thr):
+                    _extra_stats[f"threshold_mm_{pos}"] = round(_mean_thr, 3)
+
         meta_base = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
             data_df=combined_meta,
+            computed_in="plotter.py::plot_probe_noise_floor (per-run Amplitude / Stillwater Std from combined_meta)",
+            data_class="META" if processed_dfs is None else "DFS",
+            findings_doc=None,
+            run_category="nowave_control",
+            grouper="stillwater aggregation (group_by=" + (
+                ",".join(group_by) if group_by else "none") + ")",
+            collapse_panels=False,
+            fft_window_hz=0.1,
+            extra_params=(
+                f"k_sigma={k_sigma}, k_q={k_q}, "
+                f"highlight_keyword={highlight_keyword!r}, "
+                f"exclude_keywords={list(exclude_keywords)}, "
+                f"threshold=max(k_sigma·σ, k_q·q)"
+            ),
+            extra_stats=_extra_stats,
         )
         force_stub = plotting.get("force_stub", False)
         if len(figs) == 1:

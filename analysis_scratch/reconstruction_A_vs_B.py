@@ -385,57 +385,76 @@ _ewind_n_total = len(_scope)
 _ewind_absmax = float(np.abs(_scope["e_wind_frac_diff"]).max()) if len(_scope) else float("nan")
 _bandpeak_max = float(_scope["band_over_peak"].max()) if len(_scope) else float("nan")
 
-if not THESIS_STUB_AVSB.exists():
-    _caption_avsb = (
-        "Peak-bin (method A, solid blue) and band-integrated (method B, "
-        "dashed red) reconstructions of the paddle wave at the IN probe "
-        "(left) and OUT probe (right) under no-wind (rows 1--2) and "
-        "full-wind (rows 3--4) conditions at the representative run "
-        "$f=1.4$\\,Hz, $A=0.20$\\,V, full panel. Odd rows overlay the two "
-        "reconstructions on the raw signal; even rows show the "
-        "corresponding residual power spectra (log scale). Shaded bands "
-        "mark the paddle band ($\\pm 0.05$\\,Hz around the paddle peak, "
-        "blue) and the wind band (2--6\\,Hz, orange). Across all "
-        "thesis-scope runs ($f \\in [1.3,1.6]$\\,Hz, "
-        f"$n={_ewind_n_total}$ probe$\\times$run pairs) the two "
-        "reconstructions give identical wind-band residual energy to "
-        "four-decimal precision and amplitude ratio "
-        "$A_\\mathrm{B}/A_\\mathrm{A}=1.0000$. Any wind characterisation "
-        "based on the method-A residual is therefore equivalent to one "
-        "based on method B: the paddle-band sinc-leakage that A misses "
-        "stays pinned inside the paddle band and does not contaminate "
-        "the wind band."
-    )
-    _stub_avsb = (
-        "%! TEX root = ../main.tex\n"
-        "% =============================================================\n"
-        "% IMMUTABLE — generated automatically, do not edit this block\n"
-        "%   script          : analysis_scratch/reconstruction_A_vs_B.py\n"
-        "%   plot_type       : reconstruction_AvsB\n"
-        f"%   chapter         : 04\n"
-        f"%   demo_run        : {DEMO_FREQ} Hz, {DEMO_AMP} V, {DEMO_PANEL} panel\n"
-        f"%   band_half_hz    : {BAND_HALF_HZ}\n"
-        f"%   wind_band_hz    : {F_WIND_LO}-{F_WIND_HI}\n"
-        f"%   probes          : {', '.join(PROBES)}\n"
-        f"%   n_thesis_scope  : {_ewind_n_total}\n"
-        f"%   ewind_absmax    : {_ewind_absmax*100:.4f}%%\n"
-        f"%   bandpeak_max    : {_bandpeak_max:.6f}\n"
-        f"%   findings_doc    : analysis_scratch/reconstruction_A_vs_B_findings.md\n"
-        "% =============================================================\n"
-        "\\begin{figure}[htbp]\n"
-        "  \\centering\n"
-        f"  \\includegraphics[width=0.98\\linewidth]{{FIGURES/{THESIS_NAME_AVSB}.pdf}}\n"
-        "  \\caption[Peak-bin vs band-integrated reconstruction equivalence]{%\n"
-        f"    {_caption_avsb}\n"
-        "  }\n"
-        f"  \\label{{fig:{THESIS_NAME_AVSB}}}\n"
-        "\\end{figure}\n"
-    )
-    THESIS_STUB_AVSB.write_text(_stub_avsb)
-    print(f"   thesis stub   → {THESIS_STUB_AVSB.relative_to(BASE)}")
-else:
-    print(f"   thesis stub exists (not overwritten): "
-          f"{THESIS_STUB_AVSB.relative_to(BASE)}")
+_caption_avsb = (
+    "Peak-bin (method A, solid blue) and band-integrated (method B, "
+    "dashed red) reconstructions of the paddle wave at the IN probe "
+    "(left) and OUT probe (right) under no-wind (rows 1--2) and "
+    "full-wind (rows 3--4) conditions at the representative run "
+    "$f=1.4$\\,Hz, $A=0.20$\\,V, full panel. Odd rows overlay the two "
+    "reconstructions on the raw signal; even rows show the "
+    "corresponding residual power spectra (log scale). Shaded bands "
+    "mark the paddle band ($\\pm 0.05$\\,Hz around the paddle peak, "
+    "blue) and the wind band (2--6\\,Hz, orange). Across all "
+    "thesis-scope runs ($f \\in [1.3,1.6]$\\,Hz, "
+    f"$n={_ewind_n_total}$ probe$\\times$run pairs) the two "
+    "reconstructions give identical wind-band residual energy to "
+    "four-decimal precision and amplitude ratio "
+    "$A_\\mathrm{B}/A_\\mathrm{A}=1.0000$. Any wind characterisation "
+    "based on the method-A residual is therefore equivalent to one "
+    "based on method B: the paddle-band sinc-leakage that A misses "
+    "stays pinned inside the paddle band and does not contaminate "
+    "the wind band."
+)
+
+# Use the shared plot_utils helpers so the stub matches the canonical
+# schema (provenance / filters / data provenance / method / stats).
+import wavescripts.plot_utils as pu
+pu.ACTIVE_DATASETS = [str(p).split("/")[-1] for p in RESULTS_PROCESSED_DIRS]
+pu.TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
+pu.FIGURES_DIR = BASE / "output" / "FIGURES"
+
+_meta_stub_avsb = pu.build_fig_meta(
+    {
+        "filters": {
+            "PanelCondition":    DEMO_PANEL,
+            "WaveFrequencyInput [Hz]": [1.3, 1.6],
+            "WindCondition":     ["no", "full"],
+            "quality_flag":      "ok+probe_malfunction_secondary",
+            "probes":            ", ".join(PROBES),
+        },
+        "plotting": {
+            "figure_name": THESIS_NAME_AVSB,
+            "caption":     _caption_avsb,
+            "caption_short": "Peak-bin vs band-integrated reconstruction equivalence",
+        },
+    },
+    chapter="04",
+    data_df=wave_runs,
+    extra={"script": "analysis_scratch/reconstruction_A_vs_B.py"},
+    computed_in=("analysis_scratch/reconstruction_A_vs_B.py "
+                 "(FFT peak-bin vs ±0.05 Hz band-integrated IFFT; "
+                 "residual PSDs via scipy.signal.welch)"),
+    data_class="DELEG",
+    findings_doc="analysis_scratch/reconstruction_A_vs_B_findings.md",
+    grouper="per-run reconstruction; demo = single (freq, amp, panel) group; scope stats over thesis-band runs",
+    collapse_panels=False,
+    fft_window_hz=2 * BAND_HALF_HZ,
+    extra_params=(
+        f"demo_run={DEMO_FREQ} Hz, {DEMO_AMP} V, {DEMO_PANEL} panel; "
+        f"band_half_hz={BAND_HALF_HZ}; wind_band_hz={F_WIND_LO}-{F_WIND_HI}; "
+        f"probes={PROBES}"
+    ),
+    extra_stats={
+        "n_thesis_scope":          _ewind_n_total,
+        "ewind_absmax_pct":        round(_ewind_absmax * 100, 4),
+        "bandpeak_max":            round(_bandpeak_max, 6),
+        "A_B_over_A_A":            "1.0000 (method equivalence)",
+    },
+)
+
+pu.write_figure_stub(_meta_stub_avsb, plot_type="reconstruction_AvsB",
+                     subfig_filenames=[THESIS_NAME_AVSB])
+print(f"   thesis stub   → {THESIS_STUB_AVSB.relative_to(BASE)}")
 
 
 # ── 5. Pure wind via nowind-residual subtraction ──────────────────────────────
@@ -639,56 +658,70 @@ else:
     _stokes_in_max  = float(_pure_in["stokes_frac_of_naive"].max())     if len(_pure_in)  else float("nan")
     _n_groups = int(len(pure) // 2)
 
-    if not THESIS_STUB_PURE.exists():
-        _caption_pure = (
-            "Mean residual power spectra at the IN probe (left, "
-            "9373/170) and OUT probe (right, 12400/250) for the "
-            f"{DEMO_FREQ}\\,Hz / {DEMO_AMP:.2f}\\,V / full-panel group. "
-            "No-wind residuals (blue) carry only paddle-linked Stokes "
-            "harmonics; full-wind residuals (red) carry Stokes plus "
-            "wind-wave energy. Subtracting the no-wind baseline from "
-            "the full-wind residual (black) isolates pure wind. Vertical "
-            "dotted lines mark $2f$, $3f$ and $4f$, all of which fall "
-            "inside the wind band (2--6\\,Hz, orange) at thesis paddle "
-            "frequencies. Across the full thesis scope "
-            f"($n={_n_groups}$ frequency--amplitude groups with matched "
-            "no-wind/full-wind coverage), the Stokes-subtraction "
-            f"correction removes a median "
-            f"${_stokes_in_med*100:.0f}$\\,\\% of the naive "
-            f"``wind'' energy at IN and ${_stokes_out_med*100:.0f}$\\,\\% "
-            f"at OUT (up to ${_stokes_in_max*100:.0f}$\\,\\% at the IN / "
-            "0.3\\,V high-frequency corner). Any wind-energy metric that "
-            "integrates a wave run's residual over 2--6\\,Hz without this "
-            "subtraction mis-attributes paddle Stokes harmonics as wind."
-        )
-        _stub_pure = (
-            "%! TEX root = ../main.tex\n"
-            "% =============================================================\n"
-            "% IMMUTABLE — generated automatically, do not edit this block\n"
-            "%   script          : analysis_scratch/reconstruction_A_vs_B.py\n"
-            "%   plot_type       : reconstruction_pure_wind\n"
-            "%   chapter         : 04\n"
-            f"%   demo_run        : {DEMO_FREQ} Hz, {DEMO_AMP} V, {DEMO_PANEL} panel\n"
-            f"%   wind_band_hz    : {F_WIND_LO}-{F_WIND_HI}\n"
-            f"%   probes          : {', '.join(PROBES)}\n"
-            f"%   n_groups        : {_n_groups}\n"
-            f"%   stokes_frac_in  : median {_stokes_in_med*100:.1f}%%, max {_stokes_in_max*100:.1f}%%\n"
-            f"%   stokes_frac_out : median {_stokes_out_med*100:.1f}%%\n"
-            f"%   findings_doc    : analysis_scratch/reconstruction_pure_wind_findings.md\n"
-            "% =============================================================\n"
-            "\\begin{figure}[htbp]\n"
-            "  \\centering\n"
-            f"  \\includegraphics[width=0.98\\linewidth]{{FIGURES/{THESIS_NAME_PURE}.pdf}}\n"
-            "  \\caption[Pure wind via no-wind residual subtraction]{%\n"
-            f"    {_caption_pure}\n"
-            "  }\n"
-            f"  \\label{{fig:{THESIS_NAME_PURE}}}\n"
-            "\\end{figure}\n"
-        )
-        THESIS_STUB_PURE.write_text(_stub_pure)
-        print(f"   thesis stub   → {THESIS_STUB_PURE.relative_to(BASE)}")
-    else:
-        print(f"   thesis stub exists (not overwritten): "
-              f"{THESIS_STUB_PURE.relative_to(BASE)}")
+    _caption_pure = (
+        "Mean residual power spectra at the IN probe (left, "
+        "9373/170) and OUT probe (right, 12400/250) for the "
+        f"{DEMO_FREQ}\\,Hz / {DEMO_AMP:.2f}\\,V / full-panel group. "
+        "No-wind residuals (blue) carry only paddle-linked Stokes "
+        "harmonics; full-wind residuals (red) carry Stokes plus "
+        "wind-wave energy. Subtracting the no-wind baseline from "
+        "the full-wind residual (black) isolates pure wind. Vertical "
+        "dotted lines mark $2f$, $3f$ and $4f$, all of which fall "
+        "inside the wind band (2--6\\,Hz, orange) at thesis paddle "
+        "frequencies. Across the full thesis scope "
+        f"($n={_n_groups}$ frequency--amplitude groups with matched "
+        "no-wind/full-wind coverage), the Stokes-subtraction "
+        f"correction removes a median "
+        f"${_stokes_in_med*100:.0f}$\\,\\% of the naive "
+        f"``wind'' energy at IN and ${_stokes_out_med*100:.0f}$\\,\\% "
+        f"at OUT (up to ${_stokes_in_max*100:.0f}$\\,\\% at the IN / "
+        "0.3\\,V high-frequency corner). Any wind-energy metric that "
+        "integrates a wave run's residual over 2--6\\,Hz without this "
+        "subtraction mis-attributes paddle Stokes harmonics as wind."
+    )
+
+    _meta_stub_pure = pu.build_fig_meta(
+        {
+            "filters": {
+                "PanelCondition":    DEMO_PANEL,
+                "WaveFrequencyInput [Hz]": [1.3, 1.6],
+                "WindCondition":     ["no", "full"],
+                "quality_flag":      "ok+probe_malfunction_secondary",
+                "probes":            ", ".join(PROBES),
+            },
+            "plotting": {
+                "figure_name": THESIS_NAME_PURE,
+                "caption":     _caption_pure,
+                "caption_short": "Pure wind via no-wind residual subtraction",
+            },
+        },
+        chapter="04",
+        data_df=wave_runs,
+        extra={"script": "analysis_scratch/reconstruction_A_vs_B.py"},
+        computed_in=("analysis_scratch/reconstruction_A_vs_B.py §5-§6 "
+                     "(PSD_wind = mean PSD residual_A(full) − mean PSD residual_A(no), "
+                     "per (freq,amp,mooring,panel) group)"),
+        data_class="DELEG",
+        findings_doc="analysis_scratch/reconstruction_pure_wind_findings.md",
+        grouper="per (freq, amp, mooring, panel) group; demo = single group",
+        collapse_panels=False,
+        fft_window_hz=2 * BAND_HALF_HZ,
+        extra_params=(
+            f"demo_run={DEMO_FREQ} Hz, {DEMO_AMP} V, {DEMO_PANEL} panel; "
+            f"wind_band_hz={F_WIND_LO}-{F_WIND_HI}; "
+            f"probes={PROBES}; welch nperseg=min(len(residual), 4096), "
+            f"common grid 0-12.5 Hz @ 0.05 Hz"
+        ),
+        extra_stats={
+            "n_groups":                 _n_groups,
+            "stokes_frac_in_median_pct":  round(_stokes_in_med * 100, 1) if np.isfinite(_stokes_in_med) else "—",
+            "stokes_frac_in_max_pct":     round(_stokes_in_max * 100, 1) if np.isfinite(_stokes_in_max) else "—",
+            "stokes_frac_out_median_pct": round(_stokes_out_med * 100, 1) if np.isfinite(_stokes_out_med) else "—",
+        },
+    )
+
+    pu.write_figure_stub(_meta_stub_pure, plot_type="reconstruction_pure_wind",
+                         subfig_filenames=[THESIS_NAME_PURE])
+    print(f"   thesis stub   → {THESIS_STUB_PURE.relative_to(BASE)}")
 
 print("\nDone.")

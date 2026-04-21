@@ -555,56 +555,82 @@ OUT_STUB.parent.mkdir(parents=True, exist_ok=True)
 fig.savefig(OUT_PDF, bbox_inches="tight")
 print(f"   Saved → {OUT_PDF.relative_to(BASE)}")
 
-if not OUT_STUB.exists():
-    # Headline numbers for the caption (from the primary group — 0.2 V nowind)
-    r_medians = primary[primary["wind"] == "no"].groupby("mooring")["R"].median()
-    n_primary = int((primary["wind"] == "no").sum())
-    # Underscores in mooring labels must be escaped for LaTeX caption.
-    _med_by_moor = ", ".join(
-        f"{m.replace('below_90_', 'b90_').replace('_', r'\_')} {v:.3f}"
-        for m, v in r_medians.items()
-    )
-    _caption = (
-        "Mansard--Funke two-probe reflection analysis using 8804/250 (upstream) "
-        "and 9373/170 (IN probe), $\\Delta x = {delta_mm}$\\,mm. Panels: (A) MF "
-        "conditioning $|\\sin(k\\Delta x)|$ vs frequency (dashed: "
-        "ill-conditioned threshold {ict}); (B) R vs freq, nowind 0.2\\,V, by "
-        "mooring; (C) R vs freq, fullwind 0.2\\,V, by mooring; (D) R histogram "
-        "all moorings; (E--G) amplitude-tier diagnostics; (H) R distribution "
-        "box-plot by mooring and wind; (I) run-level R scatter. "
-        "Result: at 0.2\\,V nowind, median R per mooring = {meds} "
-        "(n={n}). R$\\ll$0.20 supports the decision to apply no standing-wave "
-        "correction to OUT/IN (FFT)."
-    ).format(
-        delta_mm=f"{DELTA*1000:.0f}",
-        ict=f"{ILL_COND_THRESHOLD:.2f}",
-        meds=_med_by_moor if _med_by_moor else "—",
-        n=n_primary,
-    )
-    _stub = (
-        "%! TEX root = ../main.tex\n"
-        "% =============================================================\n"
-        "% IMMUTABLE — generated automatically, do not edit this block\n"
-        f"%   script          : analysis_scratch/mansard_funke.py\n"
-        f"%   plot_type       : mansard_funke_reflection\n"
-        f"%   chapter         : {CHAPTER}\n"
-        f"%   probes          : 8804/250, 9373/170\n"
-        f"%   delta_mm        : {DELTA*1000:.0f}\n"
-        f"%   n_primary_nowind: {n_primary}\n"
-        "% =============================================================\n"
-        "\\begin{figure}[htbp]\n"
-        "  \\centering\n"
-        f"  \\includegraphics[width=0.95\\linewidth]{{FIGURES/{THESIS_NAME}.pdf}}\n"
-        "  \\caption[Mansard--Funke reflection analysis]{%\n"
-        f"    {_caption}\n"
-        "  }\n"
-        f"  \\label{{fig:{THESIS_NAME}}}\n"
-        "\\end{figure}\n"
-    )
-    OUT_STUB.write_text(_stub)
-    print(f"   Wrote stub → {OUT_STUB.relative_to(BASE)}")
-else:
-    print(f"   Stub exists (not overwritten): {OUT_STUB.relative_to(BASE)}")
+# Headline numbers for the caption (from the primary group — 0.2 V nowind)
+r_medians = primary[primary["wind"] == "no"].groupby("mooring")["R"].median()
+n_primary = int((primary["wind"] == "no").sum())
+# Underscores in mooring labels must be escaped for LaTeX caption.
+_med_by_moor = ", ".join(
+    f"{m.replace('below_90_', 'b90_').replace('_', r'\_')} {v:.3f}"
+    for m, v in r_medians.items()
+)
+_caption = (
+    "Mansard--Funke two-probe reflection analysis using 8804/250 (upstream) "
+    "and 9373/170 (IN probe), $\\Delta x = {delta_mm}$\\,mm. Panels: (A) MF "
+    "conditioning $|\\sin(k\\Delta x)|$ vs frequency (dashed: "
+    "ill-conditioned threshold {ict}); (B) R vs freq, nowind 0.2\\,V, by "
+    "mooring; (C) R vs freq, fullwind 0.2\\,V, by mooring; (D) R histogram "
+    "all moorings; (E--G) amplitude-tier diagnostics; (H) R distribution "
+    "box-plot by mooring and wind; (I) run-level R scatter. "
+    "Result: at 0.2\\,V nowind, median R per mooring = {meds} "
+    "(n={n}). R$\\ll$0.20 supports the decision to apply no standing-wave "
+    "correction to OUT/IN (FFT)."
+).format(
+    delta_mm=f"{DELTA*1000:.0f}",
+    ict=f"{ILL_COND_THRESHOLD:.2f}",
+    meds=_med_by_moor if _med_by_moor else "—",
+    n=n_primary,
+)
+
+# Use the shared plot_utils helpers so the stub matches the canonical
+# schema (provenance / filters / data provenance / method / stats).
+import wavescripts.plot_utils as pu
+pu.ACTIVE_DATASETS = [str(p).split("/")[-1] for p in
+                      sorted(BASE.glob("waveprocessed/PROCESSED-*"))]
+pu.TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
+pu.FIGURES_DIR = BASE / "output" / "FIGURES"
+
+_meta_stub = pu.build_fig_meta(
+    {
+        "filters": {
+            "PanelCondition":   "full",
+            "WindCondition":    ["no", "full"],
+            "WaveAmplitudeInput [Volt]": [AMP_LOW_SNR, AMP_PRIMARY, AMP_WARN],
+            "quality_flag":     "ok",
+            "probes":           "8804/250 (upstream), 9373/170 (IN)",
+        },
+        "plotting": {
+            "figure_name": THESIS_NAME,
+            "caption":     _caption,
+            "caption_short": "Mansard--Funke reflection analysis",
+        },
+    },
+    chapter=CHAPTER,
+    data_df=wave,
+    extra={"script": "analysis_scratch/mansard_funke.py"},
+    computed_in=("analysis_scratch/mansard_funke.py "
+                 "(two-probe complex FFT decomposition at paddle freq → R = |B|/|A|)"),
+    data_class="DFS",
+    findings_doc="analysis_scratch/mansard_funke_findings.md",
+    grouper="per-run MF decomposition; median/aggregate by (amp, wind, mooring)",
+    collapse_panels=False,
+    fft_window_hz=FFT_WINDOW_HZ,
+    extra_params=(
+        f"x_upstream={X_P1*1000:.0f} mm, x_IN={X_P2*1000:.0f} mm, "
+        f"delta_mm={DELTA*1000:.0f}, depth_m={DEPTH}, "
+        f"ill_cond_threshold=|sin(k*delta)|<{ILL_COND_THRESHOLD}, "
+        f"dispersion=full (omega^2 = g*k*tanh(k*d))"
+    ),
+    extra_stats={
+        "n_primary_nowind":       n_primary,
+        "median_R_per_mooring":   _med_by_moor if _med_by_moor else "—",
+        "delta_mm":               f"{DELTA*1000:.0f}",
+        "ill_cond_threshold":     ILL_COND_THRESHOLD,
+    },
+)
+
+pu.write_figure_stub(_meta_stub, plot_type="mansard_funke_reflection",
+                     subfig_filenames=[THESIS_NAME])
+print(f"   Wrote stub → {OUT_STUB.relative_to(BASE)}")
 
 # ── 7. Write findings ─────────────────────────────────────────────────────────
 print("7. Writing findings markdown...")
