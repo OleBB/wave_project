@@ -98,6 +98,9 @@ _cli = argparse.ArgumentParser(add_help=False)
 _cli.add_argument("--total-reset",     action="store_true")
 _cli.add_argument("--force-recompute", action="store_true")
 _cli.add_argument("--debug",           action="store_true")
+_cli.add_argument("--last", type=int, default=None, metavar="N",
+                  help="Process only the last N datasets in dataset_paths "
+                       "(useful for iterating on the latest cond4 data only).")
 _args, _ = _cli.parse_known_args()
 
 # ── Log file (mirrors stdout + stderr to waveprocessed/run_*.log) ─────────────
@@ -110,6 +113,8 @@ if _args.force_recompute:
     _log_suffix += "_force"
 if _args.total_reset:
     _log_suffix += "_reset"
+if _args.last is not None:
+    _log_suffix += f"_last{_args.last}"
 _log_path = _log_dir / f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}{_log_suffix}.log"
 _log_file = open(_log_path, "w", encoding="utf-8", buffering=1)
 sys.stdout = _Tee(sys.__stdout__, _log_file)
@@ -145,6 +150,15 @@ processvariables = {
 prosessering = processvariables.get("prosessering", {})
 total_reset = prosessering.get("total_reset", False)
 force_recompute = prosessering.get("force_recompute", False)
+
+# Apply --last N subset before the loop. Keeps the canonical dataset list in
+# one place; any user-facing "just these" override is transparent.
+if _args.last is not None:
+    if _args.last <= 0 or _args.last > len(dataset_paths):
+        raise SystemExit(f"--last N must be in [1, {len(dataset_paths)}]; got {_args.last}")
+    dataset_paths = dataset_paths[-_args.last:]
+    print(f"--last {_args.last}: processing only the last {len(dataset_paths)} datasets.")
+
 print(f"force_recompute={force_recompute}  debug={prosessering.get('debug', False)}")
 
 if total_reset:
