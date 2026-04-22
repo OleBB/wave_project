@@ -29,16 +29,31 @@ FIGURE INDEX
 Status legend:    ✓ ready   ~ draft (DRAFT stamp)   ✗ placeholder (blank fig)
                   — dropped (cell kept as a marker)
 
-Data-class tag:   [META]  combined_meta + FFT/PSD dicts — all loaded up front (~2 s)
-                  [DFS]   additionally needs processed_dfs — loaded at the heavy
-                          gate near the bottom of the file (~+45 s, ~75 MB)
-                  [DELEG] subprocess-calls a scratch script; data-agnostic here
-                  [CSV]   reads a pre-computed CSV (regenerated via [DELEG] helper)
+Data-class tag:   [META]       combined_meta + FFT/PSD dicts — loaded up front (~2 s)
+                  [DFS-canon]  additionally needs processed_dfs from the 2 canon
+                               March-2026 lowrange folders — loaded at the MEDIUM
+                               LOAD GATE (~45 s first time, ~180 runs, ~12 MB)
+                  [DFS-all]    needs processed_dfs from ALL folders — loaded at
+                               the HEAVY LOAD GATE (~+2 min for the remaining
+                               23 folders, ~75 MB total)
+                  [DELEG]      subprocess-calls a scratch script; data-agnostic here
+                               (the subprocess loads whatever it needs on its own)
+                  [CSV]        reads a pre-computed CSV (regenerated via [DELEG] helper)
 
-Every cell starts with a `# [DATA: X]` line matching one of the four tags. If
-you add a cell, add its tag too; the heavy gate relies on [DFS] cells sitting
-below it. Figures in the index are listed in thesis order — the two [DFS]
-entries are flagged "(below heavy gate)" to signal their physical file location.
+Every cell starts with a `# [DATA: X]` line matching one of the five tags. If
+you add a cell, add its tag too; the gates rely on [DFS-*] cells sitting below
+their respective gate. Figures in the index are listed in thesis order — the
+two [DFS-*] entries are flagged "(below MEDIUM gate)" to signal their physical
+file location.
+
+Three-tier load philosophy:
+  Tier 1 (Light, top):       combined_meta + FFT/PSD dicts. Fast REPL iteration.
+  Tier 2 (Medium, § 5/§ 6):   adds canon-only processed_dfs. Enough for thesis
+                               methodology figures that only need a few
+                               representative runs from the canonical dataset.
+  Tier 3 (Heavy, bottom):    adds remaining 23 folders' processed_dfs. Only
+                               needed for cross-session diagnostics (currently
+                               a placeholder; D1 cross-session consistency).
 
 CHAPTER 04 — METHODOLOGY
   §1    ch04_probe_noise_floor           [META]  ~  Stillwater noise floor per probe / hw config
@@ -65,8 +80,8 @@ CHAPTER 04 — METHODOLOGY
   §4i   ch04_fft_window_length_sens      [DELEG] ~  Window-length sensitivity (N ∈ {5,8,10,12,15,20})
   §4j   ch04_fft_window_position_sens    [DELEG] ~  Window-position sensitivity (T_ref ∈ [40,80]T)
   §4k   ch04_fft_window_position_trace   [DELEG] ~  Visual: sweep windows overlaid on η(t)
-  §5    ch04_timeseries_overview         [DFS]   ~  Full time-series with stable-window band  (below heavy gate)
-  §6    ch04_first_arrival               [DFS]   ~  First wave arrival vs probe distance      (below heavy gate)
+  §5    ch04_timeseries_overview         [DFS-canon] ~  Full time-series with stable-window band  (below MEDIUM gate)
+  §6    ch04_first_arrival               [DFS-canon] ~  First wave arrival vs probe distance      (below MEDIUM gate)
   §7    ch04_wave_stability              [META]  ~  Wave stability and period_cv vs frequency
   §8    ch04_lateral_nowind              [META]  ~  Lateral equality (parallel ratio, no-wind)
         ch04_lateral_nowind_scatter      [META]  ~     └─ per-run scatter sibling
@@ -1754,27 +1769,43 @@ if not arrival_df.empty:
 # %% ═══════════════════════════════════════════════════════════════════════════
 # ███████████████████████████████████████████████████████████████████████████████
 # █                                                                             █
-# █   HEAVY LOAD GATE — everything below this line needs processed_dfs          █
-# █   (raw 250 Hz time series, ~75 MB, ~45 s to load for the full dataset)      █
+# █   MEDIUM LOAD GATE — processed_dfs for the two canon March-2026 folders     █
+# █   (~180 runs, ~12 MB, ~45 s first time). Enough for every [DFS-canon]       █
+# █   cell below — §5, §6.                                                      █
 # █                                                                             █
-# █   If you only need the light figures, STOP executing cells here.            █
-# █   All cells above this gate use combined_meta + FFT/PSD dicts only.         █
+# █   If you only need the light figures, STOP here. All cells above this       █
+# █   gate use combined_meta + FFT/PSD dicts only.                              █
 # █                                                                             █
 # ███████████████████████████████████████████████████████████████████████████████
 # ═══════════════════════════════════════════════════════════════════════════════
-# [DATA: DFS gate]
-if not processed_dfs:
-    print("Heavy load gate — loading processed_dfs (~75 MB, ~45 s)…")
+# [DATA: DFS-canon gate]
+#
+# _loaded_dirs tracks which PROCESSED-* dirs are already in `processed_dfs`, so
+# the heavy gate further down only reads the remaining folders and never re-
+# deserialises canon. Both gates are idempotent — re-running the cell is safe.
+_loaded_dirs: set  # forward declaration
+try:
+    _loaded_dirs  # noqa: F821
+except NameError:
+    _loaded_dirs = set()
+
+_canon_missing = [d for d in RESULTS_PROCESSED_DIRS if d not in _loaded_dirs]
+if _canon_missing:
+    print(f"Medium load gate — loading canon processed_dfs "
+          f"({len(_canon_missing)} folder(s), ~12 MB, ~45 s first time)…")
     _t_gate = time.time()
-    processed_dfs = load_processed_dfs(*ALL_PROCESSED_DIRS)
-    print(f"  loaded {len(processed_dfs)} DataFrames in {time.time() - _t_gate:.1f} s")
+    _new_dfs = load_processed_dfs(*_canon_missing)
+    processed_dfs.update(_new_dfs)
+    _loaded_dirs.update(_canon_missing)
+    print(f"  +{len(_new_dfs)} DataFrames in {time.time() - _t_gate:.1f} s "
+          f"(processed_dfs: {len(processed_dfs)} total)")
 else:
-    print(f"Heavy load gate — processed_dfs already populated "
-          f"({len(processed_dfs)} DataFrames), skipping load")
+    print(f"Medium load gate — canon already loaded "
+          f"(processed_dfs: {len(processed_dfs)} total), skipping")
 
 
 # %%
-# [DATA: DFS]
+# [DATA: DFS-canon]
 """
 ── CH04 § 5 — What does a full signal look like? ────────────────────────────
 Goal: show the full signal for a select few runs — stillwater baseline,
@@ -1813,7 +1844,7 @@ _fig_ts = plot_timeseries_overview(combined_meta, processed_dfs, _pv_timeseries)
 
 
 # %%
-# [DATA: DFS]
+# [DATA: DFS-canon]
 """
 ── CH04 § 6 — Wave-range detection ──────────────────────────────────────────
 Goal: explain and validate _SNARVEI_CALIB. Show how the stable wavetrain
@@ -1843,6 +1874,34 @@ _pv_first_arrival = {
 }
 
 plot_first_arrival(combined_meta, processed_dfs, _pv_first_arrival, chapter="04")
+
+
+# %% ═══════════════════════════════════════════════════════════════════════════
+# ███████████████████████████████████████████████████████████████████████████████
+# █                                                                             █
+# █   HEAVY LOAD GATE — adds processed_dfs for the remaining (non-canon)        █
+# █   folders (~23 folders, ~+2 min on top of the canon load above).            █
+# █                                                                             █
+# █   Only [DFS-all] cells below need this. Currently the only consumer is the  █
+# █   D1 1.3 Hz cross-session consistency diagnostic (placeholder). If you are  █
+# █   only producing CH04 §5 / §6 or anything above, SKIP this cell.            █
+# █                                                                             █
+# ███████████████████████████████████████████████████████████████████████████████
+# ═══════════════════════════════════════════════════════════════════════════════
+# [DATA: DFS-all gate]
+_remaining_dirs = [d for d in ALL_PROCESSED_DIRS if d not in _loaded_dirs]
+if _remaining_dirs:
+    print(f"Heavy load gate — loading remaining processed_dfs "
+          f"({len(_remaining_dirs)} folder(s), ~65 MB, ~2 min)…")
+    _t_gate = time.time()
+    _new_dfs = load_processed_dfs(*_remaining_dirs)
+    processed_dfs.update(_new_dfs)
+    _loaded_dirs.update(_remaining_dirs)
+    print(f"  +{len(_new_dfs)} DataFrames in {time.time() - _t_gate:.1f} s "
+          f"(processed_dfs: {len(processed_dfs)} total)")
+else:
+    print(f"Heavy load gate — all folders already loaded "
+          f"(processed_dfs: {len(processed_dfs)} total), skipping")
 
 
 # %% ── DIAGNOSTICS ───────────────────────────────────────────────────────────
