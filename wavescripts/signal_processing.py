@@ -393,12 +393,125 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg
                 fft_dict[path] = fft_df
 
             amplitude_records.append(row_out)
-    
+
     if debug:
         print(f"=== FFT Complete: {len(amplitude_records)} records ===\n")
-    
+
     return fft_dict, pd.DataFrame(amplitude_records)
 
+
+# -----------------------------------------------------------------------------
+# Least-squares sinusoid fit at known paddle frequency
+# -----------------------------------------------------------------------------
+# Fits the model
+#     y[n] = DC + A·cos(ω t) + B·sin(ω t) + A2·cos(2ω t) + B2·sin(2ω t)
+# to the windowed probe signal and reports the fundamental amplitude
+#     A_1 = sqrt(A² + B²)
+# and the Stokes second-harmonic amplitude
+#     A_2 = sqrt(A2² + B2²)
+# The fit is mathematically equivalent to evaluating the DFT at exactly
+# f_paddle (Goertzel) + explicit DC/2f protection, and is therefore
+# bin-grid-independent — unaffected by how the window length aligns with
+# FFT bins. See analysis_scratch/fft_method_comparison_findings.md for
+# the cross-method validation that motivated this function.
+#
+# Returned in the same units as the input signal (metres, since eta_ is
+# in metres after zero-centring in processor.py).
+
+def compute_amplitudes_from_lsfit(signal: np.ndarray, target_freq: float, fs: float) -> dict:
+    """Fit DC + fundamental + Stokes 2f sinusoid to signal; return amplitudes.
+
+    Args:
+        signal:      1-D array of probe elevation (metres). NaNs must be
+                     interpolated before calling — this function does not.
+        target_freq: paddle frequency (Hz), taken as known.
+        fs:          sampling rate (Hz).
+
+    Returns:
+        {
+            "A_fundamental": float (m),         # sqrt(A² + B²)
+            "A_stokes2":     float (m),         # sqrt(A2² + B2²)
+            "DC":            float (m),         # baseline
+            "residual_rms":  float (m),         # std of y − model
+        }
+        or all-NaN if signal is too short (< 4 samples).
+    """
+    nan = {"A_fundamental": np.nan, "A_stokes2": np.nan,
+           "DC": np.nan, "residual_rms": np.nan}
+    sig = np.asarray(signal, dtype=float)
+    N = len(sig)
+    if N < 4 or not np.isfinite(sig).all():
+        return nan
+
+    t = np.arange(N) / fs
+    omega = 2.0 * np.pi * target_freq
+    # Design matrix: [1, cos(ω t), sin(ω t), cos(2ω t), sin(2ω t)]
+    X = np.column_stack([
+        np.ones(N),
+        np.cos(omega * t),
+        np.sin(omega * t),
+        np.cos(2.0 * omega * t),
+        np.sin(2.0 * omega * t),
+    ])
+    coef, *_ = np.linalg.lstsq(X, sig, rcond=None)
+    DC, A, B, A2, B2 = [float(c) for c in coef]
+    A_fund    = float(np.sqrt(A * A + B * B))
+    A_stokes2 = float(np.sqrt(A2 * A2 + B2 * B2))
+    residual  = sig - X @ coef
+    residual_rms = float(np.std(residual))
+    return {
+        "A_fundamental": A_fund,
+        "A_stokes2":     A_stokes2,
+        "DC":            DC,
+        "residual_rms":  residual_rms,
+    }
+
+
+def compute_lsfit_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg, fs: float,
+                                   debug: bool = False) -> pd.DataFrame:
+    """Compute LS sinusoid fit per probe per run; return wide amplitudes DataFrame.
+
+    Runs over the same windowed slice as `compute_fft_with_amplitudes`
+    (`Computed Probe {pos} start/end`) and the same NaN-handling policy,
+    so LS and FFT columns in meta are directly comparable per-run.
+    """
+    col_names = cfg.probe_col_names()
+    amplitude_records = []
+
+    for path, df in processed_dfs.items():
+        subset_meta = meta_row[meta_row["path"] == path]
+        for _, row in subset_meta.iterrows():
+            row_out = {"path": path}
+
+            freq = row["WaveFrequencyInput [Hz]"]
+            if pd.isna(freq) or freq <= 0:
+                continue
+
+            for _, pos in col_names.items():
+                signal = _extract_probe_signal(df, row, pos)
+                if signal is None:
+                    continue
+
+                # NaN handling matches compute_fft_with_amplitudes: interpolate
+                # short gaps, skip probe if too many clipped.
+                nan_mask = np.isnan(signal)
+                if nan_mask.any():
+                    if nan_mask.sum() / len(signal) > CLIP.MAX_NAN_FRACTION:
+                        continue
+                    indices = np.arange(len(signal))
+                    signal = np.interp(indices, indices[~nan_mask], signal[~nan_mask])
+
+                ls = compute_amplitudes_from_lsfit(signal, float(freq), fs)
+                row_out[f"Probe {pos} Amplitude (LS)"]         = ls["A_fundamental"]
+                row_out[f"Probe {pos} Amplitude Stokes2 (LS)"] = ls["A_stokes2"]
+                row_out[f"Probe {pos} DC (LS)"]                = ls["DC"]
+                row_out[f"Probe {pos} Residual RMS (LS)"]      = ls["residual_rms"]
+
+            amplitude_records.append(row_out)
+
+    if debug:
+        print(f"=== LS fit Complete: {len(amplitude_records)} records ===\n")
+    return pd.DataFrame(amplitude_records)
 
 
 

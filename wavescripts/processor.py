@@ -14,7 +14,7 @@ from typing import Dict, List, Tuple
 
 from wavescripts.improved_data_loader import update_processed_metadata, get_configuration_for_date
 from wavescripts.wave_detection import find_wave_range
-from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes, compute_nowave_psd
+from wavescripts.signal_processing import compute_psd_with_amplitudes, compute_fft_with_amplitudes, compute_amplitudes, compute_nowave_psd, compute_lsfit_with_amplitudes
 from wavescripts.wave_physics import calculate_wavenumbers_vectorized, calculate_wavedimensions, calculate_windspeed
 
 from scipy.interpolate import PchipInterpolator
@@ -912,6 +912,15 @@ def run_find_wave_ranges(
     debug: bool
 ) -> pd.DataFrame:
     """Find wave ranges for all probes."""
+    # Pre-initialise per-cycle-amplitude list columns as object dtype. Required
+    # because pd.DataFrame.at[idx, col] = <list> raises ValueError when the
+    # column does not yet exist with an object-compatible dtype — pandas
+    # interprets the list as multiple values targeting multiple cells.
+    for _pos_init in cfg.probe_col_names().values():
+        _list_col = f"Probe {_pos_init} Amplitude cycles list"
+        if _list_col not in meta_sel.columns:
+            meta_sel[_list_col] = pd.Series([None] * len(meta_sel),
+                                            index=meta_sel.index, dtype=object)
     col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
     for idx, row in meta_sel.iterrows():
         path = row["path"]
@@ -962,15 +971,20 @@ def run_find_wave_ranges(
                     wave_stability = np.nan
 
                 # 2. period_amplitude_cv: coefficient of variation of per-period amplitudes
+                # and per-cycle amplitude list: (max − min) / 2 for each zero-upcrossing-to-
+                # upcrossing cycle inside the analysis window. Kept as raw list + summary stats
+                # so plots can show cycle-to-cycle variability, not just the aggregate.
+                cycle_amplitudes: list[float] = []
                 if upcrossings is not None and len(upcrossings) >= 2:
-                    period_amps = [
+                    period_heights = [
                         float(np.ptp(sig[upcrossings[j] - start : upcrossings[j + 1] - start]))
                         for j in range(len(upcrossings) - 1)
                         if upcrossings[j + 1] - start <= n and upcrossings[j] - start >= 0
                     ]
-                    if len(period_amps) >= 2:
-                        mean_amp = np.mean(period_amps)
-                        period_cv = float(np.std(period_amps) / mean_amp) if mean_amp > 0 else np.nan
+                    cycle_amplitudes = [h / 2.0 for h in period_heights]
+                    if len(period_heights) >= 2:
+                        mean_amp = np.mean(period_heights)
+                        period_cv = float(np.std(period_heights) / mean_amp) if mean_amp > 0 else np.nan
                     else:
                         period_cv = np.nan
                 else:
@@ -996,6 +1010,17 @@ def run_find_wave_ranges(
                 meta_sel.loc[idx, f"Probe {pos} Significant Wave Height Hm0"] = hm0
                 meta_sel.loc[idx, f"Probe {pos} Significant Wave Height Hs"]  = hs
 
+                # Per-cycle amplitude — every zero-upcrossing-to-upcrossing cycle's
+                # (max − min)/2 as an explicit list, plus summary stats for
+                # convenience filtering. Raw list lets us inspect cycle-to-cycle
+                # variability without re-running the pipeline.
+                mean_cyc = float(np.mean(cycle_amplitudes)) if cycle_amplitudes else np.nan
+                std_cyc  = float(np.std(cycle_amplitudes))  if len(cycle_amplitudes) > 1 else np.nan
+                meta_sel.at[idx, f"Probe {pos} Amplitude (cycles)"]      = mean_cyc
+                meta_sel.at[idx, f"Probe {pos} Amplitude cycles std"]    = std_cyc
+                meta_sel.at[idx, f"Probe {pos} Amplitude cycles n"]      = len(cycle_amplitudes)
+                meta_sel.at[idx, f"Probe {pos} Amplitude cycles list"]   = cycle_amplitudes
+
         if debug and start:
             print(f'start: {start}, end: {end}, debug: {debug_info}')
 
@@ -1009,6 +1034,7 @@ def _update_all_metrics(
     amplitudes_psd_df: pd.DataFrame,
     amplitudes_fft_df: pd.DataFrame,
     cfg,
+    amplitudes_lsfit_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Update metadata with all computed metrics, using position-based probe names."""
     meta_indexed = meta_sel.set_index(GC.PATH).copy()
@@ -1031,6 +1057,14 @@ def _update_all_metrics(
     fft_df_indexed = amplitudes_fft_df.set_index(GC.PATH)
     fft_cols = [c for c in amplitudes_fft_df.columns if c != GC.PATH]
     meta_indexed[fft_cols] = fft_df_indexed[fft_cols]
+
+    # LS fit amplitudes — fundamental, Stokes 2f, DC, residual RMS per probe.
+    # Written as parallel columns to the FFT ones; downstream thesis code still
+    # reads the FFT columns by default.
+    if amplitudes_lsfit_df is not None and not amplitudes_lsfit_df.empty:
+        ls_indexed = amplitudes_lsfit_df.set_index(GC.PATH)
+        ls_cols = [c for c in amplitudes_lsfit_df.columns if c != GC.PATH]
+        meta_indexed[ls_cols] = ls_indexed[ls_cols]
 
     # ============================================================================
     # SECTION 2: DERIVED CALCULATIONS using the assigned values
@@ -1904,8 +1938,14 @@ def process_selected_data(
     # 4. b - compute FFT and amplitudes from FFT
     fft_dict, amplitudes_fft_df = compute_fft_with_amplitudes(processed_dfs, meta_sel, cfg, fs=fs, debug=debug)
 
+    # 4. c - compute LS sinusoid fit amplitudes (fundamental + Stokes 2f, DC, residual RMS)
+    #        Cross-check of the FFT path. Bin-grid-independent; carries Stokes-2f as a
+    #        first-class column. Written as NEW columns alongside the FFT ones — no swap.
+    amplitudes_lsfit_df = compute_lsfit_with_amplitudes(processed_dfs, meta_sel, cfg, fs=fs, debug=debug)
+
     # 5. Compute and update all metrics (amplitudes, wavenumbers, dimensions, windspeed)
-    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater, amplitudes_psd_df, amplitudes_fft_df, cfg)
+    meta_sel = _update_all_metrics(processed_dfs, meta_sel, stillwater, amplitudes_psd_df, amplitudes_fft_df, cfg,
+                                   amplitudes_lsfit_df=amplitudes_lsfit_df)
 
     # 6. Set output folder and save metadata
     meta_sel = _set_output_folder(meta_sel, meta_full, debug)

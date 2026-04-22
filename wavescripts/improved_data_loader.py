@@ -61,6 +61,18 @@ NON_FLOAT_COLUMNS = {
     "signal_confidence_12400/340": str,
     "signal_confidence_8804/250":  str,
     "signal_confidence_8804/170":  str,
+    # Per-cycle amplitude lists — one entry per zero-upcrossing cycle inside the
+    # analysis window. Object dtype so apply_dtypes preserves the Python list
+    # (pd.to_numeric would coerce it to NaN). Summary stats (mean, std, n) are
+    # stored as normal floats in separate columns.
+    "Probe 9373/170 Amplitude cycles list":  object,
+    "Probe 9373/250 Amplitude cycles list":  object,
+    "Probe 9373/340 Amplitude cycles list":  object,
+    "Probe 12400/170 Amplitude cycles list": object,
+    "Probe 12400/250 Amplitude cycles list": object,
+    "Probe 12400/340 Amplitude cycles list": object,
+    "Probe 8804/250 Amplitude cycles list":  object,
+    "Probe 8804/170 Amplitude cycles list":  object,
 }
 
 # ── Run category classification ───────────────────────────────────────────────
