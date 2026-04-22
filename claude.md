@@ -710,6 +710,19 @@ At 580 mm depth, the regime depends on frequency. Higher frequencies (shorter λ
 - Propose a branch name (`exp/<topic>`) for any non-trivial change
 - If this file disagrees with the actual code, ask for clarification
 
+### Observation-vs-inference discipline (durable rule)
+
+**Documentation in this project reports observations. Explanations of WHY are kept separate and clearly flagged as hypotheses.**
+
+- State numbers, patterns, correlations as observed.
+- If a mechanism is offered, mark it `*Candidate explanation (hypothesis)*:` and keep it on a separate line / paragraph from the observation.
+- Do NOT use causal phrasing ("this causes", "this is because", "this was chosen to") unless the causal link has been directly tested in the current data.
+- Do NOT attribute design intent to past choices unless there is documented intent. N=10 periods is what H&G (2000) used; *why* is a candidate explanation, not a fact.
+- Titles and descriptions that embed a causal claim are bugs. Prefer "X is observed to have Y" over "X does Y because Z".
+- When updating a memo after a correction, add an "Observations" section and leave old inferential text as "retained for historical context". Don't silently rewrite past claims into correct ones — the revision itself is data.
+
+Past mistake this rule exists to prevent (2026-04-22): a session memo claimed "H&G window kills the peak-bin bias by construction". A reviewer pointed out that the pre-H&G SNARVEI pipeline also produced integer-cycle windows (via zero-upcrossing snap), so both eras have coherent sampling. The bias was theoretical in both cases, and the memo's framing overstated what the data showed. Lesson: if the observation is "4 methods agree to 0.04 %", write that — not "the H&G window solves the problem".
+
 
 
 # TODO 20. april: - need a variant of a windprofile plot which is perfectly square. Im trying to copy the profile in VOLLESTAD: '/Users/ole/Kodevik/wave_litterature_backup/Vollestad and Jensen - 2021 - Modification of Airflow Structure Due to Wave Breaking on a Submerged Topography.pdf'

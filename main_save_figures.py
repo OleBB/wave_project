@@ -61,6 +61,10 @@ CHAPTER 04 — METHODOLOGY
   §4e   ch04_sliding_afft_stability      [DELEG] ✓  Sliding-window FFT stability at IN probe
   §4f   ch04_reconstruction_AvsB         [DELEG] ✓  Peak-bin (A) vs band-integrated (B) equivalence
   §4g   ch04_reconstruction_pure_wind    [DELEG] ✓  Pure wind via no-wind residual subtraction
+  §4h   ch04_fft_method_comparison       [DELEG] ~  4-method FFT comparison (nearest/parabolic/goertzel/ls_fit)
+  §4i   ch04_fft_window_length_sens      [DELEG] ~  Window-length sensitivity (N ∈ {5,8,10,12,15,20})
+  §4j   ch04_fft_window_position_sens    [DELEG] ~  Window-position sensitivity (T_ref ∈ [40,80]T)
+  §4k   ch04_fft_window_position_trace   [DELEG] ~  Visual: sweep windows overlaid on η(t)
   §5    ch04_timeseries_overview         [DFS]   ~  Full time-series with stable-window band  (below heavy gate)
   §6    ch04_first_arrival               [DFS]   ~  First wave arrival vs probe distance      (below heavy gate)
   §7    ch04_wave_stability              [META]  ~  Wave stability and period_cv vs frequency
@@ -1016,6 +1020,119 @@ _run_delegated_if_missing(
     [Path("output/FIGURES/ch04_reconstruction_pure_wind.pdf"),
      Path("output/TEXFIGU/ch04_reconstruction_pure_wind.tex")],
     label="ch04_reconstruction_pure_wind",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/fft_method_comparison.py
+"""
+── CH04 § 4h — FFT amplitude extraction, 4-method comparison ────────────────
+Observation: on 128 per-probe nowind measurements (canon March-2026 lowrange
+folders, 5 frequencies), the four methods `nearest_bin` / `parabolic` /
+`goertzel` / `ls_fit` agree within 0.4 % max and 0.04 % median. On synthetic
+pure-tone sweeps with non-integer-cycle windows, `nearest_bin` shows up to
+38 % sinc attenuation at half-bin offsets; `goertzel` and `ls_fit` stay
+< 1 %.
+
+Candidate explanation (hypothesis, not verified): the H&G 10-period window
+produces bin k=10 within 0.03 bin widths of f_paddle, so the nearest-bin
+reading approaches the unbiased DFT value for an integer-cycle tone.
+
+Script uses only the two canon folders — no full-dataset load required.
+Current outputs live in analysis_scratch/ (PNG + findings.md); PDF + TEX
+promotion to output/ is pending.
+
+See: analysis_scratch/fft_method_comparison_findings.md
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/fft_method_comparison.py",
+    [Path("analysis_scratch/fft_method_comparison.png"),
+     Path("analysis_scratch/fft_method_comparison_findings.md")],
+    label="ch04_fft_method_comparison",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/fft_window_sensitivity_lsfit.py
+"""
+── CH04 § 4i — Window-length sensitivity (N ∈ {5, 8, 10, 12, 15, 20}) ───────
+Observation: across 51 per240 fullpanel runs in the canon March-2026
+lowrange folders, median OUT/IN drift relative to the pipeline default
+N=10 periods stays ≤ 1 % at every N ∈ {5, 8, 12, 15, 20} for both nowind
+and fullwind. Max |drift| (excluding one run with RECON-aborted probe
+quality) is < 5 %.
+
+Candidate explanation (hypothesis): N=10 sits within a wider plateau
+[8, 15]p of interchangeable window lengths.
+
+Complements earlier per240 window-size study
+(analysis_scratch/paddle_contamination_window_sensitivity.csv from
+2026-04-21, which tested N ∈ [20, 100]p and found max drift 1.17 %).
+
+Script uses only the two canon folders. PDF/TEX promotion pending.
+
+See: analysis_scratch/fft_window_sensitivity_lsfit_findings.md
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/fft_window_sensitivity_lsfit.py",
+    [Path("analysis_scratch/fft_window_sensitivity_lsfit.png"),
+     Path("analysis_scratch/fft_window_sensitivity_lsfit_findings.md")],
+    label="ch04_fft_window_length_sens",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/fft_window_position_sensitivity_lsfit.py
+"""
+── CH04 § 4j — Window-position sensitivity (T_ref ∈ [40, 80]T) ──────────────
+Observation: sliding a fixed 10-period window across T_ref from 40 to 80
+periods (1T step), 51 per240 runs show three drift patterns relative to
+the pipeline default T_ref=50T:
+
+  - Nowind: −3.3 % at T_ref=40T; within ±0.6 % for T_ref ∈ [45, 65]T.
+  - Fullwind: within ±1 % for T_ref ∈ [40, 55]T; monotonically negative
+    from T_ref=55T, reaching −2.7 % at T_ref=80T.
+  - Intersection of sub-1 % windows (both conditions): T_ref ∈ [45, 55]T.
+
+Candidate explanations (hypotheses, not verified in this sweep):
+Region 1 (T_ref < 45T nowind) may overlap wave-envelope build-up at OUT
+(ref. memory note "envelope-back arrives at r=12.4 m at t ≈ 31 T"). Region 3
+(T_ref > 55T fullwind) is consistent with a time-dependent A_in
+wind-enhancement extending the static effect documented in
+methodology_wind_enhances_A_in.md. Other mechanisms (reflections, wind
+ramp profile, probe-specific response) not ruled out.
+
+Script uses only the two canon folders. PDF/TEX promotion pending.
+
+See: analysis_scratch/fft_window_position_sensitivity_lsfit_findings.md
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/fft_window_position_sensitivity_lsfit.py",
+    [Path("analysis_scratch/fft_window_position_sensitivity_lsfit.png"),
+     Path("analysis_scratch/fft_window_position_sensitivity_lsfit_findings.md")],
+    label="ch04_fft_window_position_sens",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/fft_window_position_sensitivity_trace.py
+"""
+── CH04 § 4k — Visual: sweep windows overlaid on η(t) ───────────────────────
+Pedagogical companion to §4j. Shows the actual probe time series (f=1.4 Hz,
+A=0.2 V per240) from the canon March-2026 folders, with 9 representative
+window positions (T_ref ∈ {40, 45, …, 80}T, every 5T) drawn as coloured
+rectangles. Pipeline default T_ref=50T highlighted.
+
+Layout: 2 rows (nowind, fullwind) × 2 cols (IN 9373/170, OUT 12400/250).
+Probe-shift (ΔT ≈ 7.59 periods at 1.4 Hz between OUT and IN) is visible
+as a horizontal shift of the window rectangles between columns.
+
+Script uses only the two canon folders. PDF/TEX promotion pending.
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/fft_window_position_sensitivity_trace.py",
+    [Path("analysis_scratch/fft_window_position_sensitivity_trace.png")],
+    label="ch04_fft_window_position_trace",
 )
 
 # NOTE: CH04 §5 (ch04_timeseries_overview) and §6 (ch04_first_arrival) have
