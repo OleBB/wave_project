@@ -175,11 +175,24 @@ Every probe position is always written as `"longitudinal/lateral"` — even for 
 - Raw signal: `"Probe 9373/250"`
 - Processed elevation: `"eta_9373/250"`
 - Smoothed: `"Probe 9373/250_ma"`
-- Amplitude (time-domain, percentile): `"Probe 9373/250 Amplitude"` ← used by `plot_all_probes` and `damping_grouper`
-- FFT amplitude: `"Probe 9373/250 Amplitude (FFT)"`
-- PSD amplitude: `"Probe 9373/250 Amplitude (PSD)"`
 - FFT spectrum: `"FFT 9373/250"`, `"FFT 9373/250 complex"`
 - PSD spectrum: `"Pxx 9373/250"`
+
+**Amplitude columns — one per method**, all in mm, all at the same probe position:
+
+| column | what it measures | suffix convention |
+|---|---|---|
+| `"Probe 9373/250 Amplitude"` | (P99.5 − P0.5)/2 percentile over the whole window | **no suffix (legacy)** — TODO rename to `Amplitude (percentile)` for consistency; see `session_2026-04-22.md` follow-ups |
+| `"Probe 9373/250 Amplitude (FFT)"` | nearest-bin FFT magnitude at f_paddle | `(method)` |
+| `"Probe 9373/250 Amplitude (PSD)"` | integrated PSD variance over ±0.1 Hz | `(method)` |
+| `"Probe 9373/250 Amplitude (LS)"` | fundamental of LS sinusoid fit at f_paddle | `(method)` |
+| `"Probe 9373/250 Amplitude Stokes2 (LS)"` | 2nd-harmonic from same LS fit | `Stokes2 (method)` |
+| `"Probe 9373/250 Amplitude (cycles) {stat}"` | per-cycle (max − min)/2 between zero-upcrossings | `(cycles) mean/std/n/list` |
+| `"Probe 9373/250 Amplitude (phase) {stat}"` | per-cycle phase-locked sample at T/4 and 3T/4 | `(phase) mean/std/n/list` |
+
+`{stat}` in `cycles` and `phase` is one of `mean`, `std`, `n`, `list` (the `list` column is a Python list, protected by `NON_FLOAT_COLUMNS`).
+
+**Canonical suffix pattern going forward**: `(method_tag) [stat]` with method_tag in parentheses. Legacy `Amplitude` with no suffix remains in downstream plotter code (`plot_all_probes`, `damping_grouper`) until the rename is carried out.
 
 **Do not** reintroduce probe numbers (1–4) in user-facing code.
 

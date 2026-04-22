@@ -917,10 +917,11 @@ def run_find_wave_ranges(
     # column does not yet exist with an object-compatible dtype — pandas
     # interprets the list as multiple values targeting multiple cells.
     for _pos_init in cfg.probe_col_names().values():
-        _list_col = f"Probe {_pos_init} Amplitude cycles list"
-        if _list_col not in meta_sel.columns:
-            meta_sel[_list_col] = pd.Series([None] * len(meta_sel),
-                                            index=meta_sel.index, dtype=object)
+        for _suffix in ("(cycles) list", "(phase) list"):
+            _list_col = f"Probe {_pos_init} Amplitude {_suffix}"
+            if _list_col not in meta_sel.columns:
+                meta_sel[_list_col] = pd.Series([None] * len(meta_sel),
+                                                index=meta_sel.index, dtype=object)
     col_names = cfg.probe_col_names()  # {1: "9373/170", ...}
     for idx, row in meta_sel.iterrows():
         path = row["path"]
@@ -950,8 +951,25 @@ def run_find_wave_ranges(
                 # Use PCHIP-interpolated signal for wave quality metrics so that NaN
                 # gaps (from spike/drift filter) do not propagate into the FFT and
                 # produce spurious NaN wave_stability values.
-                interp_col = f"eta_{pos}_interp"
-                sig_col = interp_col if interp_col in df.columns else probe_col
+                #
+                # Fallback chain:
+                #   1. eta_{pos}_interp — zeroed + pchip-filled (preferred, correct sign)
+                #   2. eta_{pos}         — zeroed, may have NaN gaps (correct sign)
+                #   3. probe_col         — raw ULS distance (INVERTED sign vs elevation;
+                #                          only used if both eta_ columns are absent)
+                #
+                # For the sign-invariant metrics (wave_stability, Hm0, Hs,
+                # period_amplitude_cv, cycles mean) the choice does not matter.
+                # For Amplitude (phase) — which reads signed values at T/4 / 3T/4 —
+                # the sign must be elevation-like, so we never want probe_col.
+                eta_interp_col = f"eta_{pos}_interp"
+                eta_col        = f"eta_{pos}"
+                if eta_interp_col in df.columns:
+                    sig_col = eta_interp_col
+                elif eta_col in df.columns:
+                    sig_col = eta_col
+                else:
+                    sig_col = probe_col
                 sig = df[sig_col].values[start:end]
 
                 # 1. wave_stability: autocorrelation at lag = 1 period (FFT-based, O(n log n))
@@ -1010,16 +1028,56 @@ def run_find_wave_ranges(
                 meta_sel.loc[idx, f"Probe {pos} Significant Wave Height Hm0"] = hm0
                 meta_sel.loc[idx, f"Probe {pos} Significant Wave Height Hs"]  = hs
 
-                # Per-cycle amplitude — every zero-upcrossing-to-upcrossing cycle's
-                # (max − min)/2 as an explicit list, plus summary stats for
-                # convenience filtering. Raw list lets us inspect cycle-to-cycle
-                # variability without re-running the pipeline.
+                # Per-cycle (max − min)/2 — one reading per zero-upcrossing-to-
+                # upcrossing cycle. Captures paddle + anything riding on top.
                 mean_cyc = float(np.mean(cycle_amplitudes)) if cycle_amplitudes else np.nan
                 std_cyc  = float(np.std(cycle_amplitudes))  if len(cycle_amplitudes) > 1 else np.nan
-                meta_sel.at[idx, f"Probe {pos} Amplitude (cycles)"]      = mean_cyc
-                meta_sel.at[idx, f"Probe {pos} Amplitude cycles std"]    = std_cyc
-                meta_sel.at[idx, f"Probe {pos} Amplitude cycles n"]      = len(cycle_amplitudes)
-                meta_sel.at[idx, f"Probe {pos} Amplitude cycles list"]   = cycle_amplitudes
+                meta_sel.at[idx, f"Probe {pos} Amplitude (cycles) mean"] = mean_cyc
+                meta_sel.at[idx, f"Probe {pos} Amplitude (cycles) std"]  = std_cyc
+                meta_sel.at[idx, f"Probe {pos} Amplitude (cycles) n"]    = len(cycle_amplitudes)
+                meta_sel.at[idx, f"Probe {pos} Amplitude (cycles) list"] = cycle_amplitudes
+
+                # Phase-locked amplitude — per-cycle reading at the expected crest
+                # and trough of the eta signal. The `upcrossings` array was
+                # detected on the RAW ULS distance signal in find_wave_range;
+                # since raw-ULS is inverted relative to eta (distance ↓ ⇔
+                # elevation ↑), a raw-upcrossing is an eta-downcrossing. Inside
+                # each cycle [u0, u1] the eta signal therefore goes:
+                #   u0    : crosses from positive to near zero (downcrossing)
+                #   u0+T/4: trough (eta minimum)
+                #   u0+T/2: crosses from negative to near zero (upcrossing)
+                #   u0+3T/4: crest (eta maximum)
+                # so crest_idx = u0 + 3·T/4 and trough_idx = u0 + T/4.
+                #
+                # For a pure sinusoid this recovers the amplitude exactly;
+                # noise / Stokes distortion introduces its own bias profile —
+                # see session_2026-04-22.md for the cross-method discussion.
+                phase_amplitudes: list[float] = []
+                if upcrossings is not None and len(upcrossings) >= 2:
+                    for j in range(len(upcrossings) - 1):
+                        u0 = upcrossings[j] - start
+                        u1 = upcrossings[j + 1] - start
+                        if u0 < 0 or u1 > n:
+                            continue
+                        T_cyc = u1 - u0
+                        if T_cyc < 4:
+                            continue
+                        trough_idx = u0 + T_cyc // 4
+                        crest_idx  = u0 + (3 * T_cyc) // 4
+                        if crest_idx >= n or trough_idx >= n:
+                            continue
+                        s_crest  = sig[crest_idx]
+                        s_trough = sig[trough_idx]
+                        if not (np.isfinite(s_crest) and np.isfinite(s_trough)):
+                            continue
+                        phase_amplitudes.append(float((s_crest - s_trough) / 2.0))
+
+                mean_phase = float(np.mean(phase_amplitudes)) if phase_amplitudes else np.nan
+                std_phase  = float(np.std(phase_amplitudes))  if len(phase_amplitudes) > 1 else np.nan
+                meta_sel.at[idx, f"Probe {pos} Amplitude (phase) mean"] = mean_phase
+                meta_sel.at[idx, f"Probe {pos} Amplitude (phase) std"]  = std_phase
+                meta_sel.at[idx, f"Probe {pos} Amplitude (phase) n"]    = len(phase_amplitudes)
+                meta_sel.at[idx, f"Probe {pos} Amplitude (phase) list"] = phase_amplitudes
 
         if debug and start:
             print(f'start: {start}, end: {end}, debug: {debug_info}')

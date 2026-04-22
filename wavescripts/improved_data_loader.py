@@ -65,14 +65,26 @@ NON_FLOAT_COLUMNS = {
     # analysis window. Object dtype so apply_dtypes preserves the Python list
     # (pd.to_numeric would coerce it to NaN). Summary stats (mean, std, n) are
     # stored as normal floats in separate columns.
-    "Probe 9373/170 Amplitude cycles list":  object,
-    "Probe 9373/250 Amplitude cycles list":  object,
-    "Probe 9373/340 Amplitude cycles list":  object,
-    "Probe 12400/170 Amplitude cycles list": object,
-    "Probe 12400/250 Amplitude cycles list": object,
-    "Probe 12400/340 Amplitude cycles list": object,
-    "Probe 8804/250 Amplitude cycles list":  object,
-    "Probe 8804/170 Amplitude cycles list":  object,
+    #
+    # (cycles): reading per cycle = (max − min) / 2 within the cycle.
+    # (phase):  reading per cycle = (sig[u+T/4] − sig[u+3T/4]) / 2; phase-locked
+    #           quarter-period sampling, recovers A exactly for a pure sinusoid.
+    "Probe 9373/170 Amplitude (cycles) list":  object,
+    "Probe 9373/250 Amplitude (cycles) list":  object,
+    "Probe 9373/340 Amplitude (cycles) list":  object,
+    "Probe 12400/170 Amplitude (cycles) list": object,
+    "Probe 12400/250 Amplitude (cycles) list": object,
+    "Probe 12400/340 Amplitude (cycles) list": object,
+    "Probe 8804/250 Amplitude (cycles) list":  object,
+    "Probe 8804/170 Amplitude (cycles) list":  object,
+    "Probe 9373/170 Amplitude (phase) list":   object,
+    "Probe 9373/250 Amplitude (phase) list":   object,
+    "Probe 9373/340 Amplitude (phase) list":   object,
+    "Probe 12400/170 Amplitude (phase) list":  object,
+    "Probe 12400/250 Amplitude (phase) list":  object,
+    "Probe 12400/340 Amplitude (phase) list":  object,
+    "Probe 8804/250 Amplitude (phase) list":   object,
+    "Probe 8804/170 Amplitude (phase) list":   object,
 }
 
 # ── Run category classification ───────────────────────────────────────────────
