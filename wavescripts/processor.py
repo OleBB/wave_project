@@ -938,6 +938,16 @@ def run_find_wave_ranges(
             meta_sel.loc[idx, f"Computed Probe {pos} start"] = start
             meta_sel.loc[idx, f"Computed Probe {pos} end"] = end
 
+            # H&G snap diagnostics: the difference between the theoretical
+            # probe-shifted H&G window and the upcrossing-snapped window
+            # actually used. Helps assess how well our c_group-based
+            # travel-time estimate matches the physical wave arrival, and
+            # lets us compare nowind vs fullwind alignment separately.
+            if debug_info is not None:
+                meta_sel.loc[idx, f"Probe {pos} hg_expected_start"] = debug_info.get("hg_expected_start")
+                meta_sel.loc[idx, f"Probe {pos} hg_expected_end"]   = debug_info.get("hg_expected_end")
+                meta_sel.loc[idx, f"Probe {pos} hg_snap_shift"]     = debug_info.get("hg_snap_shift_samples")
+
             # Wave quality metrics from upcrossings
             if (
                 debug_info is not None
