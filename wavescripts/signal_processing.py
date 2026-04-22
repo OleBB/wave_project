@@ -154,6 +154,22 @@ def _compute_matrix_amplitudes(matrix: np.ndarray) -> list[float]:
     
     return amplitudes.tolist()
 
+def _ensure_probe_columns(df: pd.DataFrame, col_names: dict, suffixes: list[str]) -> pd.DataFrame:
+    """Guarantee every ``Probe {pos} {suffix}`` column exists (NaN where absent).
+
+    Downstream code in ``processor._update_all_metrics`` indexes these columns
+    directly; if every run in a dataset skipped a probe (e.g. H&G window did
+    not fit a short recording), the column would otherwise be missing and
+    raise KeyError.
+    """
+    expected = ["path"] + [
+        f"Probe {pos} {suffix}"
+        for pos in col_names.values()
+        for suffix in suffixes
+    ]
+    return df.reindex(columns=expected)
+
+
 def compute_amplitudes(
     processed_dfs: dict,
     meta_row: pd.DataFrame,
@@ -183,7 +199,7 @@ def compute_amplitudes(
 
             records.append(row_out)
 
-    return pd.DataFrame.from_records(records)
+    return _ensure_probe_columns(pd.DataFrame.from_records(records), col_names, ["Amplitude"])
 
 # %% - PSD og FFT
 def get_positive_spectrum(fft_df):
@@ -288,7 +304,7 @@ def compute_psd_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg
 
     if debug:
         print(f"=== PSD Complete: {len(amplitude_records)} records ===\n")
-    return psd_dict, pd.DataFrame(amplitude_records)
+    return psd_dict, _ensure_probe_columns(pd.DataFrame(amplitude_records), col_names, ["Amplitude (PSD)"])
 
 def compute_nowave_psd(
     processed_dfs: dict,
@@ -397,7 +413,11 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg
     if debug:
         print(f"=== FFT Complete: {len(amplitude_records)} records ===\n")
 
-    return fft_dict, pd.DataFrame(amplitude_records)
+    return fft_dict, _ensure_probe_columns(
+        pd.DataFrame(amplitude_records),
+        col_names,
+        ["Amplitude (FFT)", "Frequency (FFT)", "WavePeriod (FFT)"],
+    )
 
 
 # -----------------------------------------------------------------------------

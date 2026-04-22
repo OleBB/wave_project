@@ -192,6 +192,10 @@ for i, data_path in enumerate(dataset_paths):
             total_reset=total_reset,
         )
 
+        if meta is None or len(meta) == 0:
+            print(f"  ⚠ No files remain after filtering — skipping {data_path.name}")
+            continue
+
         meta_sel = filter_chosen_files(meta, processvariables)
 
         processed_dfs, meta_sel, psd_dictionary, fft_dictionary = process_selected_data(

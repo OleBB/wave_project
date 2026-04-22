@@ -993,6 +993,16 @@ def get_data_files(folder: Path) -> Iterator[Path]:
         # Filter out stats files
         matches = [m for m in matches if not m.name.endswith(".stats.csv")]
 
+        # per15 / per30 runs are exploratory: too short for the H&G [50T, 60T]
+        # analysis window, and they only confuse the main results. Exclude at
+        # discovery so they never enter the pipeline.
+        _exploratory = ("per15", "per30")
+        before = len(matches)
+        matches = [m for m in matches if not any(tag in m.name for tag in _exploratory)]
+        dropped = before - len(matches)
+        if dropped:
+            print(f"  Skipped {dropped} exploratory ({'/'.join(_exploratory)}) files")
+
         if matches:
             print(f"  Found {len(matches)} files with pattern {pat}")
             total += len(matches)
@@ -1099,6 +1109,16 @@ def load_or_update(
             print(f"   No cache found, loading all CSVs")
             csv_files = list(get_data_files(folder_path))
             dfs = _load_csv_files(csv_files, experiment_name)
+
+        # Drop any cached per15/per30 DataFrames that slipped in from older
+        # caches predating the discovery-time filter in get_data_files().
+        # Keeps the runtime dfs dict consistent with the analysis scope.
+        _exploratory = ("per15", "per30")
+        _stale = [p for p in dfs if any(tag in Path(p).name for tag in _exploratory)]
+        if _stale:
+            print(f"   Dropping {len(_stale)} exploratory ({'/'.join(_exploratory)}) DataFrame(s) from cache")
+            for p in _stale:
+                del dfs[p]
 
         # ============================================================
         # Step 2: Compute or recompute metadata (meta.json)
