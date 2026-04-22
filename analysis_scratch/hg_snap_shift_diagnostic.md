@@ -247,6 +247,50 @@ To go further: the amplitude-dependence in Table 3 is the most useful
 discriminator — if shift magnitude scales with amplitude, H4 / H5 gain
 support; if flat, H6 or H3 (rejected for different reasons) are in play.
 
+## Sanity check: are 9373/170 and 9373/340 really parallel?
+
+If the two "parallel" probes are at the same longitudinal distance (= 9373 mm
+from paddle), they should see the same wave phase at the same absolute
+sample. The snap-shift array gives us a direct per-run pairwise test:
+
+```
+delta = (Probe 9373/170 hg_snap_shift) - (Probe 9373/340 hg_snap_shift)   [samples]
+```
+
+If truly parallel → delta ≈ 0 per run (up to probe-specific noise).
+
+Filtered to thesis freqs 1.3-1.7 Hz, quality=ok (n = 83):
+
+| condition       | median delta | std delta | zero-delta rate |
+|-----------------|--------------|-----------|-----------------|
+| nowind  (n=32)  | +1 sample    | 1.6       | 25.0 %          |
+| fullwind (n=51) | +1 sample    | 10.3      | 7.8 %           |
+
+1 sample at 250 Hz = 4 ms. Under deep-water `c_g ≈ 0.55 m/s`, 4 ms of travel
+time corresponds to ~2.2 mm longitudinal offset.
+
+**Under nowind**: median = +1 sample → ~2 mm longitudinal difference at most.
+25 % of runs snap to the IDENTICAL sample. Std = 1.6 samples means typical
+per-run difference is within ±2 samples = ±4 mm equivalent. Probes are
+parallel to ~2 mm tolerance.
+
+**Under fullwind**: median unchanged (+1 sample), but std blows up to 10
+samples. Wind-induced noise causes the detected upcrossings to jitter between
+adjacent candidate samples on one probe vs the other. Not a physical position
+change — just upcrossing-detection jitter on noisy signals.
+
+**Candidate explanations for the +1-sample median offset** (not verified;
+any or none could be right):
+- H7a — genuine mechanical mounting offset of ~2 mm between the two probes
+- H7b — probe-specific ULS electronic response lag of ~4 ms between channels
+- H7c — systematic algorithmic bias in upcrossing detection on two independent
+        noise realisations of the same wave
+
+Distinguishing these would need a bench measurement (lag) or precise optical
+survey (position).
+
+**Verdict**: probes are effectively parallel for all practical analysis.
+
 ## For another agent wanting to re-derive these numbers
 
 1. Re-run this script (no arguments): `python analysis_scratch/hg_snap_shift_diagnostic.py`
