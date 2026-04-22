@@ -291,6 +291,26 @@ survey (position).
 
 **Verdict**: probes are effectively parallel for all practical analysis.
 
+### Implication for the canonical-IN averaging decision
+
+The pipeline's canonical IN is `mean(9373/170, 9373/340)` for the
+`march2026_better_rearranging` config. Two independent lines of evidence
+support this choice:
+
+1. **Amplitude agreement** — existing methodology figure
+   `ch04_parallel_probe_agreement` (`analysis_scratch/parallel_probe_agreement.py`):
+   the two probes agree within ±5 % under nowind and ±10 % under
+   fullwind 0.2–0.3 V. Averaging reduces single-probe noise.
+
+2. **Phase agreement** (this diagnostic): the two probes snap to the
+   same upcrossing sample (or within ±1) for the majority of nowind
+   runs. They literally see the same wavefront at the same time.
+
+The mean-IN is not smoothing over two different measurements — it is
+averaging two independent readings of the same physical quantity. The
+two probes provide statistical noise reduction, not spatial averaging.
+This is the stronger (and physically cleaner) justification.
+
 ## For another agent wanting to re-derive these numbers
 
 1. Re-run this script (no arguments): `python analysis_scratch/hg_snap_shift_diagnostic.py`
