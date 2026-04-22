@@ -244,28 +244,32 @@ The single-probe ratio (old behaviour) is gone — it's replaced everywhere in m
 
 `_compute_matrix_amplitudes` in `signal_processing.py` builds a matrix of probe samples and calls `np.nanpercentile`. If `np.percentile` (without `nan`) is used instead, **any probe with even 1 NaN sample in its range gets NaN amplitude** — including all nowave runs (which use the full signal range). Fixed by changing to `np.nanpercentile`.
 
-### Stale `OUT/IN (FFT)` in meta.json
+### Stale `OUT/IN (FFT)` in meta.json (historical; resolved for current pipeline)
 
-`meta.json` may contain `OUT/IN (FFT)` values computed with an old wide FFT window (`0.5 Hz`, `argmax`) that picks up wind-wave peaks instead of paddle-wave peaks. Do not trust cached `OUT/IN (FFT)`.
+Historical note: pre-2026-04-18 `meta.json` files contained `OUT/IN (FFT)` computed with an old wide FFT window (0.5 Hz, argmax) that picked up wind-wave peaks instead of paddle. After the canonicalization session (2026-04-18) the canonical `IN Amplitude (FFT)` / `OUT Amplitude (FFT)` columns are computed by `processor2nd.py::_update_more_metrics` using the narrow (0.1 Hz, nearest-bin) method — safe to trust on any cache rebuilt after that date.
 
-`damping_grouper` now recomputes OUT/IN on-the-fly from `"Probe {pos} Amplitude (FFT)"` columns (paddle frequency, narrow 0.1 Hz window). It falls back to the cached value only if recomputation yields 0 valid rows (prints a diagnostic).
+`damping_grouper` (`filters.py`) recomputes OUT/IN on-the-fly from the canonical `IN Amplitude (FFT)` / `OUT Amplitude (FFT)` columns, not from per-probe `Probe {in_position} Amplitude (FFT)` anymore. It falls back to the cached `OUT/IN (FFT)` only if the canonical columns are missing (prints a diagnostic).
 
-### Two amplitude types — not interchangeable
+### Six amplitude methods — not interchangeable
 
-| Column | Source | Used by |
-|--------|--------|---------|
-| `"Probe {pos} Amplitude"` | Percentile of time-domain signal | `plot_all_probes` |
-| `"Probe {pos} Amplitude (FFT)"` | FFT peak near target frequency | Old OUT/IN cached values |
+| Column | Source | What it sees |
+|--------|--------|--------------|
+| `"Probe {pos} Amplitude"` | (P99.5−P0.5)/2 of time-domain signal, whole window | Paddle + wind + Stokes — **legacy**; rename to `(percentile)` deferred; see §5 table |
+| `"Probe {pos} Amplitude (FFT)"` | nearest-bin magnitude at f_paddle | Paddle tone only (FFT filters everything else) |
+| `"Probe {pos} Amplitude (PSD)"` | integrated PSD variance over ±0.1 Hz | Paddle tone + broadband tail in a 0.2 Hz band |
+| `"Probe {pos} Amplitude (LS)"` | LS sinusoid fit at exactly f_paddle | Paddle tone only — bin-grid-independent |
+| `"Probe {pos} Amplitude (cycles) mean"` | per-cycle `(max − min)/2` from zero-upcrossings | Paddle + wind-on-top, per cycle |
+| `"Probe {pos} Amplitude (phase) mean"` | per-cycle sample reading at `u+T/4`, `u+3T/4` | Paddle tone's quarter-period amplitude |
 
-Always use `"Probe {pos} Amplitude"` (no suffix) for OUT/IN ratio computation.
+**OUT/IN uses `(FFT)` or `(LS)` — never the time-domain methods.** See §5 for the full suffix convention; see CH04 §4h comparison figure for cross-method agreement (< 0.4 % on 128 nowind measurements).
 
 ### FFT amplitude window
 
 `compute_amplitudes_from_fft` uses `window=0.1` Hz and `argmin(abs(masked_freqs - target_freq))` (nearest bin). Old code used `window=0.5` Hz + `argmax`, which picked up wind-wave peaks for low-amplitude runs.
 
-### `_SNARVEI` probe name matching
+### `_SNARVEI` probe name matching — archived
 
-`find_wave_range` in `wave_detection.py` uses `_PROBE_GROUP` dict to map all lateral variants of a probe to a distance group (e.g. `"Probe 12400/170"` → `"12400"`). If a new probe position is added, it **must** be added to `_PROBE_GROUP` — otherwise range detection falls back to `2 * samples_per_period` (stillwater phase), giving near-zero amplitudes and OUT/IN ≈ 0.1.
+The old `_SNARVEI_CALIB` + `_PROBE_GROUP` eyeballed calibration was replaced by the deterministic H&G window + ±T snap in 2026-04-21 (see §7). Archived data lives in `constants.py` as `SNARVEI_ARCHIVE_START` / `_SNARVEI_ARCHIVE_END` and is still referenced by `RampDetectionBrowser` for visual calibration, but `find_wave_range` no longer uses it. Adding a new probe position no longer requires updating `_PROBE_GROUP` — `find_wave_range` derives the distance from the probe column name directly.
 
 ### Lessons from 2026-04-18 (big canonicalization session)
 
@@ -283,32 +287,42 @@ General principles learned the hard way this day — worth internalising before 
 
 ---
 
-## 7. Wave range detection (`_SNARVEI_CALIB`)
+## 7. Wave range detection (H&G window + ±T upcrossing snap)
 
-Defined in `wavescripts/wave_detection.py`. Multi-point linear interpolation of stable-wave start sample vs frequency, calibrated by eyeballing `RampDetectionBrowser`.
+Two-step procedure in `wavescripts/wave_detection.py::find_wave_range`:
+
+### Step 1 — probe-shifted Huseby & Grue window (deterministic)
 
 ```python
-_SNARVEI_CALIB = {
-    "8804":  [(0.65, 3975), (1.30, 4700), (1.80, 6000)],
-    "9373":  [(0.65, 4075), (0.70, 3750), (1.30, 4800), (1.60, 5500)],
-    "11800": [(0.65, 4030), (0.70, 4150), (1.30, 6160), (1.60, 6700)],  # march2026_rearranging only; needs eyeballing
-    "12400": [(0.65, 4020), (0.70, 4250), (1.30, 6500), (1.60, 7000)],
-}
+_start_T, _end_T = hg_window_for_probe(r_probe_m, f_paddle)
+good_start_idx   = round(_start_T * samples_per_period)
+good_end_idx     = round(_end_T   * samples_per_period)
 ```
 
-**Key insight**: ramp-up duration (13–20 periods) dominates the start time — wave travel time (< 5 s) is a minor secondary effect. All probes in a run see their first stable peak at nearly the same sample index, with only a small per-probe offset from travel time. The "first stable peak" is the second visible peak in the ramp: the first peak is still part of the wavemaker's soft-start program and is unreliable.
+Window length is ALWAYS `10 × samples_per_period` samples (10 wave periods). The H&G reference `[50·T, 60·T]` is anchored at **r = 12.400 m** (HG.REF_R_M; corresponds to our OUT probe / the rail position, which is ~10 mm closer to paddle than H&G 2000's actual 12.41 m — the 10 mm gives a global ~0.026 T offset that doesn't matter for analysis; see `analysis_scratch/hg_snap_shift_diagnostic.md`).
 
-- Format: `(freq_hz, start_sample)` sorted by frequency; samples at 250 Hz (ms / 4)
-- Interpolates linearly between points; extrapolates linearly beyond the range
-- `_PROBE_GROUP` maps every probe column name variant to a distance group key
-- To add a calibration point: eyeball start in `RampDetectionBrowser`, convert ms → samples (/4), add tuple
-- `8804` group has 3 points (0.65, 1.30, 1.80 Hz) — extrapolates outside that range
+For probes closer to the paddle, the window is shifted **earlier** by `ΔT = (REF_R_M − r_probe) / c_group(f, depth) · f` periods. `c_group` uses the full dispersion `ω² = gk·tanh(kh)` with h = 0.58 m; at thesis frequencies (1.3–1.7 Hz) this matches the deep-water shortcut `g/(4πf)` to < 0.1 % — see `wavescripts/constants.py::c_group`.
+
+Result: at the OUT probe, the window spans samples `[50T, 60T]`. At the IN probe (r = 9.373 m, ΔT ≈ 7.6 periods at 1.4 Hz), it spans `[42.4T, 52.4T]` from wavemaker onset.
+
+### Step 2 — ±T upcrossing snap (pipeline default since commit `71e67c5`, 2026-04-22)
+
+After Step 1, the theoretical start is snapped to the **nearest zero-upcrossing of the raw ULS signal** within ±1 full wave period. Both window endpoints shift by the same amount (preserving the 10-period length). The snapped window is guaranteed to contain an integer number of cycles of the actual measured wave train — maximum FFT alignment.
+
+Result: `Computed Probe {pos} start/end` = snap-adjusted window (used by FFT / LS / cycles / phase). Three diagnostic columns per probe record the snap:
+- `Probe {pos} hg_expected_start` — pre-snap theoretical H&G start
+- `Probe {pos} hg_expected_end`   — pre-snap theoretical H&G end
+- `Probe {pos} hg_snap_shift`     — signed sample difference (snap − expected)
+
+Typical snap shifts observed on canon data: IN probes near ±0 (c_g formula well-matched), OUT probe consistently ~−0.2 T (a separate physics effect still under investigation — candidates H5 near-panel reflection / H6 probe-specific lag). Full analysis in `analysis_scratch/hg_snap_shift_diagnostic.md`.
+
+### Archived: `_SNARVEI_CALIB` (pre-2026-04-21)
+
+The old eyeballed start-sample calibration lives in `constants.py` as `SNARVEI_ARCHIVE_START` / `_SNARVEI_ARCHIVE_END`, retained for `RampDetectionBrowser` calibration reference but NOT used by the current pipeline. The SNARVEI pipeline also snapped to zero-upcrossings (start + end), so integer-cycle windows were coherent in that era too — the 40 % sinc worst case from `memory/methodology_fft_peak_bin_bias.md` was never realised in either pre- or post-H&G pipeline. See `memory/methodology_hg_window_kills_peak_bias.md`.
 
 ### TODO: investigate wavemaker ramp-up shape
 
-The wavemaker controller uses frequency-dependent acceleration profiles — higher frequencies have a different (longer?) soft-start program. This means the signal **before** the eyeballed good-start index is not simply "stillwater + linear ramp": it contains a wavemaker-programmed pre-ramp that varies by frequency.
-
-Before relying on the region before `good_start_idx` for anything (e.g. stillwater baseline, ramp characterization), we must understand what the controller actually does in that window. The `_SNARVEI_CALIB` start values are conservative eyeballs at the first clearly stable period — the true stable onset may be 1–2 periods earlier or later depending on frequency. Needs systematic inspection in `RampDetectionBrowser` across frequencies.
+The wavemaker controller uses frequency-dependent acceleration profiles — higher frequencies have a different (longer?) soft-start program. The region **before** `good_start_idx` is not simply "stillwater + linear ramp" but contains a wavemaker-programmed pre-ramp that varies with frequency. Worth systematic inspection in `RampDetectionBrowser` if anyone needs to use the ramp region for stillwater baseline or probe characterisation.
 
 ---
 
@@ -343,7 +357,7 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 - **`improved_data_loader.py`**: `ProbeConfiguration`, `PROBE_CONFIGS`, `load_analysis_data`, `load_processed_dfs`, `save_spectra_dicts`, `load_spectra_dicts`, `apply_dtypes`, `NON_FLOAT_COLUMNS`
 - **`processor.py`**: `process_selected_data` — full pipeline called by `main.py`
 - **`processor2nd.py`**: post-processing after main pipeline — sets `in_position`, `out_position`, `OUT/IN (FFT)`, band amplitudes
-- **`signal_processing.py`**: `compute_fft_with_amplitudes`, `compute_psd_with_amplitudes`, `compute_amplitudes_from_fft`
+- **`signal_processing.py`**: `compute_fft_with_amplitudes`, `compute_psd_with_amplitudes`, `compute_amplitudes_from_fft`, `compute_amplitudes_from_lsfit`, `compute_lsfit_with_amplitudes` (LS sinusoid fit + Stokes-2f, added 2026-04-22)
 - **`filters.py`**: `apply_experimental_filters`, `filter_for_frequencyspectrum`, `damping_grouper`, `damping_all_amplitude_grouper`
 - **`plotter.py`**: `plot_all_probes`, `plot_damping_freq`, `plot_frequency_spectrum`, `plot_reconstructed`, `plot_swell_scatter`
 - **`plot_quicklook.py`**: `explore_damping_vs_freq`, `explore_damping_vs_amp`, `save_interactive_plot` — no Qt, no save_plot
@@ -358,9 +372,8 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 
 `damping_grouper`:
 - Groups by: `WaveFrequencyInput [Hz]`, `WaveAmplitudeInput [Volt]`, `WindCondition`, `PanelCondition`, `Mooring`
-- Recomputes `OUT/IN` from `"Probe {in_position} Amplitude"` / `"Probe {out_position} Amplitude"` per row
-- Requires `in_position` and `out_position` to be valid strings in `combined_meta` (not NaN, not float)
-- Falls back to cached `OUT/IN (FFT)` with a diagnostic print if recompute fails
+- Recomputes `OUT/IN` per row from the canonical `IN Amplitude (FFT)` / `OUT Amplitude (FFT)` columns (which are themselves means of contributing probes at the same longitudinal distance; see §5 Canonical IN/OUT section)
+- Falls back to the cached `OUT/IN (FFT)` value only if the canonical columns are missing (prints a diagnostic)
 
 `damping_all_amplitude_grouper`: same grouping, but across all amplitude levels.
 
@@ -600,6 +613,18 @@ PHASE 3 — EXPORT (when a plot is ready)
                               → output/FIGURES/  (PDF + PGF)
                               → output/TEXFIGU/  (LaTeX stubs, written once)
 ```
+
+### `main_save_figures.py` — three-tier data-load gates (2026-04-22)
+
+For REPL iteration, `main_save_figures.py` splits data loads into three progressively heavier tiers. Cells are tagged accordingly — stop executing before the next gate if you don't need the heavier data:
+
+| Tier | Gate | Cost | What's loaded | Tag |
+|---|---|---|---|---|
+| 1 — Light | top of file | ~2 s | `combined_meta` + FFT/PSD dicts (all 25 folders) | `[META]` / `[DELEG]` / `[CSV]` |
+| 2 — Medium | MEDIUM LOAD GATE | ~45 s | + `processed_dfs` for the 2 canon March-2026 lowrange folders (~180 runs, ~12 MB) | `[DFS-canon]` |
+| 3 — Heavy | HEAVY LOAD GATE | ~+2 min | + remaining 23 folders' `processed_dfs` (~800 runs total, ~75 MB) | `[DFS-all]` |
+
+Gates track loaded folders via `_loaded_dirs` — re-running the medium gate is idempotent; the heavy gate loads only the delta on top of whatever's already in `processed_dfs`. Currently §5 / §6 are the only [DFS-canon] consumers; no [DFS-all] cells exist (D1 placeholder would be the first).
 
 ### Plotting script hierarchy
 
