@@ -2726,7 +2726,7 @@ if "inter_run_gap_s" in _sim_plot.columns:
 """notes, todo
 ... so the cold starts needs to account for periods, as the per240 will, in my estimation (but, really lets quantify this too)
 have a more stable amplitude.
-""""
+"""
 
 if "file_date" in _sim_all.columns:
     _sim_dated = _sim_all.dropna(subset=[_fft_in]).copy()

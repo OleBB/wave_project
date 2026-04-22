@@ -1,26 +1,68 @@
 %! TEX root = ../main.tex
-% ============================================================
+% ==============================================================
 % IMMUTABLE — generated automatically, do not edit this block
-%   script          : plotter.py
-%   plot_type       : probe_noise_floor
-%   chapter         : 04
-%   panel           : None
-%   wind            : None
-%   amplitude       : None
-%   frequency       : None
-%   probes          : None
-%   draft           : True
 %
-% DATASETS:
-%   PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
-%   PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+% — Provenance ───────────────────────────────────────────────────
+%   script            : plotter.py
+%   computed_in       : plotter.py::plot_probe_noise_floor (per-run Amplitude / Stillwater Std from combined_meta)
+%   plot_type         : probe_noise_floor
+%   data_class        : DFS
+%   generated_at      : 2026-04-22T19:45:55
+%   findings_doc      : 
 %
-% SUBFIGURES AVAILABLE:
-%   FIGURES/ch04_probe_noise_floor_group0.pdf
-%   FIGURES/ch04_probe_noise_floor_group1.pdf
-%   FIGURES/ch04_probe_noise_floor_group2.pdf
-%   FIGURES/ch04_probe_noise_floor_group3.pdf
-% ============================================================
+% — Thesis context ──────────────────────────────────────────────
+%   chapter           : 04
+%   caption_label     : fig:ch04_probe_noise_floor
+%   caption_short     : Stillwater 95\% noise amplitude $(P_{97.5} - P_{2.5})/2$ per ultrasound wave gauge, with no waves and no wind
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : 
+%   wind              : 
+%   amplitude [V]     : 
+%   frequency [Hz]    : 
+%   probes            : 
+%   run_category      : nowave_control
+%   quality_flag      : 
+%   mooring           : 
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_runs            : 637
+%   in_probes_used    : 9373/170+9373/340, 9373/250
+%   out_probes_used   : 11800/250, 12400/170+12400/340, 12400/250
+%   probe_configs     : initial_setup, march2026_better_rearranging, march2026_rearranging, nov_normalt_oppsett
+%   non_final_config_n: 169
+%   datasets        :
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%   run_paths       :
+%     (omitted — aggregate over > threshold runs, see datasets)
+%
+% — Method / numerical parameters ─────────────────────────────
+%   grouper           : stillwater aggregation (group_by=probe_height_mm,probe_range_mode)
+%   collapse_panels   : False
+%   fft_window_hz     : 0.1
+%   extra_params      : k_sigma=3.0, k_q=2.0, highlight_keyword='wavemakeroff-1hour', exclude_keywords=['nestenstille'], threshold=max(k_sigma·σ, k_q·q)
+%
+% — Summary stats cited in caption ────────────────────────────
+%   stat:n_groups     : 4
+%   stat:n_probes     : 4
+%   stat:k_sigma      : 3.0
+%   stat:k_q          : 2.0
+%   stat:noise_mm_9373/170 : 0.146
+%   stat:threshold_mm_9373/170 : 0.23
+%   stat:noise_mm_12400/250 : 0.132
+%   stat:threshold_mm_12400/250 : 0.191
+%   stat:noise_mm_9373/340 : 0.098
+%   stat:threshold_mm_9373/340 : 0.163
+%   stat:noise_mm_8804/250 : 0.135
+%   stat:threshold_mm_8804/250 : 0.182
+%
+% — Subfigures available ───────────────────────────────────────
+%     FIGURES/ch04_probe_noise_floor_group0.pdf
+%     FIGURES/ch04_probe_noise_floor_group1.pdf
+%     FIGURES/ch04_probe_noise_floor_group2.pdf
+%     FIGURES/ch04_probe_noise_floor_group3.pdf
+% ── end immutable block ─────────────────────────────────────────
 \begin{figure}[htbp]
   \centering
   \begin{subfigure}[b]{0.48\linewidth}

@@ -55,6 +55,13 @@ see `memory/session_2026-03-28.md`.
 2. **`OUT/IN` always uses FFT amplitude** — `"Probe {pos} Amplitude (FFT)"`, never `"Probe {pos} Amplitude"` (time-domain includes wind waves and is meaningless for damping under full wind).
 3. **Any new string-typed column must go in `NON_FLOAT_COLUMNS`** in `improved_data_loader.py` — `apply_dtypes` calls `pd.to_numeric(errors="coerce")` on everything else, silently turning strings into NaN.
 
+**`ignore_this_archive/` is dead code.** Everything under that top-level folder
+is superseded / one-off / legacy. Do NOT read it to understand current state,
+do NOT import from it, do NOT cite its findings as authoritative. When in
+doubt about whether something is still live, check whether it's under
+`ignore_this_archive/` — if yes, ignore it. See `ignore_this_archive/README.md`
+for the dumping rule and the short list of known cosmetic dangling references.
+
 ---
 
 ## 1. Project overview
@@ -98,11 +105,11 @@ dependencies:
 | `main_explore_inline.py` | Primary analysis playground, `# %%` cells | Open in Zed REPL |
 | `main_explore_browser.py` | Qt GUIs for interactive run browsing | `python main_explore_browser.py` |
 | `main_save_figures.py` | Batch LaTeX/PGF figure export | `python main_save_figures.py` |
-| `dtale_meta.py` | Open `combined_meta` in dtale browser, nothing else | `python dtale_meta.py` or shell alias `wavetable` |
+| `wavetables/dtale_meta.py` | Open `combined_meta` in dtale browser, nothing else | `python wavetables/dtale_meta.py` or shell alias `wavetable` |
 
 `main_explore_browser.py` forces `matplotlib.use("Qt5Agg")` — run from terminal, not REPL.
 
-Shell alias `wavetable` is saved in `~/.zshrc` → `cd ~/Kodevik/wave_project && conda activate draumkvedet && python dtale_meta.py`. Type `wavetable` from any terminal to open the table instantly.
+Shell alias `wavetable` is saved in `~/.zshrc` → `cd ~/Kodevik/wave_project && conda activate draumkvedet && python wavetables/dtale_meta.py`. Type `wavetable` from any terminal to open the table instantly.
 
 See §19 for the full three-phase call hierarchy and plotting script roles.
 
@@ -422,7 +429,7 @@ importlib.reload(f)
 
 ## 14. Git workflow
 
-- Never commit to `main` directly
+- Don't commit to `main` directly, without asking
 - Branch: `git checkout -b exp/<what-you-try>`
 - Safety snapshot: `git commit -am "safety: working before I break it"`
 - Merge to main after experiment works, then delete branch

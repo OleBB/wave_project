@@ -1,28 +1,59 @@
 %! TEX root = ../main.tex
-% ============================================================
+% ==============================================================
 % IMMUTABLE — generated automatically, do not edit this block
-%   script          : plotter.py::plot_sound_speed
-%   plot_type       : sound_speed
-%   chapter         : 04
-%   panel           : None
-%   wind            : None
-%   amplitude       : None
-%   frequency       : None
-%   probes          : None
-%   draft           : True
 %
-% DATASETS:
-%   PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
-%   PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+% — Provenance ───────────────────────────────────────────────────
+%   script            : plotter.py::plot_sound_speed
+%   computed_in       : 
+%   plot_type         : sound_speed
+%   data_class        : 
+%   generated_at      : 2026-04-22T19:45:57
+%   findings_doc      : 
 %
-% SUBFIGURES AVAILABLE:
-%   FIGURES/ch04_sound_speed.pdf
-% ============================================================
+% — Thesis context ──────────────────────────────────────────────
+%   chapter           : 04
+%   caption_label     : fig:ch04_sound_speed
+%   caption_short     : Speed of sound in air per run, measured by the probe hardware (637 runs)
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : 
+%   wind              : 
+%   amplitude [V]     : 
+%   frequency [Hz]    : 
+%   probes            : 
+%   run_category      : 
+%   quality_flag      : 
+%   mooring           : 
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_runs            : 637
+%   in_probes_used    : 9373/170+9373/340, 9373/250
+%   out_probes_used   : 11800/250, 12400/170+12400/340, 12400/250
+%   probe_configs     : initial_setup, march2026_better_rearranging, march2026_rearranging, nov_normalt_oppsett
+%   non_final_config_n: 169
+%   datasets        :
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%   run_paths       :
+%     (omitted — aggregate over > threshold runs, see datasets)
+%
+% — Method / numerical parameters ─────────────────────────────
+%   grouper           : 
+%   collapse_panels   : 
+%   fft_window_hz     : 
+%   extra_params      : 
+%
+% — Summary stats cited in caption ────────────────────────────
+%   (none registered — pass extra_stats=... to build_fig_meta)
+%
+% — Subfigures available ───────────────────────────────────────
+%     FIGURES/ch04_sound_speed.pdf
+% ── end immutable block ─────────────────────────────────────────
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.9\linewidth]{FIGURES/ch04_sound_speed.pdf}
-  \caption[Speed of sound in air per run, measured by the probe hardware (646 runs)]{
-    Speed of sound in air per run, measured by the probe hardware (646 runs). Right axis: approximate air temperature from $c_{\mathrm{air}}\approx 331 + 0.606\,T$. Dashed line: 343.0\,m/s reference ($\approx$20\,\textdegree C). Worst-case amplitude scale error: 0.342\,\% (0.0342\,mm on a 10\,mm wave). For OUT/IN ratios the error cancels exactly.
+  \caption[Speed of sound in air per run, measured by the probe hardware (637 runs)]{
+    Speed of sound in air per run, measured by the probe hardware (637 runs). Right axis: approximate air temperature from $c_{\mathrm{air}}\approx 331 + 0.606\,T$. Dashed line: 343.0\,m/s reference ($\approx$20\,\textdegree C). Worst-case amplitude scale error: 0.342\,\% (0.0342\,mm on a 10\,mm wave). For OUT/IN ratios the error cancels exactly.
   }
   \label{fig:ch04_sound_speed}
 \end{figure}
