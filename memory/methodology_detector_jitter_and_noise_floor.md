@@ -6,6 +6,15 @@ type: project
 
 # Detector jitter is noise_floor / wave_slope
 
+> **Update 2026-04-23, commit `b57d4a6`**. The H&G window end is now snapped
+> to the 10th detected zero-upcrossing (was: fixed `start + 10·round(Fs/f)`).
+> Observation B below — η ≠ 0 at window end — is **resolved by construction**
+> for the nowind case and substantially reduced under fullwind. The remaining
+> fullwind residual is the detector-jitter footprint on the 10th upcrossing
+> itself (which no window choice can remove at the sample-grid level). The
+> derivation below is retained for historical context; numbers after the update
+> would differ, see the "Updated numbers (post-b57d4a6)" appendix.
+
 **TL;DR.** The zero-upcrossing detector used to snap the H&G window has a
 per-cycle timing uncertainty equal to `σ_signal / |dη/dt|_zero`, where
 `σ_signal` is the noise amplitude on the probe at the crossing and
@@ -301,6 +310,78 @@ Direct impact on the time-domain visual:
   the window endpoints separately (or snap the END to an upcrossing
   too). Would remove the 0.024 T window-length quantization baseline.
   Cosmetic only — no FFT impact.
+
+
+## Updated numbers (post-`b57d4a6`, UC-snap end)
+
+After the pipeline change, the canon runs show:
+
+| Run | Probe | Window length | η at start | η at end |
+|---|---|---|---|---|
+| nowind   | 9373/170  | 1786 samples (10.0016 T) | −0.78 | **−0.79 mm** |
+| nowind   | 12400/250 | 1787 samples (10.0072 T) | −0.27 | **−0.44 mm** |
+| fullwind | 9373/170  | 1781 samples (9.9736 T)  | +0.60 | **−3.43 mm** |
+| fullwind | 12400/250 | 1782 samples (9.9792 T)  | −0.43 | **−1.12 mm** |
+
+Nowind: η_start and η_end now match (both near the raw-upcrossing level).
+Observation B is resolved for the nowind case.
+
+Fullwind: η_end is substantially smaller than the fixed-length values
+(−3.4/−1.1 mm vs −5.1/−4.5 mm before). The residual is the detector-jitter
+footprint on the 10th upcrossing itself — each upcrossing has ±4-sample
+placement noise under wind (Section 4), so the "10th UC" lands ±4 samples
+off the true 10T position. This irreducible uncertainty translates to
+~0.02 T of residual drift at the window end, matching the observed
+fullwind η_end magnitudes.
+
+Amplitude agreement tightens:
+
+| Probe | Condition | FFT [mm] | LS [mm] | Δ (%) |
+|---|---|---|---|---|
+| 9373/170  | nowind   | 15.3308 | 15.3381 | 0.05 |
+| 12400/250 | nowind   | 10.6635 | 10.6705 | 0.07 |
+| 9373/170  | fullwind | 16.0708 | 16.0549 | 0.10 |
+| 12400/250 | fullwind | 11.7289 | 11.7189 | 0.09 |
+
+Max Δ = 0.10 % (was up to 0.4 % in CH04 §4h before UC-snap end).
+
+Sections 1–7 above describe the pre-change pipeline. The physics
+(detector jitter = σ_signal / wave_slope, noise floor limits, etc.) is
+unchanged; only the window-length quantization contribution (0.024 T
+baseline) has been eliminated by the pipeline fix.
+
+### Population-level validation (commit `eefba87`)
+
+After a full --force-recompute across all 25 datasets and the ±0.5 T
+sanity guard (commit `eefba87`), the window-length distribution across
+1012 thesis-scope probe-runs (1.3–1.7 Hz, fullpanel, quality_flag=ok):
+
+| Probe | wind | n | min [samples] | max | median | std |
+|---|---|---|---|---|---|---|
+| 9373/170  | no   | 133 | −11 | +7  | 0  | 3.6 |
+| 9373/170  | full | 120 | −13 | +41 | 0  | 7.8 |
+| 9373/340  | no   | 133 | −11 | +9  | +1 | 4.1 |
+| 9373/340  | full | 120 | −72 | +26 | 0  | 10.3 |
+| 12400/250 | no   | 133 | −11 | +7  | −2 | 4.0 |
+| 12400/250 | full | 120 | −17 | +22 | +2 | 6.8 |
+| 8804/250  | no   | 133 | −8  | +18 | 0  | 4.3 |
+| 8804/250  | full | 120 | −15 | +20 | 0  | 6.0 |
+
+Shifts measured as `(Computed end − Computed start) − 10·samples_per_period`.
+
+Nowind: std 3.6–4.3 samples = ~0.02 T, dominated by sample-grid
+quantization (each UC snaps to the nearest integer sample, accumulated
+over 10 crossings).
+
+Fullwind: std 6–10 samples = ~0.04 T, matching the accumulated detector
+jitter budget `√10·(σ_signal/(2πfA))` for `σ_signal ≈ 2` mm at 1.4 Hz.
+
+**0/1012 runs exceeded the ±0.5 T guard** — all runs either got a clean
+UC-snap end or correctly fell back to fixed length. The pre-guard
+version (commit `b57d4a6`) had 38/120 fullwind 9373/170 runs with
+|shift| > 100 samples, concentrated at the pathological 1.3 Hz × 0.1 V
+× fullwind × exposed-probe combination where wind chop creates spurious
+near-zero crossings. Guard resolves this.
 
 
 ## For another agent wanting to re-derive these numbers
