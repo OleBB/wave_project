@@ -208,8 +208,29 @@ def find_wave_range(
             _start_uc_idx = np.where(all_upcrossings == _snap_to)[0][0]
             _end_uc_idx   = _start_uc_idx + n_periods_target
 
+            # Sanity guard: the N-th UC should land within ±0.5 period of
+            # the theoretical N·T position. Under legitimate detector jitter
+            # (±4 samples per cycle, documented) the accumulated end offset
+            # is √10·4 ≈ 13 samples ≈ 0.07 T — well inside 0.5 T. Anything
+            # beyond 0.5 T means the detector found spurious upcrossings
+            # (most commonly at 1.3 Hz × 0.1 V × fullwind where wind chop
+            # creates extra near-zero crossings). In that case fall back to
+            # fixed length — the amplitude metrics will still be reasonable
+            # on a 10 T window even with the 0.024 T quantization residual.
+            _fixed_end = good_end_idx + hg_snap_shift_samples
+            _max_end_shift = samples_per_period // 2
+
             if _end_uc_idx < len(all_upcrossings):
-                good_end_idx = int(all_upcrossings[_end_uc_idx])
+                _uc_end = int(all_upcrossings[_end_uc_idx])
+                if abs(_uc_end - _fixed_end) <= _max_end_shift:
+                    good_end_idx = _uc_end
+                else:
+                    if debug:
+                        print(f"[H&G snap-end] {data_col}: 10th UC at "
+                              f"{_uc_end} is {(_uc_end - _fixed_end)/samples_per_period:+.2f} T "
+                              f"from theoretical end — likely spurious "
+                              f"wind-chop crossings. Falling back to fixed length.")
+                    good_end_idx = _fixed_end
             else:
                 # Fewer than n_periods_target upcrossings after start —
                 # fall back to fixed length so the window still exists.
@@ -218,7 +239,7 @@ def find_wave_range(
                           f"{len(all_upcrossings) - _start_uc_idx - 1} upcrossings "
                           f"past start, expected {n_periods_target}; "
                           f"falling back to fixed-length end.")
-                good_end_idx = good_end_idx + hg_snap_shift_samples
+                good_end_idx = _fixed_end
 
             # Re-check fit in signal after shift
             if good_start_idx < 0 or good_end_idx > len(signal_smooth):
