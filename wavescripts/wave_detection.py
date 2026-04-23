@@ -162,20 +162,26 @@ def find_wave_range(
     above_still     = signal_smooth > upcross_level
     all_upcrossings = np.where((~above_still[:-1]) & above_still[1:])[0] + 1
 
-    # ── 1.c-snap  Snap H&G start to nearest zero-upcrossing within ±T ────
-    # Stores the theoretical H&G start (pre-snap) in debug_info and shifts
-    # both window endpoints by the same amount to preserve the 10-period
-    # length. Snap is an ALIGNMENT — it does NOT change how long the window
-    # is, only where it begins.
+    # ── 1.c-snap  Snap H&G window to zero-upcrossings at both endpoints ──
+    # Physics first: every measurement window is a signal-complete integer
+    # number of wave cycles, bounded by two detected zero-upcrossings. This
+    # eliminates the int(round(Fs/f)) window-length quantization (0.024 T at
+    # 1.4 Hz) and delivers perfectly coherent FFT sampling (sinc leakage = 0).
     #
-    # Search range = ±1 full period around the theoretical H&G start. Since
-    # upcrossings occur every ~1 period, there is always at least one within
-    # this range (unless the detector failed entirely, e.g. heavy wind noise).
-    # The nearest one wins.
+    # Under fullwind the upcrossings jitter (±4 samples per cycle), so the
+    # 10th-upcrossing end has some uncertainty too — but the jitter is zero-
+    # mean, so 10-cycle-averaged window length matches the true period mean.
+    # See memory/methodology_detector_jitter_and_noise_floor.md.
     #
-    # The snap is on the RAW ULS signal, so it lands on an eta-downcrossing;
-    # either orientation of crossing gives integer cycles in the window, which
-    # is what the FFT actually cares about.
+    # The snap is on the RAW ULS signal, so both endpoints are raw-upcrossings
+    # = eta-downcrossings (raw distance ↓ ⇔ elevation ↑). Either orientation
+    # of crossing delimits integer cycles, which is what FFT/LS care about.
+    #
+    # Diagnostics retained:
+    #   hg_expected_start / hg_expected_end  : pre-snap theoretical window
+    #   hg_snap_shift_samples                : signed shift applied to start
+    # End-snap amount is derivable from
+    #   (good_end_idx − good_start_idx) − n_periods_target·samples_per_period
     hg_expected_start = good_start_idx
     hg_expected_end   = good_end_idx
     hg_snap_shift_samples: int | None = None
@@ -194,19 +200,41 @@ def find_wave_range(
             _snap_to = int(_candidates[np.argmin(np.abs(_candidates - good_start_idx))])
             hg_snap_shift_samples = int(_snap_to - good_start_idx)
             good_start_idx = _snap_to
-            good_end_idx   = good_end_idx + hg_snap_shift_samples  # preserve length
+
+            # End-snap: find the n_periods_target-th upcrossing after start.
+            # `n_periods_target` = HG.END_T_REF - HG.START_T_REF = 10 cycles.
+            # `_snap_to` is itself an upcrossing, so the i-th cycle ends at
+            # the upcrossing with offset i in all_upcrossings from _snap_to.
+            _start_uc_idx = np.where(all_upcrossings == _snap_to)[0][0]
+            _end_uc_idx   = _start_uc_idx + n_periods_target
+
+            if _end_uc_idx < len(all_upcrossings):
+                good_end_idx = int(all_upcrossings[_end_uc_idx])
+            else:
+                # Fewer than n_periods_target upcrossings after start —
+                # fall back to fixed length so the window still exists.
+                if debug:
+                    print(f"[H&G snap-end] {data_col}: only "
+                          f"{len(all_upcrossings) - _start_uc_idx - 1} upcrossings "
+                          f"past start, expected {n_periods_target}; "
+                          f"falling back to fixed-length end.")
+                good_end_idx = good_end_idx + hg_snap_shift_samples
 
             # Re-check fit in signal after shift
             if good_start_idx < 0 or good_end_idx > len(signal_smooth):
                 if debug:
                     print(f"[H&G snap] {data_col}: shifted window falls off signal "
-                          f"(shift={hg_snap_shift_samples} samples); reverting to expected.")
+                          f"(start_shift={hg_snap_shift_samples}); reverting to expected.")
                 good_start_idx = hg_expected_start
                 good_end_idx   = hg_expected_end
                 hg_snap_shift_samples = None
             elif debug:
-                print(f"[H&G snap] {data_col}: shift {hg_snap_shift_samples} samples "
-                      f"({hg_snap_shift_samples/samples_per_period:+.3f} periods)")
+                _win_len = good_end_idx - good_start_idx
+                print(f"[H&G snap] {data_col}: "
+                      f"start {hg_snap_shift_samples:+d} samples "
+                      f"({hg_snap_shift_samples/samples_per_period:+.3f} T); "
+                      f"window length = {_win_len} samples "
+                      f"({_win_len/samples_per_period:.3f} T)")
 
     # ── 1.c-filter  Upcrossings within the final (post-snap) window ──────
     # Used by processor.py for per-run quality metrics (wave_stability,
@@ -348,9 +376,12 @@ def find_wave_range(
         # the returned good_start_idx / good_end_idx reflect the snapped
         # position. `hg_snap_shift_samples` is their signed difference
         # (None if no upcrossing found in ±1T or the snap fell off signal).
-        "hg_expected_start":      hg_expected_start,
-        "hg_expected_end":        hg_expected_end,
-        "hg_snap_shift_samples":  hg_snap_shift_samples,
+        "hg_expected_start":           hg_expected_start,
+        "hg_expected_end":             hg_expected_end,
+        "hg_snap_shift_samples":       hg_snap_shift_samples,
+        # End-snap amount is derivable from
+        #   (good_end_idx − good_start_idx) − n_periods_target·samples_per_period
+        # so no separate sample-level diagnostic is returned.
     }
 
     return good_start_idx, good_end_idx, debug_info

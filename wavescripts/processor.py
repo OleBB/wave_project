@@ -947,6 +947,9 @@ def run_find_wave_ranges(
                 meta_sel.loc[idx, f"Probe {pos} hg_expected_start"] = debug_info.get("hg_expected_start")
                 meta_sel.loc[idx, f"Probe {pos} hg_expected_end"]   = debug_info.get("hg_expected_end")
                 meta_sel.loc[idx, f"Probe {pos} hg_snap_shift"]     = debug_info.get("hg_snap_shift_samples")
+                # End-snap amount is implicit in
+                #   (Computed end − Computed start) − n_periods·samples_per_period
+                # so no separate column is stored.
 
             # Wave quality metrics from upcrossings
             if (
