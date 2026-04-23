@@ -928,6 +928,72 @@ def resolve_caption(plotting: dict, default_template: str, slots: dict,
     return caption
 
 
+class TextRegistry:
+    """
+    Centralised registry for language-specific on-figure text.
+
+    Each plotter creates one instance and calls ``T(slot_name, default=...)``
+    wherever a human-readable string is drawn (title, suptitle, xlabel, ylabel,
+    legend title, legend entries, prose annotations — NOT math labels, numeric
+    ticks, or category tokens). The user can override any slot from
+    ``plotvariables["plotting"]["text"]``::
+
+        "text": {
+            "ylabel": "Støygulv [mm]",
+            "title": {"h100 / high": "Lav høyde", "h272 / high": "Ref."},
+            "legend_threshold": "Terskel max({k_sigma:.0f}σ, {k_q:.0f}q)",
+        }
+
+    An override may be a plain string or a dict keyed by facet value (pass
+    ``facet_key=`` to the call). Missing facet keys silently fall back to the
+    plotter's default. Every resolved string runs through ``str.format`` with
+    the registry's slot dict, so overrides can embed computed values
+    (``{n_runs}``, ``{highlight_keyword}``, …). Unknown format keys raise
+    ``KeyError`` — consistent with ``resolve_caption``. Override keys that
+    match no requested slot print a warning at ``report()`` time (typo guard).
+
+    Discoverability: after the plot is drawn, call ``T.report()`` to print the
+    slot names the plotter actually used.
+    """
+
+    def __init__(self, plotting: dict, slots: dict | None = None,
+                 fn_name: str = "plot") -> None:
+        self._overrides = dict(((plotting or {}).get("text") or {}))
+        self._slots = dict(slots or {})
+        self._fn_name = fn_name
+        self._requested: set[str] = set()
+
+    def __call__(self, slot_name: str, default: str, *,
+                 facet_key=None, extra_slots: dict | None = None) -> str:
+        self._requested.add(slot_name)
+        override = self._overrides.get(slot_name, None)
+
+        if isinstance(override, dict):
+            template = override.get(facet_key, default) if facet_key is not None else default
+        elif override is not None:
+            template = override
+        else:
+            template = default
+
+        merged = self._slots if extra_slots is None else {**self._slots, **extra_slots}
+        try:
+            return template.format(**merged)
+        except KeyError as e:
+            raise KeyError(
+                f"[{self._fn_name}] text slot '{slot_name}': unknown format "
+                f"key {e}. Available slots: {sorted(merged)}"
+            ) from None
+
+    def report(self) -> None:
+        print(f"\n[{self._fn_name}] text slots: {sorted(self._requested)}")
+        unused = set(self._overrides) - self._requested
+        if unused:
+            print(
+                f"[{self._fn_name}] WARNING: unused text override key(s) "
+                f"{sorted(unused)} — typo? known slots: {sorted(self._requested)}"
+            )
+
+
 def add_draft_stamp(fig: plt.Figure) -> None:
     """Overlay a large red DRAFT watermark diagonally across the figure."""
     fig.text(0.5, 0.5, "DRAFT",

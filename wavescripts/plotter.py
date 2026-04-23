@@ -59,6 +59,7 @@ from wavescripts.plot_utils import (
     MARKER_STYLES,
     PANEL_MARKERS,
     PANEL_STYLES,
+    TextRegistry,
     WIND_COLOR_MAP,
     _save_figure,
     _top_k_indices,
@@ -2407,6 +2408,16 @@ def plot_probe_noise_floor(
     show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
 
+    T = TextRegistry(
+        plotting,
+        slots={
+            "k_sigma": k_sigma,
+            "k_q": k_q,
+            "highlight_keyword": highlight_keyword or "",
+        },
+        fn_name="plot_probe_noise_floor",
+    )
+
     # ── select stillwater runs ────────────────────────────────────────────────
     is_stillwater = (
         combined_meta["WindCondition"].eq("no")
@@ -2552,22 +2563,25 @@ def plot_probe_noise_floor(
         Line2D([0], [0], color="crimson", linewidth=1.8, linestyle="--"),
     ]
     _leg_labels = [
-        f"Mean 95% noise amp.  (±1σ)",
-        "Per-run value",
-        f"Threshold  max({k_sigma:.0f}σ,  {k_q:.0f}q)  [mm]",
+        T("legend_mean_amp",  default="Mean 95% noise amp.  (±1σ)"),
+        T("legend_per_run",   default="Per-run value"),
+        T("legend_threshold", default="Threshold  max({k_sigma:.0f}σ,  {k_q:.0f}q)  [mm]"),
     ]
     if _has_quant_any:
         _leg_handles.append(Line2D([0], [0], color="dimgrey", linewidth=1.0, linestyle=":"))
-        _leg_labels.append("Quantization half-step  q/2  [mm]")
+        _leg_labels.append(T("legend_quantization",
+                             default="Quantization half-step  q/2  [mm]"))
     if _has_hl:
         _leg_handles.append(Line2D([0], [0], marker="*", color="w",
                                    markerfacecolor="gold", markeredgecolor="darkorange",
                                    markersize=11, linewidth=0))
-        _leg_labels.append(f"Highlighted run  ({highlight_keyword})")
+        _leg_labels.append(T("legend_highlight",
+                             default="Highlighted run  ({highlight_keyword})"))
     if _has_excl:
         _leg_handles.append(Line2D([0], [0], marker="x", color="dimgrey",
                                    markersize=8, linewidth=0, markeredgewidth=1.3))
-        _leg_labels.append("Excluded (not settled)")
+        _leg_labels.append(T("legend_excluded",
+                             default="Excluded (not settled)"))
 
     figs = []
     for grp in groups:
@@ -2624,8 +2638,13 @@ def plot_probe_noise_floor(
             xlabels = probe_cols_present
         ax.set_xticklabels(xlabels, rotation=0, ha="center", fontsize=9)
         n_grp = len(sub)
-        ax.set_title(grp if grp != "all" else f"all configs  (n={n_grp} runs)", fontsize=10)
-        ax.set_ylabel("Stillwater 95% noise amplitude  [mm]")
+        _default_title = "{group}" if grp != "all" else "all configs  (n={n_grp} runs)"
+        ax.set_title(
+            T("title", default=_default_title, facet_key=grp,
+              extra_slots={"group": grp, "n_grp": n_grp}),
+            fontsize=10,
+        )
+        ax.set_ylabel(T("ylabel", default="Stillwater 95% noise amplitude  [mm]"))
         ax.grid(True, axis="y", alpha=0.3)
         ax.legend(_leg_handles, _leg_labels, fontsize=8, loc="upper right", framealpha=0.9)
 
@@ -2633,6 +2652,8 @@ def plot_probe_noise_floor(
         if show_plot:
             plt.show()
         figs.append(fig)
+
+    T.report()
 
     # ── caption ──────────────────────────────────────────────────────────────
     _quant_vals = sorted({round(v, 3) for v in quant_steps.values() if np.isfinite(v)})
