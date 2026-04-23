@@ -434,6 +434,22 @@ _pv_noise_floor = {
             "per probe, where $\\sigma$ is the rms noise; "
             "wave amplitudes below this line are indistinguishable from stillwater noise."
         ),
+        # ↓↓↓ NEW — add this block ↓↓↓
+            "text": {
+                "ylabel": "Støyamplitude (95 %)  [mm]",
+                "legend_mean_amp":    "Gjennomsnittlig støyamplitude  (±1σ)",
+                "legend_per_run":     "Per kjøring",
+                "legend_threshold":   "Terskel  max({k_sigma:.0f}σ, {k_q:.0f}q)  [mm]",
+                "legend_quantization":"Halvt kvantiseringssteg  q/2  [mm]",
+                "legend_highlight":   "Uthevet kjøring  ({highlight_keyword})",
+                "legend_excluded":    "Ekskludert (ikke satt seg)",
+                "title": {
+                    "h272 / high": "h=272 mm — referanseoppsett",
+                    "h100 / low":  "h=100 mm - endelig oppsett ",
+                    # groups not listed here keep their default title
+                },
+            },
+            # ↑↑↑ end new block ↑↑↑
     },
 }
 

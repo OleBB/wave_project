@@ -29,7 +29,7 @@
 **Current tasks and session state** → `MEMORY.md` is auto-loaded and has a START HERE
 section at the top with the end goal, current state, and immediate next steps.
 For the full task list see `memory/project_tasks.md`. For the latest session changelog
-see `memory/session_2026-03-28.md`.
+see `memory/session_2026-04-22.md`.
 
 **Document map — find it here:**
 
@@ -59,8 +59,9 @@ see `memory/session_2026-03-28.md`.
 is superseded / one-off / legacy. Do NOT read it to understand current state,
 do NOT import from it, do NOT cite its findings as authoritative. When in
 doubt about whether something is still live, check whether it's under
-`ignore_this_archive/` — if yes, ignore it. See `ignore_this_archive/README.md`
-for the dumping rule and the short list of known cosmetic dangling references.
+`ignore_this_archive/` — if yes, ignore it. See `ignore_this_archive/ARCHIVE_NOTES.md`
+for the dumping rule, the per-file explanation of why each item was archived,
+and the short list of known cosmetic dangling references.
 
 ---
 
@@ -458,7 +459,9 @@ These are not negotiable. Every analysis decision must be consistent with them.
 - **Target resolution: 0.25 mm** (quarter millimeter). No discrepancy is too small to investigate.
 - Stillwater noise floor is **probe-dependent** — measured as `"Probe {pos} Amplitude"` = (P99.5−P0.5)/2 from no-wind, no-wave runs:
 
-Reference data: `wave_project/dtale-probe-uncertainty.csv` (5 rows, paths included).
+Reference data: the 5-row source table was a dtale dump (now at
+`ignore_this_archive/dtale-probe_uncertainty_tables.csv`); the table below
+is the authoritative copy.
 
 Run identity per row:
 
