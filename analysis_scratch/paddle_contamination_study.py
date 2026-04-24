@@ -95,7 +95,7 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import freq_to_kL
+from wavescripts.plot_utils import freq_to_k
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
 SCRATCH_DIR         = Path(__file__).parent
@@ -515,20 +515,20 @@ for i, amp in enumerate(AMPS):
         n              = ("A_in_fw",   "count"),
     )
     xs = agg.index.values
-    kLs = freq_to_kL(np.array(xs))
-    ax.errorbar(kLs, agg["A_in_nw_med"],    yerr=agg["A_in_nw_std"].fillna(0),
+    ks = freq_to_k(np.array(xs))
+    ax.errorbar(ks, agg["A_in_nw_med"],    yerr=agg["A_in_nw_std"].fillna(0),
                 marker="o", linestyle="-", color=COLOR_NW,
                 capsize=3, lw=1.4, markersize=5,
                 label="A_in (nowind)")
-    ax.errorbar(kLs, agg["A_in_fw_med"],    yerr=agg["A_in_fw_std"].fillna(0),
+    ax.errorbar(ks, agg["A_in_fw_med"],    yerr=agg["A_in_fw_std"].fillna(0),
                 marker="s", linestyle="-", color=COLOR_FW,
                 capsize=3, lw=1.4, markersize=5,
                 label="A_in (fullwind, raw)")
-    ax.errorbar(kLs, agg["A_in_corr_med"],  yerr=agg["A_in_corr_std"].fillna(0),
+    ax.errorbar(ks, agg["A_in_corr_med"],  yerr=agg["A_in_corr_std"].fillna(0),
                 marker="^", linestyle="--", color=COLOR_CORR,
                 capsize=3, lw=1.4, markersize=5,
                 label="A_in (fullwind, corrected)")
-    ax.set_xlabel(r"$kL$", fontsize=9)
+    ax.set_xlabel(r"$k$ (rad/m)", fontsize=9)
     if i == 0:
         ax.set_ylabel("A_in  [mm]", fontsize=9)
     ax.set_title(f"Wind correction  |  {amp:.2f} V", fontsize=9)
@@ -623,7 +623,7 @@ _caption = (
     "stable plateau), grouped by paddle drive 0.10, 0.20, 0.30\\,V. "
     "Blue markers: no wind; red markers: full wind. Error bars: run-to-run "
     "standard deviation within each (amplitude, wind, window) cell. "
-    "Bottom row: IN-probe amplitude at the paddle frequency versus $kL$, "
+    "Bottom row: IN-probe amplitude at the paddle frequency versus $k$ (rad/m), "
     "one panel per amplitude. Three curves per panel: A$_{\\text{in}}$ "
     "measured under no wind (blue, circles), under full wind (red, "
     "squares), and under full wind after incoherent subtraction of the "

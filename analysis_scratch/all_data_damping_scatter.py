@@ -50,7 +50,7 @@ os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
 from wavescripts.constants import PROBE_HEIGHT_DEFAULT_MM
-from wavescripts.plot_utils import freq_to_kL, add_freq_axis
+from wavescripts.plot_utils import freq_to_k, add_freq_axis
 
 # ── I/O ────────────────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "all_data_damping_scatter.pdf"
@@ -110,8 +110,8 @@ print(f"   {len(wave)} wave/fullpanel/quality=ok runs  ({n_extreme} extreme outl
 wave_clip = wave_clip[wave_clip["WindCondition"].isin(["no", "full"])].copy()
 print(f"   {len(wave_clip)} after restricting to wind ∈ {{no, full}}")
 
-# Compute kL per row (same tank depth + panel length as plot_utils)
-wave_clip["kL"] = freq_to_kL(wave_clip["WaveFrequencyInput [Hz]"].values)
+# Compute k per row (same tank depth as plot_utils)
+wave_clip["k"] = freq_to_k(wave_clip["WaveFrequencyInput [Hz]"].values)
 
 print("\n2. Counts per condition × wind:")
 pivot = wave_clip.groupby(["condition", "WindCondition"]).size().unstack(fill_value=0)
@@ -172,7 +172,7 @@ for cond in COND_ORDER:
             lambda a: AMP_SIZE.get(round(float(a), 1), 30)
         )
         ax.scatter(
-            s["kL"], s["OUT/IN (FFT)"],
+            s["k"], s["OUT/IN (FFT)"],
             c=COND_COLOR[cond],
             marker=marker,
             s=sizes,
@@ -183,13 +183,13 @@ for cond in COND_ORDER:
         )
 
 # Highlight the thesis scope band (1.3–1.6 Hz) with a light axvspan — convert
-# to kL using the same dispersion relation.
-thesis_kL_lo = float(freq_to_kL(np.array([1.3]))[0])
-thesis_kL_hi = float(freq_to_kL(np.array([1.6]))[0])
-ax.axvspan(thesis_kL_lo, thesis_kL_hi,
+# to k using the same dispersion relation.
+thesis_k_lo = float(freq_to_k(np.array([1.3]))[0])
+thesis_k_hi = float(freq_to_k(np.array([1.6]))[0])
+ax.axvspan(thesis_k_lo, thesis_k_hi,
            color="#3498DB", alpha=0.08, lw=0, zorder=1,
            label=None)
-ax.text(thesis_kL_hi - 0.1, 1.95,
+ax.text(thesis_k_hi - 0.1, 1.95,
         "thesis scope\n1.3–1.6 Hz", ha="right", va="top",
         fontsize=8, color="#1F618D", alpha=0.8,
         bbox=dict(boxstyle="round,pad=0.2",
@@ -197,7 +197,7 @@ ax.text(thesis_kL_hi - 0.1, 1.95,
 
 ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.5)
 
-ax.set_xlabel("$kL$", fontsize=11)
+ax.set_xlabel("$k$ (rad/m)", fontsize=11)
 ax.set_ylabel("OUT/IN (FFT)", fontsize=11)
 ax.set_title(
     "All wave runs (full panel, quality=ok) — supplementary cross-condition view",
@@ -257,7 +257,7 @@ if not OUT_STUB.exists():
     ).replace(r"WRONG", r"WRONG")
 
     _caption = (
-        f"OUT/IN (FFT) versus $kL$ for all {n_total} quality-ok full-panel "
+        f"OUT/IN (FFT) versus $k$ (rad/m) for all {n_total} quality-ok full-panel "
         "wave runs across the full experimental record. Colour encodes the "
         "hardware configuration (probe height $\\times$ range mode); marker "
         "encodes wind condition (circles = no wind, triangles = full wind); "

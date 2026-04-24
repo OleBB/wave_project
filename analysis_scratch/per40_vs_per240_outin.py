@@ -66,7 +66,7 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import freq_to_kL
+from wavescripts.plot_utils import freq_to_k
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
 SCRATCH_DIR = Path(__file__).parent
@@ -262,7 +262,7 @@ agg = (
         .reset_index()
 )
 agg["std"] = agg["std"].fillna(0.0)
-agg["kL"]  = freq_to_kL(agg["freq_r"].to_numpy())
+agg["k"]  = freq_to_k(agg["freq_r"].to_numpy())
 print(f"\n6. Aggregated {len(agg)} (freq, amp, wind, method) cells.")
 
 
@@ -307,11 +307,11 @@ for i, amp in enumerate(AMPS):
             cell = sub[(sub["WindCondition"] == wind) & (sub["method"] == method)]
             if cell.empty:
                 continue
-            cell = cell.sort_values("kL")
+            cell = cell.sort_values("k")
             # Horizontal offset between methods for readability.
             dx = {"short": -0.003, "long": +0.003}[method]
             ax.errorbar(
-                cell["kL"].values + dx, cell["mean"].values,
+                cell["k"].values + dx, cell["mean"].values,
                 yerr=cell["std"].fillna(0).values,
                 fmt=METHOD_MARKER[method],
                 color=WIND_COLOR[wind],
@@ -323,7 +323,7 @@ for i, amp in enumerate(AMPS):
                 label=f"{wind} wind · {METHOD_LABEL[method]}",
             )
     ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.4)
-    ax.set_xlabel("$kL$", fontsize=10)
+    ax.set_xlabel("$k$ (rad/m)", fontsize=10)
     if i == 0:
         ax.set_ylabel("OUT/IN (FFT)", fontsize=10)
     ax.set_title(f"{amp:.2f} V", fontsize=10)
@@ -353,7 +353,7 @@ pu.TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
 pu.FIGURES_DIR = BASE / "output" / "FIGURES"
 
 _caption = (
-    f"OUT/IN (FFT) at the paddle frequency versus $kL$, split by paddle drive "
+    f"OUT/IN (FFT) at the paddle frequency versus $k$ (rad/m), split by paddle drive "
     f"{', '.join(f'{a:.2f}' for a in AMPS)}\\,V (one panel each). "
     "Two analysis-window methods per condition: pipeline SNARVEI window applied to "
     f"short runs ($N_\\mathrm{{input\\_periods}} < {HG_MIN_PERIODS}$; filled circles), "

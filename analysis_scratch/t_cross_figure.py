@@ -57,7 +57,7 @@ import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
-from wavescripts.plot_utils import freq_to_kL, add_freq_axis
+from wavescripts.plot_utils import freq_to_k, add_freq_axis
 
 # ── I/O ────────────────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "t_cross_figure.pdf"
@@ -146,7 +146,7 @@ for amp in AMPS:
             tcross_m, tcross_s_total = np.nan, np.nan
 
         rows.append({
-            "amp": amp, "freq": f, "kL": float(freq_to_kL(np.array([f]))[0]),
+            "amp": amp, "freq": f, "k": float(freq_to_k(np.array([f]))[0]),
             "n_nw": n_nw, "n_fw": n_fw,
             "A_in_nw": A_in_nw_m, "A_in_nw_std": A_in_nw_s,
             "A_in_fw": A_in_fw_m, "A_in_fw_std": A_in_fw_s,
@@ -188,7 +188,7 @@ def draw_t_cross_ax(ax, sub: pd.DataFrame, amp: float):
                 transform=ax.transAxes, color="gray")
         return
 
-    x = sub["kL"].values
+    x = sub["k"].values
 
     def _line(y, yerr, color, label, marker, ls="-"):
         mask = np.isfinite(y)
@@ -215,7 +215,7 @@ def draw_t_cross_ax(ax, sub: pd.DataFrame, amp: float):
                         label="honest wind effect")
 
     ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.4)
-    ax.set_xlabel(r"$kL$", fontsize=9)
+    ax.set_xlabel(r"$k$ (rad/m)", fontsize=9)
     ax.set_ylabel("transmission", fontsize=9)
     ax.set_title(f"full panel  |  {amp:.2f}\u202fV", fontsize=9)
     ax.grid(True, alpha=0.3)
@@ -229,7 +229,7 @@ gs = gridspec.GridSpec(1, 3, figure=fig, wspace=0.32,
                        left=0.05, right=0.99, top=0.84, bottom=0.18)
 for i, amp in enumerate(AMPS):
     ax = fig.add_subplot(gs[0, i])
-    draw_t_cross_ax(ax, df[df["amp"] == amp].sort_values("kL"), amp)
+    draw_t_cross_ax(ax, df[df["amp"] == amp].sort_values("k"), amp)
 fig.suptitle(
     r"Wind effect on transmission — $(OUT/IN)_{nw}$ vs $T_{\mathrm{cross}}$ vs $(OUT/IN)_{fw}$",
     fontsize=11, fontweight="bold", y=0.95,
@@ -249,7 +249,7 @@ plt.close(fig)
 thesis_names = []
 for amp in AMPS:
     fig_s, ax_s = plt.subplots(figsize=(6, 3.6))
-    draw_t_cross_ax(ax_s, df[df["amp"] == amp].sort_values("kL"), amp)
+    draw_t_cross_ax(ax_s, df[df["amp"] == amp].sort_values("k"), amp)
     fig_s.subplots_adjust(left=0.12, right=0.97, top=0.84, bottom=0.15)
     amp_tag = f"{int(round(amp * 100)):02d}V"
     fname = f"{THESIS_BASE}_{amp_tag}"

@@ -55,59 +55,55 @@ ACTIVE_DATASETS: list[str] = []
 
 # ── Physics parameters used for x-axis conversion ────────────────────────────
 # Note: calculate_wavenumbers_vectorized expects depth in mm (it applies MM_TO_M internally)
-# and returns k in m⁻¹.
+# and returns k in rad/m.
 _TANK_DEPTH_MM: float = 580.0   # nominal lab depth in mm (depth580 in filenames)
-_PANEL_LENGTH_M: float = 1.048  # purple panel length in m (constants.PANEL_LENGTHS["purple"])
 
 
-def freq_to_kL(
+def freq_to_k(
     freqs,
     depth_mm: float = _TANK_DEPTH_MM,
-    panel_length_m: float = _PANEL_LENGTH_M,
 ) -> np.ndarray:
-    """Convert paddle input frequencies [Hz] to dimensionless kL.
+    """Convert paddle input frequencies [Hz] to wavenumber k [rad/m].
 
-    Uses the full dispersion relation ω² = gk·tanh(kd).
-    L defaults to the purple panel length (1.048 m) — used as the reference
-    length for all plots regardless of the run's own PanelCondition, so that
-    the x-axis represents 'wave scale relative to the panel' consistently.
-    depth_mm is in mm (as expected by calculate_wavenumbers_vectorized).
+    Uses the full dispersion relation ω² = gk·tanh(kd). depth_mm is in mm
+    (as expected by calculate_wavenumbers_vectorized); returned k is in rad/m.
+
+    Replaces the old freq_to_kL (which multiplied by a reference panel
+    length to give a dimensionless kL). Axes now plot pure wavenumber; no
+    reference length is implied.
     """
     freqs = np.asarray(freqs, dtype=float)
-    k = calculate_wavenumbers_vectorized(freqs, np.full_like(freqs, depth_mm))
-    return k * panel_length_m
+    return calculate_wavenumbers_vectorized(freqs, np.full_like(freqs, depth_mm))
 
 
 def add_freq_axis(
     ax,
     depth_mm: float = _TANK_DEPTH_MM,
-    panel_length_m: float = _PANEL_LENGTH_M,
     label: str = "frequency (Hz)",
 ):
-    """Add a secondary x-axis showing input frequency [Hz] above a kL axis.
+    """Add a secondary x-axis showing input frequency [Hz] above a k axis.
 
-    Uses the full dispersion relation ω² = gk·tanh(kd) — same as freq_to_kL.
-    Forward (kL → Hz): analytical, no iteration.
-    Inverse (Hz → kL): calls freq_to_kL (iterative solver already implemented).
+    Uses the full dispersion relation ω² = gk·tanh(kd) — same as freq_to_k.
+    Forward (k → Hz): analytical, no iteration.
+    Inverse (Hz → k): calls freq_to_k (iterative solver already implemented).
 
     Returns the secondary Axes so the caller can adjust tick labels if needed.
     """
     g = 9.81  # m/s²
     d = depth_mm * 1e-3  # mm → m
 
-    def _kL_to_freq(kL):
-        kL = np.asarray(kL, dtype=float)
-        k = kL / panel_length_m
+    def _k_to_freq(k):
+        k = np.asarray(k, dtype=float)
         # guard against k=0 to avoid sqrt(0*tanh(0)) edge case
         with np.errstate(invalid="ignore", divide="ignore"):
             omega = np.where(k > 0, np.sqrt(g * k * np.tanh(k * d)), 0.0)
         return omega / (2 * np.pi)
 
-    def _freq_to_kL(f):
+    def _freq_to_k(f):
         f = np.asarray(f, dtype=float)
-        return freq_to_kL(f, depth_mm=depth_mm, panel_length_m=panel_length_m)
+        return freq_to_k(f, depth_mm=depth_mm)
 
-    secax = ax.secondary_xaxis("top", functions=(_kL_to_freq, _freq_to_kL))
+    secax = ax.secondary_xaxis("top", functions=(_k_to_freq, _freq_to_k))
     secax.set_xlabel(label, fontsize=8)
     secax.tick_params(labelsize=7)
     return secax

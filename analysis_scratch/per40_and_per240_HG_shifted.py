@@ -72,7 +72,7 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import freq_to_kL
+from wavescripts.plot_utils import freq_to_k
 
 # ── Config ────────────────────────────────────────────────────────────────────
 FS              = 250.0
@@ -277,7 +277,7 @@ agg = (df.dropna(subset=["OUT_IN"])
           ["OUT_IN"].agg(["mean", "std", "count"])
           .reset_index())
 agg["std"] = agg["std"].fillna(0.0)
-agg["kL"]  = freq_to_kL(agg["freq_hz"].to_numpy())
+agg["k"]  = freq_to_k(agg["freq_hz"].to_numpy())
 
 
 # ── Agreement per (freq, amp, wind) ──────────────────────────────────────────
@@ -325,12 +325,12 @@ for i, amp in enumerate(AMPS):
         continue
     for wind in WINDS:
         for rt in ["per40", "per240"]:
-            cell = sub[(sub["wind"] == wind) & (sub["run_type"] == rt)].sort_values("kL")
+            cell = sub[(sub["wind"] == wind) & (sub["run_type"] == rt)].sort_values("k")
             if cell.empty:
                 continue
             dx = {"per40": -0.003, "per240": +0.003}[rt]
             ax.errorbar(
-                cell["kL"].values + dx, cell["mean"].values,
+                cell["k"].values + dx, cell["mean"].values,
                 yerr=cell["std"].values,
                 fmt=RUNTYPE_MARK[rt],
                 color=WIND_COLOR[wind],
@@ -342,7 +342,7 @@ for i, amp in enumerate(AMPS):
                 label=f"{wind} · {RUNTYPE_LABEL[rt]}",
             )
     ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.4)
-    ax.set_xlabel("$kL$", fontsize=10)
+    ax.set_xlabel("$k$ (rad/m)", fontsize=10)
     if i == 0:
         ax.set_ylabel("OUT/IN (FFT)", fontsize=10)
     ax.set_title(f"{amp:.2f} V", fontsize=10)
@@ -372,7 +372,7 @@ pu.TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
 pu.FIGURES_DIR = BASE / "output" / "FIGURES"
 
 _caption = (
-    "OUT/IN (FFT) at the paddle frequency versus $kL$, split by paddle drive "
+    "OUT/IN (FFT) at the paddle frequency versus $k$ (rad/m), split by paddle drive "
     f"{', '.join(f'{a:.2f}' for a in AMPS)}\\,V (one panel each). "
     "Both per40 (filled circles) and per240 (open diamonds) runs use the "
     "Huseby--Grue window anchored at $r = 12.4$\\,m with $[50T, 60T]$ from "

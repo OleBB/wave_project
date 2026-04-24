@@ -17,11 +17,54 @@ INPUT KEYS  (experimental conditions):
     PanelCondition              — full / reverse / no
     WindCondition               — full / lowest / no
 
-OUTPUT KEYS (measured results):
-    OUT/IN (FFT)                — damping ratio, FFT amplitude at paddle freq only
-                                  (wind waves excluded — they are characterised separately)
-    ka                          — wavenumber × amplitude, found per probe per run
-                                  (not pre-calculated; measured from the actual wave)
+OUTPUT KEYS (reader-facing axes on plots):
+    OUT/IN (FFT)  — damping ratio (= A_Ut/A_inn at paddle frequency). The
+                    thesis primary metric. FFT amplitude at the paddle bin only
+                    (wind waves are on a separate axis, not inflating this).
+    k  (rad/m)    — wavenumber on plot x-axes. Derived from input Hz via the
+                    full dispersion relation ω² = g·k·tanh(kd); replaces the
+                    older "kL" axis (2026-04-24 migration).
+    ka            — wavenumber × amplitude, measured per probe per run. Primary
+                    wave descriptor (§19 CLAUDE.md); encodes wavelength (in k)
+                    and steepness (in a). Used for CH05 §4 per-voltage panels.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PLOT TAXONOMY — what each kind of figure shows
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Five recurring shapes show up in this file. Knowing which shape a figure is
+tells you what to put on the axes and what the points/bars represent.
+
+  (I) Single-run demo — ONE canonical run, illustrates what a reader sees
+      Examples: ch04_fft_wave (one FFT), ch04_inspirational_{nowind,fullwind}
+      (one time series). Data: a specific csv from a specific folder.
+      Tag: usually [DELEG] (the scratch script hard-codes the run path).
+
+ (II) All-runs scatter — each point is ONE run; colour/marker encodes condition
+      Examples: ch05_damping_ka_{10,20,30}V, ch05_damping_scatter,
+      ch05_damping_all_data_scatter, ch04_td_vs_fft_scatter.
+      Data: apply_experimental_filters(meta_results, _pv…) → N-row DataFrame.
+      Tag: [META] or [DELEG] — one row of meta_results per dot.
+
+(III) Grouped aggregate — mean + errorbar per (freq, wind, amp, …) cell
+      Examples: ch05_damping_freq, ch04_parallel_ratio, ch04_probe_noise_floor,
+      ch05_damping_wind_delta.
+      Data: damping_grouper(meta_results, …) → per-cell stats_df. Each point
+      is a mean over runs sharing the same experimental keys.
+
+ (IV) Multi-probe overlay — curves or bars at several probe positions at once
+      Examples: ch04_wind_psd (PSD per probe), ch04_lateral_nowind (wall/far
+      asymmetry), ch04_fft_wave (IN vs OUT bar grid).
+      Data: fft_dict / psd_dict / eta_{pos} columns keyed by probe position.
+
+  (V) Methodology / decision — comparison figures that justify a choice
+      Examples: ch04_fft_method_comparison (4 FFT amplitude methods),
+      ch04_reconstruction_AvsB, ch04_sw_correction_test, ch04_paddle_contamination,
+      ch04_per40_vs_per240_outin, ch04_fft_peak_bias_cancellation.
+      These are usually [DELEG] and produce a side-by-side or before-vs-after.
+
+"All available runs" in the thesis-result context = meta_results (the two
+March-2026 lowrange folders). "All runs across all sessions" = combined_meta
+(CH04 methodology, supplementary scatter).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FIGURE INDEX
@@ -54,6 +97,13 @@ Three-tier load philosophy:
   Tier 3 (Heavy, bottom):    adds remaining 23 folders' processed_dfs. Only
                                needed for cross-session diagnostics (currently
                                a placeholder; D1 cross-session consistency).
+
+Figure-stub invariants (2026-04-24 durable rule):
+  Every figure-generation script guarantees four things on regeneration —
+  (a) IMMUTABLE block freshly rewritten, (b) valid `\\begin{figure}` env,
+  (c) `\\label{fig:NAME}` matches the stub filename `NAME.tex`, (d) user-
+  authored captions in the Python `CAPTIONS` dict are applied verbatim.
+  See memory/feedback_figure_stub_invariants.md.
 
 CHAPTER 04 — METHODOLOGY
   §1    ch04_probe_noise_floor           [META]  ~  Stillwater noise floor per probe / hw config
@@ -263,7 +313,7 @@ def _run_delegated_if_missing(
 #
 # Why two sets: older sessions have interpolation artefacts at ≥1.6 Hz but are
 # valid for noise floor, probe characterisation, wind PSD, etc. (CH04). Result
-# figures (OUT/IN vs freq/kL, damping vs amplitude) must use only the two
+# figures (OUT/IN vs freq/k, damping vs amplitude) must use only the two
 # validated lowrange/h100 folders.
 
 ALL_PROCESSED_DIRS = [
@@ -850,7 +900,7 @@ _pv_td_vs_fft_scatter = {
         "caption": (
             "Same data as the td-vs-fft figure. "
             "Bottom row: individual run ratios as scatter (no median line). "
-            "Use to identify outlier runs driving dips at specific kL."
+            "Use to identify outlier runs driving dips at specific $k$."
         ),
     },
 }
@@ -2077,7 +2127,8 @@ _save_placeholder(
 print("main_save_figures.py — all figure sections complete.")
 
 # TODO: check the phase on the sine vs signal comparison.
-# BIG TODO: change all plots with freq on x-axis to kL.
+# (Done 2026-04-24: x-axis is now pure wavenumber $k$ (rad/m), not $kL$.
+#  See memory/feedback_kL_to_k_migration.md for the rename map.)
 
 # %%
 # [DATA: META]  — Quick sanity-check, prints only (no figure saved).
