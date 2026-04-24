@@ -283,8 +283,7 @@ def _write_stub(sub: pd.DataFrame, volt: float, figure_name: str) -> None:
     # the dict, not in the .tex.
     pu.write_figure_stub(_meta, plot_type="damping_ka",
                          subfig_filenames=[figure_name],
-                         force=True,
-                         width="\\linewidth")
+                         force=True)
     print(f"   stub → output/TEXFIGU/{figure_name}.tex")
 
 

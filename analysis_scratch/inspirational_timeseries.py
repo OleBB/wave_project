@@ -364,8 +364,7 @@ def _write_stub(wind_tag: str, data: dict, figure_name: str) -> None:
     # force=True — body is always rewritten from CAPTIONS; hand edits to
     # the .tex body don't survive a re-run. Author captions in the dict.
     pu.write_figure_stub(_meta, plot_type="inspirational_timeseries",
-                         subfig_filenames=[figure_name], force=True,
-                         width="\\linewidth")
+                         subfig_filenames=[figure_name], force=True)
     print(f"   stub → {stub_path.relative_to(BASE)}")
 
 

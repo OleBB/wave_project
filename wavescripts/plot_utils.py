@@ -780,7 +780,7 @@ def write_figure_stub(meta: dict, plot_type: str,
                       subfig_filenames: Optional[list[str]] = None,
                       subfig_captions: Optional[list[str]] = None,
                       force: bool = False,
-                      width: str = "0.9\\linewidth") -> None:
+                      width: str = "\\linewidth") -> None:
     """
     Write (or surgically refresh) a LaTeX figure stub in TEXFIGU_DIR.
 

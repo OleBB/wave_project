@@ -426,7 +426,6 @@ _stub_meta = pu.build_fig_meta(
 # overlay-plot layout, not the single 2×2 grid we're saving now.
 pu.write_figure_stub(_stub_meta, plot_type="spectrum_fft",
                      subfig_filenames=["ch04_fft_wave"],
-                     force=True,
-                     width="\\linewidth")
+                     force=True)
 print(f"   stub → output/TEXFIGU/ch04_fft_wave.tex")
 print("\nDone.")
