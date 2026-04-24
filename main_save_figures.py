@@ -29,6 +29,79 @@ OUTPUT KEYS (reader-facing axes on plots):
                     and steepness (in a). Used for CH05 §4 per-voltage panels.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+END-TO-END PROCESS FLOW — what happens when you run `python main_save_figures.py`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 1. IMPORTS & MODULE RELOAD (lines ~110–145)
+    importlib.reload(wavescripts.plotter, wavescripts.filters). Load plotter
+    API + helpers. Cheap.
+
+ 2. DELEGATED-HELPER REGISTRATION (lines ~190–225)
+    Define _run_delegated_if_missing(script_rel, outputs, label). Any cell
+    tagged [DELEG] later calls this to subprocess-run a scratch script only
+    when its declared output files are absent. Set REGENERATE_DELEGATED=True
+    at module top to force every delegated script to re-run.
+
+ 3. DATASET REGISTRY (lines ~306–365)
+    ALL_PROCESSED_DIRS      — every PROCESSED-* folder (CH04 methodology).
+    RESULTS_PROCESSED_DIRS  — the 2 canon March-2026 lowrange folders (CH05).
+    _pu.ACTIVE_DATASETS     — RESULTS_PROCESSED_DIRS names; gets written into
+                              every figure stub's IMMUTABLE provenance block.
+
+ 4. LIGHT LOAD (lines ~366–375)
+    load_analysis_data(*ALL_PROCESSED_DIRS, load_processed=False)
+      → combined_meta (DataFrame, one row per run, all folders)
+      → combined_fft_dict / combined_psd_dict (wave runs only)
+      → processed_dfs = {}  (empty placeholder; deferred to gates)
+    Cost: ~2 s.
+
+ 5. RESULTS SUBSET (lines ~377–394)
+    meta_results = combined_meta filtered to RESULTS_PROCESSED_DIRS.
+    Mooring-variant merge (below_90_loose230 / loose300 → below_90_loose)
+    lands here (CH04 §3c established they're equivalent within ±7%).
+
+ 6. CH04 METHODOLOGY FIGURES (lines ~430–1322) — all [META] or [DELEG]
+    Order roughly matches the thesis chapter outline (§19 CLAUDE.md):
+      §1    noise floor            (is our signal above noise?)
+      §2    stillwater timing      (how long between runs — TODO)
+      §3    probe placement        (lateral symmetry, probe-to-probe calib)
+      §4-x  wind & FFT methodology (what is the wind; why FFT not TD)
+      §4b–n amplitude-method / window-choice diagnostics
+      §5    inspirational timeseries (IN/OUT macro + 5-period zoom)
+      §7    wave stability, period_cv
+      §8    lateral equality (nowind)
+      §9    amplitude profile along tank (cell commented)
+
+ 7. CH05 RESULTS FIGURES (lines ~1324–1800) — all [META] or [DELEG]
+      §1    damping vs frequency         ← primary result
+      §2    damping scatter vs amplitude
+      §3    wind delta
+      §3b   T_cross (clean nowind reference)
+      §4    damping vs ka (overview + per-voltage standalones)
+      §5    swell scatter (DROPPED)
+      §6    reconstructed paddle signal
+      §7    all-data scatter (supplementary)
+
+ 8. MEDIUM LOAD GATE (lines ~1930–1966)
+    Loads processed_dfs for the 2 canon March-2026 folders (~180 runs,
+    ~12 MB, ~45 s first time). Needed by [DFS-canon] cells immediately
+    below: CH04 §5b timeseries overview, §6 first arrival. _loaded_dirs
+    tracks which folders are already in memory so the gate is idempotent.
+
+ 9. CH04 §5b / §6 (DFS-CANON CELLS) (lines ~1968–2039)
+
+10. HEAVY LOAD GATE (lines ~2040–2066)
+    Loads processed_dfs for the remaining 23 folders (~+65 MB, ~+2 min).
+    Currently only the D1 cross-session diagnostic is a [DFS-all] consumer
+    (placeholder). Skip if you don't need that diagnostic.
+
+11. DIAGNOSTICS (lines ~2068–2131)
+    D1 — 1.3 Hz cross-session consistency (placeholder).
+
+12. FINAL SANITY PRINT (lines ~2133–end)
+    damping_all_amplitude_grouper aggregated OUT/IN at 1.2–1.7 Hz, fullpanel,
+    no/full wind. Printed to stdout; no figure saved.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PLOT TAXONOMY — what each kind of figure shows
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Five recurring shapes show up in this file. Knowing which shape a figure is
