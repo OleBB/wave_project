@@ -187,6 +187,7 @@ CHAPTER 04 — METHODOLOGY
   §3c   ch04_mooring_comparison          [DELEG] ✓  Mooring rubber band length: loose230 vs loose300
   §3d   ch04_sound_speed                 [META]  ~  Speed-of-sound / lab temperature drift
   §3e   ch04_parallel_probe_agreement    [DELEG] ✓  9373/170 vs 9373/340 — mean-IN canonical ref
+  §3f   ch04_depth_regime                [DELEG] ✓  Depth-regime map: kd vs f at d=0.58 m + deep-water-approx error
   §4-1  ch04_wind_psd                    [META]  ~  Wind PSD per probe (nowave runs)
   §4-2  ch04_wind_reflection             [META]  ✗  Wind reflection from panel  [TODO]
   §4-3  ch04_fft_wave                    [DELEG] ✓  FFT spectrum at paddle freq (1.4 Hz canon — 2×2 bar grid w/ Δ)
@@ -779,6 +780,40 @@ _run_delegated_if_missing(
     [Path("output/FIGURES/ch04_parallel_probe_agreement.pdf"),
      Path("output/TEXFIGU/ch04_parallel_probe_agreement.tex")],
     label="ch04_parallel_probe_agreement",
+)
+
+# %%
+# [DATA: DELEG]  — subprocess-calls analysis_scratch/depth_regime_map.py
+"""
+── CH04 § 3f — Depth-regime map (kd vs f) at d = 0.58 m ─────────────────────
+Two-panel figure that justifies the full dispersion relation ω² = g·k·tanh(kd)
+used throughout the pipeline (wavescripts.constants.c_group,
+wavescripts.plot_utils.freq_to_k).
+
+    Top panel: kd vs paddle frequency at d = 580 mm. Shaded regime bands
+    (deep / intermediate / shallow) with thresholds kd=π and kd=π/10.
+    Run-frequency markers sized by n_runs, coded by regime (colour + shape).
+    Vertical band marks the thesis scope (1.3–1.6 Hz). Secondary right-hand
+    axis shows wavelength λ in metres.
+
+    Bottom panel: relative error in λ if the deep-water approximation
+    λ_deep = g/(2π f²) were used instead of full dispersion, as % on a
+    symlog y-axis. Quantifies "by how much does the full dispersion matter".
+
+At 580 mm depth, thesis-scope runs (1.3–1.6 Hz) are comfortably deep
+(kd > π, deep-water approximation error < 0.11 %). Sub-1 Hz frequencies
+drift into intermediate water (kd < π at 1.0 Hz; up to ~15 % λ-error at
+0.7 Hz) — consistent with the bottom-motion observation from 2026-03-12
+annotated on the figure. Scope boundary `f < 1 Hz out of scope`
+(MEMORY.md) has a direct physical rationale visible here.
+
+Delegated build — see analysis_scratch/depth_regime_map.py.
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/depth_regime_map.py",
+    [Path("output/FIGURES/ch04_depth_regime.pdf"),
+     Path("output/TEXFIGU/ch04_depth_regime.tex")],
+    label="ch04_depth_regime",
 )
 
 # _pv_probe_height = {
