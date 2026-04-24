@@ -317,10 +317,35 @@ os.chdir(file_dir)
 # via subprocess when expected outputs are absent. Set REGENERATE_DELEGATED
 # to True to force every delegated script to re-run (use when the pipeline
 # data changed). Default False: run only when outputs are missing.
+import argparse
 import subprocess
 import sys
 
 REGENERATE_DELEGATED = False
+
+# ── CLI flags (parsed once at module load) ────────────────────────────────────
+# Default (no flags): run end-to-end, including both load gates.
+#   --skip-heavy   : skip the HEAVY LOAD GATE (D1 cross-session diagnostic).
+#                    Medium gate still runs → CH04 §5b/§6 DFS-canon cells produce.
+#   --skip-dfs     : skip BOTH gates → only the Light tier (CH04 §1…§9, CH05 §1…§7)
+#                    runs. Nothing that needs processed_dfs executes. Fast.
+#   --regenerate   : equivalent to setting REGENERATE_DELEGATED=True (forces
+#                    every delegated script to re-run even if outputs exist).
+# Safe to import this file in non-CLI contexts too (Jupyter, tests) —
+# parse_known_args tolerates unknown/missing argv.
+_cli = argparse.ArgumentParser(add_help=False)
+_cli.add_argument("--skip-heavy", action="store_true")
+_cli.add_argument("--skip-dfs",   action="store_true")
+_cli.add_argument("--regenerate", action="store_true")
+_args, _ = _cli.parse_known_args()
+SKIP_HEAVY = _args.skip_heavy or _args.skip_dfs
+SKIP_DFS   = _args.skip_dfs
+if _args.regenerate:
+    REGENERATE_DELEGATED = True
+if SKIP_DFS:
+    print("CLI: --skip-dfs set → light tier only (no processed_dfs)")
+elif SKIP_HEAVY:
+    print("CLI: --skip-heavy set → medium tier ok, heavy gate skipped")
 
 def _run_delegated_if_missing(
     script_rel: str,
@@ -1652,7 +1677,7 @@ _pv_damping_scatter = {
         "figure_name": "ch05_damping_scatter",
         "force_stub":  True,
         "figsize":     (5, 4),
-        "caption": "UT/INN damping ratio versus wave frequency, all amplitudes combined. all panel condition(s); colour = wind condition (full, no); marker size = wave amplitude (0.10\,V, 0.20\,V, 0.30\,V, 0.60\,V). Errorbars: standard deviation across runs."
+        "caption": "OUT/IN damping ratio versus wave frequency, all amplitudes combined. Colour = wind condition; marker size = amplitude tier ($\\mathrm{A_1}$, $\\mathrm{A_2}$, $\\mathrm{A_3}$). Errorbars: standard deviation across runs."
 }}
 
 _scatter_meta   = _aef(meta_results, _pv_damping_scatter)
@@ -2065,6 +2090,11 @@ try:
 except NameError:
     _loaded_dirs = set()
 
+if SKIP_DFS:
+    print("Medium load gate — skipped (CLI: --skip-dfs). "
+          "Exiting before any DFS-canon or diagnostic cells run.")
+    sys.exit(0)
+
 _canon_missing = [d for d in RESULTS_PROCESSED_DIRS if d not in _loaded_dirs]
 if _canon_missing:
     print(f"Medium load gate — loading canon processed_dfs "
@@ -2165,6 +2195,11 @@ plot_first_arrival(combined_meta, processed_dfs, _pv_first_arrival, chapter="04"
 # ███████████████████████████████████████████████████████████████████████████████
 # ═══════════════════════════════════════════════════════════════════════════════
 # [DATA: DFS-all gate]
+if SKIP_HEAVY:
+    print("Heavy load gate — skipped (CLI: --skip-heavy). "
+          "Exiting before any DFS-all or diagnostic cells run.")
+    sys.exit(0)
+
 _remaining_dirs = [d for d in ALL_PROCESSED_DIRS if d not in _loaded_dirs]
 if _remaining_dirs:
     print(f"Heavy load gate — loading remaining processed_dfs "
