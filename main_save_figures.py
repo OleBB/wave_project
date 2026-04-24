@@ -1677,7 +1677,7 @@ _pv_damping_scatter = {
         "figure_name": "ch05_damping_scatter",
         "force_stub":  True,
         "figsize":     (5, 4),
-        "caption": "OUT/IN damping ratio versus wave frequency, all amplitudes combined. Colour = wind condition; marker size = amplitude tier ($\\mathrm{{A_1}}$, $\\mathrm{{A_2}}$, $\\mathrm{{A_3}}$). Errorbars: standard deviation across runs."
+        "caption": "OUT/IN damping ratio versus wave frequency, all amplitudes combined. Colour = wind condition; marker size = amplitude tier ($A_1$, $A_2$, $A_3$). Errorbars: standard deviation across runs."
 }}
 
 _scatter_meta   = _aef(meta_results, _pv_damping_scatter)

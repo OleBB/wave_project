@@ -132,9 +132,9 @@ WIND_COLOR_MAP = {
 # sub-linearity at highest amplitude. See the 2026-04-24 paddle-voltage →
 # measured-amplitude audit (170 nowind+fullpanel runs).
 _AMP_TIERS = (
-    (0.10, r"$\mathrm{A_1}$", "A1",  7.5),
-    (0.20, r"$\mathrm{A_2}$", "A2", 15.0),
-    (0.30, r"$\mathrm{A_3}$", "A3", 21.5),
+    (0.10, r"$A_1$", "A1",  7.5),
+    (0.20, r"$A_2$", "A2", 15.0),
+    (0.30, r"$A_3$", "A3", 21.5),
 )
 AMP_LABEL = {v: lbl for v, lbl, _, _ in _AMP_TIERS}   # reader-facing (mathtext)
 AMP_TAG   = {v: t   for v, _, t, _ in _AMP_TIERS}     # file-name tag
@@ -142,7 +142,7 @@ AMP_MM    = {v: mm  for v, _, _, mm in _AMP_TIERS}    # nominal measured mm
 
 
 def amp_to_label(v, default: Optional[str] = None) -> str:
-    """Reader-facing amplitude label (e.g. 0.20 → ``$\\mathrm{A_2}$``).
+    """Reader-facing amplitude label (e.g. 0.20 → ``$A_2$``).
 
     Use this in axis titles, legends, subfigure captions. If ``v`` is not
     one of the canonical tiers, returns ``default`` (fallback: ``"V = x"``
@@ -273,13 +273,28 @@ def apply_thesis_style(usetex: bool = False) -> None:
     -----
     Call once at the top of your notebook/script before any plotting:
         from wavescripts.plot_utils import apply_thesis_style
-        apply_thesis_style()             # draft
-        apply_thesis_style(usetex=True)  # final
+        apply_thesis_style()             # draft (NCM via OTF, no LaTeX)
+        apply_thesis_style(usetex=True)  # final (LaTeX + Computer Modern)
+
+    In draft mode (default), NewComputerModern OTFs shipped with TeX Live
+    are registered with matplotlib's FontManager so text in the figures
+    matches the thesis body font without a LaTeX round-trip. Math uses the
+    built-in Computer Modern mathtext set (visually identical to NCM for
+    standard symbols). If NCM OTFs can't be located, falls back silently
+    to DejaVu Serif.
     """
+    # Register NCM OTFs once per process (no-op after first call).
+    if not usetex:
+        _register_ncm_fonts()
+
+    serif_list = (["Computer Modern"] if usetex
+                  else ["NewComputerModern10", "DejaVu Serif"])
+
     plt.rcParams.update({
         "text.usetex":       usetex,
         "font.family":       "serif",
-        "font.serif":        ["Computer Modern"] if usetex else ["DejaVu Serif"],
+        "font.serif":        serif_list,
+        "mathtext.fontset":  "cm",
         "font.size":         10,
         "axes.labelsize":    10,
         "axes.titlesize":    11,
@@ -296,6 +311,42 @@ def apply_thesis_style(usetex: bool = False) -> None:
         "grid.alpha":        0.3,
         "axes.grid":         True,
     })
+
+
+_NCM_REGISTERED = False
+
+
+def _register_ncm_fonts() -> None:
+    """Register NewComputerModern OpenType files with matplotlib.
+
+    Looks up the OTFs under TeX Live's texmf-dist tree. Idempotent — safe
+    to call repeatedly. If the files aren't present (no TeX Live install),
+    prints a single warning and returns without raising.
+    """
+    global _NCM_REGISTERED
+    if _NCM_REGISTERED:
+        return
+    from matplotlib import font_manager as _fm
+    # Known TeX Live locations (macOS MacPorts/Homebrew, Linux TUG installer).
+    _candidates = [
+        Path("/usr/local/texlive/2025/texmf-dist/fonts/opentype/public/newcomputermodern"),
+        Path("/usr/local/texlive/2024/texmf-dist/fonts/opentype/public/newcomputermodern"),
+        Path("/opt/homebrew/texlive/texmf-dist/fonts/opentype/public/newcomputermodern"),
+    ]
+    ncm_dir = next((p for p in _candidates if p.exists()), None)
+    if ncm_dir is None:
+        print("   warn: NewComputerModern OTFs not found on this machine — "
+              "falling back to DejaVu Serif.")
+        _NCM_REGISTERED = True
+        return
+    for _fname in ("NewCM10-Regular.otf", "NewCM10-Bold.otf",
+                   "NewCM10-Italic.otf", "NewCM10-BoldItalic.otf",
+                   "NewCMMath-Regular.otf"):
+        try:
+            _fm.fontManager.addfont(str(ncm_dir / _fname))
+        except Exception as _e:
+            print(f"   warn: could not register {_fname}: {_e}")
+    _NCM_REGISTERED = True
     
 def _top_k_indices(values: np.ndarray, k: int) -> np.ndarray:
     """
