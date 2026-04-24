@@ -158,6 +158,26 @@ def amp_to_label(v, default: Optional[str] = None) -> str:
     return default if default is not None else f"V = {v:.2f}"
 
 
+WIND_LABEL = {
+    "no":      "uten",
+    "lowest":  "liten",
+    "full":    "full",
+}
+
+
+def wind_to_label(w, default: Optional[str] = None) -> str:
+    """Reader-facing wind label (e.g. ``"no"`` → ``"uten"``).
+
+    Norwegian short forms for legend entries on damping / transmission
+    plots: uten (no wind), liten (lowest), full (full). Legends title the
+    group as ``"vind"``. Unknown wind tags fall back to the raw string.
+    """
+    try:
+        return WIND_LABEL.get(str(w), str(w) if default is None else default)
+    except Exception:
+        return default if default is not None else "—"
+
+
 def amp_to_tag(v, default: Optional[str] = None) -> str:
     """File-name tag for one paddle amplitude (0.20 → ``"A2"``).
 

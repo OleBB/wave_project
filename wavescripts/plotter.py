@@ -65,6 +65,7 @@ from wavescripts.plot_utils import (
     _top_k_indices,
     amp_to_label,
     amp_to_tag,
+    wind_to_label,
     apply_legend,
     apply_thesis_style,
     build_fig_meta,
@@ -202,7 +203,6 @@ def _draw_damping_freq_ax(
             transform=ax.transAxes,
             color="gray",
         )
-        ax.set_title(f"{panel} / {wind}", fontsize=9)
         return
 
     ax.axhline(
@@ -230,8 +230,7 @@ def _draw_damping_freq_ax(
         )
 
     ax.set_xlabel("$k$ (rad/m)", fontsize=9)
-    ax.set_ylabel("OUT/IN", fontsize=9)
-    ax.set_title(f"{panel}panel / {wind}wind", fontsize=9)
+    ax.set_ylabel(r"$A_\mathrm{Ut}/A_\mathrm{inn}$", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(title="Amplitude", fontsize=7, title_fontsize=7)
 
@@ -253,15 +252,14 @@ def _make_damping_freq_fig(
         ax.errorbar(
             freq_to_k(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
             yerr=grp["std_out_in"],
-            label=wind, color=WIND_COLOR_MAP.get(wind),
+            label=wind_to_label(wind), color=WIND_COLOR_MAP.get(wind),
             marker="o", markersize=5, linewidth=1.4, capsize=3,
         )
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax.set_xlabel("$k$ (rad/m)", fontsize=9)
-    ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
-    ax.set_title(f"{panel} panel  |  {amp_to_label(amp)}", fontsize=9)
+    ax.set_ylabel(r"$A_\mathrm{Ut}/A_\mathrm{inn}$", fontsize=9)
     ax.grid(True, alpha=0.3)
-    ax.legend(title="wind", fontsize=8, title_fontsize=8)
+    ax.legend(title="vind", fontsize=8, title_fontsize=8)
     add_freq_axis(ax)
     fig.subplots_adjust(left=0.14, right=0.97, top=0.84, bottom=0.13)
     return fig
@@ -404,9 +402,8 @@ def _make_damping_scatter_fig(
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax.set_xlabel("$k$ (rad/m)", fontsize=9)
-    ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
-    ax.set_title(f"{panel} panel", fontsize=9)
-    ax.legend(title="wind / amp", fontsize=7, title_fontsize=7)
+    ax.set_ylabel(r"$A_\mathrm{Ut}/A_\mathrm{inn}$", fontsize=9)
+    ax.legend(title="vind / amp", fontsize=7, title_fontsize=7)
     ax.grid(True, alpha=0.3)
     add_freq_axis(ax)
     # top=0.84 to leave room for the secondary frequency axis above the title
@@ -659,17 +656,7 @@ def _make_damping_ka_fig(
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax.set_xlabel("$ka$ (IN probe, measured)", fontsize=9)
-    ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
-    if amp is not None:
-        ax.set_title(
-            f"Wave transmission vs. wave steepness — {panel} panel, {amp_to_label(amp)}",
-            fontsize=9,
-        )
-    else:
-        ax.set_title(
-            f"Wave transmission vs. wave steepness — {panel} panel",
-            fontsize=9,
-        )
+    ax.set_ylabel(r"$A_\mathrm{Ut}/A_\mathrm{inn}$", fontsize=9)
     ax.grid(True, alpha=0.3)
     if xlim is not None:
         ax.set_xlim(xlim)
@@ -679,7 +666,8 @@ def _make_damping_ka_fig(
     # ── Legend(s) ──
     wind_handles = [
         mlines.Line2D([], [], color=WIND_COLOR_MAP.get(w, "gray"),
-                      marker="o", linestyle="None", markersize=6, label=f"{w} wind")
+                      marker="o", linestyle="None", markersize=6,
+                      label=wind_to_label(w))
         for w in wind_conditions
     ]
     if amp is None:
@@ -691,7 +679,7 @@ def _make_damping_ka_fig(
             for i, a in enumerate(all_amps)
         ]
         ax.legend(handles=wind_handles + amp_handles, fontsize=7,
-                  title="condition / amplitude", title_fontsize=7)
+                  title="vind / amplitude", title_fontsize=7)
     elif per_freq_markers and unique_freqs:
         # Per-amp variant with per-freq markers — show a frequency
         # legend beside the wind legend.
@@ -704,7 +692,7 @@ def _make_damping_ka_fig(
             for fi, f in enumerate(unique_freqs)
         ]
         leg_wind = ax.legend(handles=wind_handles, fontsize=7,
-                              title="wind", title_fontsize=7,
+                              title="vind", title_fontsize=7,
                               loc="upper right", framealpha=0.92)
         ax.add_artist(leg_wind)
         ax.legend(handles=freq_handles, fontsize=7,
@@ -712,7 +700,7 @@ def _make_damping_ka_fig(
                   loc="upper left", framealpha=0.92)
     else:
         ax.legend(handles=wind_handles, fontsize=7,
-                  title="wind", title_fontsize=7)
+                  title="vind", title_fontsize=7)
 
     fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
     return fig
@@ -882,14 +870,13 @@ def _make_damping_wind_delta_fig(
         ax_top.errorbar(
             freq_to_k(freq_agg[GC.WAVE_FREQUENCY_INPUT].values), freq_agg["mean_out_in"],
             yerr=freq_agg["std_out_in"].fillna(0),
-            label=wind, color=WIND_COLOR_MAP.get(wind, "gray"),
+            label=wind_to_label(wind), color=WIND_COLOR_MAP.get(wind, "gray"),
             marker="o", markersize=5, linewidth=1.4, capsize=3,
         )
     ax_top.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
-    ax_top.set_ylabel("OUT/IN (FFT)", fontsize=9)
-    ax_top.set_title(f"{panel} panel  |  {amp_to_label(amp)}", fontsize=9)
+    ax_top.set_ylabel(r"$A_\mathrm{Ut}/A_\mathrm{inn}$", fontsize=9)
     ax_top.grid(True, alpha=0.3)
-    ax_top.legend(title="wind", fontsize=8, title_fontsize=8)
+    ax_top.legend(title="vind", fontsize=8, title_fontsize=8)
     add_freq_axis(ax_top)
 
     # ── Bottom: delta = target − ref ──────────────────────────────────────────
@@ -3809,7 +3796,7 @@ def plot_fft_peak_bias_cancellation(
                        edgecolor="none")
         ax.axhline(0, color="k", ls="--", lw=0.7, alpha=0.5)
         ax.set_xlabel("Wave frequency (Hz)")
-        ax.set_ylabel("$\\Delta(\\mathrm{OUT/IN})$")
+        ax.set_ylabel(r"$\Delta(A_\mathrm{Ut}/A_\mathrm{inn})$")
         ax.set_title("(c) $\\Delta$ vs frequency")
         ax.legend(fontsize=7, loc="lower left")
         ax.grid(True, alpha=0.3)
@@ -3828,7 +3815,7 @@ def plot_fft_peak_bias_cancellation(
         ax.axhline(0, color="k", ls="--", lw=0.5, alpha=0.5)
         ax.axvline(0, color="k", ls="--", lw=0.5, alpha=0.5)
         ax.set_xlabel("Paddle peak offset at IN (mHz from nominal)")
-        ax.set_ylabel("$\\Delta(\\mathrm{OUT/IN})$")
+        ax.set_ylabel(r"$\Delta(A_\mathrm{Ut}/A_\mathrm{inn})$")
         ax.set_title("(d) $\\Delta$ vs IN paddle drift")
         ax.legend(fontsize=7, loc="lower left")
         ax.grid(True, alpha=0.3)
