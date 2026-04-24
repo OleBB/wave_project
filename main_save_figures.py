@@ -66,7 +66,7 @@ CHAPTER 04 — METHODOLOGY
   §3e   ch04_parallel_probe_agreement    [DELEG] ✓  9373/170 vs 9373/340 — mean-IN canonical ref
   §4-1  ch04_wind_psd                    [META]  ~  Wind PSD per probe (nowave runs)
   §4-2  ch04_wind_reflection             [META]  ✗  Wind reflection from panel  [TODO]
-  §4-3  ch04_fft_wave                    [META]  ~  FFT spectrum at paddle freq (1.3 Hz example)
+  §4-3  ch04_fft_wave                    [DELEG] ✓  FFT spectrum at paddle freq (1.4 Hz canon — 2×2 bar grid w/ Δ)
   §4-4  ch04_wind_snr                    [META]  ~  Spectral SNR: paddle / wind noise per probe
   §4-5  ch04_td_vs_fft                   [META]  ~  A_td vs A_FFT: why FFT is required
         ch04_td_vs_fft_scatter           [META]  ~     └─ per-run scatter sibling
@@ -98,7 +98,7 @@ CHAPTER 05 — RESULTS
   §3    ch05_damping_wind_delta          [META]  ~  Wind effect on damping (delta plot)
   §3b   ch05_t_cross                     [DELEG] ✓  T_cross: honest wind effect via clean nowind ref
   §4    ch05_damping_ka                  [META]  ~  Damping vs ka (wavenumber × amplitude)
-        ch05_damping_ka_by_amp           [META]  ~     └─ split by input amplitude
+        ch05_damping_ka_{10,20,30}V      [DELEG] ✓     └─ standalone per-voltage (per240+per40, magenta palette)
   §5    ch05_swell_scatter               [META]  —  DROPPED (cell commented in place)
   §6    ch05_reconstructed               [META]  ~  FFT-reconstructed paddle signal (fft_dict, not DFS)
   §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions
@@ -757,59 +757,28 @@ Figures:
 _save_placeholder("ch04_wind_reflection", "CH04 §4-2 — Wind reflection from panel", chapter="04")
 
 # %%
-# [DATA: META]  — reads combined_fft_dict
+# [DATA: DELEG]  — subprocess-calls analysis_scratch/fft_wave_spectrum.py
 """
 ── CH04 § 4-3 — FFT spectrum: paddle frequency peak ────────────────────────
-Goal: show what the FFT looks like for a wave run — narrow peak at the paddle
-frequency, wind condition overlaid. Motivates using FFT amplitude (not
-time-domain) for OUT/IN. One representative frequency (e.g. 1.3 Hz).
+Goal: teach the reader the discrete FFT spectrum of a paddle wave. A 2×2
+grid of bar plots at the actual FFT bin centres for a canonical 1.4 Hz,
+0.2 V, fullpanel, per240 run (canon 20260327). Rows = wind condition,
+columns = probe side (Inn / Ut). Horizontal dotted guides at each row's
+paddle peaks; vertical guides at f, 2f, 3f, 4f (labels on the top axis);
+Δ and A_Ut/A_inn arrow in the Utgående panels.
 
-Data: combined_fft_dict, wave runs.
+Typeset in NewComputerModern (OTFs registered directly from TeX Live).
+Bin widths per probe are recorded in the TEXFIGU stub's extra_stats
+(they differ by ±1 sample between probes because the H&G window end is
+UC-snapped independently per probe).
 
-Figures:
-  - plot_frequency_spectrum with data_type="fft", facet_by="probe"
+Delegated build — see analysis_scratch/fft_wave_spectrum.py for details.
 """
-
-_pv_fft_wave = {
-    "filters": {
-        "WaveAmplitudeInput [Volt]": 0.2,
-        "WaveFrequencyInput [Hz]":   1.3,
-        "WindCondition":             None,
-        "PanelCondition":            "full",
-        "run_category":              "standard",
-    },
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,           # DRAFT — FFT wave example not yet polished
-        "draft":       True,
-        "figure_name": "ch04_fft_wave",
-        "force_stub":  True,
-        "figsize":     (11, 4 * 4),
-        "linewidth":   0.8,
-        "facet_by":    "probe",
-        "probes":      ANALYSIS_PROBES,
-        "xlim":        (0, 5),
-        "logaritmic":  False,
-        "peaks":       3,
-        "max_points":  500,
-        "grid":        True,
-        "legend":      "inside",
-        "caption": (
-            "FFT amplitude spectrum of the free surface during wave runs "
-            "(paddle frequency 1.3\\,Hz, amplitude 0.2\\,V, full panel). "
-            "Each panel shows one probe; colour encodes wind condition. "
-            "The narrow paddle-frequency peak is the target signal used "
-            "for OUT/IN ratio computation."
-        ),
-    },
-}
-
-_fft_wave_meta = _aef(combined_meta, _pv_fft_wave)
-_fft_wave_paths = set(_fft_wave_meta["path"])
-_fft_wave_dict  = {k: v for k, v in combined_fft_dict.items() if k in _fft_wave_paths}
-
-_fig_fft_wave, _ = plot_frequency_spectrum(
-    _fft_wave_dict, _fft_wave_meta, _pv_fft_wave, data_type="fft", chapter="04"
+_run_delegated_if_missing(
+    "analysis_scratch/fft_wave_spectrum.py",
+    [Path("output/FIGURES/ch04_fft_wave.pdf"),
+     Path("output/TEXFIGU/ch04_fft_wave.tex")],
+    label="ch04_fft_wave",
 )
 
 # %%
@@ -1644,28 +1613,22 @@ _ka_meta = apply_experimental_filters(meta_results, _pv_damping_ka)
 from wavescripts.plotter import plot_damping_ka
 plot_damping_ka(_ka_meta, _pv_damping_ka, chapter="05")
 
-# Per-amplitude variants of the same plot — one figure per input voltage
-# (0.10/0.20/0.30 V). Shared x/y limits across the three so they read as
-# panels of the same underlying figure. Same filtered data as the all-amps
-# overview above.
-_pv_damping_ka_by_amp = {
-    **_pv_damping_ka,
-    "plotting": {
-        **_pv_damping_ka["plotting"],
-        "figure_name": "ch05_damping_ka_by_amp",
-        "facet_by_amp": True,
-        "force_stub": True,
-        "caption": (
-            "OUT/IN damping ratio versus wave steepness $ka$ at the incident probe "
-            "(9373/170), full panel condition, split by input amplitude "
-            "(0.10/0.20/0.30\\,V). Colour encodes wind condition. Axes are "
-            "shared across the three sub-figures for direct comparison. "
-            "Each point is one run. Dashed line: ratio = 1 (no damping). "
-            "Data: two validated sessions (2026-03-26/27, lowrange mode)."
-        ),
-    },
-}
-plot_damping_ka(_ka_meta, _pv_damping_ka_by_amp, chapter="05")
+# Per-voltage standalone variants — three independent figures (one per paddle
+# voltage 0.10 / 0.20 / 0.30 V), each with its own TEXFIGU stub so the thesis
+# caption is fully hand-authored per panel (\caption{} body left blank; a
+# suggested draft is parked in the stub's IMMUTABLE extra_params for reference).
+# Also combines per240 and per40 runs: per240 uses the canonical thesis blue/red
+# (WIND_COLOR_MAP), per40 uses turquoise (#00D4BC, nowind) + magenta (#D946EF,
+# fullwind) for visual separation without breaking the wind-colour convention.
+# Delegated build — see analysis_scratch/damping_ka_per_volt.py for details.
+_run_delegated_if_missing(
+    "analysis_scratch/damping_ka_per_volt.py",
+    [Path("output/TEXFIGU/ch05_damping_ka_10V.tex"),
+     Path("output/TEXFIGU/ch05_damping_ka_20V.tex"),
+     Path("output/TEXFIGU/ch05_damping_ka_30V.tex"),
+     *(Path(f"output/FIGURES/ch05_damping_ka_{v}V.pdf") for v in ("10", "20", "30"))],
+    label="ch05_damping_ka_per_volt",
+)
 
 # %%
 # [DATA: META]  — cell body DROPPED (kept as a marker)

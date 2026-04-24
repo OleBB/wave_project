@@ -11,66 +11,66 @@ Given:
 
 True samples per period:
 
-```math
+$$
 N_T^\text{true}
 = \frac{f_s}{f_p}
 = \frac{250}{1.4}
 \approx 178.571.
-```
+$$
 
 You rounded that to:
 
-```math
+$$
 N_T^\text{used} = 179,
-```
+$$
 
 so your 10‑period window is:
 
-```math
+$$
 N_\text{win} = 10 \times 179 = 1790 \text{ samples},
-```
+$$
 
 while true 10T would be:
 
-```math
+$$
 N_\text{true} = 10 \times 178.571
 \approx 1785.71.
-```
+$$
 
 So the window is too long by:
 
-```math
+$$
 \Delta N = 1790 - 1785.71 \approx 4.3 \text{ samples},
-```
+$$
 
 i.e.
 
-```math
+$$
 \Delta t
 = \frac{\Delta N}{f_s}
 \approx \frac{4.3}{250}
 \approx 0.0172 \,\text{s}.
-```
+$$
 
 As a fraction of a period:
 
-```math
+$$
 \Delta t / T
 = f_p \Delta t
 \approx 1.4 \times 0.0172
 \approx 0.024.
-```
+$$
 
 So you’re ending the window $\approx 0.024$ cycles “past” the last ideal upcrossing: a small phase overshoot.
 
 If the wave is roughly sinusoidal with amplitude $A \approx 15 \,\text{mm}$, then a pure sinusoid at phase $\phi = 0.024 \times 2\pi$ has
 
-```math
+$$
 \eta_\text{end}
-\approx -A \sin(2\pi \times 0.024)
-\approx -15 \,\text{mm} \times 0.152
-\approx -2.3 \,\text{mm},
-```
+\approx -A \sin(2\pi \times 0.024) 
+\approx -15 \,\text{mm} \times 0.152 
+\approx -2.3 \,\text{mm}, 
+$$
 
 which is exactly what Claude is quoting. Your measured end values (−3.0, −1.6, −5.1, −4.6 mm) are all within that baseline plus some extra drift/wind contamination.
 
@@ -82,28 +82,28 @@ So the “non‑zero endpoint” is mostly just the integer‑rounding artifact 
 
 For an FFT of length $N_\text{win} = 1790$, the discrete frequency bins are spaced by
 
-```math
+$$
 \Delta f
 = \frac{f_s}{N_\text{win}}
 = \frac{250}{1790}
 \approx 0.13966\,\text{Hz}.
-```
+$$
 
 Your paddle frequency in bins:
 
-```math
+$$
 k_p
 = \frac{f_p}{\Delta f}
 = \frac{1.4}{250/1790}
 = \frac{1.4 \times 1790}{250}
 \approx 10.02.
-```
+$$
 
 So instead of landing exactly on bin $k = 10$, you’re offset by $\approx 0.02$ of a bin. That causes a tiny sinc attenuation and tiny leakage into neighbouring bins.
 
 For a rectangular window, the main lobe attenuation at offset $\delta = 0.02$ bins is roughly
 
-```math
+$$
 \text{gain}(\delta)
 \approx \left|
   \frac{\sin(\pi \delta)}{\pi \delta}
@@ -112,7 +112,7 @@ For a rectangular window, the main lobe attenuation at offset $\delta = 0.02$ bi
   \frac{\sin(0.02\pi)}{0.02\pi}
 \right|
 \approx 0.9993,
-```
+$$
 
 i.e. about a $0.07\%$ amplitude loss. That’s exactly what Claude is calling “≈ 0.07 %.”
 
@@ -146,10 +146,10 @@ This is where the connection between LS and FFT shows up:
 
 - **LS case**:
   - You fit directly
-    ```math
+    $
     \eta(t_n) \approx
       A \cos(2\pi f_p t_n + \phi),
-    ```
+    $
     with $f_p = 1.4 \,\text{Hz}$ held fixed, over the same 1790 samples.
   - The LS solution is equivalent to projecting onto $\cos(2\pi f_p t)$ and $\sin(2\pi f_p t)$ at that exact $f_p$.
 

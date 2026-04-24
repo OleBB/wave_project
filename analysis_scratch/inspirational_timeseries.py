@@ -65,8 +65,43 @@ TITLE_WIND = {
 WIND_KEY = {"nowind": "no", "fullwind": "full"}
 WIN_COLOR = "#F1B24A"  # amber — shaded H&G window + zoom connectors
 
+# ══════════════════════════════════════════════════════════════════════════
+# USER-AUTHORED CAPTIONS — edit these; the stub body picks them up verbatim.
+# ══════════════════════════════════════════════════════════════════════════
+# - Empty string  → body renders with a TODO placeholder (hint to author it).
+# - Non-empty     → body's \caption[short]{full} uses your text literally.
+# Regenerate stubs after editing by running this script (or letting
+# main_save_figures.py's _run_delegated_if_missing pick up the missing
+# output). force=True, so the body is always rewritten from these entries
+# — editing the .tex by hand won't survive. Author captions here, not in
+# the .tex.
+#
+# No agent-drafted captions are included anywhere in the stub; the
+# IMMUTABLE block only records provenance / filters / stats / method.
+CAPTIONS = {
+    "nowind":   "",
+    "fullwind": "",
+}
+
 
 apply_thesis_style()
+
+# Match thesis body font — NewComputerModern OTFs shipped with TeX Live.
+from matplotlib import font_manager as _fm
+_NCM_DIR = "/usr/local/texlive/2025/texmf-dist/fonts/opentype/public/newcomputermodern"
+for _fname in ("NewCM10-Regular.otf", "NewCM10-Bold.otf",
+               "NewCM10-Italic.otf", "NewCM10-BoldItalic.otf",
+               "NewCMMath-Regular.otf"):
+    try:
+        _fm.fontManager.addfont(f"{_NCM_DIR}/{_fname}")
+    except Exception as _e:
+        print(f"   warn: could not register {_fname}: {_e}")
+plt.rcParams.update({
+    "font.family":      "serif",
+    "font.serif":       ["NewComputerModern10", "DejaVu Serif"],
+    "mathtext.fontset": "cm",
+})
+
 pu.ACTIVE_DATASETS = [p.name for p in
                      sorted(BASE.glob("waveprocessed/PROCESSED-*"))]
 pu.TEXFIGU_DIR = TEXFIGU_DIR
@@ -131,7 +166,7 @@ def _apply_ticks(ax, *, x_major, x_minor, y_major, y_minor):
 
 
 def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
-    """Geometry: v02_xtall_y5 — (10×12) figsize, y_major=5, default height ratios."""
+    """Geometry: zoom-tall variant — (10×13) figsize, height_ratios=[1,2,1,2]."""
     color = WIND_COLOR_MAP[WIND_KEY[wind_tag]]
 
     eta_in, eta_out = data["eta_in"], data["eta_out"]
@@ -145,8 +180,8 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
     in_zx0,  in_zx1  = (in_ws + in_we) / 2 - zoom_half,  (in_ws + in_we) / 2 + zoom_half
     out_zx0, out_zx1 = (out_ws + out_we) / 2 - zoom_half, (out_ws + out_we) / 2 + zoom_half
 
-    fig = plt.figure(figsize=(10, 12.0))
-    gs = fig.add_gridspec(4, 1, height_ratios=[2.2, 1, 2.2, 1], hspace=0.42)
+    fig = plt.figure(figsize=(10, 13.0))
+    gs = fig.add_gridspec(4, 1, height_ratios=[1, 2, 1, 2], hspace=0.42)
     ax_in_full  = fig.add_subplot(gs[0, 0])
     ax_in_zoom  = fig.add_subplot(gs[1, 0])
     # Macros share x (0 … x_cutoff). Zooms do NOT share x — each follows its
@@ -169,8 +204,9 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
         ax_full.text(
             0.005, 0.92, label,
             transform=ax_full.transAxes, va="top", ha="left",
-            fontsize=10, color=color, weight="bold",
-            bbox=dict(boxstyle="round,pad=0.25", fc="white", ec=color, lw=0.6),
+            fontsize=10, color="black",
+            bbox=dict(boxstyle="square,pad=0.25", fc="white",
+                      ec="#888", lw=0.5, alpha=0.97),
         )
 
         m = (t >= zx0) & (t <= zx1)
@@ -181,11 +217,6 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
         ax_zoom.set_xlim(zx0, zx1)
         ax_zoom.set_ylim(ylim)
         ax_zoom.set_ylabel(r"$\eta$ (mm)")
-        ax_zoom.text(
-            0.005, 0.92, "zoom · 5 perioder",
-            transform=ax_zoom.transAxes, va="top", ha="left",
-            fontsize=9, color="#444",
-        )
 
         for xx in (zx0, zx1):
             con = ConnectionPatch(
@@ -211,23 +242,85 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
     print(f"   → {out_pdf.relative_to(BASE)}  (+ .png)")
 
 
+def _f(x, n=4):
+    try:
+        return f"{float(x):.{n}f}"
+    except (TypeError, ValueError):
+        return "NA"
+
+
+def _inspirational_extra_stats(row, data, wind_tag):
+    """Pack everything useful from meta + derived quantities for one run."""
+    out = {}
+    # ka is the primary wave descriptor — always surfaced
+    out["ka_inn"] = _f(data["ka_in"],  4)
+    out["ka_Ut"]  = _f(data["ka_out"], 4)
+    # Per-side dispersion / physics from meta
+    for side_short, side_long in (("inn", "IN"), ("Ut", "OUT")):
+        out[f"A_{side_short}_FFT_mm"]         = _f(row[f"{side_long} Amplitude (FFT)"],            3)
+        out[f"wavelength_{side_short}_m"]     = _f(row[f"{side_long} Wavelength (FFT)"],           4)
+        out[f"wavenumber_{side_short}_per_m"] = _f(row[f"{side_long} Wavenumber (FFT)"],           4)
+        out[f"period_{side_short}_s"]         = _f(row[f"{side_long} WavePeriod (FFT)"],           5)
+        out[f"celerity_{side_short}_m_s"]     = _f(row[f"{side_long} Celerity (FFT)"],             4)
+        out[f"Hm0_{side_short}_mm"]           = _f(row[f"{side_long} Significant Wave Height Hm0"], 3)
+        out[f"Hs_{side_short}_mm"]            = _f(row[f"{side_long} Significant Wave Height Hs"],  3)
+        out[f"Froude_{side_short}"]           = _f(row[f"{side_long} Froude (FFT)"],               5)
+        out[f"Ursell_{side_short}"]           = _f(row[f"{side_long} Ursell (FFT)"],               5)
+        out[f"wind_over_c_{side_short}"]      = _f(row[f"{side_long} Wind/Celerity (FFT)"],        4)
+        out[f"f_over_fPM_{side_short}"]       = _f(row[f"{side_long} f/f_PM (FFT)"],               4)
+        out[f"wave_stability_{side_short}"]   = _f(row[f"{side_long} wave_stability"],             4)
+        out[f"period_cv_{side_short}"]        = _f(row[f"{side_long} period_amplitude_cv"],        4)
+    # Per-probe: alternate amplitudes (method cross-check)
+    for side_short, probe in (("inn", IN_PROBE), ("Ut", OUT_PROBE)):
+        out[f"A_{side_short}_LS_mm"]          = _f(row[f"Probe {probe} Amplitude (LS)"],           3)
+        out[f"A_{side_short}_Stk2_mm"]        = _f(row[f"Probe {probe} Amplitude Stokes2 (LS)"],   3)
+        out[f"A_{side_short}_percentile_mm"]  = _f(row[f"Probe {probe} Amplitude"],                3)
+        out[f"A_{side_short}_PSD_mm"]         = _f(row[f"Probe {probe} Amplitude (PSD)"],          3)
+        out[f"A_{side_short}_cycles_mean"]    = _f(row[f"Probe {probe} Amplitude (cycles) mean"],  3)
+        out[f"A_{side_short}_phase_mean"]     = _f(row[f"Probe {probe} Amplitude (phase) mean"],   3)
+        out[f"DC_{side_short}_mm"]            = _f(row[f"Probe {probe} DC (LS)"],                  4)
+        out[f"residualRMS_{side_short}_mm"]   = _f(row[f"Probe {probe} Residual RMS (LS)"],        4)
+        # H&G window diagnostics
+        out[f"window_{side_short}_s"]         = f"[{int(row[f'Computed Probe {probe} start'])/FS:.3f}, {int(row[f'Computed Probe {probe} end'])/FS:.3f}]"
+        hg_shift = row.get(f"Probe {probe} hg_snap_shift")
+        if hg_shift is not None:
+            out[f"hg_snap_shift_{side_short}_samples"] = _f(hg_shift, 1)
+    # Per-run OUT/IN — the thesis central metric, cross-check
+    out["meta_OUT_over_IN"] = _f(row["OUT/IN (FFT)"], 4)
+    # Dataset / setup metadata
+    out["file_date"]          = str(row.get("file_date", "NA"))[:10]
+    out["mooring"]            = str(row.get("Mooring", "NA"))
+    out["probe_height_mm"]    = _f(row.get("probe_height_mm"), 1)
+    out["probe_range_mode"]   = str(row.get("probe_range_mode", "NA"))
+    out["water_depth_mm"]     = _f(row.get("water_depth_mm", 580), 1)
+    # kd depth regime
+    try:
+        k_m = float(row["OUT Wavenumber (FFT)"])
+        h_m = float(row.get("water_depth_mm", 580)) / 1000.0
+        kd  = k_m * h_m
+        regime = ("shallow"      if kd < np.pi/10 else
+                  "intermediate" if kd < np.pi     else
+                  "deep")
+        out["kd_Ut"]         = _f(kd, 3)
+        out["depth_regime"]  = regime
+    except Exception:
+        pass
+    # Input / pipeline sanity values
+    out["input_freq_Hz"]     = _f(FREQ, 2)
+    out["input_amp_V"]       = _f(AMP_V, 2)
+    out["sampling_rate_Hz"]  = _f(FS, 1)
+    out["zoom_periods"]      = "5"
+    out["wind_condition"]    = wind_tag
+    return out
+
+
 def _write_stub(wind_tag: str, data: dict, figure_name: str) -> None:
-    """Canonical 6-section TEXFIGU stub via pu.write_figure_stub (write-once)."""
+    """TEXFIGU stub via pu.write_figure_stub (force=True, CAPTIONS-driven)."""
     stub_path = TEXFIGU_DIR / f"{figure_name}.tex"
 
-    caption = (
-        f"Inspirational time-series overview ({TITLE_WIND[wind_tag].lower()}) "
-        f"of a canonical run at $f = {FREQ}$\\,Hz, paddle drive $V = {AMP_V}$\\,V, "
-        "full panel, per240. Top: incoming wave (probe at 9373/170, IN side of "
-        "the panel). Bottom: outgoing wave (probe at 12400/250, OUT side). Each "
-        "probe panel is accompanied by a 5-period zoom centred on that probe's "
-        "own H\\&G analysis window; the OUT zoom sits later in time because the "
-        "wave group arrives at the OUT probe $\\sim\\!5$\\,s after the IN probe. "
-        f"Measured $ka_{{\\mathrm{{IN}}}}$ = {data['ka_in']:.3f}, "
-        f"$ka_{{\\mathrm{{OUT}}}}$ = {data['ka_out']:.3f}. "
-        "Amber shading on the macro panels marks the zoom interval; the 10-period "
-        "analysis window is a subset of that interval (see H\\&G methodology)."
-    )
+    # Author-written caption. Empty → body renders with TODO placeholder.
+    # Edit CAPTIONS at the top of this file to populate.
+    caption = CAPTIONS.get(wind_tag, "")
 
     _meta = pu.build_fig_meta(
         {
@@ -247,22 +340,32 @@ def _write_stub(wind_tag: str, data: dict, figure_name: str) -> None:
         extra={"script": "analysis_scratch/inspirational_timeseries.py"},
         computed_in="analysis_scratch/inspirational_timeseries.py (single-run time-series render)",
         data_class="DELEG",
+        findings_doc="memory/methodology_hg_window_kills_peak_bias.md",
         fft_window_hz=0.1,
         extra_params=(
-            f"run_path={RUNS[wind_tag].relative_to(BASE)}, "
-            f"probes=IN:{IN_PROBE}+OUT:{OUT_PROBE}, "
-            "zoom=5 periods centred on each probe's H&G window"
+            f"run_path={RUNS[wind_tag].relative_to(BASE)}. "
+            f"probes=IN:{IN_PROBE}+OUT:{OUT_PROBE}. "
+            f"zoom=5 periods centred on each probe's H&G window "
+            f"(macro = full recording, ~{(data['out_we']+10):.1f} s cutoff). "
+            f"H&G window: probe-shifted [50T, 60T] anchored at r = 12.4 m, "
+            f"IN shifted earlier by group-velocity Δt; start UC-snapped "
+            f"within ±T, end UC-snapped to the 10th upcrossing with ±0.5 T guard. "
+            f"Amber vspan on macro = zoom extent; zoom extent is a 5-period "
+            f"window centred on each probe's own H&G window midpoint so OUT "
+            f"zoom sits later in time (wave-group lag). "
+            f"Colour convention: blue = nowind, red = fullwind — CLAUDE.md "
+            f"thesis-wide WIND_COLOR_MAP. "
+            f"Typeset in NewComputerModern10 (OTFs from TeXLive's "
+            f"newcomputermodern package, registered via font_manager)."
         ),
-        extra_stats={
-            "ka_in":        f"{data['ka_in']:.3f}",
-            "ka_out":       f"{data['ka_out']:.3f}",
-            "in_window_s":  f"[{data['in_ws']:.2f}, {data['in_we']:.2f}]",
-            "out_window_s": f"[{data['out_ws']:.2f}, {data['out_we']:.2f}]",
-        },
+        extra_stats=_inspirational_extra_stats(data["row"], data, wind_tag),
     )
 
+    # force=True — body is always rewritten from CAPTIONS; hand edits to
+    # the .tex body don't survive a re-run. Author captions in the dict.
     pu.write_figure_stub(_meta, plot_type="inspirational_timeseries",
-                         subfig_filenames=[figure_name])
+                         subfig_filenames=[figure_name], force=True,
+                         width="\\linewidth")
     print(f"   stub → {stub_path.relative_to(BASE)}")
 
 

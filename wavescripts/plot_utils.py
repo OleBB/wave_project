@@ -779,7 +779,8 @@ def existing_body_fallback(existing: str) -> str:
 def write_figure_stub(meta: dict, plot_type: str,
                       subfig_filenames: Optional[list[str]] = None,
                       subfig_captions: Optional[list[str]] = None,
-                      force: bool = False) -> None:
+                      force: bool = False,
+                      width: str = "0.9\\linewidth") -> None:
     """
     Write (or surgically refresh) a LaTeX figure stub in TEXFIGU_DIR.
 
@@ -842,7 +843,7 @@ def write_figure_stub(meta: dict, plot_type: str,
         body = (
             "\\begin{figure}[htbp]\n"
             "  \\centering\n"
-            f"  \\includegraphics[width=0.9\\linewidth]{{FIGURES/{subfig_files[0]}.pdf}}\n"
+            f"  \\includegraphics[width={width}]{{FIGURES/{subfig_files[0]}.pdf}}\n"
             + _caption_block
             + f"  \\label{{{_label}}}\n"
             "\\end{figure}\n"
