@@ -1727,7 +1727,11 @@ def plot_reconstructed(
     facet_by = plotting.get("facet_by", None)
     show_grid = plotting.get("grid", True)
     linewidth = plotting.get("linewidth", 1.2)
-    dual_yaxis = plotting.get("dual_yaxis", True)
+    # Default False: paddle-frequency wave and wind+noise residual share one
+    # y-axis so their amplitudes are directly comparable. Callers that want
+    # the earlier "wave-on-left, residual-on-right-with-own-scale" look can
+    # still opt in with "dual_yaxis": True.
+    dual_yaxis = plotting.get("dual_yaxis", False)
     show_full = plotting.get("show_full_signal", False)
     show_stats = plotting.get("show_amplitude_stats", True)
     fontsize = 9
