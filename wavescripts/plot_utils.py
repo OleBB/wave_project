@@ -119,6 +119,60 @@ WIND_COLOR_MAP = {
     "no":      "#1F77B4",   # blue
 }
 
+
+# ── Reader-facing amplitude labels ────────────────────────────────────────
+# 2026-04-24: paddle drive voltages (0.10/0.20/0.30 V) are a lab-specific
+# signal. For thesis plots and captions, we use A_1/A_2/A_3 — reader-friendly
+# tiered amplitude identifiers. Within the thesis scope (1.3–1.6 Hz) the
+# mapping to measured amplitude (IN-mean FFT) is well-defined (±3 %):
+#     A_1 ≈ 7.5 mm     (paddle V = 0.10 V)
+#     A_2 ≈ 15.0 mm    (paddle V = 0.20 V)
+#     A_3 ≈ 21.5 mm    (paddle V = 0.30 V)
+# The linearity 0.2/0.1 = 2.0 is exact; 0.3/0.1 = 2.87 shows a mild paddle
+# sub-linearity at highest amplitude. See the 2026-04-24 paddle-voltage →
+# measured-amplitude audit (170 nowind+fullpanel runs).
+_AMP_TIERS = (
+    (0.10, r"$\mathrm{A_1}$", "A1",  7.5),
+    (0.20, r"$\mathrm{A_2}$", "A2", 15.0),
+    (0.30, r"$\mathrm{A_3}$", "A3", 21.5),
+)
+AMP_LABEL = {v: lbl for v, lbl, _, _ in _AMP_TIERS}   # reader-facing (mathtext)
+AMP_TAG   = {v: t   for v, _, t, _ in _AMP_TIERS}     # file-name tag
+AMP_MM    = {v: mm  for v, _, _, mm in _AMP_TIERS}    # nominal measured mm
+
+
+def amp_to_label(v, default: Optional[str] = None) -> str:
+    """Reader-facing amplitude label (e.g. 0.20 → ``$\\mathrm{A_2}$``).
+
+    Use this in axis titles, legends, subfigure captions. If ``v`` is not
+    one of the canonical tiers, returns ``default`` (fallback: ``"V = x"``
+    formatted string).
+    """
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return default if default is not None else "—"
+    for canon, lbl in AMP_LABEL.items():
+        if abs(v - canon) < 1e-3:
+            return lbl
+    return default if default is not None else f"V = {v:.2f}"
+
+
+def amp_to_tag(v, default: Optional[str] = None) -> str:
+    """File-name tag for one paddle amplitude (0.20 → ``"A2"``).
+
+    Replaces the old ``"{int(round(v*100)):02d}V"`` convention. Fallback for
+    non-canonical values preserves the old tag so legacy data never breaks.
+    """
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return default if default is not None else "NA"
+    for canon, tag in AMP_TAG.items():
+        if abs(v - canon) < 1e-3:
+            return tag
+    return default if default is not None else f"{int(round(v * 100)):02d}V"
+
 PANEL_STYLES = {
     "no":      "solid",
     "full":    "dashed",

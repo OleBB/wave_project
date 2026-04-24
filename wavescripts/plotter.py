@@ -63,6 +63,8 @@ from wavescripts.plot_utils import (
     WIND_COLOR_MAP,
     _save_figure,
     _top_k_indices,
+    amp_to_label,
+    amp_to_tag,
     apply_legend,
     apply_thesis_style,
     build_fig_meta,
@@ -221,7 +223,7 @@ def _draw_damping_freq_ax(
             amp_data["mean_out_in"],
             yerr=amp_data["std_out_in"],
             marker="o",
-            label=f"{amp:.2f} V",
+            label=amp_to_label(amp),
             capsize=3,
             alpha=0.8,
             linewidth=1.4,
@@ -257,7 +259,7 @@ def _make_damping_freq_fig(
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax.set_xlabel("$k$ (rad/m)", fontsize=9)
     ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
-    ax.set_title(f"{panel} panel  |  {amp:.2f} V", fontsize=9)
+    ax.set_title(f"{panel} panel  |  {amp_to_label(amp)}", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(title="wind", fontsize=8, title_fontsize=8)
     add_freq_axis(ax)
@@ -300,7 +302,7 @@ def plot_damping_freq(
         "n_panels":    len(panel_conditions),
         "panels":      ", ".join(panel_conditions),
         "n_amps":      len(amplitudes),
-        "amps":        ", ".join(f"{a:.2f}\\,V" for a in amplitudes),
+        "amps":        ", ".join(amp_to_label(a) for a in amplitudes),
         "n_wind":      len(wind_conditions),
         "wind_conds":  ", ".join(wind_conditions),
     }
@@ -358,11 +360,11 @@ def plot_damping_freq(
         for panel in panel_conditions:
             for amp in amplitudes:
                 fig_s = _make_damping_freq_fig(stats_df, panel, amp, figsize=figsize)
-                amp_tag = f"{int(round(amp * 100)):02d}V"
+                amp_tag = amp_to_tag(amp)
                 fname = f"{figure_name}_{panel}_{amp_tag}"
                 _save_figure(fig_s, fname, save_pgf=True)
                 subfig_filenames.append(fname)
-                subfig_captions.append(f"{panel.capitalize()} panel, ${amp:.2f}$\\,V")
+                subfig_captions.append(f"{panel.capitalize()} panel, {amp_to_label(amp)}")
                 plt.close(fig_s)
 
         stub_meta = {**meta_base, "panel": panel_conditions, "amplitude": amplitudes, "wind": "allwind"}
@@ -451,7 +453,7 @@ def plot_damping_scatter(
         "n_wind":     len(wind_conditions),
         "wind_conds": ", ".join(wind_conditions),
         "n_amps":     len(amplitudes),
-        "amps":       ", ".join(f"{a:.2f}\\,V" for a in amplitudes),
+        "amps":       ", ".join(amp_to_label(a) for a in amplitudes),
     }
     _default_caption = (
         "OUT/IN damping ratio versus wave frequency, all amplitudes combined. "
@@ -660,7 +662,7 @@ def _make_damping_ka_fig(
     ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
     if amp is not None:
         ax.set_title(
-            f"Wave transmission vs. wave steepness — {panel} panel, {amp:.2f}\u202fV",
+            f"Wave transmission vs. wave steepness — {panel} panel, {amp_to_label(amp)}",
             fontsize=9,
         )
     else:
@@ -685,7 +687,7 @@ def _make_damping_ka_fig(
         amp_handles = [
             mlines.Line2D([], [], color="gray",
                           marker=amp_markers[i % len(amp_markers)],
-                          linestyle="None", markersize=6, label=f"{a:.2f} V")
+                          linestyle="None", markersize=6, label=amp_to_label(a))
             for i, a in enumerate(all_amps)
         ]
         ax.legend(handles=wind_handles + amp_handles, fontsize=7,
@@ -746,7 +748,7 @@ def plot_damping_ka(
         "n_runs":     n_runs,
         "panels":     ", ".join(panel_conditions),
         "wind_conds": ", ".join(wind_conditions),
-        "amps":       ", ".join(f"{a:.2f}\\,V" for a in amplitudes),
+        "amps":       ", ".join(amp_to_label(a) for a in amplitudes),
     }
     _default_caption = (
         "OUT/IN damping ratio versus wave steepness $ka$ at the incident probe "
@@ -815,11 +817,11 @@ def plot_damping_ka(
                         xlim=shared_xlim, ylim=shared_ylim,
                         show_freq_labels=show_freq_labels,
                     )
-                    amp_tag = f"{int(round(amp * 100)):02d}V"
+                    amp_tag = amp_to_tag(amp)
                     fname = f"{figure_name}_{panel}_{amp_tag}"
                     _save_figure(fig_s, fname, save_pgf=True)
                     subfig_filenames.append(fname)
-                    subfig_captions.append(f"{panel.capitalize()} panel, ${amp:.2f}$\\,V")
+                    subfig_captions.append(f"{panel.capitalize()} panel, {amp_to_label(amp)}")
                     plt.close(fig_s)
             else:
                 fig_s = _make_damping_ka_fig(wave_df, panel, figsize=figsize)
@@ -885,7 +887,7 @@ def _make_damping_wind_delta_fig(
         )
     ax_top.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax_top.set_ylabel("OUT/IN (FFT)", fontsize=9)
-    ax_top.set_title(f"{panel} panel  |  {amp:.2f} V", fontsize=9)
+    ax_top.set_title(f"{panel} panel  |  {amp_to_label(amp)}", fontsize=9)
     ax_top.grid(True, alpha=0.3)
     ax_top.legend(title="wind", fontsize=8, title_fontsize=8)
     add_freq_axis(ax_top)
@@ -1018,7 +1020,7 @@ def plot_damping_wind_delta(
         "panels":     ", ".join(panel_conditions),
         "ref_wind":   ref_wind,
         "target_wind": target_wind,
-        "amps":       ", ".join(f"{a:.2f}\\,V" for a in amplitudes),
+        "amps":       ", ".join(amp_to_label(a) for a in amplitudes),
     }
     _default_caption = (
         "Wind effect on damping ratio. "
@@ -1061,7 +1063,7 @@ def plot_damping_wind_delta(
             _common = _ref.index.intersection(_tgt.index)
             if len(_common):
                 _delta = (_tgt.loc[_common] - _ref.loc[_common]).astype(float)
-                _amp_tag = f"{int(round(amp * 100)):02d}V"
+                _amp_tag = amp_to_tag(amp)
                 _extra_stats[f"mean_delta_{_amp_tag}"] = round(float(_delta.mean()), 4)
                 _extra_stats[f"max_abs_delta_{_amp_tag}"] = round(float(_delta.abs().max()), 4)
 
@@ -1091,11 +1093,11 @@ def plot_damping_wind_delta(
                     stats_df, panel, amp, ref_wind, target_wind, figsize=figsize,
                     ylim_top=ylim_top, ylim_bot=ylim_bot,
                 )
-                amp_tag = f"{int(round(amp * 100)):02d}V"
+                amp_tag = amp_to_tag(amp)
                 fname = f"{figure_name}_{panel}_{amp_tag}"
                 _save_figure(fig_s, fname, save_pgf=True)
                 subfig_filenames.append(fname)
-                subfig_captions.append(f"{panel.capitalize()} panel, ${amp:.2f}$\\,V")
+                subfig_captions.append(f"{panel.capitalize()} panel, {amp_to_label(amp)}")
                 plt.close(fig_s)
 
         stub_meta = {**meta_base, "panel": panel_conditions, "wind": f"{ref_wind}_vs_{target_wind}"}
@@ -2837,7 +2839,7 @@ def plot_parallel_ratio(
                 amp_grp = grp[grp["WaveAmplitudeInput [Volt]"] == amp]
                 if amp_grp.empty:
                     continue
-                label = f"{wind} / {amp:.2f} V" if len(amps) > 1 else wind
+                label = f"{wind} / {amp_to_label(amp)}" if len(amps) > 1 else wind
                 k_vals = freq_to_k(amp_grp["WaveFrequencyInput [Hz]"].values)
                 if scatter:
                     mk = amp_markers[i % len(amp_markers)]
@@ -3025,7 +3027,7 @@ def plot_wave_stability(
                               .agg(mean="mean", std="std")
                               .reset_index())
                 ls = _amp_ls[i % len(_amp_ls)]
-                label = f"{wind} / {amp:.2f} V" if len(all_amps) > 1 else wind
+                label = f"{wind} / {amp_to_label(amp)}" if len(all_amps) > 1 else wind
                 ax.errorbar(
                     freq_to_k(agg["freq"].values), agg["mean"], yerr=agg["std"].fillna(0),
                     label=label,
@@ -3183,7 +3185,7 @@ def plot_timeseries_overview(
         freq  = run_row.get("WaveFrequencyInput [Hz]")
         wind  = run_row.get("WindCondition", "?")
         amp   = run_row.get("WaveAmplitudeInput [Volt]")
-        col_title = f"{freq:.2f} Hz  {wind}  {amp:.2f} V"
+        col_title = f"{freq:.2f} Hz  {wind}  {amp_to_label(amp)}"
 
         for row_i, pos in enumerate(probe_positions):
             ax = axes[row_i][col_i]

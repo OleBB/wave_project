@@ -72,7 +72,7 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import freq_to_k
+from wavescripts.plot_utils import freq_to_k, amp_to_label
 
 # ── Config ────────────────────────────────────────────────────────────────────
 FS              = 250.0
@@ -321,7 +321,7 @@ for i, amp in enumerate(AMPS):
     if sub.empty:
         ax.text(0.5, 0.5, "no data", ha="center", va="center",
                 transform=ax.transAxes, color="gray")
-        ax.set_title(f"{amp:.2f} V", fontsize=10)
+        ax.set_title(f"{amp_to_label(amp)}", fontsize=10)
         continue
     for wind in WINDS:
         for rt in ["per40", "per240"]:
@@ -345,7 +345,7 @@ for i, amp in enumerate(AMPS):
     ax.set_xlabel("$k$ (rad/m)", fontsize=10)
     if i == 0:
         ax.set_ylabel("OUT/IN (FFT)", fontsize=10)
-    ax.set_title(f"{amp:.2f} V", fontsize=10)
+    ax.set_title(f"{amp_to_label(amp)}", fontsize=10)
     ax.grid(True, alpha=0.3)
     if i == 0:
         ax.legend(fontsize=7, loc="best", framealpha=0.92, ncol=1)

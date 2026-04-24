@@ -57,7 +57,7 @@ import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
-from wavescripts.plot_utils import freq_to_k, add_freq_axis
+from wavescripts.plot_utils import freq_to_k, add_freq_axis, amp_to_label, amp_to_tag
 
 # ── I/O ────────────────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "t_cross_figure.pdf"
@@ -217,7 +217,7 @@ def draw_t_cross_ax(ax, sub: pd.DataFrame, amp: float):
     ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.4)
     ax.set_xlabel(r"$k$ (rad/m)", fontsize=9)
     ax.set_ylabel("transmission", fontsize=9)
-    ax.set_title(f"full panel  |  {amp:.2f}\u202fV", fontsize=9)
+    ax.set_title(f"full panel  |  {amp_to_label(amp)}", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=7, loc="lower left", framealpha=0.92)
     add_freq_axis(ax)
@@ -251,7 +251,7 @@ for amp in AMPS:
     fig_s, ax_s = plt.subplots(figsize=(6, 3.6))
     draw_t_cross_ax(ax_s, df[df["amp"] == amp].sort_values("k"), amp)
     fig_s.subplots_adjust(left=0.12, right=0.97, top=0.84, bottom=0.15)
-    amp_tag = f"{int(round(amp * 100)):02d}V"
+    amp_tag = amp_to_tag(amp)
     fname = f"{THESIS_BASE}_{amp_tag}"
     fpath = BASE / "output" / "FIGURES" / f"{fname}.pdf"
     fpath.parent.mkdir(parents=True, exist_ok=True)

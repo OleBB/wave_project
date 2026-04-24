@@ -39,7 +39,7 @@ from matplotlib import font_manager as _fm
 from matplotlib.ticker import MultipleLocator
 
 from wavescripts.improved_data_loader import load_analysis_data
-from wavescripts.plot_utils import apply_thesis_style, WIND_COLOR_MAP
+from wavescripts.plot_utils import apply_thesis_style, WIND_COLOR_MAP, amp_to_label, amp_to_tag
 import wavescripts.plot_utils as pu
 
 
@@ -69,9 +69,9 @@ RATIO_COL = "OUT/IN (FFT)"
 # No agent-drafted captions are included anywhere in the stub; the
 # IMMUTABLE block only records provenance / filters / stats / method.
 CAPTIONS = {
-    "10V": "",
-    "20V": "",
-    "30V": "",
+    "A1": "",
+    "A2": "",
+    "A3": "",
 }
 
 # V11 magenta palette — chosen in damping_ka_exploration (user-approved).
@@ -221,7 +221,7 @@ def _per_volt_stats(sub: pd.DataFrame) -> dict:
 
 
 def _write_stub(sub: pd.DataFrame, volt: float, figure_name: str) -> None:
-    volt_tag = f"{int(round(volt * 100)):02d}V"
+    volt_tag = amp_to_tag(volt)
     stats = _per_volt_stats(sub)
 
     # Caption is whatever the author put in CAPTIONS[volt_tag] at the top
@@ -252,7 +252,9 @@ def _write_stub(sub: pd.DataFrame, volt: float, figure_name: str) -> None:
         fft_window_hz=0.1,
         extra_params=(
             # Data slicing
-            f"voltage={volt:.2f} V (tag={volt_tag}). "
+            f"amplitude tier {volt_tag} (paddle V = {volt:.2f} V → "
+            f"nominal measured amplitude at IN ≈ "
+            f"{ {0.10: 7.5, 0.20: 15.0, 0.30: 21.5}.get(round(volt, 2), 0.0):.1f} mm). "
             f"frequency range = 1.3–1.6 Hz (thesis scope). "
             f"panel condition = full. quality_flag ∈ {{ok, NaN}}. "
             f"per-tags included: per240 + per40 "
@@ -289,7 +291,7 @@ def _write_stub(sub: pd.DataFrame, volt: float, figure_name: str) -> None:
 
 # ─── Build three standalone figures ───────────────────────────────────────
 for volt in ALL_VOLTS:
-    volt_tag = f"{int(round(volt * 100)):02d}V"
+    volt_tag = amp_to_tag(volt)
     figure_name = f"ch05_damping_ka_{volt_tag}"
     sub = m[np.isclose(m["WaveAmplitudeInput [Volt]"], volt)]
 

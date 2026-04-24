@@ -95,7 +95,7 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import freq_to_k
+from wavescripts.plot_utils import freq_to_k, amp_to_label, amp_to_tag
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
 SCRATCH_DIR         = Path(__file__).parent
@@ -470,7 +470,7 @@ for i, amp in enumerate(AMPS):
     if sub.empty:
         ax.text(0.5, 0.5, "no data", ha="center", va="center",
                 transform=ax.transAxes, color="gray")
-        ax.set_title(f"{amp:.2f} V  (n=0)", fontsize=9)
+        ax.set_title(f"{amp_to_label(amp)}  (n=0)", fontsize=9)
         continue
     for wind, color in [("no", COLOR_NW), ("full", COLOR_FW)]:
         wsub = sub[sub["WindCondition"] == wind]
@@ -491,7 +491,7 @@ for i, amp in enumerate(AMPS):
     ax.set_xlabel("Analysis window  [paddle periods]", fontsize=8)
     if i == 0:
         ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
-    ax.set_title(f"Window sensitivity  |  {amp:.2f} V", fontsize=9)
+    ax.set_title(f"Window sensitivity  |  {amp_to_label(amp)}", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=7, loc="lower right", framealpha=0.92)
 
@@ -502,7 +502,7 @@ for i, amp in enumerate(AMPS):
     if sub.empty:
         ax.text(0.5, 0.5, "no data", ha="center", va="center",
                 transform=ax.transAxes, color="gray")
-        ax.set_title(f"{amp:.2f} V  (n=0)", fontsize=9)
+        ax.set_title(f"{amp_to_label(amp)}  (n=0)", fontsize=9)
         continue
     sub = sub.sort_values("WaveFrequencyInput [Hz]")
     agg = sub.groupby("WaveFrequencyInput [Hz]").agg(
@@ -531,7 +531,7 @@ for i, amp in enumerate(AMPS):
     ax.set_xlabel(r"$k$ (rad/m)", fontsize=9)
     if i == 0:
         ax.set_ylabel("A_in  [mm]", fontsize=9)
-    ax.set_title(f"Wind correction  |  {amp:.2f} V", fontsize=9)
+    ax.set_title(f"Wind correction  |  {amp_to_label(amp)}", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=7, loc="best", framealpha=0.92)
 
@@ -597,7 +597,7 @@ for _amp in sorted(_enh["WaveAmplitudeInput [Volt]"].unique()):
     _sub = _enh[np.isclose(_enh["WaveAmplitudeInput [Volt]"], _amp)]
     if _sub.empty:
         continue
-    _tag = f"{int(round(_amp * 100)):02d}V"
+    _tag = amp_to_tag(_amp)
     enhancement_by_amp[f"A_in_fw_over_nw_{_tag}_median"] = round(float(_sub["fw_over_nw"].median()), 4)
     enhancement_by_amp[f"A_in_fw_over_nw_{_tag}_max"]    = round(float(_sub["fw_over_nw"].max()),    4)
 
