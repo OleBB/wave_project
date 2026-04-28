@@ -1,0 +1,64 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/wind_effect_table.py
+%   plot_type         : wind_effect_table
+%   chapter           : 05
+%   generated_at      : 2026-04-28T17:37:12
+%   caption_label     : tab:ch05_wind_effect_table
+%   caption_short     : 
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : full
+%   wind              : no, full
+%   amplitude [V]     : 0.1, 0.2, 0.3
+%   frequency [Hz]    : 1.3, 1.4, 1.5, 1.6
+%   quality_flag      : ok
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_cells           : 12
+%   n_runs (nw + fw)  : 40
+%   datasets        :
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%
+% — Method ────────────────────────────────────────────────────
+%   grouper           : damping_all_amplitude_grouper
+%   metric_definitions:
+%     tau_nw / tau_fw    : mean OUT/IN(FFT) at no- / full-wind
+%     Delta_tau (pp)     : (tau_fw - tau_nw) * 100
+%     pct_T_gain (%)     : (tau_fw - tau_nw) / tau_nw * 100
+%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - tau
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{cc cc r r r}
+    \toprule
+      $f$ [Hz] & Amp & $\tau_\text{nw}$ & $\tau_\text{fw}$ & $\Delta\tau$ [pp] & T-økn. [\%] & D-red. [\%] \\
+    \midrule
+  1.3 & $A_1$ & 0.735 & 0.834 & +10.0 & +13.6 & +37.6 \\
+  1.3 & $A_2$ & 0.765 & 0.861 & +9.6 & +12.5 & +40.7 \\
+  1.3 & $A_3$ & 0.794 & 0.802 & +0.8 & +1.0 & +3.8 \\
+\midrule
+  1.4 & $A_1$ & 0.556 & 0.873 & +31.7 & +56.9 & +71.4 \\
+  1.4 & $A_2$ & 0.692 & 0.824 & +13.3 & +19.2 & +43.0 \\
+  1.4 & $A_3$ & 0.714 & 0.765 & +5.1 & +7.1 & +17.8 \\
+\midrule
+  1.5 & $A_1$ & 0.478 & 0.707 & +23.0 & +48.1 & +44.0 \\
+  1.5 & $A_2$ & 0.592 & 0.759 & +16.8 & +28.3 & +41.1 \\
+  1.5 & $A_3$ & 0.623 & 0.746 & +12.3 & +19.8 & +32.6 \\
+\midrule
+  1.6 & $A_1$ & 0.384 & 0.634 & +25.0 & +65.2 & +40.6 \\
+  1.6 & $A_2$ & 0.480 & 0.679 & +19.9 & +41.4 & +38.3 \\
+  1.6 & $A_3$ & 0.522 & 0.701 & +17.9 & +34.4 & +37.5 \\
+    \bottomrule
+  \end{tabular}
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch05_wind_effect_table}
+\end{table}

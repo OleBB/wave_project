@@ -1,0 +1,262 @@
+"""
+Wind-effect table — CH05 §3.
+============================
+
+Replaces the archived `ch05_damping_wind_delta` 2-row scatter (see
+ignore_this_archive/wavescripts/plot_damping_wind_delta_2026-04-28.py).
+Same data path: canon March-2026 lowrange folders, full panel, 1.3–1.6 Hz,
+quality_flag=ok, both wind conditions.
+
+Per (freq, amp) cell, computes:
+
+    τ_nw     = mean OUT/IN(FFT) at no-wind
+    τ_fw     = mean OUT/IN(FFT) at full-wind
+    Δτ       = τ_fw − τ_nw                     (signed transmission change, pp)
+    % T-gain = Δτ / τ_nw · 100                 (relative transmission change)
+    % D-red  = (D_nw − D_fw) / D_nw · 100      where D = 1 − τ
+                                               (relative damping reduction)
+
+All three percentage columns share a sign convention: positive Δτ ↔
+positive % T-gain ↔ positive % D-red ↔ "wind makes more wave get through
+the panel" (i.e. the panel damps less).
+
+Outputs:
+    output/TABLES/ch05_wind_effect_table.tex   (thesis include)
+    analysis_scratch/wind_effect_table.csv     (human-readable companion)
+
+Caption text is read from FIGURE_CAPTIONS["ch05_wind_effect_table"] in
+main_save_figures.py via output/.figure_captions.json.
+"""
+
+import sys
+import warnings
+from pathlib import Path
+import glob
+
+warnings.filterwarnings("ignore")
+
+import numpy as np
+import pandas as pd
+
+BASE = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE))
+
+import os
+os.chdir(BASE)
+
+from wavescripts.improved_data_loader import load_analysis_data
+from wavescripts.filters import (apply_experimental_filters,
+                                 damping_all_amplitude_grouper)
+from wavescripts.plot_utils import _lookup_central_caption, amp_to_label
+
+# ── I/O ────────────────────────────────────────────────────────────────────
+SCRATCH_CSV = Path(__file__).parent / "wind_effect_table.csv"
+THESIS_NAME = "ch05_wind_effect_table"
+OUT_TEX     = BASE / "output" / "TABLES" / f"{THESIS_NAME}.tex"
+CHAPTER     = "05"
+
+# Same canon scope as ch05_damping_freq + ch05_damping_scatter.
+RESULTS_DIRS = [
+    BASE / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
+    BASE / "waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange",
+]
+
+THESIS_FREQS = [1.3, 1.4, 1.5, 1.6]
+THESIS_AMPS  = [0.10, 0.20, 0.30]
+
+# ── 1. Load + filter ───────────────────────────────────────────────────────
+print("1. Loading canon results folders …")
+meta, _, _, _ = load_analysis_data(*[str(d) for d in RESULTS_DIRS],
+                                   load_processed=False)
+print(f"   {len(meta)} rows total")
+
+_pv = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": (0.1, 0.3),
+        "WaveFrequencyInput [Hz]":   (1.3, 1.6),
+        "WindCondition":             ["no", "full"],
+        "PanelCondition":            "full",
+    },
+    "plotting": {},
+}
+filt = apply_experimental_filters(meta, _pv)
+print(f"   {len(filt)} rows after thesis-scope filter")
+
+stats = damping_all_amplitude_grouper(filt)
+print(f"   {len(stats)} grouped rows from damping_all_amplitude_grouper")
+
+# ── 2. Pivot per (freq, amp) → wind columns ────────────────────────────────
+pivot = stats.pivot_table(
+    index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
+    columns="WindCondition",
+    values="mean_out_in",
+    aggfunc="first",
+).reset_index()
+
+# Same pivot for std + n.
+pivot_std = stats.pivot_table(
+    index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
+    columns="WindCondition",
+    values="std_out_in",
+    aggfunc="first",
+).reset_index()
+
+pivot_n = stats.pivot_table(
+    index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
+    columns="WindCondition",
+    values="n_runs",
+    aggfunc="first",
+).reset_index()
+
+# Compute the four wind-effect metrics.
+table = pivot.rename(columns={"no": "tau_nw", "full": "tau_fw"})
+table["Delta_tau"]   = table["tau_fw"] - table["tau_nw"]
+table["pct_T_gain"]  = (table["tau_fw"] - table["tau_nw"]) / table["tau_nw"] * 100.0
+_D_nw = 1.0 - table["tau_nw"]
+_D_fw = 1.0 - table["tau_fw"]
+table["pct_D_red"]   = (_D_nw - _D_fw) / _D_nw * 100.0
+table["std_nw"]      = pivot_std["no"]
+table["std_fw"]      = pivot_std["full"]
+table["n_nw"]        = pivot_n["no"].astype("Int64")
+table["n_fw"]        = pivot_n["full"].astype("Int64")
+
+# Keep only thesis-scope (freq, amp) cells, in the canonical order.
+table = table[table["WaveFrequencyInput [Hz]"].isin(THESIS_FREQS)
+              & table["WaveAmplitudeInput [Volt]"].isin(THESIS_AMPS)].copy()
+table = table.sort_values(["WaveFrequencyInput [Hz]",
+                           "WaveAmplitudeInput [Volt]"]).reset_index(drop=True)
+
+# Drop cells where either wind condition is missing (no Δ to compute).
+n_before = len(table)
+table = table.dropna(subset=["tau_nw", "tau_fw"]).reset_index(drop=True)
+n_dropped = n_before - len(table)
+if n_dropped:
+    print(f"   {n_dropped} (freq, amp) cell(s) dropped — at least one wind missing")
+print(f"   {len(table)} cells in final table\n")
+print(table.round(3).to_string(index=False))
+
+# ── 3. Save companion CSV ──────────────────────────────────────────────────
+SCRATCH_CSV.parent.mkdir(parents=True, exist_ok=True)
+table.to_csv(SCRATCH_CSV, index=False)
+print(f"\n   CSV → {SCRATCH_CSV.relative_to(BASE)}")
+
+
+# ── 4. Render LaTeX table ──────────────────────────────────────────────────
+def _fmt_signed(x: float, decimals: int = 1) -> str:
+    """Render a signed number with a leading + on positives."""
+    if pd.isna(x):
+        return "—"
+    return f"{x:+.{decimals}f}"
+
+def _fmt_unsigned(x: float, decimals: int = 3) -> str:
+    if pd.isna(x):
+        return "—"
+    return f"{x:.{decimals}f}"
+
+
+# Body rows. Insert \midrule between frequency blocks for visual grouping.
+body_rows = []
+last_freq = None
+for _, r in table.iterrows():
+    f = float(r["WaveFrequencyInput [Hz]"])
+    a = float(r["WaveAmplitudeInput [Volt]"])
+    if last_freq is not None and f != last_freq:
+        body_rows.append(r"\midrule")
+    body_rows.append(
+        f"  {f:.1f} & {amp_to_label(a)} & "
+        f"{_fmt_unsigned(r['tau_nw'], 3)} & {_fmt_unsigned(r['tau_fw'], 3)} & "
+        f"{_fmt_signed(r['Delta_tau'] * 100, 1)} & "  # Δτ in pp
+        f"{_fmt_signed(r['pct_T_gain'], 1)} & "
+        f"{_fmt_signed(r['pct_D_red'], 1)} \\\\"
+    )
+    last_freq = f
+
+# Caption from central FIGURE_CAPTIONS dict (via JSON cache).
+caption_full  = _lookup_central_caption(THESIS_NAME, kind="full")
+caption_short = _lookup_central_caption(THESIS_NAME, kind="short")
+
+if caption_full:
+    if caption_short:
+        caption_block = (
+            f"  \\caption[{caption_short}]{{\n"
+            f"    {caption_full}\n"
+            f"  }}\n"
+        )
+    else:
+        caption_block = (
+            f"  \\caption{{\n"
+            f"    {caption_full}\n"
+            f"  }}\n"
+        )
+else:
+    caption_block = (
+        "  \\caption{\n"
+        "    % TODO: write caption\n"
+        "  }\n"
+    )
+
+# IMMUTABLE provenance block — same idea as figure stubs but for a table.
+from datetime import datetime as _dt
+n_total_runs = int(table["n_nw"].fillna(0).sum() + table["n_fw"].fillna(0).sum())
+immutable = "\n".join([
+    "%! TEX root = ../main.tex",
+    "% ==============================================================",
+    "% IMMUTABLE — generated automatically, do not edit this block",
+    "%",
+    "% — Provenance ───────────────────────────────────────────────────",
+    "%   script            : analysis_scratch/wind_effect_table.py",
+    "%   plot_type         : wind_effect_table",
+    f"%   chapter           : {CHAPTER}",
+    f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
+    f"%   caption_label     : tab:{THESIS_NAME}",
+    f"%   caption_short     : {caption_short}",
+    "%",
+    "% — Filters ────────────────────────────────────────────────────",
+    "%   panel             : full",
+    "%   wind              : no, full",
+    f"%   amplitude [V]     : {', '.join(f'{a:.1f}' for a in THESIS_AMPS)}",
+    f"%   frequency [Hz]    : {', '.join(f'{f:.1f}' for f in THESIS_FREQS)}",
+    "%   quality_flag      : ok",
+    "%",
+    "% — Data provenance ────────────────────────────────────────────",
+    f"%   n_cells           : {len(table)}",
+    f"%   n_runs (nw + fw)  : {n_total_runs}",
+    "%   datasets        :",
+    *[f"%     {p.name}" for p in RESULTS_DIRS],
+    "%",
+    "% — Method ────────────────────────────────────────────────────",
+    "%   grouper           : damping_all_amplitude_grouper",
+    "%   metric_definitions:",
+    "%     tau_nw / tau_fw    : mean OUT/IN(FFT) at no- / full-wind",
+    "%     Delta_tau (pp)     : (tau_fw - tau_nw) * 100",
+    "%     pct_T_gain (%)     : (tau_fw - tau_nw) / tau_nw * 100",
+    "%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - tau",
+    "%",
+    "% ── end immutable block ─────────────────────────────────────────",
+])
+
+# Note: the column headers below are intentionally shorter than the verbal
+# names in the body of the thesis. The IMMUTABLE block above has the full
+# definitions; the table caption + thesis prose can spell them out.
+table_body = (
+    "\\begin{table}[htbp]\n"
+    "  \\centering\n"
+    "  \\small\n"
+    "  \\begin{tabular}{cc cc r r r}\n"
+    "    \\toprule\n"
+    "      $f$ [Hz] & Amp & $\\tau_\\text{nw}$ & $\\tau_\\text{fw}$ "
+    "& $\\Delta\\tau$ [pp] & T-økn. [\\%] & D-red. [\\%] \\\\\n"
+    "    \\midrule\n"
+    + "\n".join(body_rows) + "\n"
+    "    \\bottomrule\n"
+    "  \\end{tabular}\n"
+    + caption_block
+    + f"  \\label{{tab:{THESIS_NAME}}}\n"
+    "\\end{table}\n"
+)
+
+OUT_TEX.parent.mkdir(parents=True, exist_ok=True)
+OUT_TEX.write_text(immutable + "\n" + table_body, encoding="utf-8")
+print(f"   TEX → {OUT_TEX.relative_to(BASE)}")
+
+print("\nDone.")
