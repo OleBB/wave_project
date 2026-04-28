@@ -1719,7 +1719,7 @@ def plot_reconstructed(
     # Wind+noise residual must visually contrast with the paddle-wave line.
     # Wave colour is blue (nowind) or red (fullwind) from WIND_COLOR_MAP;
     # orange reads distinctly against both.
-    color_wind = "#FF7F0E"
+    color_wind = "#00da9d" #cyan ish
     color_full = "gray"
 
     n_subplots = len(probes) if facet_by == "probe" else 1
@@ -1733,14 +1733,23 @@ def plot_reconstructed(
     ax_s_list: list = []
     ax_w_list: list = []
 
+    # Map probe position → Norwegian role label (incoming / outgoing) using
+    # the per-run in_position / out_position from combined_meta. Falls back
+    # to the raw position string for any probe that's neither IN nor OUT.
+    _probe_role_label = {
+        str(row.get("in_position", "")):  "Innkommende",
+        str(row.get("out_position", "")): "Utgående",
+    }
+
     for subplot_idx in range(n_subplots):
         ax_s = axes[subplot_idx]
         ax_w = ax_s.twinx() if dual_yaxis else ax_s
         ax_s_list.append(ax_s)
         ax_w_list.append(ax_w)
         probes_here = [probes[subplot_idx]] if facet_by == "probe" else probes
+        _pos = probes[subplot_idx]
         title = (
-            f"Probe {probes[subplot_idx]}"
+            _probe_role_label.get(str(_pos), f"Probe {_pos}")
             if facet_by == "probe"
             else f"{windcond} wind / {panelcond} panel / {target_freq:.3f} Hz"
         )
@@ -1797,7 +1806,7 @@ def plot_reconstructed(
                 time_axis,
                 signal_swell,
                 lw=linewidth * 2.5,
-                label=f"{lp}wave ({actual_freq:.4f}Hz)",
+                label=f"{lp}bølge ({actual_freq:.4f}Hz)",
                 linestyle="-",
                 color=color_wave,
                 alpha=0.95,
@@ -1807,15 +1816,15 @@ def plot_reconstructed(
                 time_axis,
                 signal_wind,
                 lw=linewidth,
-                label=f"{lp}wind+noise",
+                label=f"{lp}vind+støy",
                 linestyle="-",
                 color=color_wind,
-                alpha=0.75,
+                alpha=0.85,
                 zorder=2,
             )
 
         ax_s.set_title(title, fontsize=fontsize + 2, fontweight="bold", pad=15)
-        ax_s.set_xlabel("Time [s]", fontsize=fontsize)
+        ax_s.set_xlabel("Tid [s]", fontsize=fontsize)
         if dual_yaxis:
             ax_s.set_ylabel("Reconstructed paddle-frequency wave [mm]",
                             fontsize=fontsize, color=color_wave)
@@ -1865,12 +1874,12 @@ def plot_reconstructed(
                 for ax in ax_w_list:
                     ax.set_ylim(lim_w)
 
-    plt.suptitle(
-        f"{Path(path).stem}\n{windcond} / {panelcond} / {target_freq:.2f} Hz",
-        fontsize=fontsize + 3,
-        fontweight="bold",
-        y=0.995,
-    )
+    # plt.suptitle(
+    #     f"{Path(path).stem}\n{windcond} / {panelcond} / {target_freq:.2f} Hz",
+    #     fontsize=fontsize + 3,
+    #     fontweight="bold",
+    #     y=0.995,
+    # )
 
     if save_plot:
         meta = build_fig_meta(

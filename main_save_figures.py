@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# %%
 """
 Save publication-quality figures and tables for the thesis.
 
@@ -470,8 +471,8 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_per40_and_per240_HG_shifted":"",
 
     # § 5 — Reading a time series (inspirational opener)
-    "ch04_inspirational_nowind":       "",
-    "ch04_inspirational_fullwind":     "",
+    "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind.",
+    "ch04_inspirational_fullwind":     "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, med vind.",
 
     # § 6–9 — Wave-range detection, autocorrelation, lateral
     "ch04_first_arrival":              "",
@@ -510,7 +511,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_damping_ka_A3":              "",
 
     # § 6 — Reconstructed
-    "ch05_reconstructed":              "",
+    "ch05_reconstructed":              "Hovedmoden fra bølge \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.",
 
     # § 7 — All-data scatter (supplementary)
     "ch05_damping_all_data_scatter":   "",
@@ -2001,14 +2002,14 @@ Data: combined_fft_dict, one representative run (1.3 Hz, 0.2 V, full panel).
 _pv_reconstructed = {
     "filters": {
         "WaveAmplitudeInput [Volt]": 0.2,
-        "WaveFrequencyInput [Hz]":   1.3,
+        "WaveFrequencyInput [Hz]":   1.4,
         "WindCondition":             None,
         "PanelCondition":            "full",
     },
     "plotting": {
         "show_plot":    True,
-        "save_plot":    True,           # DRAFT — not yet polished
-        "draft":        True,
+        "save_plot":    True,           #
+        "draft":        False,
         "figure_name":  "ch05_reconstructed",
         "force_stub":   True,
         "facet_by":     "probe",

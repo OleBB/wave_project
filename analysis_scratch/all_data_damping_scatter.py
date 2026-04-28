@@ -145,11 +145,11 @@ COND_COLOR = {
     "cond4_h100_low":        "#3498DB",  # blue (thesis scope)
 }
 COND_LABEL = {
-    "legacy_nov2025":        "Nov-2025 legacy probe config",
-    "cond1_h272_high":       "cond1 h272/high",
-    "cond2_h136_high":       "cond2 h136/high",
-    "cond3_h100_high_WRONG": "cond3 h100/high (WRONG)",
-    "cond4_h100_low":        "cond4 h100/low ← thesis",
+    "legacy_nov2025":        "Nov-2025 innledende oppsett",
+    "cond1_h272_high":       "Høyde 272mm (high)",
+    "cond2_h136_high":       "Høyde 136mm (high)",
+    "cond3_h100_high_WRONG": "Høyde 100mm (high) (ustabil)",
+    "cond4_h100_low":        "Høyde 100mm (low) ← resultatene",
 }
 # Wind condition → marker
 WIND_MARKER = {"no": "o", "full": "^"}
@@ -190,7 +190,7 @@ ax.axvspan(thesis_k_lo, thesis_k_hi,
            color="#3498DB", alpha=0.08, lw=0, zorder=1,
            label=None)
 ax.text(thesis_k_hi - 0.1, 1.95,
-        "thesis scope\n1.3–1.6 Hz", ha="right", va="top",
+        "Hovedfokus \n1,3–1,6 Hz", ha="right", va="top",
         fontsize=8, color="#1F618D", alpha=0.8,
         bbox=dict(boxstyle="round,pad=0.2",
                   facecolor="white", alpha=0.75, edgecolor="none"))
@@ -198,11 +198,11 @@ ax.text(thesis_k_hi - 0.1, 1.95,
 ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.5)
 
 ax.set_xlabel("$k$ (rad/m)", fontsize=11)
-ax.set_ylabel("OUT/IN (FFT)", fontsize=11)
-ax.set_title(
-    "All wave runs (full panel, quality=ok) — supplementary cross-condition view",
-    fontsize=11, fontweight="bold",
-)
+ax.set_ylabel("Ut/Inn (FFT)", fontsize=11)
+# ax.set_title(
+#     "All bølgekjøringer (full panel, quality=ok) — supplementary cross-condition view",
+#     fontsize=11, fontweight="bold",
+# )
 ax.grid(True, alpha=0.25, lw=0.5)
 ax.set_ylim(0.1, 2.0)
 add_freq_axis(ax)
@@ -223,15 +223,13 @@ wind_handles = [
     for w, m in WIND_MARKER.items()
 ]
 first = ax.legend(handles=cond_handles, loc="upper left",
-                  fontsize=8, framealpha=0.92, title="condition")
+                  fontsize=8, framealpha=0.92, title="Probehøyde og innstilling")
 ax.add_artist(first)
 ax.legend(handles=wind_handles, loc="upper right",
-          fontsize=8, framealpha=0.92, title="wind")
+          fontsize=8, framealpha=0.92, title="vind")
 
 fig.text(0.5, 0.01,
-         f"n = {len(wave_clip)} runs across all dates (2025-10 to 2026-03). "
-         f"Marker size ∝ input amplitude (0.1/0.2/0.3 V). "
-         f"Blue band highlights the tight thesis scope (cond4 only, nowind+fullwind present at every freq).",
+         f"n = {len(wave_clip)} kjøringer (2025-10 til 2026-03). "#f"Blue band highlights the tight thesis scope (cond4 only, nowind+fullwind present at every freq).", #f"Marker size ∝ input amplitude (0.1/0.2/0.3 V). "
          ha="center", fontsize=8, color="#444", style="italic")
 
 fig.subplots_adjust(left=0.08, right=0.98, top=0.85, bottom=0.14)
