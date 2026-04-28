@@ -1066,55 +1066,33 @@ def write_figure_stub(meta: dict, plot_type: str,
     print(f"  Stub created: {tex_path.name}")
 
 
-def resolve_caption(plotting: dict, default_template: str, slots: dict,
+def resolve_caption(plotting: dict,
+                    default_template: str = "",
+                    slots: dict | None = None,
                     fn_name: str = "plot") -> str:
     """
-    Resolve a caption template with computed data slots.
+    Return the user-supplied ``plotting["caption"]`` template, formatted with
+    *slots* if it contains ``{placeholders}``. Empty string if no caption is
+    set — the caller (``write_figure_stub``) then falls back to the central
+    ``FIGURE_CAPTIONS`` dict via the JSON cache.
 
-    Every plotter function calls this once, after computing its summary
-    statistics. It:
-      1. Picks the user-supplied ``plotting["caption"]`` template, or falls
-         back to *default_template*.
-      2. Formats the template with *slots* (raises KeyError on unknown slot
-         so typos surface immediately).
-      3. Prints the available slots and copies the one-line result to the
-         macOS clipboard (silent no-op on other platforms).
-      4. Returns the formatted caption string (multi-line, as written).
+    No agent-written defaults, no terminal print, no clipboard side-effect.
+    The ``default_template`` and ``fn_name`` parameters are accepted for
+    back-compat with existing call sites but ignored — the only source of
+    caption text is ``plotting["caption"]`` (per-call override) or the
+    central dict (looked up downstream by ``write_figure_stub``).
 
-    Parameters
-    ----------
-    plotting : dict
-        The ``plotvariables["plotting"]`` sub-dict.
-    default_template : str
-        A format-string used when the user has not supplied ``"caption"``.
-        All ``{slot}`` names must exist in *slots*.
-    slots : dict
-        Computed values available for substitution, e.g.
-        ``{"n_runs": 14, "window_ms": 200.0}``.
-        **Do not** include private keys (leading underscore) here — they
-        are for internal use only and are not printed.
-    fn_name : str
-        Name shown in the terminal prefix, e.g. ``"plot_probe_noise_floor"``.
-
-    Returns
-    -------
-    str
-        Formatted caption (may contain LaTeX commands and newlines).
+    Slot interpolation is kept for back-compat with the few inline cells
+    that still parameterise their captions with ``{n_runs}`` / ``{wind_conds}``
+    etc. After those cells migrate (Commit 3), the formatting branch is
+    unused and this function can be reduced to a passthrough.
     """
-    template = plotting.get("caption", default_template)
-    caption  = template.format(**slots)
-    oneline  = " ".join(caption.split())
-
-    public_slots = {k: v for k, v in slots.items() if not k.startswith("_")}
-    print(f"\n[{fn_name}] caption slots: {public_slots}")
-    try:
-        import subprocess
-        subprocess.run(["pbcopy"], input=oneline.encode(), check=True)
-        print(f"[{fn_name}] caption copied to clipboard — just Cmd+V.")
-    except Exception:
-        pass
-    print(f'[{fn_name}] formatted caption:\n  "{oneline}"\n')
-    return caption
+    template = plotting.get("caption", "")
+    if not template:
+        return ""
+    if slots and "{" in template:
+        return template.format(**slots)
+    return template
 
 
 class TextRegistry:
