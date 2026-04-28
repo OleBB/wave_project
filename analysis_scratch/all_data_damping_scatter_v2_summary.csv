@@ -1,5 +1,5 @@
 condition,is_final,WindCondition,PanelCondition,n,freq_min,freq_max,out_in_mean,out_in_std
-cond1_h272_high,False,full,full,75,0.5,2.0,0.7009823808451839,0.19989731174284012
+cond1_h272_high,False,full,full,74,0.5,1.9,0.703714605248489,0.1998468653249236
 cond1_h272_high,False,no,full,72,0.5,1.9,0.6694203558152552,0.23939549166773458
 cond2_h136_high,False,no,full,3,1.5,1.7,0.518668135847724,0.10470699934786434
 cond3_h100_high_WRONG,False,full,full,35,1.2,1.8,0.7090728575416119,0.07718814549404406

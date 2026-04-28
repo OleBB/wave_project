@@ -52,7 +52,15 @@ from wavescripts.improved_data_loader import load_analysis_data
 from wavescripts.constants import PROBE_HEIGHT_DEFAULT_MM
 from wavescripts.plot_utils import (
     freq_to_k, add_freq_axis, WIND_COLOR_MAP, amp_to_label, amp_to_tag,
+    apply_thesis_style,
 )
+
+# Thesis body font (NewComputerModern OTFs registered via FontManager).
+# usetex=False keeps the script fast; mathtext renders math in a CM-compatible
+# font that visually matches NCM body text. If true siunitx \unit{\hertz} is
+# required later, flip to apply_thesis_style(usetex=True) and add
+# r"\usepackage{siunitx}" to text.latex.preamble — slower but literal.
+apply_thesis_style()
 
 # ── I/O ────────────────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "all_data_damping_scatter_v2.pdf"
@@ -102,6 +110,12 @@ print(f"   {len(wave)} wave/fullpanel/quality=ok runs  ({n_extreme} extreme outl
 wave_clip = wave_clip[wave_clip["WindCondition"].isin(["no", "full"])].copy()
 print(f"   {len(wave_clip)} after restricting to wind ∈ {{no, full}}")
 
+# Drop the lone 2.0 Hz run (1 fullwind/0.3V) — way out at k≈16, wastes
+# horizontal space and not a real cluster.
+n_drop_2hz = int((wave_clip["WaveFrequencyInput [Hz]"] >= 2.0).sum())
+wave_clip = wave_clip[wave_clip["WaveFrequencyInput [Hz]"] < 2.0].copy()
+print(f"   {len(wave_clip)} after dropping {n_drop_2hz} run(s) at f >= 2.0 Hz")
+
 wave_clip["k"] = freq_to_k(wave_clip["WaveFrequencyInput [Hz]"].values)
 
 print("\n2. Counts per condition × wind:")
@@ -149,7 +163,9 @@ def _round_amp(v):
     return round(float(v), 2)
 
 
-fig, ax = plt.subplots(figsize=(11, 6))
+# A4 portrait, 1-inch margins → text width 6.27 in, text height 9.69 in.
+# 6.27 × 9.5 fills the page with room for caption (~0.2 in residual).
+fig, ax = plt.subplots(figsize=(6.27, 9.5))
 
 # Plot order: earlier hardware first (so the more-numerous final cond4
 # markers paint over them — keeps the canonical data on top).
@@ -213,37 +229,46 @@ thesis_k_lo = float(freq_to_k(np.array([1.3]))[0])
 thesis_k_hi = float(freq_to_k(np.array([1.6]))[0])
 ax.axvspan(thesis_k_lo, thesis_k_hi,
            color=WIND_COLOR_MAP["no"], alpha=0.07, lw=0, zorder=1)
-ax.text(thesis_k_hi - 0.1, 1.27,
+ax.text(thesis_k_hi - 0.1, 1.16,
         "Hovedfokus\n1,3–1,6 Hz", ha="right", va="top",
         fontsize=8, color="#1F618D", alpha=0.85,
         bbox=dict(boxstyle="round,pad=0.2",
                   facecolor="white", alpha=0.75, edgecolor="none"))
 
 ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.5)
-ax.set_xlabel("$k$ (rad/m)", fontsize=11)
-ax.set_ylabel("Ut/Inn (FFT)", fontsize=11)
-ax.grid(True, alpha=0.25, lw=0.5)
-# Cap at 1.3 — points above 1.3 are wind-contamination / low-SNR artefacts
-# (CLAUDE.md §16); not informative for the cross-condition pattern check.
-Y_TOP = 1.3
-ax.set_ylim(0.1, Y_TOP)
-n_hidden = int((wave_clip["OUT/IN (FFT)"] > Y_TOP).sum())
-if n_hidden:
-    ax.text(0.99, 0.99,
-            f"+{n_hidden} kjøringer over y={Y_TOP:.1f} (vind-kontaminert, ikke vist)",
-            transform=ax.transAxes, ha="right", va="top",
-            fontsize=7, color="#666", style="italic",
-            bbox=dict(boxstyle="round,pad=0.25",
-                      facecolor="white", alpha=0.85, edgecolor="#ccc"))
-add_freq_axis(ax)
+ax.set_xlabel("$k$", fontsize=11)
+ax.set_ylabel("Transmisjonskoeffisient", fontsize=11)
+
+# Grid: majors + minors (denser y-grid since the figure is now tall and the
+# story is mostly along y).
+from matplotlib.ticker import MultipleLocator
+ax.yaxis.set_major_locator(MultipleLocator(0.1))
+ax.yaxis.set_minor_locator(MultipleLocator(0.05))
+ax.xaxis.set_minor_locator(MultipleLocator(1.0))   # majors stay default (~5)
+ax.grid(which="major", alpha=0.30, lw=0.6)
+ax.grid(which="minor", alpha=0.15, lw=0.4)
+
+# Cap at 1.18 — squeezes the dense middle band into more vertical space.
+# Points above 1.18 are wind-contamination / low-SNR artefacts (CLAUDE.md §16),
+# not informative for the cross-condition pattern check.
+ax.set_ylim(0.1, 1.18)
+
+# Top axis: every frequency that actually appears in the dataset, as ticks
+# (instead of the default sparse "every 0.5 Hz" labels).
+secax = add_freq_axis(ax)
+secax.set_xlabel(r"Frekvens (Hz)", fontsize=9)   # Norwegian; siunitx-style
+                                                 # \unit{\hertz} would need
+                                                 # text.usetex=True.
+_used_freqs = sorted(wave_clip["WaveFrequencyInput [Hz]"].unique())
+secax.set_xticks(_used_freqs)
+secax.set_xticklabels([f"{f:.1f}" for f in _used_freqs])
+secax.tick_params(labelsize=7)
 
 # ── Legend ────────────────────────────────────────────────────────────────────
 # Three small legends, one per dimension.
 wind_handles = [
     mlines.Line2D([], [], color=WIND_COLOR_MAP[w],
-                  marker="s", linestyle="None", markersize=8,
-                  markerfacecolor=WIND_COLOR_MAP[w],
-                  markeredgecolor="black", markeredgewidth=0.3,
+                  linestyle="-", linewidth=5,
                   label=WIND_LABEL[w])
     for w in ["no", "full"]
 ]
@@ -268,24 +293,37 @@ hardware_handles = [
                   label="tidligere oppsett"),
 ]
 
-leg1 = ax.legend(handles=wind_handles, loc="upper left",
-                 fontsize=8, framealpha=0.92, title="Vind", title_fontsize=8)
-ax.add_artist(leg1)
-leg2 = ax.legend(handles=amp_handles, loc="upper center",
-                 fontsize=8, framealpha=0.92, title="Amplitude",
-                 title_fontsize=8, bbox_to_anchor=(0.42, 0.99))
-ax.add_artist(leg2)
-ax.legend(handles=hardware_handles, loc="upper right",
-          fontsize=8, framealpha=0.92, title="Maskinvare", title_fontsize=8)
+# Layout: all three legends stacked along the right edge, top → bottom:
+#   Probeinnstillinger  (hardware fill, 2 entries)
+#   Vind                (wind colour, 2 entries)
+#   Amplitude           (marker shape, 3 entries)
+# y-anchors are in axes-fraction; tweak if boxes overlap or there's a gap.
+leg_hw = ax.legend(handles=hardware_handles, loc="upper right",
+                   bbox_to_anchor=(0.995, 0.995),
+                   fontsize=8, framealpha=0.92,
+                   title="Probeinnstillinger", title_fontsize=8)
+ax.add_artist(leg_hw)
 
+leg_w = ax.legend(handles=wind_handles, loc="upper right",
+                  bbox_to_anchor=(0.995, 0.86),
+                  fontsize=8, framealpha=0.92,
+                  title="Vind", title_fontsize=8)
+ax.add_artist(leg_w)
+
+ax.legend(handles=amp_handles, loc="upper right",
+          bbox_to_anchor=(0.995, 0.74),
+          fontsize=8, framealpha=0.92,
+          title="Amplitude", title_fontsize=8)
+
+# In-figure subtitle removed by request — counts (n_total, n_final, etc.)
+# go into the caption manually. Print them here so they're easy to copy.
 n_total = len(wave_clip)
 n_final = int(wave_clip["is_final"].sum())
-fig.text(0.5, 0.01,
-         f"n = {n_total} kjøringer  ({n_final} fra endelig oppsett, "
-         f"{n_total - n_final} fra tidligere oppsett).",
-         ha="center", fontsize=8, color="#444", style="italic")
+print(f"\n   For caption use:  n = {n_total} kjøringer  "
+      f"({n_final} fra endelig oppsett, "
+      f"{n_total - n_final} fra tidligere oppsett).")
 
-fig.subplots_adjust(left=0.08, right=0.98, top=0.85, bottom=0.14)
+fig.subplots_adjust(left=0.10, right=0.98, top=0.95, bottom=0.06)
 
 # ── 5. Save ────────────────────────────────────────────────────────────────────
 print("\n3. Saving v2 figure (scratch only — does NOT touch output/) …")
