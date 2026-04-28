@@ -266,23 +266,22 @@ def _make_damping_freq_fig(
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     # Dead-equal y-axis across all 3 subfigures so they stack visually for
     # apples-to-apples reading of A1/A2/A3.
-    ax.set_ylim(0.33, 1.05)
+    ax.set_ylim(0.33, 0.93)
     ax.grid(True, alpha=0.3)
     ax.legend(title="vind", fontsize=8, title_fontsize=8)
     secax = add_freq_axis(ax)
     secax.set_xticks([1.3, 1.4, 1.5, 1.6])
     secax.set_xticklabels(["1.3", "1.4", "1.5", "1.6"])
-    # Minimalist axis identifiers — one italic symbol at each corner of the
-    # data area, level with the tick-label row. Caption defines them:
-    # τ = Transmisjonskoeffisient (= A_ut / A_inn). k = wavenumber.
-    # f = paddle frequency. Frees ~6 % horizontal space (was rotated y-label).
+    # Single-letter axis identifiers at the right end, level with the tick
+    # row. Caption defines them: k = wavenumber, f = paddle frequency.
     ax.set_xlabel("$k$", fontsize=11)
     ax.xaxis.set_label_coords(1.02, -0.025)
     secax.set_xlabel("$f$", fontsize=11)
     secax.xaxis.set_label_coords(1.02, 1.025)
-    ax.set_ylabel(r"$\tau$", fontsize=12, rotation=0)
-    ax.yaxis.set_label_coords(-0.02, 1.025)
-    fig.subplots_adjust(left=0.08, right=0.97, top=0.90, bottom=0.13)
+    # Y-axis: full Norwegian word (rotated, default position) — matches the
+    # surrounding figures (ch05_damping_scatter, ch05_damping_all_data_scatter).
+    ax.set_ylabel("Transmisjonskoeffisient", fontsize=9)
+    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
     return fig
 
 
@@ -387,7 +386,7 @@ def plot_damping_freq(
 
 
 def _make_damping_scatter_fig(
-    stats_df: pd.DataFrame, panel: str, figsize: tuple = (5, 4)
+    stats_df: pd.DataFrame, panel: str, figsize: tuple = (5, 7)
 ) -> plt.Figure:
     """
     Single axes: OUT/IN vs frequency for one panel condition. All three
@@ -408,28 +407,28 @@ def _make_damping_scatter_fig(
     fig, ax = plt.subplots(figsize=figsize)
 
     # One scatter call per (wind, amp) so we control marker (amp) + colour
-    # (wind) independently. Errorbars piggy-back on the same loop.
+    # (wind) independently.
+    #
+    # Errorbars are omitted from this combined view: with 6 series (3 amps
+    # × 2 winds) overlaid at the same x-positions, the bars stack on top of
+    # each other and become visually unreadable. Per-condition spread (std
+    # across repeats) is fully covered by ch05_damping_freq's three stacked
+    # subfigs — point the reader there in the caption.
     for (wind, amp), grp in subset.groupby([GC.WIND_CONDITION,
                                             GC.WAVE_AMPLITUDE_INPUT]):
         marker = AMP_MARKER.get(round(float(amp), 2), "o")
         color  = WIND_COLOR_MAP.get(wind, "gray")
+        grp = grp.sort_values("k")
         ax.scatter(
             grp["k"], grp["mean_out_in"],
             color=color, marker=marker, s=70, alpha=0.85,
             edgecolors="black", linewidths=0.3, zorder=3,
         )
-        if "std_out_in" in subset.columns:
-            ax.errorbar(
-                grp["k"], grp["mean_out_in"],
-                yerr=grp["std_out_in"],
-                fmt="none", ecolor=color,
-                elinewidth=1, capsize=3, alpha=0.4, zorder=1,
-            )
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax.set_ylabel("Transmisjonskoeffisient", fontsize=9)
     # Same y-range as plot_damping_freq's three subfigs — apples-to-apples.
-    ax.set_ylim(0.33, 1.05)
+    ax.set_ylim(0.33, 0.93)
     ax.grid(True, alpha=0.3)
 
     # Bottom x-axis: ticks at the 4 thesis-scope k-values (those that match
@@ -465,8 +464,11 @@ def _make_damping_scatter_fig(
                       loc="upper right", bbox_to_anchor=(0.99, 0.99),
                       fontsize=7, title_fontsize=7, framealpha=0.92)
     ax.add_artist(leg_w)
+    # Amplitude legend sits just under Vind so the dense data band below
+    # ~0.85 stays clear. Tweak the y-anchor (currently 0.83) if there's
+    # a gap or overlap between the two legend boxes.
     ax.legend(handles=amp_handles, title="Amplitude",
-              loc="upper right", bbox_to_anchor=(0.99, 0.74),
+              loc="upper right", bbox_to_anchor=(0.99, 0.83),
               fontsize=7, title_fontsize=7, framealpha=0.92)
 
     fig.subplots_adjust(left=0.14, right=0.97, top=0.84, bottom=0.13)

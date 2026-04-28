@@ -1809,7 +1809,7 @@ _pv_damping_scatter = {
         "save_plot":   True,         # set True when figure is ready for thesis
         "figure_name": "ch05_damping_scatter",
         "force_stub":  True,
-        "figsize":     (5, 4),
+        "figsize":     (5, 7),
     },
 }
 
