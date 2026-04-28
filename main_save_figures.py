@@ -764,20 +764,6 @@ _pv_noise_floor = {
         "draft":     True,
         "figure_name": "ch04_probe_noise_floor",
         "force_stub": True,
-        "caption": (
-            "Stillwater 95\\% noise amplitude $(P_{{97.5}} - P_{{2.5}})/2$ per "
-            "ultrasound wave gauge, with no waves and no wind. "
-            "Each panel shows one hardware configuration "
-            "(probe height above still water / range mode). "
-            "Blue bars: mean across accepted stillwater runs within each configuration "
-            "(error bars: \\pm 1\\,std). "
-            "White dots: individual run values. "
-            "Quantization step $q = 0.03$--$0.05$\\,mm per probe "
-            "(P5 of nonzero sample-to-sample differences); "
-            "Dashed red line: detection threshold $\\max(3\\,\\sigma,\\; 2\\,q)$ "
-            "per probe, where $\\sigma$ is the rms noise; "
-            "wave amplitudes below this line are indistinguishable from stillwater noise."
-        ),
         # ↓↓↓ NEW — add this block ↓↓↓
             "text": {
                 "ylabel": "Støyamplitude (95 %)  [mm]",
@@ -862,15 +848,6 @@ _pv_parallel_ratio = {
         "draft":     True,
         "figure_name": "ch04_parallel_ratio",
         "force_stub": True,
-        "caption": (
-            "Ratio of wall-side to far-side probe amplitude at the same longitudinal "
-            "distance, for {n_runs} wave runs across {n_panels} panel condition(s) "
-            "({panel_conditions}). "
-            "A ratio of 1 indicates lateral symmetry. "
-            "Deviations indicate wall reflections or wind-driven lateral asymmetry. "
-            r"Error bars: standard deviation across runs at the same frequency. "
-            "Dashed line: ratio = 1."
-        ),
     },
 }
 start = time.perf_counter()
@@ -884,11 +861,6 @@ _pv_parallel_ratio_scatter = {
         **_pv_parallel_ratio["plotting"],
         "scatter":     True,
         "figure_name": "ch04_parallel_ratio_scatter",
-        "caption": (
-            "Same data as the parallel-ratio figure, plotted as individual run "
-            "points (no grouping). Each dot = one run. Colour = wind condition; "
-            "marker shape = wave amplitude. Use to identify outlier runs."
-        ),
     },
 }
 plot_parallel_ratio(combined_meta, _pv_parallel_ratio_scatter)
@@ -1091,15 +1063,6 @@ _pv_wind_psd = {
         "max_points":    500,
         "grid":          True,
         "legend":        "inside",
-
-        "caption": (
-            "POWER spectral density (PSD) of the free surface at each wave gauge "
-            "during wind-only runs (no paddle waves). "
-            "All {n_runs} nowave runs overlaid; colour encodes wind condition. "
-            "Stillwater runs (no wind) shown as baseline. "
-            "Wind energy is concentrated above 2\\,Hz — "
-            "the paddle frequency range (0.65--1.9\\,Hz) is unaffected."
-        ),
     },
 }
 
@@ -1223,11 +1186,6 @@ _pv_td_vs_fft_scatter = {
         **_pv_td_vs_fft["plotting"],
         "scatter":     True,
         "figure_name": "ch04_td_vs_fft_scatter",
-        "caption": (
-            "Same data as the td-vs-fft figure. "
-            "Bottom row: individual run ratios as scatter (no median line). "
-            "Use to identify outlier runs driving dips at specific $k$."
-        ),
     },
 }
 plot_td_vs_fft(combined_meta, _pv_td_vs_fft_scatter, chapter="04")
@@ -1712,11 +1670,6 @@ _pv_lateral_nowind = {
         "draft":       True,
         "figure_name": "ch04_lateral_nowind",
         "force_stub":  True,
-        "caption": (
-            "Wall-side to far-side amplitude ratio at matched longitudinal distance, "
-            "no-wind runs only. A ratio of 1 indicates the paddle wave is laterally "
-            r"uniform. Dashed line: ratio = 1."
-        ),
     },
 }
 _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)
@@ -1727,10 +1680,6 @@ _pv_lateral_nowind_scatter = {
         **_pv_lateral_nowind["plotting"],
         "scatter":     True,
         "figure_name": "ch04_lateral_nowind_scatter",
-        "caption": (
-            "Same data as the lateral-nowind figure, plotted as individual run "
-            "points (no grouping). Each dot = one run. Use to identify outliers."
-        ),
     },
 }
 plot_parallel_ratio(combined_meta, _pv_lateral_nowind_scatter)
@@ -1818,13 +1767,6 @@ _pv_damping_freq = {
         "annotate":   True,
         "legend":     "outside_right",
         "probes":     ANALYSIS_PROBES,
-        "caption": (
-            "Damping ratio OUT/IN (FFT amplitude at paddle frequency) versus wave frequency. "
-            "Colour encodes wind condition ({wind_conds}); "
-            "each line shows one amplitude ({amps}). "
-            "Errorbars: standard deviation across repeated runs. "
-            "Dashed line: ratio = 1 (no damping)."
-        ),
     },
 }
 
@@ -1863,8 +1805,8 @@ _pv_damping_scatter = {
         "figure_name": "ch05_damping_scatter",
         "force_stub":  True,
         "figsize":     (5, 4),
-        "caption": "OUT/IN damping ratio versus wave frequency, all amplitudes combined. Colour = wind condition; marker size = amplitude tier ($A_1$, $A_2$, $A_3$). Errorbars: standard deviation across runs."
-}}
+    },
+}
 
 _scatter_meta   = _aef(meta_results, _pv_damping_scatter)
 _scatter_grouped = damping_all_amplitude_grouper(_scatter_meta)
@@ -1975,13 +1917,6 @@ _pv_damping_ka = {
         "draft": True,
         "figure_name": "ch05_damping_ka",
         "force_stub": False,
-        "caption": (
-            "OUT/IN damping ratio versus wave steepness $ka$ at the incident probe "
-            "(9373/170), full panel condition. "
-            "Colour encodes wind condition; marker encodes wave amplitude. "
-            "Each point is one run. Dashed line: ratio = 1 (no damping). "
-            "Data: two validated sessions (2026-03-26/27, lowrange mode)."
-        ),
     },
 }
 

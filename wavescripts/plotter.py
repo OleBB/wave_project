@@ -304,14 +304,7 @@ def plot_damping_freq(
         "n_wind":      len(wind_conditions),
         "wind_conds":  ", ".join(wind_conditions),
     }
-    _default_caption = (
-        "Damping ratio OUT/IN (FFT amplitude at paddle frequency) versus "
-        "wave frequency, for {panels} panel condition(s). "
-        "Colour encodes wind condition ({wind_conds}); "
-        "each line shows one amplitude ({amps}). "
-        "Errorbars: standard deviation across repeated runs. "
-        "Dashed line: ratio = 1 (no damping)."
-    )
+    _default_caption = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(plotting, _default_caption, _caption_slots,
                                fn_name="plot_damping_freq")
 
@@ -452,12 +445,7 @@ def plot_damping_scatter(
         "n_amps":     len(amplitudes),
         "amps":       ", ".join(amp_to_label(a) for a in amplitudes),
     }
-    _default_caption = (
-        "OUT/IN damping ratio versus wave frequency, all amplitudes combined. "
-        "{panels} panel condition(s); colour = wind condition ({wind_conds}); "
-        "marker size = wave amplitude ({amps}). "
-        "Errorbars: standard deviation across runs."
-    )
+    _default_caption = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(plotting, _default_caption, _caption_slots,
                                fn_name="plot_damping_scatter")
 
@@ -738,13 +726,7 @@ def plot_damping_ka(
         "wind_conds": ", ".join(wind_conditions),
         "amps":       ", ".join(amp_to_label(a) for a in amplitudes),
     }
-    _default_caption = (
-        "OUT/IN damping ratio versus wave steepness $ka$ at the incident probe "
-        "(9373/170), for {panels} panel condition(s). "
-        "Colour encodes wind condition ({wind_conds}); "
-        "marker encodes wave amplitude ({amps}). "
-        "Each point is one run. Dashed line: ratio = 1 (no damping)."
-    )
+    _default_caption = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(plotting, _default_caption, _caption_slots,
                                fn_name="plot_damping_ka")
 
@@ -1009,13 +991,7 @@ def plot_damping_wind_delta(
         "target_wind": target_wind,
         "amps":       ", ".join(amp_to_label(a) for a in amplitudes),
     }
-    _default_caption = (
-        "Wind effect on damping ratio. "
-        "Top: OUT/IN (FFT) versus frequency for all wind conditions. "
-        "Bottom: signed difference OUT/IN({target_wind}) minus OUT/IN({ref_wind}). "
-        "Positive = wind increases transmission; negative = wind reduces it. "
-        "{panels} panel condition(s); amplitudes {amps}."
-    )
+    _default_caption = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(plotting, _default_caption, _caption_slots,
                                fn_name="plot_damping_wind_delta")
 
@@ -1557,12 +1533,7 @@ def plot_frequency_spectrum(
         "xlim_hi":       xlim[1],
         "data_type":     data_type.upper(),
     }
-    _default_caption = (
-        "{data_type} of the free surface at each wave gauge "
-        "({n_runs} runs: {n_wind} wind, {n_stillwater} stillwater). "
-        "Wind conditions: {wind_conds}. "
-        "Frequency range shown: {xlim_lo}--{xlim_hi}\\,Hz."
-    )
+    _default_caption = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(
         plotting, _default_caption, _caption_slots,
         fn_name="plot_frequency_spectrum",
@@ -2669,20 +2640,7 @@ def plot_probe_noise_floor(
         "k_sigma":    k_sigma,
         "k_q":        k_q,
     }
-    _default_caption = (
-        "Stillwater 95\\% noise amplitude $(P_{{97.5}} - P_{{2.5}})/2$ per "
-        "ultrasound wave gauge, with no waves and no wind. "
-        "Each panel shows one hardware configuration "
-        "(probe height above still water / range mode). "
-        "Blue bars: mean across accepted stillwater runs within each configuration "
-        "(error bars: ±1\\,std). "
-        "White dots: individual run values. "
-        + (_quant_str)
-        + "Dashed red line: detection threshold "
-        "$\\max({k_sigma:.0f}\\,\\sigma,\\; {k_q:.0f}\\,q)$ "
-        "per probe, where $\\sigma$ is the rms noise; "
-        "wave amplitudes below this line are indistinguishable from stillwater noise."
-    )
+    _default_caption = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(
         plotting, _default_caption, _caption_slots,
         fn_name="plot_probe_noise_floor",
@@ -2870,17 +2828,7 @@ def plot_parallel_ratio(
         "n_panels": n_panels,
         "panel_conditions": ", ".join(str(p) for p in panel_vals),
     }
-    _default_caption = (
-        "Ratio of wall-side to far-side probe amplitude at the same longitudinal "
-        "distance, for {n_runs} wave runs across {n_panels} panel "
-        "condition(s) ({panel_conditions}). "
-        "A ratio of 1 indicates lateral symmetry. "
-        "Deviations indicate wall reflections or wind-driven lateral asymmetry. "
-        "Colour = wind condition; linestyle = wave amplitude. "
-        "Error bars: standard deviation across repeated runs at the same (frequency, amplitude) — "
-        "pure run-to-run repeatability, not inflated by mixing amplitudes. "
-        "Dashed line: ratio = 1."
-    )
+    _default_caption = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(
         plotting, _default_caption, _caption_slots,
         fn_name="plot_parallel_ratio",
@@ -2981,14 +2929,7 @@ def plot_wave_stability(
         "threshold": stability_threshold,
         "n_probes":  n_probes,
     }
-    _default_caption = (
-        "Wave-train stability (autocorrelation at lag-1-period) versus wave "
-        "frequency for {n_probes} probes, {n_runs} wave runs. "
-        "Colour = wind condition; linestyle = wave amplitude. "
-        "Error bars: standard deviation across repeated runs at the same (frequency, amplitude). "
-        "Dashed line: quality threshold {threshold} — "
-        "runs below this are dominated by wind-wave noise at the IN probe."
-    )
+    _default_caption = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(
         plotting, _default_caption, _caption_slots,
         fn_name="plot_wave_stability",
@@ -3146,14 +3087,7 @@ def plot_timeseries_overview(
         "wind_conds":  ", ".join(wind_vals),
         "probe_list":  ", ".join(probe_positions),
     }
-    _default_caption = (
-        "Time series of free-surface elevation at {n_probes} probes "
-        "for {n_runs} selected runs "
-        "(f = {freq_hz}\\,Hz; wind: {wind_conds}). "
-        "Grey shading marks the detected stable-wave window used for amplitude "
-        "and FFT analysis."
-    )
-    _default_caption = _default_caption.replace("{n_probes}", str(n_probes))
+    _default_caption = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(
         plotting, _default_caption, _caption_slots,
         fn_name="plot_timeseries_overview",
@@ -3304,16 +3238,7 @@ def plot_sound_speed(
         "worst_pct":   f"{worst_pct:.3f}",
         "worst_mm_10": f"{worst_pct * 0.1:.4f}",
     }
-    _default = (
-        "Speed of sound in air per run, measured by the probe hardware "
-        "({n_runs} runs). "
-        "Right axis: approximate air temperature from "
-        "$c_{{\\mathrm{{air}}}}\\approx 331 + 0.606\\,T$. "
-        "Dashed line: {c_ref}\\,m/s reference ($\\approx$20\\,\\textdegree C). "
-        "Worst-case amplitude scale error: {worst_pct}\\,\\% "
-        "({worst_mm_10}\\,mm on a 10\\,mm wave). "
-        "For OUT/IN ratios the error cancels exactly."
-    )
+    _default = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(plotting, _default, _slots,
                                fn_name="plot_sound_speed")
 
@@ -3454,16 +3379,7 @@ def plot_wind_snr(
         "n_fw_psds":   len(_fw_psds),
         "fft_window":  fft_window_hz,
     }
-    _default = (
-        "Spectral SNR per probe: ratio of paddle-frequency FFT amplitude "
-        "to wind-noise amplitude integrated over the {fft_window}\\,Hz FFT window "
-        "at each paddle frequency "
-        "({n_wave_runs} wave runs; wind-noise baseline from "
-        "{n_fw_psds} full-wind no-wave runs). "
-        "Horizontal lines: SNR~=~10 (dotted grey), 5 (dashed black), "
-        "3 (dotted red, critical). "
-        "SNR~$<$~3 indicates wind dominates the FFT measurement."
-    )
+    _default = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(plotting, _default, _slots,
                                fn_name="plot_wind_snr")
 
@@ -3554,16 +3470,7 @@ def plot_td_vs_fft(
         "n_runs":     n_runs,
         "wind_conds": ", ".join(wind_conds),
     }
-    _default = (
-        "Time-domain amplitude $A_\\mathrm{{td}}$ vs.\\ FFT amplitude "
-        "$A_\\mathrm{{FFT}}$ at the paddle frequency per probe "
-        "({n_runs} wave runs; wind: {wind_conds}). "
-        "Top row: scatter; dashed = 1:1 line. "
-        "Bottom row: ratio $A_\\mathrm{{FFT}}/A_\\mathrm{{td}}$ vs.\\ frequency. "
-        "Ratio $\\to 1$ under no wind; $\\to 0$ at the IN probe under full wind "
-        "(time-domain dominated by wind waves). "
-        "Confirms $A_\\mathrm{{FFT}}$ as the only valid amplitude metric under wind."
-    )
+    _default = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(plotting, _default, _slots,
                                fn_name="plot_td_vs_fft")
 
@@ -3715,27 +3622,7 @@ def plot_fft_peak_bias_cancellation(
         "fw_mean":      f"{fw_mean_delta:+.4f}",
         "nw_mean":      f"{nw_mean_delta:+.4f}",
     }
-    _default = (
-        "Cancellation of the FFT peak-bin bias in the OUT/IN ratio "
-        "({n_total} runs; nowind {n_nowind}, fullwind {n_fullwind}). "
-        "Nearest-bin amplitude is systematically biased by paddle-drift "
-        "vs FFT bin-grid alignment (sinc-attenuation up to ~40\\,\\% for "
-        "individual amplitudes). Panel (a): OUT/IN computed with the pipeline's "
-        "nearest-bin rule is near-identical to sub-bin parabolic-interpolated "
-        "amplitude (y = x shown dashed). Panel (b): distribution of "
-        "$\\Delta(\\mathrm{{OUT/IN}}) = \\mathrm{{parabolic}} - \\mathrm{{nearest}}$ "
-        "is sharply peaked near zero. Panel (c): residual $\\Delta$ has "
-        "no strong frequency structure. Panel (d): $\\Delta$ grows with the "
-        "IN-probe paddle peak offset from nominal (the expected driver of "
-        "sinc attenuation) but stays small because the OUT probe sees the "
-        "same offset. Mean $|\\Delta|/(\\mathrm{{OUT/IN}}) = {mean_abs_rel}$; "
-        "{frac_lt_002} of runs have $|\\Delta| < 0.02$; "
-        "worst-case $|\\Delta| = {max_abs}$. "
-        "Fullwind introduces a small negative tail "
-        "(mean $\\Delta = {fw_mean}$ vs nowind {nw_mean}) from wind-induced "
-        "spectral broadening at the IN probe. Conclusion: OUT/IN ratios are "
-        "robust to the peak-bin bias; individual absolute amplitudes are not."
-    )
+    _default = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(plotting, _default, _slots,
                                fn_name="plot_fft_peak_bias_cancellation")
 
@@ -3946,15 +3833,7 @@ def plot_first_arrival(
         "window_s":    window_s,
         "min_arr":     min_arrival_s,
     }
-    _default = (
-        "First wave arrival time at each probe vs.\\ distance from the paddle, "
-        "no-wind runs ({n_runs} runs). "
-        "Detection: rolling {window_s}\\,s window exceeds "
-        "{threshold}$\\times$ stillwater noise floor ({thresh_strs}). "
-        "Arrivals $\\leq${min_arr}\\,s excluded as instrument transients. "
-        "Error bars: half-range across parallel probes at the same "
-        "longitudinal distance."
-    )
+    _default = ""   # caption text comes from FIGURE_CAPTIONS dict
     _caption = resolve_caption(plotting, _default, _slots,
                                fn_name="plot_first_arrival")
 
