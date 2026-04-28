@@ -229,7 +229,7 @@ ax.legend(handles=wind_handles, loc="upper right",
           fontsize=8, framealpha=0.92, title="vind")
 
 fig.text(0.5, 0.01,
-         f"n = {len(wave_clip)} kjøringer (2025-10 til 2026-03). "#f"Blue band highlights the tight thesis scope (cond4 only, nowind+fullwind present at every freq).", #f"Marker size ∝ input amplitude (0.1/0.2/0.3 V). "
+         f"n = {len(wave_clip)} kjøringer (2025-10 til 2026-03). ",#f"Blue band highlights the tight thesis scope (cond4 only, nowind+fullwind present at every freq).", #f"Marker size ∝ input amplitude (0.1/0.2/0.3 V). "
          ha="center", fontsize=8, color="#444", style="italic")
 
 fig.subplots_adjust(left=0.08, right=0.98, top=0.85, bottom=0.14)
