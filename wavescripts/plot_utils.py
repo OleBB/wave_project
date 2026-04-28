@@ -946,22 +946,25 @@ def existing_body_fallback(existing: str) -> str:
 def write_figure_stub(meta: dict, plot_type: str,
                       subfig_filenames: Optional[list[str]] = None,
                       subfig_captions: Optional[list[str]] = None,
-                      force: bool = False,
+                      force: bool = True,
                       width: str = "\\linewidth") -> None:
     """
-    Write (or surgically refresh) a LaTeX figure stub in TEXFIGU_DIR.
+    Write a LaTeX figure stub in TEXFIGU_DIR.
 
-    Default behaviour (``force=False``):
-      - Stub absent    → write from scratch (immutable block + template body).
+    Default behaviour (``force=True``):
+      Stub body (caption text, label, subfigure layout) is rewritten on
+      every call from ``meta`` and the central ``FIGURE_CAPTIONS`` dict
+      (via the JSON cache). The single-source-of-truth invariant requires
+      this — caption edits in ``main_save_figures.py`` must always land
+      on regen.
+
+    With ``force=False``:
+      - Stub absent    → write from scratch.
       - Stub present   → refresh ONLY the immutable block between
-                         ``_IMMUTABLE_OPEN`` and ``_IMMUTABLE_CLOSE``.
-                         The LaTeX body (caption text, label, subfigure
-                         layout) is preserved, so hand-edited captions
-                         survive re-runs.
-
-    With ``force=True`` the entire stub is rewritten — captions included.
-    Only use that when you're certain the hand-edits haven't started yet
-    (typically right after the first write) or you've committed to git.
+                         ``_IMMUTABLE_OPEN`` and ``_IMMUTABLE_CLOSE``;
+                         preserve the LaTeX body. Use only if you're
+                         intentionally hand-editing a body (which the
+                         project convention says you shouldn't).
 
     Parameters
     ----------
@@ -973,9 +976,11 @@ def write_figure_stub(meta: dict, plot_type: str,
         1 → single ``\\includegraphics``; 2+ → subfigure layout.
         None → single figure, filename from ``meta['figure_name']``.
     subfig_captions : list[str], optional
-        Per-subfigure captions (same length as subfig_filenames).
+        Per-subfigure captions (same length as subfig_filenames). When
+        omitted, each subfig caption is looked up from ``FIGURE_CAPTIONS``
+        by its .pdf basename.
     force : bool
-        Rewrite the entire stub (body included). See above.
+        Default True — rewrite the whole stub. See above for opt-out.
     """
     TEXFIGU_DIR.mkdir(parents=True, exist_ok=True)
     stub_filename = meta.get("figure_name") or build_filename(plot_type, meta)
@@ -1175,7 +1180,7 @@ def save_and_stub(fig: plt.Figure,
                   meta: dict,
                   plot_type: str,
                   subfig_filenames: Optional[list[str]] = None,
-                  force_stub: bool = False) -> None:
+                  force_stub: bool = True) -> None:
     """
     Save figure files and write the LaTeX stub in one call.
 
@@ -1192,7 +1197,10 @@ def save_and_stub(fig: plt.Figure,
         When the stub should reference multiple separate subfigure PDFs.
         None → stub references only the single figure being saved now.
     force_stub : bool
-        Overwrite existing stub (wipes caption edits — commit to git first).
+        Default True — every regen rewrites the stub body so the latest
+        caption text from the central FIGURE_CAPTIONS dict lands. Pass
+        False only if you have a special reason to preserve a hand-edited
+        body (which the project's invariant says you shouldn't).
 
     Example
     -------

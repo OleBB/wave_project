@@ -1916,7 +1916,7 @@ _pv_damping_ka = {
         "save_plot": True,
         "draft": True,
         "figure_name": "ch05_damping_ka",
-        "force_stub": False,
+        "force_stub": True,
     },
 }
 

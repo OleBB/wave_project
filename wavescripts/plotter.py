@@ -361,7 +361,7 @@ def plot_damping_freq(
         stub_meta = {**meta_base, "panel": panel_conditions, "amplitude": amplitudes, "wind": "allwind"}
         write_figure_stub(stub_meta, "damping_freq", subfig_filenames=subfig_filenames,
                           subfig_captions=subfig_captions,
-                          force=plotting.get("force_stub", False))
+                          force=plotting.get("force_stub", True))
 
 
 def _make_damping_scatter_fig(
@@ -494,7 +494,7 @@ def plot_damping_scatter(
         stub_meta = {**meta_base, "panel": panel_conditions, "wind": "allwind"}
         write_figure_stub(stub_meta, "damping_scatter", subfig_filenames=subfig_filenames,
                           subfig_captions=subfig_captions,
-                          force=plotting.get("force_stub", False))
+                          force=plotting.get("force_stub", True))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -806,7 +806,7 @@ def plot_damping_ka(
             stub_meta["amplitude"] = amplitudes
         write_figure_stub(stub_meta, "damping_ka", subfig_filenames=subfig_filenames,
                           subfig_captions=subfig_captions,
-                          force=plotting.get("force_stub", False))
+                          force=plotting.get("force_stub", True))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1066,7 +1066,7 @@ def plot_damping_wind_delta(
         stub_meta = {**meta_base, "panel": panel_conditions, "wind": f"{ref_wind}_vs_{target_wind}"}
         write_figure_stub(stub_meta, "damping_wind_delta", subfig_filenames=subfig_filenames,
                           subfig_captions=subfig_captions,
-                          force=plotting.get("force_stub", False))
+                          force=plotting.get("force_stub", True))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1359,7 +1359,7 @@ def plot_swell_scatter(
 
         write_figure_stub(meta_base, "swell_scatter",
                           subfig_filenames=subfig_filenames,
-                          force=plotting.get("force_stub", False))
+                          force=plotting.get("force_stub", True))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1558,7 +1558,7 @@ def plot_frequency_spectrum(
                 meta_base,
                 plot_type=f"spectrum_{data_type}",
                 save_pgf=True,
-                force_stub=plotting.get("force_stub", False),
+                force_stub=plotting.get("force_stub", True),
             )
         else:
             # Save one figure per facet panel
@@ -1648,7 +1648,7 @@ def plot_frequency_spectrum(
             # One stub with all panels as subfigures
             write_figure_stub(
                 meta_base, f"spectrum_{data_type}", subfig_filenames=subfig_filenames,
-                force=plotting.get("force_stub", False),
+                force=plotting.get("force_stub", True),
             )
 
     if show_plot:
@@ -2686,7 +2686,7 @@ def plot_probe_noise_floor(
             ),
             extra_stats=_extra_stats,
         )
-        force_stub = plotting.get("force_stub", False)
+        force_stub = plotting.get("force_stub", True)
         if len(figs) == 1:
             save_and_stub(figs[0], meta_base, plot_type="probe_noise_floor",
                           force_stub=force_stub)
@@ -2841,7 +2841,7 @@ def plot_parallel_ratio(
             data_df=combined_meta,
         )
         save_and_stub(fig, meta, plot_type="parallel_ratio",
-                      force_stub=plotting.get("force_stub", False))
+                      force_stub=plotting.get("force_stub", True))
 
     return fig
 
@@ -2875,7 +2875,7 @@ def plot_wave_stability(
             show_plot          : bool  (default False)
             save_plot          : bool  (default False)
             figure_name        : str
-            force_stub         : bool  (default False)
+            force_stub         : bool  (default True)
             figsize            : tuple (default auto)
             caption            : str  (optional template with {n_runs},
                                        {threshold}, {n_probes})
@@ -2889,7 +2889,7 @@ def plot_wave_stability(
     show_plot  = plotting.get("show_plot",  False)
     save_plot  = plotting.get("save_plot",  False)
     figure_name = plotting.get("figure_name", "ch04_wave_stability")
-    force_stub  = plotting.get("force_stub",  False)
+    force_stub  = plotting.get("force_stub",  True)
 
     _top_caption = plotvariables.get("caption")
     if isinstance(_top_caption, str) and "caption" not in plotting:
@@ -3037,7 +3037,7 @@ def plot_timeseries_overview(
             show_plot      : bool  (default False)
             save_plot      : bool  (default False)
             figure_name    : str
-            force_stub     : bool  (default False)
+            force_stub     : bool  (default True)
             probes         : list[str]  — which probes to show as rows
             max_runs       : int   — cap on columns shown (default 4)
             xlim           : tuple (t_start, t_end) [s], or None for full run
@@ -3056,7 +3056,7 @@ def plot_timeseries_overview(
     show_plot    = plotting.get("show_plot",  False)
     save_plot    = plotting.get("save_plot",  False)
     figure_name  = plotting.get("figure_name", "ch04_timeseries")
-    force_stub   = plotting.get("force_stub",  False)
+    force_stub   = plotting.get("force_stub",  True)
     probe_positions = plotting.get("probes", [])
     max_runs     = plotting.get("max_runs", 4)
     xlim         = plotting.get("xlim",  None)
@@ -3217,7 +3217,7 @@ def plot_sound_speed(
     plotting   = plotvariables.get("plotting", {})
     show_plot  = plotting.get("show_plot",  False)
     save_plot  = plotting.get("save_plot",  False)
-    force_stub = plotting.get("force_stub", False)
+    force_stub = plotting.get("force_stub", True)
     figsize    = plotting.get("figsize",    (10, 3))
 
     _c_df = combined_meta[
@@ -3309,7 +3309,7 @@ def plot_wind_snr(
     plotting       = plotvariables.get("plotting", {})
     show_plot      = plotting.get("show_plot",     False)
     save_plot      = plotting.get("save_plot",     False)
-    force_stub     = plotting.get("force_stub",    False)
+    force_stub     = plotting.get("force_stub",    True)
     probes         = plotting.get("probes",        [])
     fft_window_hz  = plotting.get("fft_window_hz", 0.1)
     figsize        = plotting.get("figsize",       None)
@@ -3453,7 +3453,7 @@ def plot_td_vs_fft(
     plotting   = plotvariables.get("plotting", {})
     show_plot  = plotting.get("show_plot",  False)
     save_plot  = plotting.get("save_plot",  False)
-    force_stub = plotting.get("force_stub", False)
+    force_stub = plotting.get("force_stub", True)
     probes     = plotting.get("probes",     [])
     figsize    = plotting.get("figsize",    None)
     scatter    = plotting.get("scatter",    False)
@@ -3587,7 +3587,7 @@ def plot_fft_peak_bias_cancellation(
     plotting   = plotvariables.get("plotting", {})
     show_plot  = plotting.get("show_plot",  False)
     save_plot  = plotting.get("save_plot",  False)
-    force_stub = plotting.get("force_stub", False)
+    force_stub = plotting.get("force_stub", True)
     figsize    = plotting.get("figsize",    (9.5, 7.2))
 
     # Default cache location (override via plotting["csv_path"])
@@ -3763,7 +3763,7 @@ def plot_first_arrival(
     plotting         = plotvariables.get("plotting", {})
     show_plot        = plotting.get("show_plot",        False)
     save_plot        = plotting.get("save_plot",        False)
-    force_stub       = plotting.get("force_stub",       False)
+    force_stub       = plotting.get("force_stub",       True)
     probes           = plotting.get("probes",           [])
     threshold_factor = plotting.get("threshold_factor", 5.0)
     window_s         = plotting.get("window_s",         2.5)
