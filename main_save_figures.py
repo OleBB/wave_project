@@ -409,6 +409,127 @@ def _run_delegated_if_missing(
         return
     print(f"    {label}: regenerated {len(outputs)} output(s)")
 
+# ══════════════════════════════════════════════════════════════════════════════
+# FIGURE CAPTIONS — single source of truth for thesis caption text.
+# ══════════════════════════════════════════════════════════════════════════════
+# Edit the right-hand string for each figure. Empty string → the stub's
+# \caption{} body gets a TODO placeholder so a glance at this dict tells
+# you what's still unwritten.
+#
+# Keys are figure_name == .tex stem == .pdf stem == \label{fig:...} suffix.
+# Multi-subfigure stubs have one key for the parent \caption{} (the .tex
+# stem) plus one key per included PDF (subfig basename).
+#
+# This dict is read by both inline plotters (same Python process) and
+# delegated subprocess scripts via output/.figure_captions.json (rewritten
+# below on every import). Run `python main_save_figures.py --regenerate`
+# to refresh every TEXFIGU stub from these strings (force=True on stub
+# writes — required for caption edits to land).
+#
+# Plain LaTeX text. No {slot} interpolation, no agent-written defaults,
+# no clipboard side-effects.
+# ──────────────────────────────────────────────────────────────────────────────
+FIGURE_CAPTIONS: dict[str, str] = {
+
+    # ── CHAPTER 04 — METHODOLOGY ─────────────────────────────────────────────
+
+    # § 1 — Probe noise floor (parent + 4 subfigs)
+    "ch04_probe_noise_floor":          "",
+    "ch04_probe_noise_floor_group0":   "",
+    "ch04_probe_noise_floor_group1":   "",
+    "ch04_probe_noise_floor_group2":   "",
+    "ch04_probe_noise_floor_group3":   "",
+
+    # § 2 — Stillwater timing (placeholder)
+    "ch04_stillwater_timing":          "",
+
+    # § 3 — Probe placement / parallel probes
+    "ch04_parallel_ratio":             "",
+    "ch04_parallel_ratio_scatter":     "",
+    "ch04_probe_height":               "",
+    "ch04_mooring_comparison":         "",
+    "ch04_sound_speed":                "",
+    "ch04_parallel_probe_agreement":   "",
+    "ch04_depth_regime":               "",
+
+    # § 4 — Wind characterisation / FFT methodology
+    "ch04_wind_psd":                   "",
+    "ch04_wind_reflection":            "",
+    "ch04_fft_wave":                   "",
+    "ch04_wind_snr":                   "",
+    "ch04_td_vs_fft":                  "",
+    "ch04_td_vs_fft_scatter":          "",
+    "ch04_fft_peak_bias_cancellation": "",
+    "ch04_mansard_funke_reflection":   "",
+    "ch04_sw_correction_test":         "",
+    "ch04_sliding_afft_stability":     "",
+    "ch04_reconstruction_AvsB":        "",
+    "ch04_reconstruction_pure_wind":   "",
+    "ch04_paddle_contamination":       "",
+    "ch04_per40_vs_per240_outin":      "",
+    "ch04_per40_and_per240_HG_shifted":"",
+
+    # § 5 — Reading a time series (inspirational opener)
+    "ch04_inspirational_nowind":       "",
+    "ch04_inspirational_fullwind":     "",
+
+    # § 6–9 — Wave-range detection, autocorrelation, lateral
+    "ch04_first_arrival":              "",
+    "ch04_timeseries_overview":        "",
+    "ch04_wave_stability":             "",
+    "ch04_lateral_nowind":             "",
+    "ch04_lateral_nowind_scatter":     "",
+
+    # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
+
+    # § 1 — Damping vs frequency (parent + 3 subfigs)
+    "ch05_damping_freq":               "",
+    "ch05_damping_freq_full_A1":       "",
+    "ch05_damping_freq_full_A2":       "",
+    "ch05_damping_freq_full_A3":       "",
+
+    # § 2 — Damping vs amplitude
+    "ch05_damping_scatter":            "",
+
+    # § 3 — Wind effect (parent + 3 subfigs)
+    "ch05_damping_wind_delta":         "",
+    "ch05_damping_wind_delta_full_A1": "",
+    "ch05_damping_wind_delta_full_A2": "",
+    "ch05_damping_wind_delta_full_A3": "",
+
+    # § 3b — T_cross (parent + 3 subfigs)
+    "ch05_t_cross":                    "",
+    "ch05_t_cross_A1":                 "",
+    "ch05_t_cross_A2":                 "",
+    "ch05_t_cross_A3":                 "",
+
+    # § 4 — Damping vs ka
+    "ch05_damping_ka":                 "",
+    "ch05_damping_ka_A1":              "",
+    "ch05_damping_ka_A2":              "",
+    "ch05_damping_ka_A3":              "",
+
+    # § 6 — Reconstructed
+    "ch05_reconstructed":              "",
+
+    # § 7 — All-data scatter (supplementary)
+    "ch05_damping_all_data_scatter":   "",
+
+    # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
+    "diag_13hz_consistency":           "",
+}
+
+# Persist for delegated subprocess scripts that import write_figure_stub
+# (which reads this JSON via _lookup_central_caption). Gitignored — source
+# of truth is the dict above, this file is a runtime artefact.
+import json as _json
+_captions_path = file_dir / "output" / ".figure_captions.json"
+_captions_path.parent.mkdir(parents=True, exist_ok=True)
+_captions_path.write_text(
+    _json.dumps(FIGURE_CAPTIONS, indent=2, ensure_ascii=False),
+    encoding="utf-8",
+)
+
 # ── Datasets ──────────────────────────────────────────────────────────────────
 # Two named datasets from a single load:
 #   ALL_PROCESSED_DIRS   → combined_meta  — all sessions → CH04 methodology

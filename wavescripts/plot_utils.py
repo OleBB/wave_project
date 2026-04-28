@@ -29,6 +29,7 @@ Output directories (mirror your TeX project, copy manually)
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Optional
@@ -423,6 +424,30 @@ def make_label(row) -> str:
 FIGURES_DIR = Path("output/FIGURES")
 TEXFIGU_DIR = Path("output/TEXFIGU")
 
+# ── Centralised figure-caption lookup ─────────────────────────────────────────
+# main_save_figures.py owns the FIGURE_CAPTIONS dict and writes it to
+# output/.figure_captions.json on import. Both inline plotters (same process)
+# and delegated subprocess scripts read captions from that JSON file via the
+# helper below, keyed by figure_name (== .tex stem == .pdf stem == \label
+# suffix). Empty value (or missing key) → stub renders a TODO placeholder.
+
+_CAPTIONS_CACHE_PATH = Path("output/.figure_captions.json")
+
+
+def _lookup_central_caption(figure_name: str) -> str:
+    """Return the user-authored caption for ``figure_name`` from the JSON
+    cache written by main_save_figures.py, or ``""`` if missing/unreadable."""
+    if not figure_name:
+        return ""
+    if not _CAPTIONS_CACHE_PATH.exists():
+        return ""
+    try:
+        data = json.loads(_CAPTIONS_CACHE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    val = data.get(figure_name, "")
+    return val if isinstance(val, str) else ""
+
 
 # ── Filename format helpers ────────────────────────────────────────────────────
 
@@ -707,15 +732,22 @@ def _label_probe(filename: str, fallback_idx: int) -> str:
     return m.group(1) if m else str(fallback_idx + 1)
 
 
-def _build_subfigure_block(filename: str, label_suffix: str,
+def _build_subfigure_block(filename: str, label_suffix: str = "",
                             width: str = "0.48",
                             subcaption: str = "TODO") -> str:
+    """Subfigure environment for one PDF.
+
+    The ``\\label`` is locked to ``fig:{filename}`` so the figure-name ↔
+    label invariant (``figure_name == .pdf stem == .tex stem == \\label
+    suffix``) holds for subfigures too. The ``label_suffix`` parameter is
+    retained for back-compat with existing callers but ignored.
+    """
     return (
         f"  \\begin{{subfigure}}[b]{{{width}\\linewidth}}\n"
         f"    \\centering\n"
         f"    \\includegraphics[width=\\linewidth]{{FIGURES/{filename}.pdf}}\n"
         f"    \\caption{{{subcaption}}}\n"
-        f"    \\label{{fig:TODO_{label_suffix}}}\n"
+        f"    \\label{{fig:{filename}}}\n"
         f"  \\end{{subfigure}}"
     )
 
@@ -941,7 +973,13 @@ def write_figure_stub(meta: dict, plot_type: str,
     # ── Caption / figure-body template (used only when we write a new stub
     # from scratch, or when force=True). Hand-edited captions in existing
     # stubs are preserved by the surgical-update path above.
-    _caption_text = meta.get("caption")
+    #
+    # Caption resolution order (first non-empty wins):
+    #   1. meta["caption"]                      (explicit per-call override)
+    #   2. FIGURE_CAPTIONS[figure_name] via the JSON cache
+    #      (single source of truth, edited in main_save_figures.py)
+    #   3. ""                                   → TODO placeholder body
+    _caption_text = meta.get("caption") or _lookup_central_caption(stub_filename)
     if _caption_text:
         _short = _caption_text.split(".")[0].strip()
         _caption_block = (
@@ -972,8 +1010,11 @@ def write_figure_stub(meta: dict, plot_type: str,
     else:
         subfigs = []
         for i, pf in enumerate(subfig_files):
-            subcap = (subfig_captions[i] if subfig_captions and i < len(subfig_captions)
-                      else "TODO")
+            # Same resolution order as the parent caption: explicit kwarg first,
+            # then central FIGURE_CAPTIONS by subfig pdf basename, then TODO.
+            explicit = (subfig_captions[i] if subfig_captions and i < len(subfig_captions)
+                        else "")
+            subcap = explicit or _lookup_central_caption(pf) or "TODO"
             subfigs.append(_build_subfigure_block(pf, _label_probe(pf, i),
                                                   subcaption=subcap))
         body = (
