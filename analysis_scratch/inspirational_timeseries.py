@@ -6,12 +6,16 @@ per240, fullpanel. Macro (full recording, ~52 s) + micro (5-period zoom) for
 both IN and OUT probes. The zoom window follows each probe's own H&G window,
 so the OUT zoom sits later in time than IN (wave arrival is ~5 s later at OUT).
 
-Outputs (written directly; no stub regeneration once captions have been
-hand-edited):
+Outputs:
     output/FIGURES/ch04_inspirational_nowind.pdf
     output/FIGURES/ch04_inspirational_fullwind.pdf
     output/TEXFIGU/ch04_inspirational_nowind.tex
     output/TEXFIGU/ch04_inspirational_fullwind.tex
+
+Caption text is sourced from FIGURE_CAPTIONS / FIGURE_CAPTIONS_SHORT in
+main_save_figures.py (single source of truth) via the JSON cache. Stub
+bodies are rewritten on every run (force=True) so the latest authored
+captions land — do not hand-edit the .tex bodies.
 
 See also the exploratory variants in
     analysis_scratch/inspirational_timeseries_C_variants.py
@@ -65,23 +69,9 @@ TITLE_WIND = {
 WIND_KEY = {"nowind": "no", "fullwind": "full"}
 WIN_COLOR = "#F1B24A"  # amber — shaded H&G window + zoom connectors
 
-# ══════════════════════════════════════════════════════════════════════════
-# USER-AUTHORED CAPTIONS — edit these; the stub body picks them up verbatim.
-# ══════════════════════════════════════════════════════════════════════════
-# - Empty string  → body renders with a TODO placeholder (hint to author it).
-# - Non-empty     → body's \caption[short]{full} uses your text literally.
-# Regenerate stubs after editing by running this script (or letting
-# main_save_figures.py's _run_delegated_if_missing pick up the missing
-# output). force=True, so the body is always rewritten from these entries
-# — editing the .tex by hand won't survive. Author captions here, not in
-# the .tex.
-#
-# No agent-drafted captions are included anywhere in the stub; the
-# IMMUTABLE block only records provenance / filters / stats / method.
-CAPTIONS = {
-    "nowind":   "",
-    "fullwind": "",
-}
+# Captions live centrally in main_save_figures.py (FIGURE_CAPTIONS /
+# FIGURE_CAPTIONS_SHORT). pu.write_figure_stub looks them up by figure_name
+# via output/.figure_captions.json. Nothing to edit here.
 
 
 apply_thesis_style()
@@ -315,12 +305,13 @@ def _inspirational_extra_stats(row, data, wind_tag):
 
 
 def _write_stub(wind_tag: str, data: dict, figure_name: str) -> None:
-    """TEXFIGU stub via pu.write_figure_stub (force=True, CAPTIONS-driven)."""
-    stub_path = TEXFIGU_DIR / f"{figure_name}.tex"
+    """TEXFIGU stub via pu.write_figure_stub (force=True).
 
-    # Author-written caption. Empty → body renders with TODO placeholder.
-    # Edit CAPTIONS at the top of this file to populate.
-    caption = CAPTIONS.get(wind_tag, "")
+    Caption text is looked up centrally from FIGURE_CAPTIONS in
+    main_save_figures.py via output/.figure_captions.json — no caption
+    is passed in meta here.
+    """
+    stub_path = TEXFIGU_DIR / f"{figure_name}.tex"
 
     _meta = pu.build_fig_meta(
         {
@@ -333,7 +324,6 @@ def _write_stub(wind_tag: str, data: dict, figure_name: str) -> None:
             },
             "plotting": {
                 "figure_name": figure_name,
-                "caption":     caption,
             },
         },
         chapter="04",
@@ -361,8 +351,8 @@ def _write_stub(wind_tag: str, data: dict, figure_name: str) -> None:
         extra_stats=_inspirational_extra_stats(data["row"], data, wind_tag),
     )
 
-    # force=True — body is always rewritten from CAPTIONS; hand edits to
-    # the .tex body don't survive a re-run. Author captions in the dict.
+    # force=True — body is always rewritten so the latest central-dict
+    # caption text lands. Hand edits to the .tex body don't survive a re-run.
     pu.write_figure_stub(_meta, plot_type="inspirational_timeseries",
                          subfig_filenames=[figure_name], force=True)
     print(f"   stub → {stub_path.relative_to(BASE)}")

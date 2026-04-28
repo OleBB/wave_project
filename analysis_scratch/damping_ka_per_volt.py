@@ -57,22 +57,9 @@ RESULTS_DIRS = [
 KA_COL    = "IN ka (FFT)"
 RATIO_COL = "OUT/IN (FFT)"
 
-# ══════════════════════════════════════════════════════════════════════════
-# USER-AUTHORED CAPTIONS — edit these; the stub body picks them up verbatim.
-# ══════════════════════════════════════════════════════════════════════════
-# - Empty string  → body renders with a TODO placeholder (hint to author it).
-# - Non-empty     → body's \caption[short]{full} uses your text literally.
-# Regenerate stubs after editing by running this script. force=True, so the
-# body is always rewritten from these entries — editing the .tex by hand
-# won't survive. Author captions here, not in the .tex.
-#
-# No agent-drafted captions are included anywhere in the stub; the
-# IMMUTABLE block only records provenance / filters / stats / method.
-CAPTIONS = {
-    "A1": "",
-    "A2": "",
-    "A3": "",
-}
+# Captions live centrally in main_save_figures.py (FIGURE_CAPTIONS /
+# FIGURE_CAPTIONS_SHORT). pu.write_figure_stub looks them up by figure_name
+# via output/.figure_captions.json. Nothing to edit here.
 
 # V11 magenta palette — chosen in damping_ka_exploration (user-approved).
 PER_WIND_COLOR = {
@@ -224,11 +211,9 @@ def _write_stub(sub: pd.DataFrame, volt: float, figure_name: str) -> None:
     volt_tag = amp_to_tag(volt)
     stats = _per_volt_stats(sub)
 
-    # Caption is whatever the author put in CAPTIONS[volt_tag] at the top
-    # of this file — empty string leaves the body as a TODO placeholder,
-    # non-empty text renders directly as \caption[...]{...}.
-    caption = CAPTIONS.get(volt_tag, "")
-
+    # Caption text is looked up centrally from FIGURE_CAPTIONS in
+    # main_save_figures.py via output/.figure_captions.json — no caption
+    # is passed in meta here.
     _meta = pu.build_fig_meta(
         {
             "filters": {
@@ -240,7 +225,6 @@ def _write_stub(sub: pd.DataFrame, volt: float, figure_name: str) -> None:
             },
             "plotting": {
                 "figure_name": figure_name,
-                "caption":     caption,
             },
         },
         chapter="05",
@@ -279,10 +263,9 @@ def _write_stub(sub: pd.DataFrame, volt: float, figure_name: str) -> None:
         extra_stats=stats,
     )
 
-    # force=True — always rewrite the stub (immutable block + body).
-    # Captions come from the CAPTIONS dict at the top of this file; hand
-    # edits to the .tex body do not survive a re-run — author captions in
-    # the dict, not in the .tex.
+    # force=True — always rewrite the stub (immutable block + body) so
+    # the latest central-dict caption text lands. Hand edits to the .tex
+    # body do not survive a re-run.
     pu.write_figure_stub(_meta, plot_type="damping_ka",
                          subfig_filenames=[figure_name],
                          force=True)
