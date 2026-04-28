@@ -455,7 +455,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     # § 4 — Wind characterisation / FFT methodology
     "ch04_wind_psd":                   "",
     "ch04_wind_reflection":            "",
-    "ch04_fft_wave":                   "",
+    "ch04_fft_wave":                   "Frekvensspekter for bølge på \qty{1.4}{\hertz}, amplitudevalg $A_2$.",
     "ch04_wind_snr":                   "",
     "ch04_td_vs_fft":                  "",
     "ch04_td_vs_fft_scatter":          "",
@@ -519,14 +519,79 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "diag_13hz_consistency":           "",
 }
 
+# ──────────────────────────────────────────────────────────────────────────────
+# SHORT CAPTIONS for the List of Figures (LOF entry).
+#
+# Edit when you want a different LOF entry from the full \caption{} body.
+# Empty string → no [short] argument is emitted; LaTeX falls back to the full
+# caption for the LOF (its default behaviour). Author manually — no automatic
+# truncation, no first-sentence extraction.
+#
+# Subfigures don't have short captions (their text never appears in LOF), so
+# this dict only contains parent figure_names.
+# ──────────────────────────────────────────────────────────────────────────────
+FIGURE_CAPTIONS_SHORT: dict[str, str] = {
+
+    # ── CHAPTER 04 ───────────────────────────────────────────────────────────
+    "ch04_probe_noise_floor":          "",
+    "ch04_stillwater_timing":          "",
+    "ch04_parallel_ratio":             "",
+    "ch04_parallel_ratio_scatter":     "",
+    "ch04_probe_height":               "",
+    "ch04_mooring_comparison":         "",
+    "ch04_sound_speed":                "",
+    "ch04_parallel_probe_agreement":   "",
+    "ch04_depth_regime":               "",
+    "ch04_wind_psd":                   "",
+    "ch04_wind_reflection":            "",
+    "ch04_fft_wave":                   "",
+    "ch04_wind_snr":                   "",
+    "ch04_td_vs_fft":                  "",
+    "ch04_td_vs_fft_scatter":          "",
+    "ch04_fft_peak_bias_cancellation": "",
+    "ch04_mansard_funke_reflection":   "",
+    "ch04_sw_correction_test":         "",
+    "ch04_sliding_afft_stability":     "",
+    "ch04_reconstruction_AvsB":        "",
+    "ch04_reconstruction_pure_wind":   "",
+    "ch04_paddle_contamination":       "",
+    "ch04_per40_vs_per240_outin":      "",
+    "ch04_per40_and_per240_HG_shifted":"",
+    "ch04_inspirational_nowind":       "",
+    "ch04_inspirational_fullwind":     "",
+    "ch04_first_arrival":              "",
+    "ch04_timeseries_overview":        "",
+    "ch04_wave_stability":             "",
+    "ch04_lateral_nowind":             "",
+    "ch04_lateral_nowind_scatter":     "",
+
+    # ── CHAPTER 05 ───────────────────────────────────────────────────────────
+    "ch05_damping_freq":               "",
+    "ch05_damping_scatter":            "",
+    "ch05_damping_wind_delta":         "",
+    "ch05_t_cross":                    "",
+    "ch05_damping_ka":                 "",
+    "ch05_damping_ka_A1":              "",
+    "ch05_damping_ka_A2":              "",
+    "ch05_damping_ka_A3":              "",
+    "ch05_reconstructed":              "",
+    "ch05_damping_all_data_scatter":   "",
+
+    # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
+    "diag_13hz_consistency":           "",
+}
+
 # Persist for delegated subprocess scripts that import write_figure_stub
 # (which reads this JSON via _lookup_central_caption). Gitignored — source
-# of truth is the dict above, this file is a runtime artefact.
+# of truth is the two dicts above, this file is a runtime artefact.
 import json as _json
 _captions_path = file_dir / "output" / ".figure_captions.json"
 _captions_path.parent.mkdir(parents=True, exist_ok=True)
 _captions_path.write_text(
-    _json.dumps(FIGURE_CAPTIONS, indent=2, ensure_ascii=False),
+    _json.dumps(
+        {"full": FIGURE_CAPTIONS, "short": FIGURE_CAPTIONS_SHORT},
+        indent=2, ensure_ascii=False,
+    ),
     encoding="utf-8",
 )
 

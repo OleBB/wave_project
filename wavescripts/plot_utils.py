@@ -425,18 +425,32 @@ FIGURES_DIR = Path("output/FIGURES")
 TEXFIGU_DIR = Path("output/TEXFIGU")
 
 # ── Centralised figure-caption lookup ─────────────────────────────────────────
-# main_save_figures.py owns the FIGURE_CAPTIONS dict and writes it to
-# output/.figure_captions.json on import. Both inline plotters (same process)
-# and delegated subprocess scripts read captions from that JSON file via the
-# helper below, keyed by figure_name (== .tex stem == .pdf stem == \label
-# suffix). Empty value (or missing key) → stub renders a TODO placeholder.
+# main_save_figures.py owns FIGURE_CAPTIONS (full) + FIGURE_CAPTIONS_SHORT
+# (LOF entries) and writes both to output/.figure_captions.json on import.
+# Both inline plotters (same process) and delegated subprocess scripts read
+# captions from that JSON file via the helper below, keyed by figure_name
+# (== .tex stem == .pdf stem == \label suffix). Empty value (or missing key)
+# → stub renders a TODO placeholder for full, omits the [short] arg for short.
+#
+# JSON cache format:
+#   { "full":  {<figure_name>: <full caption text>, ...},
+#     "short": {<figure_name>: <short caption text for LOF>, ...} }
 
 _CAPTIONS_CACHE_PATH = Path("output/.figure_captions.json")
 
 
-def _lookup_central_caption(figure_name: str) -> str:
+def _lookup_central_caption(figure_name: str, *, kind: str = "full") -> str:
     """Return the user-authored caption for ``figure_name`` from the JSON
-    cache written by main_save_figures.py, or ``""`` if missing/unreadable."""
+    cache written by main_save_figures.py, or ``""`` if missing/unreadable.
+
+    Parameters
+    ----------
+    figure_name : str
+        Stub filename without .tex (== .pdf stem == \\label suffix).
+    kind : {'full', 'short'}
+        'full'  → text for the figure body's \\caption{...}.
+        'short' → text for the optional [short] arg (LOF entry).
+    """
     if not figure_name:
         return ""
     if not _CAPTIONS_CACHE_PATH.exists():
@@ -445,7 +459,12 @@ def _lookup_central_caption(figure_name: str) -> str:
         data = json.loads(_CAPTIONS_CACHE_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return ""
-    val = data.get(figure_name, "")
+    if not isinstance(data, dict):
+        return ""
+    bucket = data.get(kind, {})
+    if not isinstance(bucket, dict):
+        return ""
+    val = bucket.get(figure_name, "")
     return val if isinstance(val, str) else ""
 
 
@@ -796,20 +815,15 @@ def _build_immutable_block(meta: dict, plot_type: str,
         """Format one `%   key: val` line with the stub value renderer."""
         return f"%   {key:<{width}}: {_fmt_stub_value(val)}"
 
-    caption_full  = meta.get("caption") or ""
-    # Split on ". " (period + space) so decimals like "0.2\,V" don't break
-    # the first-sentence extractor. Fall back to the full first 120 chars
-    # if no proper sentence break is found.
-    caption_short = ""
-    if caption_full:
-        parts = caption_full.split(". ", 1)
-        caption_short = parts[0].strip()
-        if caption_short.endswith("."):
-            caption_short = caption_short[:-1]
-        if len(caption_short) > 200:
-            caption_short = caption_short[:197].rstrip() + "…"
     figure_name   = meta.get("figure_name") or ""
     label         = f"fig:{figure_name}" if figure_name else ""
+
+    # Caption text shown in the IMMUTABLE comment block — read from the same
+    # central source the LaTeX body uses. Manual; no auto-derivation from full.
+    caption_full  = (meta.get("caption")
+                     or _lookup_central_caption(figure_name, kind="full"))
+    caption_short = (meta.get("caption_short")
+                     or _lookup_central_caption(figure_name, kind="short"))
 
     subfig_files  = subfig_filenames or [figure_name] if figure_name else []
     datasets_list = list(ACTIVE_DATASETS) if ACTIVE_DATASETS else []
@@ -974,22 +988,34 @@ def write_figure_stub(meta: dict, plot_type: str,
     # from scratch, or when force=True). Hand-edited captions in existing
     # stubs are preserved by the surgical-update path above.
     #
-    # Caption resolution order (first non-empty wins):
-    #   1. meta["caption"]                      (explicit per-call override)
-    #   2. FIGURE_CAPTIONS[figure_name] via the JSON cache
-    #      (single source of truth, edited in main_save_figures.py)
-    #   3. ""                                   → TODO placeholder body
-    _caption_text = meta.get("caption") or _lookup_central_caption(stub_filename)
-    if _caption_text:
-        _short = _caption_text.split(".")[0].strip()
-        _caption_block = (
-            f"  \\caption[{_short}]{{\n"
-            f"    {_caption_text}\n"
-            "  }\n"
-        )
+    # Resolution order (first non-empty wins) for full + short separately:
+    #   1. meta["caption"] / meta["caption_short"]  (explicit per-call override)
+    #   2. FIGURE_CAPTIONS[figure_name] / FIGURE_CAPTIONS_SHORT[figure_name]
+    #      via the JSON cache (single source of truth, edited in
+    #      main_save_figures.py)
+    #   3. ""                                       (full → TODO placeholder
+    #                                                short → omit [short] arg,
+    #                                                LaTeX uses full for LOF)
+    _caption_full  = (meta.get("caption")
+                      or _lookup_central_caption(stub_filename, kind="full"))
+    _caption_short = (meta.get("caption_short")
+                      or _lookup_central_caption(stub_filename, kind="short"))
+    if _caption_full:
+        if _caption_short:
+            _caption_block = (
+                f"  \\caption[{_caption_short}]{{\n"
+                f"    {_caption_full}\n"
+                "  }\n"
+            )
+        else:
+            _caption_block = (
+                f"  \\caption{{\n"
+                f"    {_caption_full}\n"
+                "  }\n"
+            )
     else:
         _caption_block = (
-            "  \\caption[Short caption for LOF]{\n"
+            "  \\caption{\n"
             "    % TODO: write caption\n"
             "  }\n"
         )
