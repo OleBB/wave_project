@@ -31,6 +31,7 @@ import copy
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
@@ -240,12 +241,19 @@ def _make_damping_freq_fig(
 ) -> plt.Figure:
     """
     Single axes: OUT/IN vs frequency for one (panel, amplitude) combination.
-    Colour = wind condition. No internal faceting — LaTeX arranges subfigures.
+    Colour = wind condition. Marker shape = amplitude tier (○ A1, □ A2, △ A3),
+    consistent with the rest of CH05 — trains the reader's eye.
+    No internal faceting — LaTeX arranges subfigures.
     """
+    apply_thesis_style()   # NewComputerModern body font (idempotent).
     subset = stats_df[
         (stats_df[GC.PANEL_CONDITION] == panel) &
         (stats_df[GC.WAVE_AMPLITUDE_INPUT] == amp)
     ]
+    # Amp-tier marker (matches ch05_damping_all_data_scatter convention).
+    AMP_MARKER = {0.10: "o", 0.20: "s", 0.30: "^"}
+    marker = AMP_MARKER.get(round(float(amp), 2), "o")
+
     fig, ax = plt.subplots(figsize=figsize)
     for wind, grp in subset.groupby(GC.WIND_CONDITION):
         grp = grp.sort_values(GC.WAVE_FREQUENCY_INPUT)
@@ -253,15 +261,28 @@ def _make_damping_freq_fig(
             freq_to_k(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
             yerr=grp["std_out_in"],
             label=wind_to_label(wind), color=WIND_COLOR_MAP.get(wind),
-            marker="o", markersize=5, linewidth=1.4, capsize=3,
+            marker=marker, markersize=6, linewidth=1.4, capsize=3,
         )
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
-    ax.set_xlabel("$k$ (rad/m)", fontsize=9)
-    ax.set_ylabel(r"$A_\mathrm{Ut}/A_\mathrm{inn}$", fontsize=9)
+    # Dead-equal y-axis across all 3 subfigures so they stack visually for
+    # apples-to-apples reading of A1/A2/A3.
+    ax.set_ylim(0.33, 1.05)
     ax.grid(True, alpha=0.3)
     ax.legend(title="vind", fontsize=8, title_fontsize=8)
-    add_freq_axis(ax)
-    fig.subplots_adjust(left=0.14, right=0.97, top=0.84, bottom=0.13)
+    secax = add_freq_axis(ax)
+    secax.set_xticks([1.3, 1.4, 1.5, 1.6])
+    secax.set_xticklabels(["1.3", "1.4", "1.5", "1.6"])
+    # Minimalist axis identifiers — one italic symbol at each corner of the
+    # data area, level with the tick-label row. Caption defines them:
+    # τ = Transmisjonskoeffisient (= A_ut / A_inn). k = wavenumber.
+    # f = paddle frequency. Frees ~6 % horizontal space (was rotated y-label).
+    ax.set_xlabel("$k$", fontsize=11)
+    ax.xaxis.set_label_coords(1.02, -0.025)
+    secax.set_xlabel("$f$", fontsize=11)
+    secax.xaxis.set_label_coords(1.02, 1.025)
+    ax.set_ylabel(r"$\tau$", fontsize=12, rotation=0)
+    ax.yaxis.set_label_coords(-0.02, 1.025)
+    fig.subplots_adjust(left=0.08, right=0.97, top=0.90, bottom=0.13)
     return fig
 
 
@@ -361,45 +382,93 @@ def plot_damping_freq(
         stub_meta = {**meta_base, "panel": panel_conditions, "amplitude": amplitudes, "wind": "allwind"}
         write_figure_stub(stub_meta, "damping_freq", subfig_filenames=subfig_filenames,
                           subfig_captions=subfig_captions,
-                          force=plotting.get("force_stub", True))
+                          force=plotting.get("force_stub", True),
+                          subfig_layout=plotting.get("subfig_layout", "row"))
 
 
 def _make_damping_scatter_fig(
     stats_df: pd.DataFrame, panel: str, figsize: tuple = (5, 4)
 ) -> plt.Figure:
     """
-    Single axes: OUT/IN vs frequency for one panel condition.
-    Colour = wind condition. Marker size = amplitude. No internal faceting.
+    Single axes: OUT/IN vs frequency for one panel condition. All three
+    amplitude tiers overlaid; same data as plot_damping_freq's three subfigs.
+
+    Encoding (matches ch05_damping_freq + ch05_damping_all_data_scatter):
+      - colour      = wind condition (WIND_COLOR_MAP)
+      - marker      = amplitude tier (○ A1, □ A2, △ A3)
+      - errorbar    = std across runs at each (freq, amp, wind)
     """
-    import seaborn as sns
+    apply_thesis_style()
+
     subset = stats_df[stats_df[GC.PANEL_CONDITION] == panel].copy()
     subset["k"] = freq_to_k(subset[GC.WAVE_FREQUENCY_INPUT].values)
+
+    AMP_MARKER = {0.10: "o", 0.20: "s", 0.30: "^"}
+
     fig, ax = plt.subplots(figsize=figsize)
 
-    sns.scatterplot(
-        data=subset.sort_values("k"),
-        x="k", y="mean_out_in",
-        hue=GC.WIND_CONDITION, palette=WIND_COLOR_MAP,
-        size=GC.WAVE_AMPLITUDE_INPUT, sizes=(40, 160),
-        alpha=0.80, ax=ax, legend="auto",
-    )
-
-    if "std_out_in" in subset.columns:
-        for wind, grp in subset.groupby(GC.WIND_CONDITION):
+    # One scatter call per (wind, amp) so we control marker (amp) + colour
+    # (wind) independently. Errorbars piggy-back on the same loop.
+    for (wind, amp), grp in subset.groupby([GC.WIND_CONDITION,
+                                            GC.WAVE_AMPLITUDE_INPUT]):
+        marker = AMP_MARKER.get(round(float(amp), 2), "o")
+        color  = WIND_COLOR_MAP.get(wind, "gray")
+        ax.scatter(
+            grp["k"], grp["mean_out_in"],
+            color=color, marker=marker, s=70, alpha=0.85,
+            edgecolors="black", linewidths=0.3, zorder=3,
+        )
+        if "std_out_in" in subset.columns:
             ax.errorbar(
                 grp["k"], grp["mean_out_in"],
                 yerr=grp["std_out_in"],
-                fmt="none", ecolor=WIND_COLOR_MAP.get(wind, "gray"),
+                fmt="none", ecolor=color,
                 elinewidth=1, capsize=3, alpha=0.4, zorder=1,
             )
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
-    ax.set_xlabel("$k$ (rad/m)", fontsize=9)
-    ax.set_ylabel(r"$A_\mathrm{Ut}/A_\mathrm{inn}$", fontsize=9)
-    ax.legend(title="vind / amp", fontsize=7, title_fontsize=7)
+    ax.set_ylabel("Transmisjonskoeffisient", fontsize=9)
+    # Same y-range as plot_damping_freq's three subfigs — apples-to-apples.
+    ax.set_ylim(0.33, 1.05)
     ax.grid(True, alpha=0.3)
-    add_freq_axis(ax)
-    # top=0.84 to leave room for the secondary frequency axis above the title
+
+    # Bottom x-axis: ticks at the 4 thesis-scope k-values (those that match
+    # the 4 used frequencies 1.3–1.6 Hz). Replaces the default 0.5-step
+    # ticks so the 4 key values are unambiguously marked.
+    KEY_FREQS = [1.3, 1.4, 1.5, 1.6]
+    KEY_KS = freq_to_k(np.asarray(KEY_FREQS))
+    ax.set_xticks(KEY_KS)
+    ax.set_xticklabels([f"{k:.1f}" for k in KEY_KS])
+    ax.set_xlabel("$k$", fontsize=11)
+
+    # Top x-axis: paired ticks at the 4 frequencies, full title above.
+    secax = add_freq_axis(ax)
+    secax.set_xticks(KEY_FREQS)
+    secax.set_xticklabels([f"{f:.1f}" for f in KEY_FREQS])
+    secax.set_xlabel("Frekvens [Hz]", fontsize=9)
+
+    # ── Legend: two sections (Vind colour-line, Amplitude marker-shape).
+    wind_handles = [
+        mlines.Line2D([], [], color=WIND_COLOR_MAP[w], lw=4,
+                      label=label)
+        for w, label in (("no", "uten vind"), ("full", "med vind"))
+    ]
+    amp_handles = [
+        mlines.Line2D([], [], color="black", marker=AMP_MARKER[v],
+                      lw=0, markersize=8,
+                      markerfacecolor="lightgray", markeredgecolor="black",
+                      markeredgewidth=0.3,
+                      label=amp_to_label(v))
+        for v in (0.10, 0.20, 0.30)
+    ]
+    leg_w = ax.legend(handles=wind_handles, title="Vind",
+                      loc="upper right", bbox_to_anchor=(0.99, 0.99),
+                      fontsize=7, title_fontsize=7, framealpha=0.92)
+    ax.add_artist(leg_w)
+    ax.legend(handles=amp_handles, title="Amplitude",
+              loc="upper right", bbox_to_anchor=(0.99, 0.74),
+              fontsize=7, title_fontsize=7, framealpha=0.92)
+
     fig.subplots_adjust(left=0.14, right=0.97, top=0.84, bottom=0.13)
     return fig
 

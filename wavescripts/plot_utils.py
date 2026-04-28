@@ -947,7 +947,8 @@ def write_figure_stub(meta: dict, plot_type: str,
                       subfig_filenames: Optional[list[str]] = None,
                       subfig_captions: Optional[list[str]] = None,
                       force: bool = True,
-                      width: str = "\\linewidth") -> None:
+                      width: str = "\\linewidth",
+                      subfig_layout: str = "row") -> None:
     """
     Write a LaTeX figure stub in TEXFIGU_DIR.
 
@@ -1039,6 +1040,23 @@ def write_figure_stub(meta: dict, plot_type: str,
             "\\end{figure}\n"
         )
     else:
+        # Subfigure layout:
+        #   "row"    (default) — side-by-side at 0.48\linewidth, separated by
+        #                        \hfill. LaTeX wraps to multi-row as needed.
+        #                        figure placement = htbp.
+        #   "column"           — stacked vertically at \linewidth, separated by
+        #                        \\[1ex]. Suited to full-page figures (~3+
+        #                        subfigures, page-only float).
+        #                        figure placement = p (full-page float).
+        if subfig_layout == "column":
+            sub_w  = "1.0"
+            sub_sep = "\n  \\\\[1ex]\n"
+            placement = "p"
+        else:   # "row"
+            sub_w  = "0.48"
+            sub_sep = "\n  \\hfill\n"
+            placement = "htbp"
+
         subfigs = []
         for i, pf in enumerate(subfig_files):
             # Same resolution order as the parent caption: explicit kwarg first,
@@ -1047,11 +1065,12 @@ def write_figure_stub(meta: dict, plot_type: str,
                         else "")
             subcap = explicit or _lookup_central_caption(pf) or "TODO"
             subfigs.append(_build_subfigure_block(pf, _label_probe(pf, i),
+                                                  width=sub_w,
                                                   subcaption=subcap))
         body = (
-            "\\begin{figure}[htbp]\n"
+            f"\\begin{{figure}}[{placement}]\n"
             "  \\centering\n"
-            + "\n  \\hfill\n".join(subfigs) + "\n"
+            + sub_sep.join(subfigs) + "\n"
             + _caption_block
             + f"  \\label{{{_label}}}\n"
             "\\end{figure}\n"

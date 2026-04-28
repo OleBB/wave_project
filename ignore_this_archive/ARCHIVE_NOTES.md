@@ -55,6 +55,7 @@ archived context stays self-contained.
 | `probe_height_analysis.py` | Precursor to `probe_height_figure.py` (the live §3b figure). Early exploration; the `_figure.py` sibling is the polished version. |
 | `period_overlay.py` | Phase-lock diagnostic on one 1.6 Hz ultrasound-glitch run. Conclusion: 100 % of periods affected — now in `memory/known_baddata_ultrasound_16hz.md`. |
 | `run_assumption_tests.py` | FFT/window/stationarity assumption audit. Passed → negative result, no live figure. Raw output lives alongside as `run_assumption_tests_output.txt`. |
+| `all_data_damping_scatter_v1_2026-04-28.{py,pdf,_summary.csv}` | **Superseded by** the v2 rewrite at `analysis_scratch/all_data_damping_scatter.py` (2026-04-28). v1 used per-condition colours (5 distinct colours, hardware as primary axis). v2 aligns the visual scheme with the rest of CH05: wind→colour, amplitude→marker shape, hardware→fill style (filled = cond4 final, hollow = earlier). Same data, same filter, same delegated wiring in `main_save_figures.py` §7. |
 
 ### Top-level files
 

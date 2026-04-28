@@ -514,7 +514,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_reconstructed":              "Hovedmoden fra bølge \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.",
 
     # § 7 — All-data scatter (supplementary)
-    "ch05_damping_all_data_scatter":   "",
+    "ch05_damping_all_data_scatter":   "Alle kjøringer. Vi skiller primært mellom det endelige oppsettet og alle andre oppsett.",
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
     "diag_13hz_consistency":           "",
@@ -1760,7 +1760,7 @@ _pv_damping_freq = {
         "PanelCondition":            None,
     },
     "plotting": {
-        "show_plot":  True,
+        "show_plot":  False,
         "save_plot":  True,          # set True when figure is ready for thesis
         "force_stub": True,
         "figure_name": "ch05_damping_freq",
@@ -1768,6 +1768,10 @@ _pv_damping_freq = {
         "annotate":   True,
         "legend":     "outside_right",
         "probes":     ANALYSIS_PROBES,
+        # Stack the three (A1/A2/A3) subfigures vertically as a full-page
+        # float (\\begin{figure}[p], each subfig at \\linewidth, separated
+        # by \\\\[1ex]). Default would be "row" (0.48\\linewidth + \\hfill).
+        "subfig_layout": "column",
     },
 }
 
