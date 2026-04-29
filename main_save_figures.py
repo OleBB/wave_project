@@ -213,6 +213,8 @@ CHAPTER 04 — METHODOLOGY
   §4k   ch04_fft_window_position_trace   [DELEG] ~  Visual: sweep windows overlaid on η(t)
   §4L   ch04_paddle_contamination        [DELEG] ~  Paddle-freq IN contamination + wind correction + T_cross validation
   §4m   ch04_per40_and_per240_HG_shifted [DELEG] ~  Per40+per240 pooling under probe-shifted H&G window (the answer: yes)
+  §4n   ch04_hg_per40_window_fitness_f{13,14,15,16}  [DELEG] ~  Proposed H&G window (N=15 + UC-snap) overlaid on η(t), per40+per240, all 4 thesis freqs
+        ch04_window_intervals            [DELEG] ~     └─ companion table: IN/OUT window intervals + samples-per-period at each thesis freq
   §5    ch04_inspirational_nowind        [DELEG] ~  Reading a time series — nowind canon (macro + 5-period zoom)
         ch04_inspirational_fullwind      [DELEG] ~     └─ same layout, fullwind canon (wind-wave clutter visible at IN)
   §5b   ch04_timeseries_overview         [DFS-canon] ~  Full time-series with stable-window band  (below MEDIUM gate)
@@ -464,6 +466,11 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_reconstruction_pure_wind":   "",
     "ch04_paddle_contamination":       "",
     "ch04_per40_and_per240_HG_shifted":"",
+    "ch04_hg_per40_window_fitness_f13": "",
+    "ch04_hg_per40_window_fitness_f14": "",
+    "ch04_hg_per40_window_fitness_f15": "",
+    "ch04_hg_per40_window_fitness_f16": "",
+    "ch04_window_intervals":           "",
 
     # § 5 — Reading a time series (inspirational opener)
     "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind.",
@@ -550,6 +557,11 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_reconstruction_pure_wind":   "",
     "ch04_paddle_contamination":       "",
     "ch04_per40_and_per240_HG_shifted":"",
+    "ch04_hg_per40_window_fitness_f13": "",
+    "ch04_hg_per40_window_fitness_f14": "",
+    "ch04_hg_per40_window_fitness_f15": "",
+    "ch04_hg_per40_window_fitness_f16": "",
+    "ch04_window_intervals":           "",
     "ch04_inspirational_nowind":       "",
     "ch04_inspirational_fullwind":     "",
     "ch04_first_arrival":              "",
@@ -1531,6 +1543,77 @@ _run_delegated_if_missing(
     [Path("output/FIGURES/ch04_per40_and_per240_HG_shifted.pdf"),
      Path("output/TEXFIGU/ch04_per40_and_per240_HG_shifted.tex")],
     label="ch04_per40_and_per240_HG_shifted",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/hg_per40_window_fitness.py
+"""
+── CH04 § 4n — Proposed H&G window fitness on per40+per240, all 4 freqs ─────
+Visual companion to §4m: confirms the proposed H&G window placement sits
+inside the wavetrain at every thesis frequency (1.3, 1.4, 1.5, 1.6 Hz).
+
+Proposed formula (CH04 §4 methodology):
+    t_start = r / c_g(f, h) + N_offset / f       (seconds)
+    t_end   = t_start + 10 / f                   (10T H&G window)
+
+with N_offset = 15 periods (5 wavemaker-ramp + 10 H&G "10 periods after
+arrival" safety). Start snapped to nearest zero-upcrossing within ±T of
+the theoretical start (matches the live pipeline's snap rule).
+
+Per frequency, one figure with 4 rows (per40 nowind / per40 fullwind /
+per240 nowind / per240 fullwind) × 2 cols (IN, OUT). Green band is the
+snapped window; purple dotted line is per40 paddle stop (40/f). All four
+rows share x-axis [0, 60] s so the reader compares plateaus directly.
+
+The figures answer: does the proposed window fall inside the user's
+eyeballed plateau at each frequency? — visually, yes at all four. Tightest
+fit at 1.6 Hz OUT where window end coincides with plateau end; comfortable
+margin at 1.3–1.5 Hz at both probes.
+
+Outputs (4 figures + 4 stubs):
+    output/FIGURES/ch04_hg_per40_window_fitness_f{13,14,15,16}.pdf
+    output/TEXFIGU/ch04_hg_per40_window_fitness_f{13,14,15,16}.tex
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/hg_per40_window_fitness.py",
+    [Path("output/FIGURES/ch04_hg_per40_window_fitness_f13.pdf"),
+     Path("output/FIGURES/ch04_hg_per40_window_fitness_f14.pdf"),
+     Path("output/FIGURES/ch04_hg_per40_window_fitness_f15.pdf"),
+     Path("output/FIGURES/ch04_hg_per40_window_fitness_f16.pdf"),
+     Path("output/TEXFIGU/ch04_hg_per40_window_fitness_f13.tex"),
+     Path("output/TEXFIGU/ch04_hg_per40_window_fitness_f14.tex"),
+     Path("output/TEXFIGU/ch04_hg_per40_window_fitness_f15.tex"),
+     Path("output/TEXFIGU/ch04_hg_per40_window_fitness_f16.tex")],
+    label="ch04_hg_per40_window_fitness",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/window_intervals_table.py
+"""
+── CH04 § 4n (companion table) — H&G window intervals per thesis frequency ──
+Numerical companion to ch04_hg_per40_window_fitness_f{13,14,15,16}: a single
+LaTeX table that tabulates the H&G window's [t_start, t_end] in seconds
+at the IN and OUT probes, plus samples-per-period (Fs / f), at each thesis
+frequency (1.3, 1.4, 1.5, 1.6 Hz).
+
+Values are THEORETICAL (pre-snap) — the deterministic output of the
+proposed formula `t_start = r/c_g(f, h) + 15/f`, length 10T. The actual
+per-run windows snap to ±T upcrossings; that variability is shown
+visually in the §4n PDFs but isn't table-friendly.
+
+This table is the "what window did we use?" reference. Whenever the
+formula changes (N_offset, window length, depth), re-running this script
+updates the table — and the IMMUTABLE block at the top of the .tex file
+records the formula parameters used at generation time.
+
+Writes output/TABLES/ch04_window_intervals.tex directly.
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/window_intervals_table.py",
+    [Path("output/TABLES/ch04_window_intervals.tex")],
+    label="ch04_window_intervals",
 )
 
 # %%
