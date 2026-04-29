@@ -16,7 +16,7 @@ Sections
   DAMPING                     plot_damping_freq, plot_damping_scatter
   SWELL / P2 vs P3            plot_swell_scatter
   FREQUENCY SPECTRUM          plot_frequency_spectrum
-  RECONSTRUCTED SIGNAL        plot_reconstructed, plot_reconstructed_rms
+  RECONSTRUCTED SIGNAL        plot_reconstructed, plot_reconstructed_combined, plot_reconstructed_rms
   RAMP DETECTION              gather_ramp_data, plot_ramp_detection
   WAVE STABILITY              plot_wave_stability
   TIME-SERIES OVERVIEW        plot_timeseries_overview
@@ -1706,6 +1706,177 @@ def plot_reconstructed(
             freqplotvariables,
             chapter=chapter,
             extra={"script": "plotter.py::plot_reconstructed"},
+            data_df=meta_df,
+        )
+        save_and_stub(fig, meta, plot_type="reconstructed")
+
+    if show_plot:
+        plt.show(block=False)
+    else:
+        plt.close(fig)
+
+    return fig, axes
+
+
+def plot_reconstructed_combined(
+    fft_dict: Dict[str, pd.DataFrame],
+    filtrert_frequencies: pd.DataFrame,
+    freqplotvariables: dict,
+    data_type: str = "fft",
+    chapter: str = "05",
+) -> Tuple[Optional[plt.Figure], Optional[np.ndarray]]:
+    """
+    Combined reconstructed-wave figure on one page: 2 (wind) × 2 (probe).
+
+    Rows: nowind (top) → fullwind (bottom). Cols: IN (left) → OUT (right).
+    Picks one matching run per WindCondition from the filtered meta.
+    """
+    meta_df = filtrert_frequencies.copy()
+    plotting = freqplotvariables.get("plotting", {})
+    show_plot = plotting.get("show_plot", False)
+    save_plot = plotting.get("save_plot", False)
+
+    probes = list(plotting.get("probes", []))
+    if len(probes) != 2:
+        print("plot_reconstructed_combined: expected exactly 2 probes "
+              f"(IN, OUT), got {probes}")
+        return None, None
+
+    show_grid = plotting.get("grid", True)
+    linewidth = plotting.get("linewidth", 1.2)
+    show_full = plotting.get("show_full_signal", False)
+    fontsize = 9
+    color_rest = "#00da9d"
+    color_full = "gray"
+
+    apply_thesis_style()
+
+    wind_order = ["no", "full"]
+    rows_by_wind: dict = {}
+    for w in wind_order:
+        sub = meta_df[meta_df["WindCondition"] == w]
+        if sub.empty:
+            print(f"plot_reconstructed_combined: no run found for wind={w}")
+            return None, None
+        path = sub.iloc[0]["path"]
+        if path not in fft_dict:
+            print(f"plot_reconstructed_combined: path missing in fft_dict "
+                  f"for wind={w}: {path}")
+            return None, None
+        rows_by_wind[w] = {
+            "row": sub.iloc[0],
+            "path": path,
+            "df_fft": fft_dict[path],
+        }
+
+    figsize = plotting.get("figsize") or (8, 11)
+    fig, axes = plt.subplots(
+        nrows=4, ncols=1,
+        figsize=figsize,
+        sharex=True, sharey=True,
+        squeeze=False, dpi=120,
+    )
+    axes_flat = axes.flatten()
+
+    ref_row = rows_by_wind[wind_order[0]]["row"]
+    role_map = {
+        str(ref_row.get("in_position", "")):  "Innkommende",
+        str(ref_row.get("out_position", "")): "Utgående",
+    }
+    wind_label_map = {"no": "uten vind", "full": "med vind"}
+
+    # Reading order: per-experiment, IN then OUT.
+    #   row 0: nowind  IN
+    #   row 1: nowind  OUT
+    #   row 2: fullwind IN
+    #   row 3: fullwind OUT
+    panel_order = [(w, p) for w in wind_order for p in probes]
+
+    for idx, (w, probe) in enumerate(panel_order):
+        ax = axes_flat[idx]
+        info = rows_by_wind[w]
+        row = info["row"]
+        df_fft = info["df_fft"]
+        target_freq = row.get(GC.WAVE_FREQUENCY_INPUT, None)
+        if not target_freq or target_freq <= 0:
+            print(f"plot_reconstructed_combined: invalid freq for wind={w}")
+            return None, None
+        color_wave = WIND_COLOR_MAP.get(w, "black")
+
+        col = f"FFT {probe} complex"
+        if col not in df_fft:
+            col = f"FFT {probe}"
+        if col not in df_fft:
+            print(f"plot_reconstructed_combined: missing FFT col for {probe}")
+            continue
+
+        fft_series = df_fft[col].dropna()
+        if fft_series.empty:
+            continue
+        freq_bins = fft_series.index.values
+        fft_complex = fft_series.values
+        N = len(fft_complex)
+        df_freq = abs(freq_bins[1] - freq_bins[0])
+        sr = df_freq * N
+
+        fft_ord = np.fft.ifftshift(fft_complex).astype(complex)
+        fftfreqs = np.fft.ifftshift(freq_bins)
+        signal_full = np.real(np.fft.ifft(fft_ord))
+        time_axis = np.arange(N) / sr
+        pos_freqs = fftfreqs[fftfreqs > 0]
+        actual_freq = pos_freqs[np.argmin(np.abs(pos_freqs - target_freq))]
+        peak_idx = np.argmin(np.abs(fftfreqs - actual_freq))
+        mirror_idx = np.argmin(np.abs(fftfreqs + actual_freq))
+        fft_swell = np.zeros_like(fft_ord, dtype=complex)
+        fft_swell[peak_idx] = fft_ord[peak_idx]
+        fft_swell[mirror_idx] = fft_ord[mirror_idx]
+        signal_swell = np.real(np.fft.ifft(fft_swell))
+        signal_resid = signal_full - signal_swell
+        amplituden = np.round(max(signal_swell), 3)
+
+        if show_full:
+            ax.plot(time_axis, signal_full, lw=linewidth * 0.7,
+                    label="full", color=color_full, alpha=0.6, zorder=1)
+        ax.plot(
+            time_axis, signal_swell, lw=linewidth * 2.5,
+            label=f"bølge ({actual_freq:.4f} Hz) amplitude: {amplituden}",
+            color=color_wave, alpha=0.95, zorder=3,
+        )
+        ax.plot(time_axis, signal_resid, lw=linewidth,
+                label="rest", color=color_rest, alpha=0.9, zorder=3)
+        ax.axhline(0, color="black", lw=0.5, alpha=0.3)
+        if show_grid:
+            ax.grid(which="major", linestyle="--", alpha=0.3)
+            ax.grid(which="minor", linestyle=":", alpha=0.15)
+            ax.minorticks_on()
+
+        role = role_map.get(probe, f"Probe {probe}")
+        wlabel = wind_label_map.get(w, str(w))
+        ax.set_title(f"{role} — {wlabel}",
+                     fontsize=fontsize + 1, fontweight="bold", pad=6)
+        ax.set_ylabel("Amplitude [mm]", fontsize=fontsize)
+        if idx == len(panel_order) - 1:
+            ax.set_xlabel("Tid [s]", fontsize=fontsize)
+        ax.legend(loc="upper right", fontsize=fontsize - 1, framealpha=0.95)
+
+    # Single symmetric y-limit shared across all 4 stacked panels — direct
+    # visual comparison of amplitude across wind conditions and probes.
+    lo, hi = np.inf, -np.inf
+    for ax in axes_flat:
+        y0, y1 = ax.get_ylim()
+        lo, hi = min(lo, y0), max(hi, y1)
+    if np.isfinite(lo):
+        span = max(abs(lo), abs(hi)) * 1.05
+        for ax in axes_flat:
+            ax.set_ylim(-span, span)
+
+    fig.tight_layout()
+
+    if save_plot:
+        meta = build_fig_meta(
+            freqplotvariables,
+            chapter=chapter,
+            extra={"script": "plotter.py::plot_reconstructed_combined"},
             data_df=meta_df,
         )
         save_and_stub(fig, meta, plot_type="reconstructed")

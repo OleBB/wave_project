@@ -198,6 +198,7 @@ CHAPTER 04 — METHODOLOGY
   §4-1  ch04_wind_psd                    [META]  ~  Wind PSD per probe (nowave runs)
   §4-2  ch04_wind_reflection             [META]  ✗  Wind reflection from panel  [TODO]
   §4-3  ch04_fft_wave                    [DELEG] ✓  FFT spectrum at paddle freq (1.4 Hz canon — 2×2 bar grid w/ Δ)
+  §4-3b ch04_reconstructed                [META]  ✓  FFT-reconstructed paddle signal — 4 stacked panels (wind × probe), A4-tall
   §4-4  ch04_wind_snr                    [META]  ~  Spectral SNR: paddle / wind noise per probe
   §4-5  ch04_td_vs_fft                   [META]  ~  A_td vs A_FFT: why FFT is required
         ch04_td_vs_fft_scatter           [META]  ~     └─ per-run scatter sibling
@@ -232,8 +233,7 @@ CHAPTER 05 — RESULTS
   §4    ch05_damping_ka                  [META]  ~  Damping vs ka (wavenumber × amplitude)
         ch05_damping_ka_{A1,A2,A3}       [DELEG] ✓     └─ standalone per-amplitude-tier (per240+per40, magenta palette)
   §5    ch05_swell_scatter               [META]  —  DROPPED (cell commented in place)
-  §6    ch05_reconstructed               [META]  ~  FFT-reconstructed paddle signal (fft_dict, not DFS)
-  §6b   ch05_b_reconstructed             [META]  ~  FFT-reconstructed paddle signal (fft_dict, not DFS)
+  §6    (moved → CH04 §4-3b as ch04_reconstructed)
   §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions
 
 DIAGNOSTICS
@@ -287,6 +287,7 @@ from wavescripts.plotter import (
     plot_parallel_ratio,
     plot_probe_noise_floor,
     plot_reconstructed,
+    plot_reconstructed_combined,
     plot_sound_speed,
     plot_swell_scatter,
     plot_td_vs_fft,
@@ -456,6 +457,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_wind_psd":                   "",
     "ch04_wind_reflection":            "",
     "ch04_fft_wave":                   "Frekvensspekter for bølge på \qty{1.4}{\hertz}, amplitudevalg $A_2$.",
+    "ch04_reconstructed":              "Hovedmoden fra bølge \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut. Stablet ovenfra og ned: Innkommende uten vind, Utgående uten vind, Innkommende med vind, Utgående med vind. Felles y-akse for alle fire paneler.",
     "ch04_wind_snr":                   "",
     "ch04_td_vs_fft":                  "",
     "ch04_td_vs_fft_scatter":          "",
@@ -511,9 +513,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_damping_ka_A2":              "",
     "ch05_damping_ka_A3":              "",
 
-    # § 6 — Reconstructed
-    "ch05_reconstructed":              "Hovedmoden fra bølge \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.", #fullwind
-    "ch05_b_reconstructed":              "Hovedmoden fra bølge \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.",
+    # § 6 — moved to CH04 §4-3b as ch04_reconstructed (paired with ch04_fft_wave)
 
     # § 7 — All-data scatter (supplementary)
     "ch05_damping_all_data_scatter":   "Alle kjøringer. Vi skiller primært mellom det endelige oppsettet og alle andre oppsett.",
@@ -548,6 +548,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_wind_psd":                   "",
     "ch04_wind_reflection":            "",
     "ch04_fft_wave":                   "",
+    "ch04_reconstructed":              "",
     "ch04_wind_snr":                   "",
     "ch04_td_vs_fft":                  "",
     "ch04_td_vs_fft_scatter":          "",
@@ -581,8 +582,6 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_damping_ka_A1":              "",
     "ch05_damping_ka_A2":              "",
     "ch05_damping_ka_A3":              "",
-    "ch05_reconstructed":              "", #todo, later, move these both to ch04
-    "ch05_b_reconstructed":              "",
     "ch05_damping_all_data_scatter":   "",
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
@@ -1127,6 +1126,52 @@ _run_delegated_if_missing(
      Path("output/TEXFIGU/ch04_fft_wave.tex")],
     label="ch04_fft_wave",
 )
+
+# %%
+# [DATA: META]  — reads combined_fft_dict (NOT processed_dfs); lives above gate
+"""
+── CH04 § 4-3b — Reconstructed wave signal (combined nowind / fullwind) ─────
+Goal: show the FFT-reconstructed paddle-frequency signal alongside the raw
+time-series, stacked top-to-bottom for both wind conditions and both probe
+positions on a single A4-tall page. Pairs naturally with §4-3 (the FFT
+spectrum) — same data, time-domain view of what the single-bin reconstruction
+isolates from the full signal.
+
+Layout (top → bottom): Innkommende uten vind, Utgående uten vind,
+Innkommende med vind, Utgående med vind. Single shared symmetric y-axis.
+Data: combined_fft_dict, one representative run per wind condition
+(1.4 Hz, 0.2 V, full panel).
+"""
+
+_pv_reconstructed = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": 0.2,
+        "WaveFrequencyInput [Hz]":   1.4,
+        "WindCondition":             ["no", "full"],
+        "PanelCondition":            "full",
+    },
+    "plotting": {
+        "show_plot":    False,
+        "save_plot":    True,
+        "draft":        False,
+        "figure_name":  "ch04_reconstructed",
+        "force_stub":   True,
+        "probes":       ["9373/170", "12400/250"],
+        "linewidth":    0.8,
+        "show_full_signal":  False,
+        "grid":         True,
+        "figsize":      (8, 11),
+    },
+}
+
+_recon_meta  = apply_experimental_filters(meta_results, _pv_reconstructed)
+_recon_paths = {p: combined_fft_dict[p]
+                for p in _recon_meta["path"] if p in combined_fft_dict}
+if _recon_paths:
+    plot_reconstructed_combined(_recon_paths, _recon_meta, _pv_reconstructed,
+                                data_type="fft", chapter="04")
+else:
+    print("ch04_reconstructed: no matching runs found — check filters.")
 
 # %%
 # [DATA: META]  — reads combined_fft_dict + combined_psd_dict
@@ -2029,89 +2074,6 @@ _pv_swell_scatter = {
 
 plot_swell_scatter(meta_results, _pv_swell_scatter, chapter="05")
 """
-# TODO: check why the signal starts going downward first... i thought we did upcross...for this and its counterpart below.
-# %%
-# [DATA: META]  — reads combined_fft_dict (NOT processed_dfs); lives above gate
-"""
-── CH05 § 6 — Reconstructed wave signal ─────────────────────────────────────
-Goal: show the FFT-reconstructed paddle-frequency signal alongside the raw
-time-series. Illustrates what A_FFT actually isolates from the full signal.
-Data: combined_fft_dict, one representative run (1.3 Hz, 0.2 V, full panel).
-"""
-
-_pv_reconstructed = {
-    "filters": {
-        "WaveAmplitudeInput [Volt]": 0.2,
-        "WaveFrequencyInput [Hz]":   1.4,
-        "WindCondition":             "full",
-        "PanelCondition":            "full",
-    },
-    "plotting": {
-        "show_plot":    False,
-        "save_plot":    True,           #
-        "draft":        False,
-        "figure_name":  "ch05_reconstructed",
-        "force_stub":   True,
-        "facet_by":     "probe",
-        "probes":       ["9373/170", "12400/250"],
-        "linewidth":    0.8,
-        "show_full_signal":  False,
-        "grid":         True,
-        "legend":       "inside",
-        "xlim":         None,
-        "max_points":   500,
-    },
-}
-
-_recon_meta  = apply_experimental_filters(meta_results, _pv_reconstructed)
-_recon_paths = {p: combined_fft_dict[p]
-                for p in _recon_meta["path"] if p in combined_fft_dict}
-if _recon_paths:
-    plot_reconstructed(_recon_paths, _recon_meta, _pv_reconstructed,
-                       data_type="fft", chapter="05")
-else:
-    print("ch05_reconstructed: no matching runs found — check filters.")
-
-# %% just copied this one
-# [DATA: META]  — reads combined_fft_dict (NOT processed_dfs); lives above gate
-"""
-── CH05 § 6b — Reconstructed wave signal ─────────────────────────────────────
-Goal: show the FFT-reconstructed paddle-frequency signal alongside the raw
-time-series. Illustrates what A_FFT actually isolates from the full signal.
-Data: combined_fft_dict, one representative run (1.3 Hz, 0.2 V, full panel).
-"""
-
-_pv_reconstructed = {
-    "filters": {
-        "WaveAmplitudeInput [Volt]": 0.2,
-        "WaveFrequencyInput [Hz]":   1.4,
-        "WindCondition":             "no",
-        "PanelCondition":            "full",
-    },
-    "plotting": {
-        "show_plot":    False,
-        "save_plot":    True,           #
-        "draft":        False,
-        "figure_name":  "ch05_b_reconstructed",
-        "force_stub":   True,
-        "facet_by":     "probe",
-        "probes":       ["9373/170", "12400/250"],
-        "linewidth":    0.8,
-        "grid":         True,
-        "legend":       "inside",
-        "xlim":         None,
-        "max_points":   500,
-    },
-}
-
-_recon_meta  = apply_experimental_filters(meta_results, _pv_reconstructed)
-_recon_paths = {p: combined_fft_dict[p]
-                for p in _recon_meta["path"] if p in combined_fft_dict}
-if _recon_paths:
-    plot_reconstructed(_recon_paths, _recon_meta, _pv_reconstructed,
-                        data_type="fft", chapter="05")
-else:
-    print("ch05_b_reconstructed: no matching runs found — check filters.")
 
 # %%
 # [DATA: DELEG]  — analysis_scratch/all_data_damping_scatter.py
