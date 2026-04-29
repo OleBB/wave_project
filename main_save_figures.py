@@ -139,7 +139,7 @@ tells you what to put on the axes and what the points/bars represent.
   (V) Methodology / decision — comparison figures that justify a choice
       Examples: ch04_fft_method_comparison (4 FFT amplitude methods),
       ch04_reconstruction_AvsB, ch04_sw_correction_test, ch04_paddle_contamination,
-      ch04_per40_vs_per240_outin, ch04_fft_peak_bias_cancellation.
+      ch04_per40_and_per240_HG_shifted, ch04_fft_peak_bias_cancellation.
       These are usually [DELEG] and produce a side-by-side or before-vs-after.
 
 "All available runs" in the thesis-result context = meta_results (the two
@@ -212,8 +212,7 @@ CHAPTER 04 — METHODOLOGY
   §4j   ch04_fft_window_position_sens    [DELEG] ~  Window-position sensitivity (T_ref ∈ [40,80]T)
   §4k   ch04_fft_window_position_trace   [DELEG] ~  Visual: sweep windows overlaid on η(t)
   §4L   ch04_paddle_contamination        [DELEG] ~  Paddle-freq IN contamination + wind correction + T_cross validation
-  §4m   ch04_per40_vs_per240_outin       [DELEG] ~  Can per40 (short) and per240 (long) OUT/IN be pooled? (SNARVEI framing)
-  §4n   ch04_per40_and_per240_HG_shifted [DELEG] ~  Per40+per240 pooling under probe-shifted H&G window (the answer: yes)
+  §4m   ch04_per40_and_per240_HG_shifted [DELEG] ~  Per40+per240 pooling under probe-shifted H&G window (the answer: yes)
   §5    ch04_inspirational_nowind        [DELEG] ~  Reading a time series — nowind canon (macro + 5-period zoom)
         ch04_inspirational_fullwind      [DELEG] ~     └─ same layout, fullwind canon (wind-wave clutter visible at IN)
   §5b   ch04_timeseries_overview         [DFS-canon] ~  Full time-series with stable-window band  (below MEDIUM gate)
@@ -464,7 +463,6 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_reconstruction_AvsB":        "",
     "ch04_reconstruction_pure_wind":   "",
     "ch04_paddle_contamination":       "",
-    "ch04_per40_vs_per240_outin":      "",
     "ch04_per40_and_per240_HG_shifted":"",
 
     # § 5 — Reading a time series (inspirational opener)
@@ -551,7 +549,6 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_reconstruction_AvsB":        "",
     "ch04_reconstruction_pure_wind":   "",
     "ch04_paddle_contamination":       "",
-    "ch04_per40_vs_per240_outin":      "",
     "ch04_per40_and_per240_HG_shifted":"",
     "ch04_inspirational_nowind":       "",
     "ch04_inspirational_fullwind":     "",
@@ -1505,44 +1502,12 @@ _run_delegated_if_missing(
 )
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/per40_vs_per240_outin.py
-"""
-── CH04 § 4m — Can per40 and per240 OUT/IN be pooled? (SNARVEI framing) ─────
-THE big methodology question: we have ~4× more per40 (short) runs than
-per240 (long) runs. Can we pool both into CH05, or does short-vs-long
-window strategy produce systematically different OUT/IN(FFT)?
-
-Two windows compared on the paddle-frequency FFT:
-  - Short runs (period < HG_MIN_PERIODS=50T): legacy SNARVEI eyeballed
-    window, read from canonical IN/OUT Amplitude (FFT) in combined_meta.
-  - Long runs (≥ 50T): Huseby–Grue [50T, 60T] from wavemaker start,
-    scaled per-frequency. Exactly 10T wide → no spectral leakage, no
-    second-harmonic contamination, no beach reflection.
-
-Decision rule: if the two methods agree within run-to-run std at each
-(freq, amp, wind), pool them. If not, per240-H&G becomes primary and
-per40 moves to supplementary.
-
-Result: median agreement 1.9 % (see analysis_scratch/per40_vs_per240_outin_findings.md
-and MEMORY.md). Pooling is justified for CH05 — this is the script that
-proved it.
-
-Writes output/FIGURES/ch04_per40_vs_per240_outin.pdf and stub directly.
-"""
-
-_run_delegated_if_missing(
-    "analysis_scratch/per40_vs_per240_outin.py",
-    [Path("output/FIGURES/ch04_per40_vs_per240_outin.pdf"),
-     Path("output/TEXFIGU/ch04_per40_vs_per240_outin.tex")],
-    label="ch04_per40_vs_per240_outin",
-)
-
-# %%
 # [DATA: DELEG]  — analysis_scratch/per40_and_per240_HG_shifted.py
 """
-── CH04 § 4n — Per40 + per240 under probe-shifted H&G window ────────────────
-Companion to §4m. Applies the same probe-shifted Huseby–Grue window to
-BOTH per40 and per240 runs, removing the method asymmetry from §4m.
+── CH04 § 4m — Per40 + per240 under probe-shifted H&G window ────────────────
+Methodology question: we have ~4× more per40 (short) runs than per240 (long)
+runs. Can we pool both into CH05? Applies the probe-shifted Huseby–Grue
+window to both run types, then checks whether OUT/IN(FFT) agrees.
 
 Physics: H&G's [35.088 s, 42.105 s] = [50T, 60T] at 1.425 Hz was measured
 at r = 12.4 m — exactly our OUT probe. For closer probes (IN at 9.373 m),
@@ -1551,12 +1516,11 @@ shift the same window back by group-velocity travel time:
     1.3 Hz → 6.6 T earlier;  1.4 Hz → 7.6 T;  1.5 Hz → 8.7 T;  1.6 Hz → 9.9 T
 
 The shifted IN window fits inside the per40 wavetrain at every thesis
-frequency → both run types analyzable with one methodology. This is the
-CURRENT answer to the pooling question (§4m shows the decision rationale;
-§4n shows the unified-method result).
+frequency → both run types analyzable with one methodology.
 
-Result: per40 and per240 agree within 1–2 % median (much better than the
-~10 % SNARVEI-era outlier at 1.4 Hz / 0.2 V / fullwind).
+Result: per40 and per240 agree within 1–2 % median → pooling justified for
+CH05. (The earlier mixed-method comparison ch04_per40_vs_per240_outin
+was archived 2026-04-29; see ignore_this_archive/ARCHIVE_NOTES.md.)
 
 Writes output/FIGURES/ch04_per40_and_per240_HG_shifted.pdf and stub directly.
 See memory/methodology_hg_probe_shifted.md.
