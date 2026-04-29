@@ -271,12 +271,7 @@ fig, axes = plt.subplots(3, 3, figsize=(20, 11), sharex=True)
 # it's ~5× smaller than IN.
 for row in range(3):
     axes[row, 0].sharey(axes[row, 1])
-fig.suptitle(
-    f"Huseby & Grue window applied to per240 {TARGET_FREQ:.1f} Hz — "
-    f"sliding 10T AFFT vs H&G single-shot [35, {HG_END_S:.2f}] s  "
-    f"(parallel 9373 probe added as lateral sanity check)",
-    fontsize=12, fontweight="bold",
-)
+fig.suptitle("", fontsize=12, fontweight="bold")
 
 amps_order = [0.1, 0.2, 0.3]
 for i, amp in enumerate(amps_order):
@@ -322,7 +317,7 @@ for i, amp in enumerate(amps_order):
 
         ax.set_xlim(SLIDING_START_S, SLIDING_END_S)
         ax.grid(True, alpha=0.3)
-        ax.set_title(f"{amp:.1f} V — {PROBE_LABELS[probe]}", fontsize=9, fontweight="bold")
+        ax.set_title("", fontsize=9, fontweight="bold")
         if i == 2:
             ax.set_xlabel("window start [s from wavemaker start]", fontsize=9)
         if j == 0:

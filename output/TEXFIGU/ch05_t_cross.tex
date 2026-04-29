@@ -7,13 +7,13 @@
 %   computed_in       : analysis_scratch/t_cross_figure.py (groupby freq+amp+wind → mean/std of IN/OUT Amplitude (FFT); T_cross = A_out^fw / mean(A_in^nw))
 %   plot_type         : t_cross
 %   data_class        : DELEG
-%   generated_at      : 2026-04-24T15:31:01
+%   generated_at      : 2026-04-29T09:54:27
 %   findings_doc      : analysis_scratch/t_cross_figure_findings.md
 %
 % — Thesis context ──────────────────────────────────────────────
 %   chapter           : 05
 %   caption_label     : fig:ch05_t_cross
-%   caption_short     : Wind effect on transmission measured three ways: $(OUT/IN)_{nw}$ (blue, nowind baseline); $T_{\mathrm{cross}} = A_{out}^{fw}/A_{in}^{nw}$ (green, fullwind OUT referenced to the clean nowind IN); an…
+%   caption_short     : 
 %
 % — Filters ────────────────────────────────────────────────────
 %   panel             : full
@@ -56,28 +56,28 @@
 % ── end immutable block ─────────────────────────────────────────
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[b]{0.32\linewidth}
+  \begin{subfigure}[b]{0.48\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch05_t_cross_10V.pdf}
+    \includegraphics[width=\linewidth]{FIGURES/ch05_t_cross_A1.pdf}
     \caption{$0.10$\,V}
-    \label{fig:ch05_t_cross_10V}
+    \label{fig:ch05_t_cross_A1}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[b]{0.32\linewidth}
+  \begin{subfigure}[b]{0.48\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch05_t_cross_20V.pdf}
+    \includegraphics[width=\linewidth]{FIGURES/ch05_t_cross_A2.pdf}
     \caption{$0.20$\,V}
-    \label{fig:ch05_t_cross_20V}
+    \label{fig:ch05_t_cross_A2}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[b]{0.32\linewidth}
+  \begin{subfigure}[b]{0.48\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch05_t_cross_30V.pdf}
+    \includegraphics[width=\linewidth]{FIGURES/ch05_t_cross_A3.pdf}
     \caption{$0.30$\,V}
-    \label{fig:ch05_t_cross_30V}
+    \label{fig:ch05_t_cross_A3}
   \end{subfigure}
-  \caption[T\_cross: wind effect via clean nowind reference]{%
-    Wind effect on transmission measured three ways: $(OUT/IN)_{nw}$ (blue, nowind baseline); $T_{\mathrm{cross}} = A_{out}^{fw}/A_{in}^{nw}$ (green, fullwind OUT referenced to the clean nowind IN); and $(OUT/IN)_{fw}$ (red, standard fullwind metric). The green--blue gap is the wind effect measured with the clean incident reference. The red--blue gap is the same effect as reported by the standard ratio; the two disagree where the IN probe is contaminated by wind noise at the paddle frequency (CLAUDE.md \S 16). Worst-case divergence between the two metrics: 0.695 vs 0.594 at $f = 1.6$\,Hz, $0.10$\,V. Each subfigure is one input amplitude; $n$ per point in \texttt{analysis\_scratch/t\_cross\_figure\_summary.csv}.
+  \caption{
+    Wind effect on transmission measured three ways: $(OUT/IN)_{nw}$ (blue, nowind baseline); $T_{\mathrm{cross}} = A_{out}^{fw}/A_{in}^{nw}$ (green, fullwind OUT referenced to the clean nowind IN); and $(OUT/IN)_{fw}$ (red, standard fullwind metric). The green--blue gap is the wind effect measured with the clean incident reference. The red--blue gap is the same effect as reported by the standard ratio; the two disagree where the IN probe is contaminated by wind noise at the paddle frequency (CLAUDE.md \S 16). Worst-case divergence between the two metrics: 0.702 vs 0.608 at $f = 1.6$\,Hz, $0.10$\,V. Each subfigure is one input amplitude; $n$ per point in \texttt{analysis\_scratch/t\_cross\_figure\_summary.csv}.
   }
   \label{fig:ch05_t_cross}
 \end{figure}

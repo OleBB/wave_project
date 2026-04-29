@@ -219,7 +219,7 @@ def draw_t_cross_ax(ax, sub: pd.DataFrame, amp: float):
     ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.4)
     ax.set_xlabel(r"$k$ (rad/m)", fontsize=9)
     ax.set_ylabel("transmission", fontsize=9)
-    ax.set_title(f"full panel  |  {amp_to_label(amp)}", fontsize=9)
+    ax.set_title("", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=7, loc="lower left", framealpha=0.92)
     add_freq_axis(ax)
@@ -232,10 +232,7 @@ gs = gridspec.GridSpec(1, 3, figure=fig, wspace=0.32,
 for i, amp in enumerate(AMPS):
     ax = fig.add_subplot(gs[0, i])
     draw_t_cross_ax(ax, df[df["amp"] == amp].sort_values("k"), amp)
-fig.suptitle(
-    r"Wind effect on transmission — $(OUT/IN)_{nw}$ vs $T_{\mathrm{cross}}$ vs $(OUT/IN)_{fw}$",
-    fontsize=11, fontweight="bold", y=0.95,
-)
+fig.suptitle("", fontsize=11, fontweight="bold", y=0.95)
 fig.text(0.5, 0.02,
          r"Green line uses the clean nowind IN amplitude as reference, sidestepping "
          r"in-probe wind contamination. The green–blue gap is the honest wind effect; "

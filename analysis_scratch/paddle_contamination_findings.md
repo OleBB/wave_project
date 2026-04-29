@@ -12,7 +12,7 @@ and CLAUDE.md §16.
 ## Part A — Window-size sensitivity
 
 Worst drift (max − min across N_tags) in median OUT/IN across all
-(amp, wind) cells: **0.0117**
+(amp, wind) cells: **0.0000**
 
 ## Part B — Wind-correction at the paddle bin
 
@@ -22,34 +22,34 @@ with E[A_wind²] = 2 · ∫_{f_p ± 0.05 Hz} PSD_wind(f) df,
 and PSD_wind = mean PSD_residual(full) − mean PSD_residual(no) per
 (freq, amp, mooring) group.
 
-Median contamination fraction √(A_wind²) / A_in_fw: **2.11 %**
-(max **36.74 %**).
+Median contamination fraction √(A_wind²) / A_in_fw: **1.27 %**
+(max **2.29 %**).
 
 ## Part C — A_in_fw vs A_in_nw
 
 Agreement of corrected full-wind A_in against no-wind A_in
 (48 matched rows):
 
-  median  |A_in_corr − A_in_nw| / A_in_nw  =  9.40 %
-  max     |A_in_corr − A_in_nw| / A_in_nw  =  44.10 %
+  median  |A_in_corr − A_in_nw| / A_in_nw  =  6.84 %
+  max     |A_in_corr − A_in_nw| / A_in_nw  =  29.79 %
 
 Per (amplitude × frequency) median A_in_fw / A_in_nw (raw, no
 contamination correction — the correction is <5%
 at thesis amplitudes, so this ratio is dominated by non-spectral
 wind effects):
 
-  0.10 V  |  1.30 Hz  |  A_in_fw/A_in_nw median = 0.9570  (n=10)
-  0.10 V  |  1.40 Hz  |  A_in_fw/A_in_nw median = 0.9897  (n=3)
-  0.10 V  |  1.50 Hz  |  A_in_fw/A_in_nw median = 0.9310  (n=3)
-  0.10 V  |  1.60 Hz  |  A_in_fw/A_in_nw median = 1.2532  (n=3)
-  0.20 V  |  1.30 Hz  |  A_in_fw/A_in_nw median = 1.0288  (n=3)
-  0.20 V  |  1.40 Hz  |  A_in_fw/A_in_nw median = 1.0509  (n=3)
-  0.20 V  |  1.50 Hz  |  A_in_fw/A_in_nw median = 1.1227  (n=3)
-  0.20 V  |  1.60 Hz  |  A_in_fw/A_in_nw median = 1.1722  (n=3)
-  0.30 V  |  1.30 Hz  |  A_in_fw/A_in_nw median = 1.0236  (n=4)
-  0.30 V  |  1.40 Hz  |  A_in_fw/A_in_nw median = 1.0594  (n=4)
-  0.30 V  |  1.50 Hz  |  A_in_fw/A_in_nw median = 1.1482  (n=4)
-  0.30 V  |  1.60 Hz  |  A_in_fw/A_in_nw median = 1.1219  (n=5)
+  0.10 V  |  1.30 Hz  |  A_in_fw/A_in_nw median = 1.0115  (n=10)
+  0.10 V  |  1.40 Hz  |  A_in_fw/A_in_nw median = 1.0080  (n=3)
+  0.10 V  |  1.50 Hz  |  A_in_fw/A_in_nw median = 1.1217  (n=3)
+  0.10 V  |  1.60 Hz  |  A_in_fw/A_in_nw median = 1.2377  (n=3)
+  0.20 V  |  1.30 Hz  |  A_in_fw/A_in_nw median = 1.0303  (n=3)
+  0.20 V  |  1.40 Hz  |  A_in_fw/A_in_nw median = 1.0551  (n=3)
+  0.20 V  |  1.50 Hz  |  A_in_fw/A_in_nw median = 1.1211  (n=3)
+  0.20 V  |  1.60 Hz  |  A_in_fw/A_in_nw median = 1.1585  (n=3)
+  0.30 V  |  1.30 Hz  |  A_in_fw/A_in_nw median = 1.0235  (n=4)
+  0.30 V  |  1.40 Hz  |  A_in_fw/A_in_nw median = 1.0655  (n=4)
+  0.30 V  |  1.50 Hz  |  A_in_fw/A_in_nw median = 1.1497  (n=4)
+  0.30 V  |  1.60 Hz  |  A_in_fw/A_in_nw median = 1.1393  (n=5)
 
 ## Files
 

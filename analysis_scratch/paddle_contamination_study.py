@@ -95,7 +95,7 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import apply_thesis_style, freq_to_k, amp_to_label, amp_to_tag
+from wavescripts.plot_utils import apply_thesis_style, freq_to_k, amp_to_label, amp_to_tag, WIND_COLOR_MAP
 
 apply_thesis_style()
 
@@ -132,11 +132,13 @@ IN_POS, OUT_POS = PROBES
 # stable plateau. "full" = whole plateau (upper bound ≈ 240 for per240 runs).
 N_PERIOD_CHOICES = [20, 40, 60, 100, "full"]
 
-# Colour scheme (reuse the rest of the thesis' WIND_COLOR_MAP conventions)
-COLOR_NW   = "#2E86AB"   # blue — nowind
-COLOR_FW   = "#E74C3C"   # red  — fullwind (raw)
-COLOR_CORR = "#2ECC71"   # green — fullwind after wind-subtraction
-COLOR_NW_A = "#888888"   # grey — secondary
+# Colour scheme — wind dimensions sourced from the central WIND_COLOR_MAP.
+# CORR is the wind-subtraction-corrected fullwind A_in; it shares the figure
+# with raw nowind+fullwind so it gets a third distinct colour.
+COLOR_NW   = WIND_COLOR_MAP["no"]    # blue — nowind
+COLOR_FW   = WIND_COLOR_MAP["full"]  # red  — fullwind (raw)
+COLOR_CORR = "#7F3FBF"               # purple — fullwind after wind-subtraction
+COLOR_NW_A = "#888888"               # grey — secondary
 
 # Shared PSD grid for residual subtraction (matches reconstruction_A_vs_B)
 COMMON_F_GRID = np.arange(0.0, 12.5 + 1e-9, 0.05)

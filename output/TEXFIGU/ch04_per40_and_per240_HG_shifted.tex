@@ -7,13 +7,13 @@
 %   computed_in       : analysis_scratch/per40_and_per240_HG_shifted.py (probe-shifted H&G window — IN at r=9.373 m shifted back by (12.4 − r)/c_group · f from the canonical H&G [50T, 60T] at OUT)
 %   plot_type         : per40_and_per240_HG_shifted
 %   data_class        : DFS
-%   generated_at      : 2026-04-21T15:10:52
+%   generated_at      : 2026-04-29T09:53:33
 %   findings_doc      : analysis_scratch/per40_and_per240_HG_shifted_findings.md
 %
 % — Thesis context ──────────────────────────────────────────────
 %   chapter           : 04
 %   caption_label     : fig:ch04_per40_and_per240_HG_shifted
-%   caption_short     : OUT/IN (FFT) at the paddle frequency versus $kL$, split by paddle drive 0.10, 0.20, 0.30\,V (one panel each)
+%   caption_short     : 
 %
 % — Filters ────────────────────────────────────────────────────
 %   panel             : full
@@ -59,9 +59,9 @@
 %   stat:n_per240     : 93
 %   stat:n_per40      : 76
 %   stat:n_matched_cells : 24
-%   stat:abs_Δ_OUTIN_median : 0.0122
+%   stat:abs_Δ_OUTIN_median : 0.0091
 %   stat:abs_Δ_OUTIN_max : 0.0768
-%   stat:rel_Δ_OUTIN_median_pct : 1.92
+%   stat:rel_Δ_OUTIN_median_pct : 1.42
 %   stat:rel_Δ_OUTIN_max_pct : 10.93
 %   stat:HG_anchor_r_m : 12.4
 %   stat:HG_window_T  : [50, 60]
@@ -72,8 +72,8 @@
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{FIGURES/ch04_per40_and_per240_HG_shifted.pdf}
-  \caption[OUT/IN (FFT) at the paddle frequency versus $kL$, split by paddle drive 0]{
-    OUT/IN (FFT) at the paddle frequency versus $kL$, split by paddle drive 0.10, 0.20, 0.30\,V (one panel each). Both per40 (filled circles) and per240 (open diamonds) runs use the Huseby--Grue window anchored at $r = 12.4$\,m with $[50T, 60T]$ from wavemaker start. The IN probes at $r = 9.373$\,m receive the same waves $\Delta T$ earlier by group velocity ($c_g = g/(4\pi f)$, deep water), so the IN window is shifted back by $\Delta T \in [9.93, 6.55]$\,T across the thesis band. Canonical IN amplitude = mean AFFT across 9373/170 and 9373/340; OUT amplitude = AFFT at 12400/250. Blue: no wind; red: full wind. Error bars: run-to-run standard deviation. Mooring below\_90\_loose (230+300 merged), quality\_flag = ok, full panel.
+  \caption{
+    OUT/IN (FFT) at the paddle frequency versus $k$ (rad/m), split by paddle drive 0.10, 0.20, 0.30\,V (one panel each). Both per40 (filled circles) and per240 (open diamonds) runs use the Huseby--Grue window anchored at $r = 12.4$\,m with $[50T, 60T]$ from wavemaker start. The IN probes at $r = 9.373$\,m receive the same waves $\Delta T$ earlier by group velocity ($c_g = g/(4\pi f)$, deep water), so the IN window is shifted back by $\Delta T \in [9.93, 6.55]$\,T across the thesis band. Canonical IN amplitude = mean AFFT across 9373/170 and 9373/340; OUT amplitude = AFFT at 12400/250. Blue: no wind; red: full wind. Error bars: run-to-run standard deviation. Mooring below\_90\_loose (230+300 merged), quality\_flag = ok, full panel.
   }
   \label{fig:ch04_per40_and_per240_HG_shifted}
 \end{figure}

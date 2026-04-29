@@ -7,13 +7,13 @@
 %   computed_in       : analysis_scratch/mooring_comparison.py (groupby freq+amp+wind+Mooring → mean/std of OUT/IN_computed)
 %   plot_type         : mooring_comparison
 %   data_class        : DELEG
-%   generated_at      : 2026-04-20T16:57:27
+%   generated_at      : 2026-04-29T09:47:40
 %   findings_doc      : analysis_scratch/mooring_comparison_findings.md
 %
 % — Thesis context ──────────────────────────────────────────────
 %   chapter           : 04
 %   caption_label     : fig:ch04_mooring_comparison
-%   caption_short     : OUT/IN(FFT) damping ratio at 0.2\,V (left) and 0.3\,V (right) paddle drive for two below-water mooring rubber band lengths: 230\,mm (blue) and 300\,mm (orange), both attached 90\,mm below the still…
+%   caption_short     : 
 %
 % — Filters ────────────────────────────────────────────────────
 %   panel             : full
@@ -26,7 +26,7 @@
 %   mooring           : below_90_loose230, below_90_loose300
 %
 % — Data provenance ────────────────────────────────────────────
-%   n_runs            : 217
+%   n_runs            : 215
 %   in_probes_used    : 9373/170+9373/340
 %   out_probes_used   : 12400/250
 %   probe_configs     : march2026_better_rearranging
@@ -69,7 +69,7 @@
 % — Summary stats cited in caption ────────────────────────────
 %   stat:n_conditions_all : 16   (incl. 1.3 Hz)
 %   stat:n_conditions_clean : 12   (1.4-1.6 Hz)
-%   stat:max_abs_delta_clean : 5.90 %
+%   stat:max_abs_delta_clean : 6.10 %
 %
 % — Subfigures available ───────────────────────────────────────
 %     FIGURES/ch04_mooring_comparison.pdf
@@ -77,8 +77,8 @@
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{FIGURES/ch04_mooring_comparison.pdf}
-  \caption[OUT/IN(FFT) damping ratio at 0]{
-    OUT/IN(FFT) damping ratio at 0.2\,V (left) and 0.3\,V (right) paddle drive for two below-water mooring rubber band lengths: 230\,mm (blue) and 300\,mm (orange), both attached 90\,mm below the still-water surface. Solid markers: no-wind runs; dashed connectors: full-wind runs. Error bars are run-to-run standard deviation when $n\geq 2$. Across the clean thesis range ($f \in [1.40, 1.60]$\,Hz, $n=12$ matched (frequency, amplitude, wind) conditions), the two mooring types agree to within $|\Delta| \leq 5.9\,\%$. The 1.3\,Hz column is retained in the figure for completeness; the loose230 no-wind point at $\textrm{OUT}/\textrm{IN}>0.9$ is a known mooring-independent standing-wave artefact (IN probe near a pressure node) and is discussed separately in the methodology. Panel geometry dominates wave transmission; rubber band length does not produce a detectable systematic effect. Datasets may therefore be merged as \texttt{below\_90\_loose} for the CH05 main results. See \texttt{analysis\_scratch/mooring\_comparison\_findings.md} for the full per-condition comparison and 0.1\,V low-SNR caveats.
+  \caption{
+    OUT/IN(FFT) damping ratio at 0.2\,V (left) and 0.3\,V (right) paddle drive for two below-water mooring rubber band lengths: 230\,mm (blue) and 300\,mm (orange), both attached 90\,mm below the still-water surface. Solid markers: no-wind runs; dashed connectors: full-wind runs. Error bars are run-to-run standard deviation when $n\geq 2$. Across the clean thesis range ($f \in [1.40, 1.60]$\,Hz, $n=12$ matched (frequency, amplitude, wind) conditions), the two mooring types agree to within $|\Delta| \leq 6.1\,\%$. The 1.3\,Hz column is retained in the figure for completeness; the loose230 no-wind point at $\textrm{OUT}/\textrm{IN}>0.9$ is a known mooring-independent standing-wave artefact (IN probe near a pressure node) and is discussed separately in the methodology. Panel geometry dominates wave transmission; rubber band length does not produce a detectable systematic effect. Datasets may therefore be merged as \texttt{below\_90\_loose} for the CH05 main results. See \texttt{analysis\_scratch/mooring\_comparison\_findings.md} for the full per-condition comparison and 0.1\,V low-SNR caveats.
   }
   \label{fig:ch04_mooring_comparison}
 \end{figure}

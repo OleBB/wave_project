@@ -223,7 +223,7 @@ ax.plot(lim, lim, "k--", lw=0.8, alpha=0.5, label="y=x")
 ax.set_xlim(lim); ax.set_ylim(lim)
 ax.set_xlabel("OUT/IN (nearest-bin) — pipeline convention")
 ax.set_ylabel("OUT/IN (parabolic-interpolated)")
-ax.set_title("(a) OUT/IN: nearest-bin vs parabolic")
+ax.set_title("")
 ax.legend(fontsize=8)
 ax.grid(True, alpha=0.3)
 
@@ -237,7 +237,7 @@ for wind, color in (("no", "tab:blue"), ("lowest", "tab:orange"), ("full", "tab:
 ax.axvline(0, color="k", ls="--", lw=0.8)
 ax.set_xlabel("Δ(OUT/IN) = parabolic − nearest")
 ax.set_ylabel("count")
-ax.set_title("(b) Distribution of OUT/IN bias correction")
+ax.set_title("")
 ax.legend(fontsize=8)
 ax.grid(True, alpha=0.3)
 
@@ -252,7 +252,7 @@ for wind, color in (("no", "tab:blue"), ("lowest", "tab:orange"), ("full", "tab:
 ax.axhline(0, color="k", ls="--", lw=0.8)
 ax.set_xlabel("Wave frequency (Hz)")
 ax.set_ylabel("Δ(OUT/IN)")
-ax.set_title("(c) Bias correction vs frequency")
+ax.set_title("")
 ax.legend(fontsize=8)
 ax.grid(True, alpha=0.3)
 
@@ -271,13 +271,11 @@ ax.axhline(0, color="k", ls="--", lw=0.5)
 ax.axvline(0, color="k", ls="--", lw=0.5)
 ax.set_xlabel("Paddle peak offset at IN probe (mHz from nominal)")
 ax.set_ylabel("Δ(OUT/IN)")
-ax.set_title("(d) Δ(OUT/IN) vs paddle frequency offset (IN)")
+ax.set_title("")
 ax.legend(fontsize=8)
 ax.grid(True, alpha=0.3)
 
-fig.suptitle("Impact of FFT peak-bin bias on OUT/IN ratio\n"
-             "(parabolic interpolation corrects for sinc-attenuation)",
-             fontsize=11)
+fig.suptitle("", fontsize=11)
 fig.tight_layout()
 fig.savefig(OUT_PNG, dpi=110, bbox_inches="tight")
 plt.close(fig)

@@ -41,7 +41,7 @@ import matplotlib.gridspec as gridspec
 from datetime import datetime
 
 from wavescripts.improved_data_loader import load_analysis_data
-from wavescripts.plot_utils import apply_thesis_style
+from wavescripts.plot_utils import apply_thesis_style, WIND_COLOR_MAP
 
 apply_thesis_style()
 
@@ -337,16 +337,16 @@ print("7. Building thesis figure (2-panel clean view)…")
 
 _thesis_amps = [0.2, 0.3]
 _thesis_freq_lo, _thesis_freq_hi = 1.25, 1.65
-_MOORING_COLOR = {
-    "below_90_loose230": "#1f77b4",   # blue  — 230 mm
-    "below_90_loose300": "#ff7f0e",   # orange — 300 mm
+# Wind = colour (project-wide WIND_COLOR_MAP).
+# Mooring = linestyle (the difference being interrogated; solid=loose230, dashed=loose300).
+_MOORING_STYLE = {
+    "below_90_loose230": "-",     # solid — 230 mm
+    "below_90_loose300": "--",    # dashed — 300 mm
 }
 _MOORING_LABEL = {
     "below_90_loose230": "loose230 (230 mm)",
     "below_90_loose300": "loose300 (300 mm)",
 }
-_WIND_STYLE = {"no": "-", "full": "--"}
-_WIND_LABEL_T = {"no": "no wind", "full": "full wind"}
 
 _thesis = both[(both["amp"].isin(_thesis_amps))
                & (both["freq"] >= _thesis_freq_lo)
@@ -367,10 +367,11 @@ else:
 
 for _ax, _amp in zip(_axes_t, _thesis_amps):
     _sub = _thesis[_thesis["amp"] == _amp]
-    for _m, _c in _MOORING_COLOR.items():
+    for _m, _ls in _MOORING_STYLE.items():
         _mean_col = f"mean_{_m.split('_')[-1]}"
         _std_col  = f"std_{_m.split('_')[-1]}"
-        for _wind, _ls in _WIND_STYLE.items():
+        for _wind in ("no", "full"):
+            _color = WIND_COLOR_MAP[_wind]
             _rows = _sub[(_sub["wind"] == _wind) & _sub[_mean_col].notna()].sort_values("freq")
             if _rows.empty:
                 continue
@@ -378,7 +379,7 @@ for _ax, _amp in zip(_axes_t, _thesis_amps):
             _mn = _rows[_mean_col].values
             _sd = _rows[_std_col].fillna(0).values
             _ax.errorbar(
-                _fr, _mn, yerr=_sd, fmt="o", color=_c, linestyle=_ls,
+                _fr, _mn, yerr=_sd, fmt="o", color=_color, linestyle=_ls,
                 capsize=3, markersize=4.5, linewidth=1.3, alpha=0.85,
                 zorder=3 if _wind == "no" else 2,
             )
@@ -394,12 +395,10 @@ _axes_t[0].set_ylabel("OUT/IN (FFT)", fontsize=9)
 # Compact legend on the right panel
 from matplotlib.lines import Line2D
 _handles = [
-    Line2D([0], [0], color=_MOORING_COLOR["below_90_loose230"], marker="o",
-           linestyle="", label="loose230 (230 mm)"),
-    Line2D([0], [0], color=_MOORING_COLOR["below_90_loose300"], marker="o",
-           linestyle="", label="loose300 (300 mm)"),
-    Line2D([0], [0], color="k", linestyle="-",  label="no wind"),
-    Line2D([0], [0], color="k", linestyle="--", label="full wind"),
+    Line2D([0], [0], color=WIND_COLOR_MAP["no"],   marker="o", linestyle="", label="no wind"),
+    Line2D([0], [0], color=WIND_COLOR_MAP["full"], marker="o", linestyle="", label="full wind"),
+    Line2D([0], [0], color="k", linestyle="-",  label="loose230 (230 mm)"),
+    Line2D([0], [0], color="k", linestyle="--", label="loose300 (300 mm)"),
 ]
 _axes_t[1].legend(handles=_handles, fontsize=7.5, loc="lower left", frameon=True)
 

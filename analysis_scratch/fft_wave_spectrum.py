@@ -207,7 +207,7 @@ def draw_panel(ax, *, wind, side, show_delta, label_frac=0.88):
 
     ax.set_xlim(0, XMAX)
     ax.set_ylim(0, YMAX_ALL)
-    ax.set_title(f"{SIDE_LABEL[side]}, {WIND_LABEL[wind]}", fontsize=10)
+    ax.set_title("", fontsize=10)
     ax.xaxis.set_major_locator(MultipleLocator(1.0))
     ax.xaxis.set_minor_locator(MultipleLocator(0.2))
     ax.grid(True, which="major", alpha=0.30)

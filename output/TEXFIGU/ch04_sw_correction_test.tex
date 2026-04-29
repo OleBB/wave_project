@@ -1,15 +1,85 @@
 %! TEX root = ../main.tex
-% =============================================================
+% ==============================================================
 % IMMUTABLE — generated automatically, do not edit this block
-%   script          : analysis_scratch/sw_correction.py
-%   plot_type       : sw_correction_test
-%   chapter         : 04
-%   R_nominal       : 0.2
-% =============================================================
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/sw_correction.py
+%   computed_in       : analysis_scratch/sw_correction.py (SW_factor(f) = |1+R·exp(2ikΔ)|; per-run T_corr = OUT/IN_obs · SW_factor)
+%   plot_type         : sw_correction_test
+%   data_class        : META
+%   generated_at      : 2026-04-29T09:48:15
+%   findings_doc      : analysis_scratch/sw_correction_findings.md
+%
+% — Thesis context ──────────────────────────────────────────────
+%   chapter           : 04
+%   caption_label     : fig:ch04_sw_correction_test
+%   caption_short     : 
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : full
+%   wind              : no, full
+%   amplitude [V]     : 
+%   frequency [Hz]    : 
+%   probes            : 
+%   run_category      : 
+%   quality_flag      : ok
+%   mooring           : 
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_runs            : 350
+%   in_probes_used    : 9373/170+9373/340
+%   out_probes_used   : 12400/250
+%   probe_configs     : march2026_better_rearranging
+%   non_final_config_n: 
+%   datasets        :
+%     PROCESSED-20251005-sixttry6roof-highMooring
+%     PROCESSED-20251110-tett6roof-lowM-ekte580
+%     PROCESSED-20251110-tett6roof-lowMooring
+%     PROCESSED-20251110-tett6roof-lowMooring-2
+%     PROCESSED-20251112-tett6roof
+%     PROCESSED-20251113-tett6roof
+%     PROCESSED-20251113-tett6roof-loosepaneltaped
+%     PROCESSED-20251113-tett6roof-probeadjusted
+%     PROCESSED-20260305-newProbePos-tett6roof
+%     PROCESSED-20260306-newProbePos-tett6roof
+%     PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof
+%     PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof
+%     PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof
+%     PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof
+%     PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof
+%     PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring
+%     PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring
+%     PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED
+%     PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136
+%     PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%   run_paths       :
+%     (omitted — aggregate over > threshold runs, see datasets)
+%
+% — Method / numerical parameters ─────────────────────────────
+%   grouper           : per-frequency mean/std of observed vs corrected OUT/IN
+%   collapse_panels   : False
+%   fft_window_hz     : 0.1
+%   extra_params      : R_nominal=0.2, X_IN=9.373 m, X_panel=11.0 m, delta=1.627 m, depth_m=0.58, dispersion=full (omega^2 = g*k*tanh(k*d))
+%
+% — Summary stats cited in caption ────────────────────────────
+%   stat:R_nominal    : 0.2
+%   stat:X_panel_m    : 11.0
+%   stat:delta_m      : 1.627
+%   stat:SW_factor_at_thesis_freqs : 1.00Hz:1.154, 1.30Hz:0.803, 1.50Hz:0.944, 1.70Hz:1.198
+%   stat:R_upper_bound : <= 0.05
+%
+% — Subfigures available ───────────────────────────────────────
+%     FIGURES/ch04_sw_correction_test.pdf
+% ── end immutable block ─────────────────────────────────────────
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{FIGURES/ch04_sw_correction_test.pdf}
-  \caption[Standing-wave correction test]{%
+  \caption{
     Standing-wave correction test at R=0.20 on measured OUT/IN ratios. If the panel reflected a significant fraction of the incident wave, the OUT/IN(FFT) vs frequency curve would carry a node/antinode fingerprint with characteristic spacing $\Delta f = c_g/(4 x_\mathrm{{IN}})$. Applying a correction at R=0.20 to the raw OUT/IN curve creates a violent zigzag (top-right panel) — the raw data shows NO such pattern. This puts an upper bound of $R\lesssim0.05$ on the panel's reflection coefficient, consistent with the direct Mansard--Funke measurement (see CH04 \S4c). Conclusion: the raw OUT/IN(FFT) values require no standing-wave correction; the existing methodology is safe.
   }
   \label{fig:ch04_sw_correction_test}

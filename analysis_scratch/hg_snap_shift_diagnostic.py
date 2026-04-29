@@ -341,7 +341,7 @@ def main():
     ax.set_xticks(x_pos)
     ax.set_xticklabels(PROBES, rotation=30)
     ax.set_ylabel("Snap shift (wave periods)")
-    ax.set_title("(a) Median shift per probe (all runs)", fontsize=10)
+    ax.set_title("", fontsize=10)
     ax.grid(True, alpha=0.3)
     ax.legend()
 
@@ -363,13 +363,11 @@ def main():
                     label=f"wind={wind}", markersize=8)
     ax.axhline(0, color="k", lw=0.8, alpha=0.5)
     ax.set_xlabel("Paddle amplitude input (V)")
-    ax.set_title("(b) OUT probe (12400/250) shift vs amplitude\n(Stokes-nonlinearity discriminator)",
-                 fontsize=10)
+    ax.set_title("", fontsize=10)
     ax.grid(True, alpha=0.3)
     ax.legend()
 
-    fig.suptitle("H&G snap-shift diagnostic — canon March-2026 lowrange (n=" + str(len(sub)) + ")",
-                 fontsize=12)
+    fig.suptitle("", fontsize=12)
     fig.tight_layout()
     fig.savefig(OUT_PNG, dpi=110, bbox_inches="tight")
     plt.close(fig)

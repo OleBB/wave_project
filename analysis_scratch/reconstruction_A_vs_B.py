@@ -90,7 +90,7 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
-from wavescripts.plot_utils import apply_thesis_style
+from wavescripts.plot_utils import apply_thesis_style, WIND_COLOR_MAP
 
 apply_thesis_style()
 
@@ -297,12 +297,15 @@ fig, axes = plt.subplots(
     gridspec_kw={"height_ratios": [1.0, 1.0, 1.0, 1.2], "hspace": 0.45, "wspace": 0.25},
 )
 
-COLOR_A = "#1F77B4"   # blue: peak-bin (method A, = metric)
-COLOR_B = "#D62728"   # red : band-integrated (method B, physics)
+# Colour scheme — wind condition carries colour (rows 0/1 = nowind blue,
+# rows 2/3 = fullwind red); A vs B distinguished by black-vs-wind plus
+# linestyle. Raw signal in light grey as background.
 COLOR_RAW = "#999999"
+COLOR_B   = "black"   # method B (band-integrated, physics reference)
 
 for col_idx, probe in enumerate(PROBES):
     for row_idx, wind in enumerate(["no", "full"]):
+        color_A = WIND_COLOR_MAP[wind]   # method A = metric, in the wind colour
         run = demo_runs[wind]
         df_fft = fft_dict[run["path"]]
         fft_col = f"FFT {probe} complex"
@@ -323,7 +326,7 @@ for col_idx, probe in enumerate(PROBES):
 
         ax_wave.plot(t[zm], s_full[zm], color=COLOR_RAW, lw=0.8,
                      alpha=0.6, label="raw η", zorder=1)
-        ax_wave.plot(t[zm], s_A[zm], color=COLOR_A, lw=1.8,
+        ax_wave.plot(t[zm], s_A[zm], color=color_A, lw=1.8,
                      label="A: peak-bin", zorder=3)
         ax_wave.plot(t[zm], s_B[zm], color=COLOR_B, lw=1.8, ls="--",
                      label="B: ±0.05 Hz band", zorder=2)
@@ -341,7 +344,7 @@ for col_idx, probe in enumerate(PROBES):
         fr_A, pxx_A = sp_signal.welch(res_A, fs=fs, nperseg=nperseg)
         fr_B, pxx_B = sp_signal.welch(res_B, fs=fs, nperseg=nperseg)
         fmask = (fr_A >= 0.2) & (fr_A <= 10.0)
-        ax_res.semilogy(fr_A[fmask], pxx_A[fmask], color=COLOR_A, lw=1.2,
+        ax_res.semilogy(fr_A[fmask], pxx_A[fmask], color=color_A, lw=1.2,
                         label="residual A")
         ax_res.semilogy(fr_B[fmask], pxx_B[fmask], color=COLOR_B, lw=1.2, ls="--",
                         label="residual B")
@@ -593,9 +596,9 @@ else:
             continue
         psd_pure = np.clip(psd_fw - psd_nw, 0, None)
         fmask = (f_nw >= 0.2) & (f_nw <= 10.0)
-        ax.semilogy(f_nw[fmask], psd_nw[fmask], color=COLOR_A, lw=1.2,
+        ax.semilogy(f_nw[fmask], psd_nw[fmask], color=WIND_COLOR_MAP["no"], lw=1.2,
                     label=f"nowind residual (Stokes, n={n_nw})")
-        ax.semilogy(f_nw[fmask], psd_fw[fmask], color=COLOR_B, lw=1.2,
+        ax.semilogy(f_nw[fmask], psd_fw[fmask], color=WIND_COLOR_MAP["full"], lw=1.2,
                     label=f"fullwind residual (wind+Stokes, n={n_fw})")
         pure_nonzero = psd_pure.copy()
         pure_nonzero[pure_nonzero <= 0] = np.nan
