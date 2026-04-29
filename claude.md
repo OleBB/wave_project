@@ -275,6 +275,23 @@ Historical note: pre-2026-04-18 `meta.json` files contained `OUT/IN (FFT)` compu
 
 `compute_amplitudes_from_fft` uses `window=0.1` Hz and `argmin(abs(masked_freqs - target_freq))` (nearest bin). Old code used `window=0.5` Hz + `argmax`, which picked up wind-wave peaks for low-amplitude runs.
 
+### Snap fires on raw ULS, FFT runs on η — sign-flipped (KNOWN, 2026-04-29)
+
+**Observation:** the reconstructed paddle-frequency signal in `ch05_reconstructed` starts at sample 0 going **negative** (slope of first 5 samples = `[-1, -1, -1, -1]`; FFT phase at the paddle bin = +91° instead of the −90° expected for a sine starting at zero with positive slope).
+
+**Mechanism (directly traceable):**
+- [`wave_detection.py:62`](wavescripts/wave_detection.py:62) — upcrossing detection runs on `signal_smooth = rolling_mean(df[data_col])`, where `data_col` is the **raw ULS probe** (distance from sensor down to the water surface). Rising raw signal = water level falling.
+- [`processor.py:759`](wavescripts/processor.py:759) — `eta = -(raw - stillwater)` flips the sign so positive η means water up.
+- [`signal_processing.py:374`](wavescripts/signal_processing.py:374) — the FFT (and LS / cycles / phase metrics) consume `eta_{pos}_interp`, the sign-flipped signal.
+
+A "raw upcrossing" is therefore an **η downcrossing** at the same sample index. Window endpoints are correct integer-cycle markers, but they're zero crossings of the *wrong* sign — the reconstructed fundamental's phase is offset by π.
+
+**Effect on amplitude metrics:** none. FFT magnitude, LS amplitude, per-cycle (max − min)/2 and percentile amplitudes all ignore the absolute phase. Sinc leakage stays zero (integer cycles preserved). The bug only shows up visually in phase-sensitive plots like reconstructed waveforms.
+
+**Effect on per-cycle metrics:** `cycles` and `phase` amplitudes that rely on between-upcrossings spans are also computed against raw-signal upcrossings. Because the spans are full periods either way, this does not bias the magnitude — but the phase-locked sample indices in `(phase) mean` are at η-trough quarters rather than η-crest quarters. Mean amplitude is unaffected (symmetric extraction); only the sign of intermediate values would flip. Not investigated further.
+
+**Status:** noted, not fixed (2026-04-29). Fixing requires switching the upcrossing detector to `eta_{pos}` (or inverting the threshold), then `python main.py --force-recompute` on all datasets — every cached `Computed Probe {pos} start/end` shifts by ~half a period. Defer to a dedicated pipeline session.
+
 ### `_SNARVEI` probe name matching — archived
 
 The old `_SNARVEI_CALIB` + `_PROBE_GROUP` eyeballed calibration was replaced by the deterministic H&G window + ±T snap in 2026-04-21 (see §7). Archived data lives in `constants.py` as `SNARVEI_ARCHIVE_START` / `_SNARVEI_ARCHIVE_END` and is still referenced by `RampDetectionBrowser` for visual calibration, but `find_wave_range` no longer uses it. Adding a new probe position no longer requires updating `_PROBE_GROUP` — `find_wave_range` derives the distance from the probe column name directly.
