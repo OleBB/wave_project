@@ -233,6 +233,7 @@ CHAPTER 05 — RESULTS
         ch05_damping_ka_{A1,A2,A3}       [DELEG] ✓     └─ standalone per-amplitude-tier (per240+per40, magenta palette)
   §5    ch05_swell_scatter               [META]  —  DROPPED (cell commented in place)
   §6    ch05_reconstructed               [META]  ~  FFT-reconstructed paddle signal (fft_dict, not DFS)
+  §6b   ch05_b_reconstructed             [META]  ~  FFT-reconstructed paddle signal (fft_dict, not DFS)
   §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions
 
 DIAGNOSTICS
@@ -511,7 +512,8 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_damping_ka_A3":              "",
 
     # § 6 — Reconstructed
-    "ch05_reconstructed":              "Hovedmoden fra bølge \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.",
+    "ch05_reconstructed":              "Hovedmoden fra bølge \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.", #fullwind
+    "ch05_b_reconstructed":              "Hovedmoden fra bølge \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.",
 
     # § 7 — All-data scatter (supplementary)
     "ch05_damping_all_data_scatter":   "Alle kjøringer. Vi skiller primært mellom det endelige oppsettet og alle andre oppsett.",
@@ -2026,7 +2028,7 @@ _pv_swell_scatter = {
 
 plot_swell_scatter(meta_results, _pv_swell_scatter, chapter="05")
 """
-
+# TODO: check why the signal starts going downward first... i thought we did upcross...for this and its counterpart below.
 # %%
 # [DATA: META]  — reads combined_fft_dict (NOT processed_dfs); lives above gate
 """
@@ -2040,14 +2042,56 @@ _pv_reconstructed = {
     "filters": {
         "WaveAmplitudeInput [Volt]": 0.2,
         "WaveFrequencyInput [Hz]":   1.4,
-        "WindCondition":             None,
+        "WindCondition":             "full",
         "PanelCondition":            "full",
     },
     "plotting": {
-        "show_plot":    True,
+        "show_plot":    False,
         "save_plot":    True,           #
         "draft":        False,
         "figure_name":  "ch05_reconstructed",
+        "force_stub":   True,
+        "facet_by":     "probe",
+        "probes":       ["9373/170", "12400/250"],
+        "linewidth":    0.8,
+        "show_full_signal":  False,
+        "grid":         True,
+        "legend":       "inside",
+        "xlim":         None,
+        "max_points":   500,
+    },
+}
+
+_recon_meta  = apply_experimental_filters(meta_results, _pv_reconstructed)
+_recon_paths = {p: combined_fft_dict[p]
+                for p in _recon_meta["path"] if p in combined_fft_dict}
+if _recon_paths:
+    plot_reconstructed(_recon_paths, _recon_meta, _pv_reconstructed,
+                       data_type="fft", chapter="05")
+else:
+    print("ch05_reconstructed: no matching runs found — check filters.")
+
+# %% just copied this one
+# [DATA: META]  — reads combined_fft_dict (NOT processed_dfs); lives above gate
+"""
+── CH05 § 6b — Reconstructed wave signal ─────────────────────────────────────
+Goal: show the FFT-reconstructed paddle-frequency signal alongside the raw
+time-series. Illustrates what A_FFT actually isolates from the full signal.
+Data: combined_fft_dict, one representative run (1.3 Hz, 0.2 V, full panel).
+"""
+
+_pv_reconstructed = {
+    "filters": {
+        "WaveAmplitudeInput [Volt]": 0.2,
+        "WaveFrequencyInput [Hz]":   1.4,
+        "WindCondition":             "no",
+        "PanelCondition":            "full",
+    },
+    "plotting": {
+        "show_plot":    False,
+        "save_plot":    True,           #
+        "draft":        False,
+        "figure_name":  "ch05_b_reconstructed",
         "force_stub":   True,
         "facet_by":     "probe",
         "probes":       ["9373/170", "12400/250"],
@@ -2064,9 +2108,9 @@ _recon_paths = {p: combined_fft_dict[p]
                 for p in _recon_meta["path"] if p in combined_fft_dict}
 if _recon_paths:
     plot_reconstructed(_recon_paths, _recon_meta, _pv_reconstructed,
-                       data_type="fft", chapter="05")
+                        data_type="fft", chapter="05")
 else:
-    print("ch05_reconstructed: no matching runs found — check filters.")
+    print("ch05_b_reconstructed: no matching runs found — check filters.")
 
 # %%
 # [DATA: DELEG]  — analysis_scratch/all_data_damping_scatter.py

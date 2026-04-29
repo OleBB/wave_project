@@ -12,12 +12,12 @@
 %
 % — Thesis context ──────────────────────────────────────────────
 %   chapter           : 05
-%   caption_label     : fig:ch05_reconstructed
+%   caption_label     : fig:ch05_b_reconstructed
 %   caption_short     : 
 %
 % — Filters ────────────────────────────────────────────────────
 %   panel             : full
-%   wind              : full
+%   wind              : no
 %   amplitude [V]     : 0.2
 %   frequency [Hz]    : 1.4
 %   probes            : 9373/170, 12400/250
@@ -26,7 +26,7 @@
 %   mooring           : 
 %
 % — Data provenance ────────────────────────────────────────────
-%   n_runs            : 3
+%   n_runs            : 2
 %   in_probes_used    : 9373/170+9373/340
 %   out_probes_used   : 12400/250
 %   probe_configs     : march2026_better_rearranging
@@ -35,9 +35,8 @@
 %     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
 %     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
 %   run_paths       :
-%     wavedata/20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-amp0200-freq1400-per240-depth580-mstop30-run1.csv
-%     wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-amp0200-freq1400-per40-depth580-mstop30-run1.csv
-%     wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-amp0200-freq1400-per240-depth580-mstop30-run1.csv
+%     wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-nowind-amp0200-freq1400-per40-depth580-mstop30-run1.csv
+%     wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-nowind-amp0200-freq1400-per240-depth580-mstop30-run1.csv
 %
 % — Method / numerical parameters ─────────────────────────────
 %   grouper           : 
@@ -49,13 +48,13 @@
 %   (none registered — pass extra_stats=... to build_fig_meta)
 %
 % — Subfigures available ───────────────────────────────────────
-%     FIGURES/ch05_reconstructed.pdf
+%     FIGURES/ch05_b_reconstructed.pdf
 % ── end immutable block ─────────────────────────────────────────
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{FIGURES/ch05_reconstructed.pdf}
+  \includegraphics[width=\linewidth]{FIGURES/ch05_b_reconstructed.pdf}
   \caption{
     Hovedmoden fra bølge \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.
   }
-  \label{fig:ch05_reconstructed}
+  \label{fig:ch05_b_reconstructed}
 \end{figure}

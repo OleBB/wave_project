@@ -1536,7 +1536,7 @@ def plot_reconstructed(
     # Wind+noise residual must visually contrast with the paddle-wave line.
     # Wave colour is blue (nowind) or red (fullwind) from WIND_COLOR_MAP;
     # orange reads distinctly against both.
-    color_wind = "#00da9d" #cyan ish
+    color_rest = "#00da9d" #cyan ish
     color_full = "gray"
 
     n_subplots = len(probes) if facet_by == "probe" else 1
@@ -1616,7 +1616,7 @@ def plot_reconstructed(
                     lw=linewidth * 0.7,
                     label=f"{lp}full",
                     color=color_full,
-                    alpha=0.4,
+                    alpha=0.6,
                     zorder=1,
                 )
             ax_s.plot(
@@ -1633,10 +1633,10 @@ def plot_reconstructed(
                 time_axis,
                 signal_wind,
                 lw=linewidth,
-                label=f"{lp}vind+støy",
+                label=f"{lp}rest",
                 linestyle="-",
-                color=color_wind,
-                alpha=0.85,
+                color=color_rest,
+                alpha=0.90,
                 zorder=2,
             )
 

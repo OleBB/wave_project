@@ -4,15 +4,19 @@ H&G plateau check — PROPOSED FORMULA prototype (not pipeline yet)
 
 Side-by-side companion to `hg_plateau_check.py`. Same layout (2 rows
 × 3 cols per frequency, sliding AFFT + snapped H&G window overlay),
-but the window is computed from a NEW proposed formula instead of
-read from meta.json:
+but the window is computed from the post-squeeze NEW proposed formula
+instead of read from meta.json:
 
-    t_start = r / c_g(f, h) + N_offset / f       (seconds)
-    t_end   = t_start + 10 / f                   (10T length)
+    t_start = r / c_g(f, h) + 10 / f             (seconds)
+    t_end   = t_start + N(f) / f                 (variable N(f) length)
 
-with N_OFFSET = 15 periods (= ~5 wavemaker-ramp + 10 H&G safety).
-Start is then snapped to nearest zero-upcrossing within ±T of the
-theoretical start (same as live pipeline). End = start + 10·T_samples
+with N(f) = {1.3: 10, 1.4: 13, 1.5: 17, 1.6: 15} periods, set by the
+minimum of (a) parasitic-2f arrival at IN (binding at low f) and (b)
+per40 plateau at OUT (binding at high f). See
+analysis_scratch/window_variable_N_prototype_findings.md.
+
+Start is snapped to nearest zero-upcrossing within ±T of the
+theoretical start (same as live pipeline). End = start + N(f)·T_samples
 (no separate end-snap in this prototype — keep it simple).
 
 Visual question: does the proposed formula land the H&G window inside
@@ -78,11 +82,22 @@ PROBE_R_M = {
     "12400/250": 12.400,
 }
 
-# === The proposed formula ===============================================
-N_OFFSET_PERIODS = 15.0    # 5 (wavemaker ramp) + 10 (H&G "10 periods after arrival")
-WINDOW_PERIODS   = 10.0    # H&G's 10T window length (preserved)
+# === The proposed formula (post-squeeze, variable-N(f)) =================
+# Start  = r/c_g(f) + 10·T  (UC-snap within ±T)
+# Length = N(f) periods, where N is bounded by parasitic-2f at IN (binding
+# at low f) and per40 plateau at OUT (binding at high f). See
+# analysis_scratch/window_variable_N_prototype_findings.md.
+N_OFFSET_PERIODS = 10.0
+N_LENGTH_LOOKUP  = {1.3: 10, 1.4: 13, 1.5: 13, 1.6: 13}
 SNAP_HALFWIDTH_T = 1.0     # ±1 wave period UC search window for snap-to-start
 TANK_DEPTH_M     = HG.TANK_DEPTH_M   # 0.58 m (project canonical)
+
+
+def _n_length_for(f: float) -> int:
+    key = round(float(f), 2)
+    if key not in N_LENGTH_LOOKUP:
+        key = min(N_LENGTH_LOOKUP.keys(), key=lambda k: abs(k - f))
+    return N_LENGTH_LOOKUP[key]
 
 # Canon — march-2026 cond4 lowrange
 PROCESSED_DIRS = [
@@ -164,7 +179,7 @@ def proposed_window_theoretical(probe: str, f_paddle: float):
     r_m = PROBE_R_M[probe]
     c_g = c_group(f_paddle, TANK_DEPTH_M)
     t_start = r_m / c_g + N_OFFSET_PERIODS / f_paddle
-    t_end   = t_start + WINDOW_PERIODS / f_paddle
+    t_end   = t_start + _n_length_for(f_paddle) / f_paddle
     return t_start, t_end
 
 
@@ -196,12 +211,12 @@ def snap_to_upcrossing(signal: np.ndarray, target_idx: int,
 def proposed_window_snapped(signal: np.ndarray, probe: str,
                             f_paddle: float, fs: float = FS):
     """(t_start_s, t_end_s) using the proposed formula, with start snapped
-    to the nearest UC within ±T. End = start + 10·samples_per_period."""
+    to the nearest UC within ±T. End = start + N(f)·samples_per_period."""
     t_th_start, _ = proposed_window_theoretical(probe, f_paddle)
     target_start_idx = int(round(t_th_start * fs))
     snap_start_idx = snap_to_upcrossing(signal, target_start_idx, f_paddle, fs)
     samples_per_period = int(round(fs / f_paddle))
-    snap_end_idx = snap_start_idx + int(round(WINDOW_PERIODS * samples_per_period))
+    snap_end_idx = snap_start_idx + _n_length_for(f_paddle) * samples_per_period
     return snap_start_idx / fs, snap_end_idx / fs
 
 
@@ -260,7 +275,8 @@ def build_for(target_freq: float):
     print(f"   PROPOSED  IN  (theoretical, pre-snap): [{th_in_s:5.2f}, {th_in_e:5.2f}] s")
     print(f"   PROPOSED  OUT (theoretical, pre-snap): [{th_out_s:5.2f}, {th_out_e:5.2f}] s")
 
-    window_s_10T = WINDOW_PERIODS / target_freq
+    n_length = _n_length_for(target_freq)
+    sliding_window_s = n_length / target_freq    # match the proposed window length
     paddle_stop_s = PER40_PERIODS / target_freq
 
     sliding = {}
@@ -274,8 +290,8 @@ def build_for(target_freq: float):
         sig_out = get_eta(df, OUT_PROBE)
         if sig_in is None or sig_out is None:
             continue
-        ts_in,  A_in  = sliding_afft(sig_in,  target_freq, window_s_10T)
-        ts_out, A_out = sliding_afft(sig_out, target_freq, window_s_10T)
+        ts_in,  A_in  = sliding_afft(sig_in,  target_freq, sliding_window_s)
+        ts_out, A_out = sliding_afft(sig_out, target_freq, sliding_window_s)
         sliding[path] = {"IN": (ts_in, A_in), "OUT": (ts_out, A_out)}
         if len(ts_in) == len(ts_out) and len(ts_in) > 0:
             outin[path] = (ts_in, A_out / A_in)
@@ -375,7 +391,7 @@ def build_for(target_freq: float):
         Line2D([], [], color=WIND_COLOR_MAP["full"], lw=1.4, label="per240 (med vind)"),
         Line2D([], [], color=WIND_COLOR_MAP["full"], lw=1.2, ls="--", label="per40 (med vind)"),
         Patch(facecolor=COL_HG, alpha=0.22,
-              label=f"PROPOSED window (N_offset={int(N_OFFSET_PERIODS)} + UC-snap), median over cohort"),
+              label=f"PROPOSED window (N_offset={int(N_OFFSET_PERIODS)} + N(f)={n_length}T + UC-snap), median over cohort"),
         Line2D([], [], color=COL_PSTOP, ls=":", lw=1.2,
                label=f"per40 paddle stop (40/f = {paddle_stop_s:.1f} s)"),
     ]
