@@ -35,6 +35,9 @@ import matplotlib.pyplot as plt
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
 from wavescripts.signal_processing import compute_amplitudes_from_lsfit
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 FS = 250.0
 BASE = Path(__file__).parent.parent
@@ -222,7 +225,7 @@ ax.axvline(N_REF, color="k", ls="--", lw=0.5)
 ax.axhline(0, color="k", ls="-", lw=0.5)
 ax.set_xlabel("Window length N_periods")
 ax.set_ylabel("OUT/IN drift relative to N=10p  (%)")
-ax.set_title("(a) Per-run OUT/IN drift vs window length\n(blue = nowind, red = fullwind)", fontsize=10)
+ax.set_title("", fontsize=10)
 ax.grid(True, alpha=0.3)
 
 # (b) drift std vs N per condition
@@ -245,7 +248,7 @@ ax.axvline(N_REF, color="k", ls="--", lw=0.5)
 ax.axhline(0, color="k", ls="-", lw=0.5)
 ax.set_xlabel("N_periods")
 ax.set_ylabel("Drift from N=10p  (%)")
-ax.set_title("(b) Drift statistics vs N", fontsize=10)
+ax.set_title("", fontsize=10)
 ax.legend(fontsize=8)
 ax.grid(True, alpha=0.3)
 
@@ -268,7 +271,7 @@ ax.axvline(N_REF, color="k", ls="--", lw=0.5)
 ax.axhline(0, color="k", ls="-", lw=0.5)
 ax.set_xlabel("N_periods")
 ax.set_ylabel("Median drift from N=10p  (%)")
-ax.set_title("(c) Frequency-dependent drift", fontsize=10)
+ax.set_title("", fontsize=10)
 ax.legend(fontsize=8, loc="best")
 ax.grid(True, alpha=0.3)
 
@@ -290,13 +293,11 @@ for i, N in enumerate(N_SWEEP):
                 label=label, alpha=0.8, ls="-" if wind == "no" else "--", lw=1.2)
 ax.set_xlabel("Frequency (Hz)")
 ax.set_ylabel("Median OUT/IN")
-ax.set_title("(d) Median OUT/IN vs frequency — sanity check\n(curves for different N should coincide)",
-             fontsize=10)
+ax.set_title("", fontsize=10)
 ax.legend(fontsize=8, loc="best")
 ax.grid(True, alpha=0.3)
 
-fig.suptitle("FFT window-length sensitivity — LS fit on per240 (canon March-2026 lowrange)",
-             fontsize=12)
+fig.suptitle("", fontsize=12)
 fig.tight_layout()
 fig.savefig(OUT_PNG, dpi=110, bbox_inches="tight")
 plt.close(fig)

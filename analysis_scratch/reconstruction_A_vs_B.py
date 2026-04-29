@@ -90,6 +90,9 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
 OUT_PDF = Path(__file__).parent / "reconstruction_A_vs_B.pdf"
@@ -326,12 +329,7 @@ for col_idx, probe in enumerate(PROBES):
                      label="B: ±0.05 Hz band", zorder=2)
         ax_wave.set_xlabel("time [s]", fontsize=8)
         ax_wave.set_ylabel("η [mm]", fontsize=8)
-        ax_wave.set_title(
-            f"{PROBE_LABEL[probe]} | {wind} wind  "
-            f"(A_RMS·√2 → peak={np.sqrt(2)*s_A.std():.2f} mm, "
-            f"band={np.sqrt(2)*s_B.std():.2f} mm)",
-            fontsize=8,
-        )
+        ax_wave.set_title("", fontsize=8)
         ax_wave.grid(alpha=0.3)
         if row_idx == 0 and col_idx == 0:
             ax_wave.legend(fontsize=7, loc="upper right")
@@ -356,20 +354,12 @@ for col_idx, probe in enumerate(PROBES):
         frac = (e_A - e_B) / e_B if e_B > 0 else np.nan
         ax_res.set_xlabel("frequency [Hz]", fontsize=8)
         ax_res.set_ylabel("PSD [mm²/Hz]", fontsize=8)
-        ax_res.set_title(
-            f"wind-band (2–6 Hz)  E_A={e_A:.2f}  E_B={e_B:.2f}  "
-            f"(A−B)/B = {frac*100:+.2f}%", fontsize=8,
-        )
+        ax_res.set_title("", fontsize=8)
         ax_res.grid(alpha=0.3, which="both")
         if row_idx == 0 and col_idx == 0:
             ax_res.legend(fontsize=7, loc="upper right")
 
-fig.suptitle(
-    f"Reconstruction A (peak-bin) vs B (±{BAND_HALF_HZ:.2f} Hz band) — "
-    f"representative runs: {DEMO_FREQ} Hz, {DEMO_AMP:.2f} V, {DEMO_PANEL} panel\n"
-    f"Row 1/2 = nowind | Row 3/4 = fullwind | Left = IN probe | Right = OUT probe",
-    fontsize=11, fontweight="bold", y=0.995,
-)
+fig.suptitle("", fontsize=11, fontweight="bold", y=0.995)
 fig.subplots_adjust(top=0.93)
 fig.savefig(OUT_PDF, bbox_inches="tight")
 print(f"   demo figure → {OUT_PDF}")
@@ -625,24 +615,13 @@ else:
         e_stokes = float(np.trapezoid(psd_nw[mask], f_nw[mask]))
         e_pure = float(np.trapezoid(psd_pure[mask], f_nw[mask]))
         stk_frac = (e_naive - e_pure) / e_naive if e_naive > 0 else np.nan
-        ax.set_title(
-            f"{PROBE_LABEL[probe]}  "
-            f"E_naive={e_naive:.2f}  E_Stokes={e_stokes:.2f}  E_pure={e_pure:.2f}"
-            f"  (Stokes frac = {stk_frac*100:.1f}%)",
-            fontsize=9,
-        )
+        ax.set_title("", fontsize=9)
         ax.set_xlabel("frequency [Hz]")
         ax.set_ylabel("PSD [mm²/Hz]")
         ax.grid(alpha=0.3, which="both")
         if col_idx == 0:
             ax.legend(fontsize=7, loc="lower left")
-    fig2.suptitle(
-        f"Pure wind PSD via nowind-residual subtraction — "
-        f"{DEMO_FREQ} Hz, {DEMO_AMP:.2f} V, {DEMO_PANEL} panel, method A residuals\n"
-        f"Paddle harmonics 2f/3f/4f fall inside the 2–6 Hz wind band and must be "
-        f"subtracted for a clean wind metric.",
-        fontsize=10, fontweight="bold", y=1.02,
-    )
+    fig2.suptitle("", fontsize=10, fontweight="bold", y=1.02)
     fig2.savefig(OUT_PDF2, bbox_inches="tight")
     print(f"   pure-wind demo figure → {OUT_PDF2}")
 

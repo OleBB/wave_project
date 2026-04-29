@@ -37,6 +37,9 @@ import matplotlib.pyplot as plt
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
 from wavescripts.signal_processing import compute_amplitudes_from_lsfit
 from wavescripts.constants import HG, c_group
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 FS = 250.0
 BASE = Path(__file__).parent.parent
@@ -237,7 +240,7 @@ ax.axvline(T_REF_CANON, color="k", ls="--", lw=0.8, label=f"T_ref={T_REF_CANON}T
 ax.axhline(0, color="k", ls="-", lw=0.5)
 ax.set_xlabel("Window start T_ref (periods from wavemaker start, OUT-probe equivalent)")
 ax.set_ylabel("OUT/IN drift from T_ref=50T  (%)")
-ax.set_title(f"(a) Per-run OUT/IN drift vs window position (N={N_PERIODS}p fixed)", fontsize=10)
+ax.set_title("", fontsize=10)
 ax.legend(fontsize=8)
 ax.grid(True, alpha=0.3)
 
@@ -252,7 +255,7 @@ for wind, color in (("no", "tab:blue"), ("full", "tab:red")):
 ax.axvline(T_REF_CANON, color="k", ls="--", lw=0.8)
 ax.set_xlabel("T_ref (periods)")
 ax.set_ylabel("Absolute OUT/IN")
-ax.set_title("(b) Absolute OUT/IN traces", fontsize=10)
+ax.set_title("", fontsize=10)
 ax.grid(True, alpha=0.3)
 
 # (c) range (max - min) / median per run, vs wind and freq
@@ -264,7 +267,7 @@ for wind, color in (("no", "tab:blue"), ("full", "tab:red")):
                color=color, label=f"{wind} (n={len(sub)})")
 ax.set_xlabel("Frequency (Hz)")
 ax.set_ylabel("OUT/IN range across T_ref  (max − min)/median, %")
-ax.set_title("(c) Per-run OUT/IN range across T_ref∈[40,80]T", fontsize=10)
+ax.set_title("", fontsize=10)
 ax.legend(fontsize=8)
 ax.grid(True, alpha=0.3)
 
@@ -279,13 +282,11 @@ for wind, color in (("no", "tab:blue"), ("full", "tab:red")):
 ax.axvline(T_REF_CANON, color="k", ls="--", lw=0.8)
 ax.set_xlabel("T_ref (periods)")
 ax.set_ylabel("median A_canonical (mm)")
-ax.set_title("(d) Canonical IN and OUT amplitudes vs T_ref", fontsize=10)
+ax.set_title("", fontsize=10)
 ax.legend(fontsize=8, ncol=2)
 ax.grid(True, alpha=0.3)
 
-fig.suptitle(f"Window-position sensitivity — LS fit on per240 (canon March-2026 lowrange)\n"
-             f"10T-wide window slid across T_ref ∈ [{T_REF_MIN},{T_REF_MAX}]T",
-             fontsize=11)
+fig.suptitle("", fontsize=11)
 fig.tight_layout()
 fig.savefig(OUT_PNG, dpi=110, bbox_inches="tight")
 plt.close(fig)

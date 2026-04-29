@@ -66,7 +66,9 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import freq_to_k, amp_to_label
+from wavescripts.plot_utils import apply_thesis_style, freq_to_k, amp_to_label
+
+apply_thesis_style()
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
 SCRATCH_DIR = Path(__file__).parent
@@ -300,7 +302,7 @@ for i, amp in enumerate(AMPS):
     if sub.empty:
         ax.text(0.5, 0.5, "no data", ha="center", va="center",
                 transform=ax.transAxes, color="gray")
-        ax.set_title(f"{amp_to_label(amp)} — n=0", fontsize=10)
+        ax.set_title("", fontsize=10)
         continue
     for wind in WINDS:
         for method in ["short", "long"]:
@@ -326,16 +328,12 @@ for i, amp in enumerate(AMPS):
     ax.set_xlabel("$k$ (rad/m)", fontsize=10)
     if i == 0:
         ax.set_ylabel("OUT/IN (FFT)", fontsize=10)
-    ax.set_title(f"{amp_to_label(amp)}", fontsize=10)
+    ax.set_title("", fontsize=10)
     ax.grid(True, alpha=0.3)
     if i == 0:
         ax.legend(fontsize=7, loc="best", framealpha=0.92, ncol=1)
 
-fig.suptitle(
-    f"CH04 — OUT/IN (FFT) from short pipeline-SNARVEI windows vs long H&G 10T windows  "
-    f"(threshold: $N_\\mathrm{{input\\_periods}} \\geq {HG_MIN_PERIODS}$)",
-    fontsize=11, fontweight="bold", y=1.00,
-)
+fig.suptitle("", fontsize=11, fontweight="bold", y=1.00)
 fig.subplots_adjust(left=0.06, right=0.98, top=0.88, bottom=0.12, wspace=0.06)
 fig.savefig(SCRATCH_PDF, bbox_inches="tight")
 print(f"   scratch preview → {SCRATCH_PDF.relative_to(BASE)}")

@@ -24,6 +24,9 @@ from matplotlib.patches import Rectangle
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
 from wavescripts.constants import HG, c_group
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 FS = 250.0
 BASE = Path(__file__).parent.parent
@@ -154,8 +157,7 @@ for col_idx, (probe, r_m) in enumerate([(IN_PROBE, PROBE_R_M[IN_PROBE]),
         ax.set_ylim(y_lo, y_hi)
         ax.grid(True, alpha=0.3)
 
-        title = f"{wind}  ·  probe {probe}  (r={r_m:.3f} m, ΔT={dT_periods:.2f}T)"
-        ax.set_title(title, fontsize=10)
+        ax.set_title("", fontsize=10)
         if col_idx == 0:
             ax.set_ylabel("η (mm)")
         if row_idx == 1:
@@ -169,10 +171,7 @@ cbar = fig.colorbar(sm, ax=axes.ravel().tolist(), shrink=0.85, pad=0.02, aspect=
 cbar.set_label("T_ref (periods from wavemaker start, OUT-probe equivalent)")
 
 fig.suptitle(
-    f"Window-position sweep — visual view of overlays\n"
-    f"f = {TARGET_FREQ} Hz, A = {TARGET_AMP} V · per240 · N = {N_PERIODS}T window · "
-    f"T_ref shown every 5T from {min(T_REF_OVERLAYS)}T to {max(T_REF_OVERLAYS)}T · "
-    f"pipeline default T_ref=50T highlighted*",
+    "",
     fontsize=11,
 )
 

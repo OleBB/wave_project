@@ -62,6 +62,9 @@ os.chdir(BASE)  # waveprocessed/ paths below are repo-relative
 
 from wavescripts.improved_data_loader import load_analysis_data
 from wavescripts.constants import PROBE_RANGE_MODES, PROBE_HEIGHT_DEFAULT_MM
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 # ── Output paths ──────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "probe_height_figure.pdf"
@@ -258,7 +261,7 @@ for i, p in enumerate(PROBES):
 ax_sw.set_xticks(group_x)
 ax_sw.set_xticklabels([PROBE_LABELS[p] for p in PROBES], fontsize=8)
 ax_sw.set_ylabel("Stillwater noise (P97.5−P2.5)/2 [mm]", fontsize=9)
-ax_sw.set_title("(a) Stillwater noise floor", fontsize=10, fontweight="bold")
+ax_sw.set_title("", fontsize=10, fontweight="bold")
 ax_sw.grid(True, axis="y", alpha=0.25, lw=0.5)
 ax_sw.set_axisbelow(True)
 ax_sw.tick_params(axis="y", labelsize=7)
@@ -286,7 +289,7 @@ ax_wb.set_yscale("log")
 ax_wb.set_xticks(group_x)
 ax_wb.set_xticklabels([PROBE_LABELS[p] for p in PROBES], fontsize=8)
 ax_wb.set_ylabel("Wind-background amplitude [mm, log]", fontsize=9)
-ax_wb.set_title("(b) Wind background (no-wave, fullwind)", fontsize=10, fontweight="bold")
+ax_wb.set_title("", fontsize=10, fontweight="bold")
 ax_wb.grid(True, which="both", axis="y", alpha=0.25, lw=0.5)
 ax_wb.set_axisbelow(True)
 ax_wb.tick_params(axis="y", labelsize=7)
@@ -302,10 +305,7 @@ ax_wb.annotate("OUT probe is sheltered\nby the panel geometry",
                arrowprops=dict(arrowstyle="->", lw=0.7, color="#444"))
 
 # Suptitle with key context
-fig.suptitle(
-    "Probe height × range-mode validity — stillwater noise and wind-background amplitude per probe",
-    fontsize=11, fontweight="bold", y=0.97,
-)
+fig.suptitle("", fontsize=11, fontweight="bold", y=0.97)
 fig.text(0.5, 0.022,
          "cond3 (h100 highrange) operates 30 mm below the high-range window minimum (130 mm); "
          "noise floor is degraded and the same date is the source of the P2-malfunction runs.",

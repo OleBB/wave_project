@@ -68,6 +68,9 @@ import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 # ── Config ────────────────────────────────────────────────────────────────────
 FS              = 250.0

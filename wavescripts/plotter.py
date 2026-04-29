@@ -2428,7 +2428,7 @@ def plot_probe_noise_floor(
             xlabels = probe_cols_present
         ax.set_xticklabels(xlabels, rotation=0, ha="center", fontsize=9)
         n_grp = len(sub)
-        _default_title = "{group}" if grp != "all" else "all configs  (n={n_grp} runs)"
+        _default_title = ""
         ax.set_title(
             T("title", default=_default_title, facet_key=grp,
               extra_slots={"group": grp, "n_grp": n_grp}),
@@ -2636,14 +2636,14 @@ def plot_parallel_ratio(
                         color=color, label=label,
                     )
         ax.axhline(1.0, color="black", lw=0.8, ls="--", alpha=0.5)
-        ax.set_title(f"panel: {panel}", fontsize=10)
+        ax.set_title("", fontsize=10)
         ax.set_xlabel("$k$ (rad/m)")
         ax.grid(True, alpha=0.3)
 
     axes[0][0].set_ylabel("Parallel ratio (wall / far)")
     axes[0][0].legend(title="Wind", fontsize=8)
     _mode = "scatter" if scatter else "mean ± SD"
-    fig.suptitle(f"Lateral symmetry — parallel probe ratio  [{_mode}]", fontsize=11)
+    fig.suptitle("", fontsize=11)
 
     if show_plot:
         plt.show()
@@ -2797,13 +2797,13 @@ def plot_wave_stability(
             linestyle="--", linewidth=0.8, alpha=0.7,
             label=f"threshold {stability_threshold}",
         )
-        ax.set_title(pos, fontsize=9)
+        ax.set_title("", fontsize=9)
         ax.set_xlabel("$k$ (rad/m)")
         ax.set_ylim(0, 1.05)
 
     axes[0].set_ylabel("wave_stability")
     axes[-1].legend(title="wind", fontsize=8, loc="lower left")
-    fig.suptitle("Wavetrain stability vs frequency", fontsize=10)
+    fig.suptitle("", fontsize=10)
     # Fixed margins — content-independent so all subfigures align in LaTeX
     fig.subplots_adjust(left=0.10, right=0.97, top=0.88, bottom=0.14, wspace=0.08)
 
@@ -2944,7 +2944,7 @@ def plot_timeseries_overview(
             if df is None:
                 ax.text(0.5, 0.5, "no data", transform=ax.transAxes,
                         ha="center", va="center", fontsize=8, color="gray")
-                ax.set_title(col_title if row_i == 0 else "", fontsize=8)
+                ax.set_title("", fontsize=8)
                 continue
 
             eta_col    = f"eta_{pos}"
@@ -2981,7 +2981,7 @@ def plot_timeseries_overview(
                 ax.set_ylim(ylim)
 
             if row_i == 0:
-                ax.set_title(col_title, fontsize=8)
+                ax.set_title("", fontsize=8)
             if col_i == 0:
                 ax.set_ylabel(f"{pos}\n[mm]", fontsize=8)
             if row_i == n_probes - 1:
@@ -3231,7 +3231,7 @@ def plot_wind_snr(
                 ax.set_ylabel(
                     r"Spectral SNR  ($A_\mathrm{paddle}\,/\,A_\mathrm{wind,FFT}$)"
                 )
-            ax.set_title(pos, fontsize=9)
+            ax.set_title("", fontsize=9)
             ax.legend(fontsize=7)
             ax.grid(True, alpha=0.3)
         fig.tight_layout()
@@ -3341,7 +3341,7 @@ def plot_td_vs_fft(
             ax_sc.set_xlabel("$A_\\mathrm{td}$ [mm]")
             if ci == 0:
                 ax_sc.set_ylabel("$A_\\mathrm{FFT}$ [mm]")
-            ax_sc.set_title(pos, fontsize=9)
+            ax_sc.set_title("", fontsize=9)
             ax_sc.legend(fontsize=7)
             ax_sc.grid(True, alpha=0.3)
 
@@ -3350,7 +3350,7 @@ def plot_td_vs_fft(
             ax_rt.set_xlabel("$k$ (rad/m)")
             if ci == 0:
                 ax_rt.set_ylabel("$A_\\mathrm{FFT}\\,/\\,A_\\mathrm{td}$")
-            ax_rt.set_title(f"{pos}  ratio", fontsize=9)
+            ax_rt.set_title("", fontsize=9)
             ax_rt.legend(fontsize=7)
             ax_rt.grid(True, alpha=0.3)
 
@@ -3474,7 +3474,7 @@ def plot_fft_peak_bias_cancellation(
         ax.set_ylim(0, lim)
         ax.set_xlabel("OUT/IN  (nearest-bin, pipeline)")
         ax.set_ylabel("OUT/IN  (sub-bin parabolic)")
-        ax.set_title("(a) OUT/IN comparison")
+        ax.set_title("")
         ax.legend(fontsize=7, loc="upper left")
         ax.grid(True, alpha=0.3)
 
@@ -3493,7 +3493,7 @@ def plot_fft_peak_bias_cancellation(
         ax.axvline(0, color="k", ls="--", lw=0.7, alpha=0.6)
         ax.set_xlabel("$\\Delta(\\mathrm{OUT/IN})$ = parabolic $-$ nearest")
         ax.set_ylabel("count")
-        ax.set_title("(b) Bias-correction distribution")
+        ax.set_title("")
         ax.legend(fontsize=7, loc="upper left")
         ax.grid(True, alpha=0.3)
 
@@ -3510,7 +3510,7 @@ def plot_fft_peak_bias_cancellation(
         ax.axhline(0, color="k", ls="--", lw=0.7, alpha=0.5)
         ax.set_xlabel("Wave frequency (Hz)")
         ax.set_ylabel(r"$\Delta(A_\mathrm{Ut}/A_\mathrm{inn})$")
-        ax.set_title("(c) $\\Delta$ vs frequency")
+        ax.set_title("")
         ax.legend(fontsize=7, loc="lower left")
         ax.grid(True, alpha=0.3)
 
@@ -3529,12 +3529,11 @@ def plot_fft_peak_bias_cancellation(
         ax.axvline(0, color="k", ls="--", lw=0.5, alpha=0.5)
         ax.set_xlabel("Paddle peak offset at IN (mHz from nominal)")
         ax.set_ylabel(r"$\Delta(A_\mathrm{Ut}/A_\mathrm{inn})$")
-        ax.set_title("(d) $\\Delta$ vs IN paddle drift")
+        ax.set_title("")
         ax.legend(fontsize=7, loc="lower left")
         ax.grid(True, alpha=0.3)
 
-        fig.suptitle("FFT peak-bin bias: OUT/IN ratio is robust to bin-grid misalignment",
-                     fontsize=10.5, y=0.995)
+        fig.suptitle("", fontsize=10.5, y=0.995)
         fig.tight_layout(rect=[0, 0, 1, 0.97])
         return fig
 

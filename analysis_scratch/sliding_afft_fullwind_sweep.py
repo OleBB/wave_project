@@ -51,6 +51,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 FS                   = 250.0
@@ -284,7 +287,7 @@ for i_f, freq in enumerate(TARGET_FREQS):
         if fw_row is None:
             ax.text(0.5, 0.5, "no fullwind per240 run",
                     ha="center", va="center", transform=ax.transAxes, color="gray")
-            ax.set_title(f"{freq:.1f} Hz, {amp:.1f} V (full)", fontsize=9)
+            ax.set_title("", fontsize=9)
             continue
 
         # Fullwind sliding AFFT
@@ -398,16 +401,13 @@ for i_f, freq in enumerate(TARGET_FREQS):
             "nowind_plateau_FFT":  nw_region_afft,
         })
 
-        ax.set_title(f"{freq:.1f} Hz, {amp:.1f} V", fontsize=9)
+        ax.set_title("", fontsize=9)
         ax.set_xlabel("time (s)", fontsize=8)
         ax.set_ylabel("AFFT @ f (mm)", fontsize=8)
         ax.grid(True, alpha=0.3)
         ax.legend(fontsize=6, loc="lower right")
 
-fig.suptitle(f"Sliding AFFT at {PROBE} — fullwind per240 vs nowind reference\n"
-             f"(window={SLIDING_WINDOW_S}s, step={SLIDING_STEP_S}s, "
-             f"bin search=±{FFT_WINDOW_HZ/2*2:.2f}Hz)",
-             fontsize=10, y=0.995)
+fig.suptitle("", fontsize=10, y=0.995)
 fig.tight_layout(rect=[0, 0, 1, 0.98])
 fig.savefig(OUT_PDF, bbox_inches="tight")
 print(f"   PDF → {OUT_PDF.relative_to(BASE)}")

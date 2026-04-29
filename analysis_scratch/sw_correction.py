@@ -49,6 +49,9 @@ from scipy.optimize import brentq
 from datetime import datetime
 
 from wavescripts.improved_data_loader import load_analysis_data
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 # ── Physical constants ─────────────────────────────────────────────────────────
 G     = 9.81    # m/s²
@@ -262,12 +265,7 @@ WIND_LABELS = {"no": "No wind", "full": "Full wind"}
 MAIN_FREQS  = [f for f in freqs_unique if 0.8 <= f <= 1.9]
 
 fig = plt.figure(figsize=(18, 14))
-fig.suptitle(
-    f"Standing-wave correction: R={R_NOMINAL:.2f},  panel centroid at {X_PANEL:.1f} m,  "
-    f"Δ={DELTA:.3f} m\n"
-    f"SW_factor(f) = |1 + R·exp(2ikΔ)|   →   T_corrected = OUT/IN_obs × SW_factor",
-    fontsize=10,
-)
+fig.suptitle("", fontsize=10)
 gs = gridspec.GridSpec(3, 3, figure=fig, hspace=0.50, wspace=0.35)
 
 # ── Panel A: SW_factor vs frequency ──────────────────────────────────────────
@@ -285,7 +283,7 @@ for f_v in freqs_unique:
         ax_sw.axvline(f_v, color="gray", lw=0.3, alpha=0.4)
 ax_sw.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_sw.set_ylabel("SW_factor", fontsize=8)
-ax_sw.set_title("SW factor vs frequency\n(panel at 11.0 m)", fontsize=9)
+ax_sw.set_title("", fontsize=9)
 ax_sw.legend(fontsize=7)
 ax_sw.tick_params(labelsize=7)
 ax_sw.set_xlim(0.5, 2.0)
@@ -313,7 +311,7 @@ for wind in WINDS:
 ax_raw.axhline(1.0, color="k", lw=0.5, ls="--", alpha=0.3)
 ax_raw.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_raw.set_ylabel("OUT/IN (FFT)  [observed]", fontsize=8)
-ax_raw.set_title("Raw OUT/IN vs frequency", fontsize=9)
+ax_raw.set_title("", fontsize=9)
 ax_raw.legend(fontsize=8)
 ax_raw.set_ylim(0, 1.4)
 ax_raw.tick_params(labelsize=7)
@@ -331,7 +329,7 @@ for wind in WINDS:
 ax_cor.axhline(1.0, color="k", lw=0.5, ls="--", alpha=0.3)
 ax_cor.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_cor.set_ylabel("T_corrected  [OUT/IN × SW_factor]", fontsize=8)
-ax_cor.set_title("SW-corrected OUT/IN vs frequency", fontsize=9)
+ax_cor.set_title("", fontsize=9)
 ax_cor.legend(fontsize=8)
 ax_cor.set_ylim(0, 1.4)
 ax_cor.tick_params(labelsize=7)
@@ -363,11 +361,7 @@ tc_obs_nw  = smoothness[("no", "obs")]
 tc_corr_nw = smoothness[("no", "corr")]
 pct_nw = 100*(tc_obs_nw - tc_corr_nw)/tc_obs_nw
 verdict_nw = "SMOOTHER ✓" if tc_corr_nw < tc_obs_nw else "less smooth ✗"
-ax_nw.set_title(
-    f"No-wind: raw vs corrected\n"
-    f"curvature: {tc_obs_nw:.5f} → {tc_corr_nw:.5f}  ({pct_nw:+.1f}%)  {verdict_nw}",
-    fontsize=9,
-)
+ax_nw.set_title("", fontsize=9)
 ax_nw.legend(fontsize=8)
 ax_nw.set_ylim(0, 1.4)
 ax_nw.tick_params(labelsize=7)
@@ -393,11 +387,7 @@ tc_obs_fw  = smoothness[("full", "obs")]
 tc_corr_fw = smoothness[("full", "corr")]
 pct_fw = 100*(tc_obs_fw - tc_corr_fw)/tc_obs_fw
 verdict_fw = "SMOOTHER ✓" if tc_corr_fw < tc_obs_fw else "less smooth ✗"
-ax_fw.set_title(
-    f"Full-wind: raw vs corrected\n"
-    f"curvature Δ = {pct_fw:+.1f}%  {verdict_fw}",
-    fontsize=9,
-)
+ax_fw.set_title("", fontsize=9)
 ax_fw.legend(fontsize=8)
 ax_fw.set_ylim(0, 1.4)
 ax_fw.tick_params(labelsize=7)
@@ -417,7 +407,7 @@ ax_s1.set_yticks(range(len(R_values)))
 ax_s1.set_yticklabels([f"{r:.2f}" for r in R_values], fontsize=7)
 ax_s1.set_xlabel("Panel centroid [m]", fontsize=8)
 ax_s1.set_ylabel("R (reflection coeff)", fontsize=8)
-ax_s1.set_title("Smoothness improvement % (nowind)\ngreen = smoother after correction", fontsize=8)
+ax_s1.set_title("", fontsize=8)
 plt.colorbar(im1, ax=ax_s1, fraction=0.046, pad=0.04)
 for i in range(len(R_values)):
     for j in range(len(panel_values)):
@@ -438,7 +428,7 @@ ax_s2.set_yticks(range(len(R_values)))
 ax_s2.set_yticklabels([f"{r:.2f}" for r in R_values], fontsize=7)
 ax_s2.set_xlabel("Panel centroid [m]", fontsize=8)
 ax_s2.set_ylabel("R (reflection coeff)", fontsize=8)
-ax_s2.set_title("Smoothness improvement % (fullwind)\ngreen = smoother after correction", fontsize=8)
+ax_s2.set_title("", fontsize=8)
 plt.colorbar(im2, ax=ax_s2, fraction=0.046, pad=0.04)
 for i in range(len(R_values)):
     for j in range(len(panel_values)):
@@ -468,7 +458,7 @@ ax_we.plot(shared_freqs, wind_eff_corr, "s--", color="#8E44AD", lw=1.5,
 ax_we.axhline(0, color="k", lw=0.5, ls="--", alpha=0.4)
 ax_we.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_we.set_ylabel("Wind effect on OUT/IN", fontsize=8)
-ax_we.set_title("Wind effect (full-wind − no-wind)\nbefore and after SW correction", fontsize=9)
+ax_we.set_title("", fontsize=9)
 ax_we.legend(fontsize=8)
 ax_we.tick_params(labelsize=7)
 ax_we.set_xticks(shared_freqs)

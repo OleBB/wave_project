@@ -43,6 +43,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 FS = 250.0
 BASE = Path(__file__).parent.parent
@@ -351,8 +354,7 @@ def plot_results(synth_df, f_nominal, df_bin, N, real_df):
         ax.set_xlim(-0.6, 0.6)
         ax.set_xlabel("true-tone offset from target (bin widths)")
         ax.set_ylabel("amplitude error (%)")
-        ax.set_title(f"({chr(97 + i)}) synthetic: {scenario}  "
-                     f"(N={N}, Δf={df_bin:.3f} Hz)", fontsize=10)
+        ax.set_title("", fontsize=10)
         ax.legend(fontsize=8, ncol=2, loc="best")
         ax.grid(True, alpha=0.3)
 
@@ -369,7 +371,7 @@ def plot_results(synth_df, f_nominal, df_bin, N, real_df):
     ax.plot([lo, hi], [lo, hi], "k--", lw=0.8, alpha=0.5, label="y=x")
     ax.set_xlabel("A (ls_fit) — mm")
     ax.set_ylabel("A (other method) — mm")
-    ax.set_title(f"(d) real-data: methods vs ls_fit  (n={len(real_df)})", fontsize=10)
+    ax.set_title("", fontsize=10)
     ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
 
@@ -384,7 +386,7 @@ def plot_results(synth_df, f_nominal, df_bin, N, real_df):
     ax.axvline(0, color="k", ls="--", lw=0.8)
     ax.set_xlabel("(A_method − A_ls_fit) / A_ls_fit  (%)")
     ax.set_ylabel("count")
-    ax.set_title("(e) real-data: disagreement from ls_fit reference", fontsize=10)
+    ax.set_title("", fontsize=10)
     ax.legend(fontsize=7, loc="upper right")
     ax.grid(True, alpha=0.3)
 
@@ -402,11 +404,11 @@ def plot_results(synth_df, f_nominal, df_bin, N, real_df):
     ax.set_xlim(-0.6, 0.6)
     ax.set_xlabel("f_paddle offset from nearest bin (bin widths)")
     ax.set_ylabel("(A_method − A_ls_fit) / A_ls_fit  (%)")
-    ax.set_title("(f) real-data: bin-offset predicts nearest-bin error", fontsize=10)
+    ax.set_title("", fontsize=10)
     ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
 
-    fig.suptitle("FFT amplitude extraction — method comparison", fontsize=12, y=0.995)
+    fig.suptitle("", fontsize=12, y=0.995)
     fig.savefig(OUT_PNG, dpi=110, bbox_inches="tight")
     plt.close(fig)
     print(f"   figure → {OUT_PNG.relative_to(BASE)}")

@@ -50,6 +50,9 @@ from scipy.optimize import brentq
 from datetime import datetime
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 # ── Physical constants ────────────────────────────────────────────────────────
 G     = 9.81    # m/s²
@@ -327,12 +330,7 @@ AMP_MARKERS = {AMP_LOW_SNR: "^", AMP_PRIMARY: "o", AMP_WARN: "s"}
 AMP_ALPHA   = {AMP_LOW_SNR: 0.6,  AMP_PRIMARY: 1.0, AMP_WARN:  0.5}
 
 fig = plt.figure(figsize=(18, 14))
-fig.suptitle(
-    "Mansard-Funke reflection analysis  ·  8804/250 (upstream) + 9373/170 (IN probe)\n"
-    f"Δx = {DELTA*1000:.0f} mm  ·  ill-cond threshold |sin(kΔ)| < {ILL_COND_THRESHOLD}  "
-    f"·  {len(res)} decompositions from {len(wave)} candidate runs",
-    fontsize=10,
-)
+fig.suptitle("", fontsize=10)
 gs = gridspec.GridSpec(3, 3, figure=fig, hspace=0.50, wspace=0.35)
 
 freq_range = sorted(res["freq"].unique())
@@ -349,7 +347,7 @@ ax_cond.fill_between(f_fine, 0, ILL_COND_THRESHOLD, alpha=0.10, color="#E74C3C",
                      label="ill-conditioned zone")
 ax_cond.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_cond.set_ylabel("|sin(kΔ)|", fontsize=8)
-ax_cond.set_title("MF conditioning\n|sin(kΔx)|  (Δx = 569 mm)", fontsize=9)
+ax_cond.set_title("", fontsize=9)
 ax_cond.legend(fontsize=7)
 ax_cond.tick_params(labelsize=7)
 ax_cond.set_xlim(0.6, 2.0)
@@ -376,7 +374,7 @@ ax_R_nw.axhline(0.20, color="k", lw=0.8, ls="--", alpha=0.4, label="R=0.20 assum
 ax_R_nw.axhline(0.05, color="k", lw=0.5, ls=":", alpha=0.4, label="R=0.05 bound")
 ax_R_nw.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_R_nw.set_ylabel("R = |B|/|A|", fontsize=8)
-ax_R_nw.set_title("Reflection coefficient R\n0.2V, no-wind, by mooring", fontsize=9)
+ax_R_nw.set_title("", fontsize=9)
 ax_R_nw.legend(fontsize=6.5)
 ax_R_nw.set_ylim(0, 0.5)
 ax_R_nw.tick_params(labelsize=7)
@@ -397,8 +395,7 @@ ax_R_fw.axhline(0.20, color="k", lw=0.8, ls="--", alpha=0.4)
 ax_R_fw.axhline(0.05, color="k", lw=0.5, ls=":", alpha=0.4)
 ax_R_fw.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_R_fw.set_ylabel("R = |B|/|A|", fontsize=8)
-ax_R_fw.set_title("Reflection coefficient R\n0.2V, full-wind, by mooring\n"
-                  "⚠ wind biases IN probe phase", fontsize=9)
+ax_R_fw.set_title("", fontsize=9)
 ax_R_fw.legend(fontsize=6.5)
 ax_R_fw.set_ylim(0, 0.5)
 ax_R_fw.tick_params(labelsize=7)
@@ -420,7 +417,7 @@ for amp_v in [AMP_PRIMARY, AMP_LOW_SNR, AMP_WARN]:
 ax_amp.axhline(0.05, color="k", lw=0.5, ls=":", alpha=0.4)
 ax_amp.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_amp.set_ylabel("R = |B|/|A|", fontsize=8)
-ax_amp.set_title("above_50, nowind:\nR by amplitude (⚠ 0.3V unreliable at high f)", fontsize=9)
+ax_amp.set_title("", fontsize=9)
 ax_amp.legend(fontsize=8)
 ax_amp.set_ylim(0, 0.5)
 ax_amp.tick_params(labelsize=7)
@@ -443,7 +440,7 @@ for amp_v in [AMP_PRIMARY, AMP_LOW_SNR, AMP_WARN]:
 ax_amp2.axhline(0.05, color="k", lw=0.5, ls=":", alpha=0.4)
 ax_amp2.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_amp2.set_ylabel("R = |B|/|A|", fontsize=8)
-ax_amp2.set_title("below_90_loose230, nowind:\nR by amplitude", fontsize=9)
+ax_amp2.set_title("", fontsize=9)
 ax_amp2.legend(fontsize=8)
 ax_amp2.set_ylim(0, 0.5)
 ax_amp2.tick_params(labelsize=7)
@@ -464,7 +461,7 @@ for moor in ["above_50", "below_90_loose230"]:
 ax_wind_eff.axhline(0.05, color="k", lw=0.5, ls=":", alpha=0.4)
 ax_wind_eff.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_wind_eff.set_ylabel("R = |B|/|A|", fontsize=8)
-ax_wind_eff.set_title("R: wind effect by mooring\n(0.2V only, well-conditioned)", fontsize=9)
+ax_wind_eff.set_title("", fontsize=9)
 ax_wind_eff.legend(fontsize=7)
 ax_wind_eff.set_ylim(0, 0.5)
 ax_wind_eff.tick_params(labelsize=7)
@@ -503,8 +500,7 @@ if box_data:
 ax_box.axhline(0.05, color="k", lw=0.8, ls=":", alpha=0.5, label="R=0.05")
 ax_box.axhline(0.20, color="k", lw=0.8, ls="--", alpha=0.3, label="R=0.20 assumed")
 ax_box.set_ylabel("R = |B|/|A|", fontsize=8)
-ax_box.set_title("R distribution by mooring and wind  (0.2V, well-conditioned)",
-                 fontsize=9)
+ax_box.set_title("", fontsize=9)
 ax_box.legend(fontsize=7)
 ax_box.tick_params(labelsize=7)
 
@@ -543,7 +539,7 @@ ax_sw.axhline(0.05, color="k", lw=0.8, ls=":", alpha=0.5)
 ax_sw.axhline(0.20, color="k", lw=0.8, ls="--", alpha=0.3)
 ax_sw.set_xlabel("Frequency [Hz]", fontsize=8)
 ax_sw.set_ylabel("R = |B|/|A|  (individual runs)", fontsize=8)
-ax_sw.set_title("R scatter (0.2V, nowind)\nrun-level variability per mooring", fontsize=9)
+ax_sw.set_title("", fontsize=9)
 ax_sw.legend(fontsize=6.5)
 ax_sw.set_ylim(0, 0.6)
 ax_sw.tick_params(labelsize=7)

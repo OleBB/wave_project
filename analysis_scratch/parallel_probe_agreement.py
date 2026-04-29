@@ -59,6 +59,9 @@ import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 # ── I/O ────────────────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "parallel_probe_agreement.pdf"
@@ -152,7 +155,7 @@ for wind, grp in scope.groupby("WindCondition"):
                  alpha=0.75, label=f"{wind} wind", zorder=3)
 ax_a.set_xlabel("A(9373/170)  [mm, FFT]", fontsize=9)
 ax_a.set_ylabel("A(9373/340)  [mm, FFT]", fontsize=9)
-ax_a.set_title("(a) Parallel-probe FFT amplitudes", fontsize=10, fontweight="bold")
+ax_a.set_title("", fontsize=10, fontweight="bold")
 ax_a.set_xlim(0, lim); ax_a.set_ylim(0, lim)
 ax_a.set_aspect("equal", adjustable="box")
 ax_a.grid(True, alpha=0.3)
@@ -171,7 +174,7 @@ ax_b.axhline(THRESHOLD * 100, color="#F1C40F", lw=1.0, ls="--",
              label=f"{THRESHOLD*100:.0f}% consistency threshold")
 ax_b.set_xlabel("input amplitude [V]", fontsize=9)
 ax_b.set_ylabel("disagreement  |A₁−A₂| / mean(A)  [%]", fontsize=9)
-ax_b.set_title("(b) Disagreement vs input amplitude", fontsize=10, fontweight="bold")
+ax_b.set_title("", fontsize=10, fontweight="bold")
 ax_b.set_xticks([0.1, 0.2, 0.3])
 ax_b.grid(True, alpha=0.3)
 ax_b.legend(fontsize=7, loc="upper right", framealpha=0.9)
@@ -203,8 +206,7 @@ ax_c.set_xticks(range(len(col_labels)))
 ax_c.set_xticklabels(col_labels, fontsize=7)
 ax_c.set_yticks(range(len(freqs)))
 ax_c.set_yticklabels([f"{f:.1f} Hz" for f in freqs], fontsize=8)
-ax_c.set_title("(c) Mean disagreement per (freq, amp, wind)",
-               fontsize=10, fontweight="bold")
+ax_c.set_title("", fontsize=10, fontweight="bold")
 for i in range(len(freqs)):
     for j in range(len(col_labels)):
         v = mat[i, j]
@@ -214,11 +216,7 @@ for i in range(len(freqs)):
             ax_c.text(j, i, f"{v:.1f}{marker}", ha="center", va="center",
                       fontsize=7, color=color, fontweight="bold" if marker else "normal")
 
-fig.suptitle(
-    "Parallel probes 9373/170 and 9373/340 agree across the thesis band — "
-    "validation for using their mean as the canonical IN reference",
-    fontsize=11, fontweight="bold", y=0.95,
-)
+fig.suptitle("", fontsize=11, fontweight="bold", y=0.95)
 fig.text(0.5, 0.02,
          f"Scope: {n_total} quality-ok full-panel wave runs, 1.3–1.6 Hz, cond4 lowrange. "
          f"{n_consistent}/{n_total} ({100*n_consistent/n_total:.0f}%) consistent at "

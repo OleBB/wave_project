@@ -41,6 +41,9 @@ import matplotlib.gridspec as gridspec
 from datetime import datetime
 
 from wavescripts.improved_data_loader import load_analysis_data
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 BASE = Path(__file__).parent.parent
 OUT_PNG = Path(__file__).parent / "mooring_comparison.png"
@@ -187,11 +190,7 @@ LABELS    = {"below_90_loose230": "loose230", "below_90_loose300": "loose300"}
 WIND_LBL  = {"no": "nowind", "full": "fullwind"}
 
 fig = plt.figure(figsize=(20, 14))
-fig.suptitle(
-    "Mooring comparison: below_90_loose230 vs below_90_loose300\n"
-    "fullpanel, quality_flag==ok, OUT/IN from FFT amplitude at paddle frequency",
-    fontsize=11,
-)
+fig.suptitle("", fontsize=11)
 gs = gridspec.GridSpec(3, 4, figure=fig, hspace=0.50, wspace=0.30)
 
 # Top 2 rows: OUT/IN vs freq, split by wind (rows) and amplitude (cols)
@@ -214,7 +213,7 @@ for row_i, wind in enumerate(WINDS):
             freqs = rows_m["freq"].values
             ax.errorbar(freqs, means, yerr=stds, fmt="o-", color=color,
                         label=LABELS[mooring], capsize=4, markersize=5, lw=1.5)
-        ax.set_title(f"{WIND_LBL[wind]}  •  {amp:.1f}V", fontsize=9)
+        ax.set_title("", fontsize=9)
         ax.set_xlabel("Frequency [Hz]", fontsize=8)
         ax.set_ylabel("OUT/IN (FFT)", fontsize=8)
         ax.set_ylim(0, 1.3)
@@ -254,7 +253,7 @@ for ax, wind, title in [
     ax.axhline(0, color="k", lw=1.0, ls="-")
     ax.axhline( 0.05, color="k", lw=0.5, ls="--", alpha=0.4)
     ax.axhline(-0.05, color="k", lw=0.5, ls="--", alpha=0.4)
-    ax.set_title(title, fontsize=9)
+    ax.set_title("", fontsize=9)
     ax.set_xlabel("Frequency [Hz]", fontsize=8)
     ax.set_ylabel("Δ OUT/IN", fontsize=8)
     ax.set_xticks(FREQ_MAIN)
@@ -384,7 +383,7 @@ for _ax, _amp in zip(_axes_t, _thesis_amps):
                 zorder=3 if _wind == "no" else 2,
             )
     _ax.set_xlabel("Frequency [Hz]", fontsize=9)
-    _ax.set_title(f"{_amp:.1f} V paddle", fontsize=10)
+    _ax.set_title("", fontsize=10)
     _ax.grid(True, linestyle="--", alpha=0.4)
     _ax.set_xlim(_thesis_freq_lo - 0.02, _thesis_freq_hi + 0.02)
     _ax.set_ylim(_ymin, _ymax)
@@ -404,10 +403,7 @@ _handles = [
 ]
 _axes_t[1].legend(handles=_handles, fontsize=7.5, loc="lower left", frameon=True)
 
-_fig_t.suptitle(
-    "Mooring rubber band length — loose230 vs loose300 (full panel, below-water)",
-    fontsize=10,
-)
+_fig_t.suptitle("", fontsize=10)
 _fig_t.tight_layout(rect=[0, 0, 1, 0.95])
 _fig_t.savefig(THESIS_PDF, bbox_inches="tight")
 print(f"   thesis figure → {THESIS_PDF.relative_to(BASE)}")

@@ -95,7 +95,9 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import freq_to_k, amp_to_label, amp_to_tag
+from wavescripts.plot_utils import apply_thesis_style, freq_to_k, amp_to_label, amp_to_tag
+
+apply_thesis_style()
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
 SCRATCH_DIR         = Path(__file__).parent
@@ -470,7 +472,7 @@ for i, amp in enumerate(AMPS):
     if sub.empty:
         ax.text(0.5, 0.5, "no data", ha="center", va="center",
                 transform=ax.transAxes, color="gray")
-        ax.set_title(f"{amp_to_label(amp)}  (n=0)", fontsize=9)
+        ax.set_title("", fontsize=9)
         continue
     for wind, color in [("no", COLOR_NW), ("full", COLOR_FW)]:
         wsub = sub[sub["WindCondition"] == wind]
@@ -491,7 +493,7 @@ for i, amp in enumerate(AMPS):
     ax.set_xlabel("Analysis window  [paddle periods]", fontsize=8)
     if i == 0:
         ax.set_ylabel("OUT/IN (FFT)", fontsize=9)
-    ax.set_title(f"Window sensitivity  |  {amp_to_label(amp)}", fontsize=9)
+    ax.set_title("", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=7, loc="lower right", framealpha=0.92)
 
@@ -502,7 +504,7 @@ for i, amp in enumerate(AMPS):
     if sub.empty:
         ax.text(0.5, 0.5, "no data", ha="center", va="center",
                 transform=ax.transAxes, color="gray")
-        ax.set_title(f"{amp_to_label(amp)}  (n=0)", fontsize=9)
+        ax.set_title("", fontsize=9)
         continue
     sub = sub.sort_values("WaveFrequencyInput [Hz]")
     agg = sub.groupby("WaveFrequencyInput [Hz]").agg(
@@ -531,17 +533,11 @@ for i, amp in enumerate(AMPS):
     ax.set_xlabel(r"$k$ (rad/m)", fontsize=9)
     if i == 0:
         ax.set_ylabel("A_in  [mm]", fontsize=9)
-    ax.set_title(f"Wind correction  |  {amp_to_label(amp)}", fontsize=9)
+    ax.set_title("", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=7, loc="best", framealpha=0.92)
 
-fig.suptitle(
-    "CH04 §2.6 — Paddle-frequency IN contamination & window-size sensitivity\n"
-    "Top: OUT/IN vs analysis window length (flat = metric robust).  "
-    "Bottom: A_in raw vs A_in corrected for wind PSD at paddle bin  "
-    "(green ≈ blue ⇒ T_cross assumption holds).",
-    fontsize=10, fontweight="bold", y=1.00,
-)
+fig.suptitle("", fontsize=10, fontweight="bold", y=1.00)
 fig.subplots_adjust(left=0.07, right=0.98, top=0.86, bottom=0.08, wspace=0.08, hspace=0.32)
 
 fig.savefig(SCRATCH_PDF, bbox_inches="tight")

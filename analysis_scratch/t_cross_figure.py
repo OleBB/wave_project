@@ -57,7 +57,9 @@ import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
-from wavescripts.plot_utils import freq_to_k, add_freq_axis, amp_to_label, amp_to_tag
+from wavescripts.plot_utils import apply_thesis_style, freq_to_k, add_freq_axis, amp_to_label, amp_to_tag
+
+apply_thesis_style()
 
 # ── I/O ────────────────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "t_cross_figure.pdf"

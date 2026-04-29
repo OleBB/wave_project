@@ -39,6 +39,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from wavescripts.improved_data_loader import load_analysis_data
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 FS = 250.0
 BASE = Path(__file__).parent.parent

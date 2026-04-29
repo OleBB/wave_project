@@ -34,6 +34,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 FS                   = 250.0
 PROBE                = "9373/170"
@@ -198,9 +201,7 @@ if nwind_row is not None:
 for ax in axes[-1]:
     ax.set_xlabel("time (s)", fontsize=8)
 
-fig.suptitle(f"{FREQ:.1f} Hz / {AMP:.1f} V per240 — zoom on 9373/170 anomaly\n"
-             f"(η raw, sliding AFFT, sliding Atd; {SLIDING_WINDOW_S} s windows)",
-             fontsize=10)
+fig.suptitle("", fontsize=10)
 fig.tight_layout()
 fig.savefig(OUT_PNG, dpi=110, bbox_inches="tight")
 plt.close(fig)

@@ -35,6 +35,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()
 
 FS            = 250.0
 FFT_WINDOW_HZ = 0.10
