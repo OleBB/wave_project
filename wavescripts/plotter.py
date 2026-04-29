@@ -1539,6 +1539,8 @@ def plot_reconstructed(
     color_rest = "#00da9d" #cyan ish
     color_full = "gray"
 
+    apply_thesis_style() #todo check correct placement of this insert
+
     n_subplots = len(probes) if facet_by == "probe" else 1
     if n_subplots == 0:
         print("plot_reconstructed: no probes selected, nothing to plot")
@@ -1607,6 +1609,7 @@ def plot_reconstructed(
             fft_swell[mirror_idx] = fft_ord[mirror_idx]
             signal_swell = np.real(np.fft.ifft(fft_swell))
             signal_wind = signal_full - signal_swell
+            amplituden = np.round(max(signal_swell),3)
 
             lp = "" if facet_by == "probe" else f"P{probe_num} "
             if show_full:
@@ -1623,7 +1626,7 @@ def plot_reconstructed(
                 time_axis,
                 signal_swell,
                 lw=linewidth * 2.5,
-                label=f"{lp}bølge ({actual_freq:.4f}Hz)",
+                label=f"{lp}bølge ({actual_freq:.4f}Hz) amplitude: {amplituden} ", #todo, add amplitude here.
                 linestyle="-",
                 color=color_wave,
                 alpha=0.95,
@@ -1637,7 +1640,7 @@ def plot_reconstructed(
                 linestyle="-",
                 color=color_rest,
                 alpha=0.90,
-                zorder=2,
+                zorder=3,
             )
 
         ax_s.set_title(title, fontsize=fontsize + 2, fontweight="bold", pad=15)

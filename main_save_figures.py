@@ -581,7 +581,8 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_damping_ka_A1":              "",
     "ch05_damping_ka_A2":              "",
     "ch05_damping_ka_A3":              "",
-    "ch05_reconstructed":              "",
+    "ch05_reconstructed":              "", #todo, later, move these both to ch04
+    "ch05_b_reconstructed":              "",
     "ch05_damping_all_data_scatter":   "",
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
