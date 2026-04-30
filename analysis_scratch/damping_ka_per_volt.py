@@ -41,6 +41,7 @@ from matplotlib.ticker import MultipleLocator
 from wavescripts.improved_data_loader import load_analysis_data
 from wavescripts.plot_utils import (apply_thesis_style, apply_horizontal_ylabel,
                                     WIND_COLOR_MAP, amp_to_label, amp_to_tag)
+from wavescripts.plotter import _freq_marker
 import wavescripts.plot_utils as pu
 
 
@@ -62,12 +63,27 @@ RATIO_COL = "OUT/IN (FFT)"
 # FIGURE_CAPTIONS_SHORT). pu.write_figure_stub looks them up by figure_name
 # via output/.figure_captions.json. Nothing to edit here.
 
-# V11 magenta palette — chosen in damping_ka_exploration (user-approved).
+# Wind colour palette: per240 uses the canonical thesis WIND_COLOR_MAP
+# (blue / red, identical to ch05_damping_freq); per40 uses lighter tints
+# of the same hues so the wind→colour convention reads consistently across
+# all CH05 figures and the per-tag distinction is a brightness step rather
+# than a hue jump.
+import matplotlib.colors as _mcolors
+
+
+def _lighten(c: str, mix: float = 0.55) -> tuple:
+    """Blend colour ``c`` with white. mix=0 → unchanged, mix=1 → white."""
+    r, g, b = _mcolors.to_rgb(c)
+    return (r + (1.0 - r) * mix,
+            g + (1.0 - g) * mix,
+            b + (1.0 - b) * mix)
+
+
 PER_WIND_COLOR = {
-    ("per240", "no"):   WIND_COLOR_MAP.get("no",   "#1f77b4"),  # canonical blue
-    ("per240", "full"): WIND_COLOR_MAP.get("full", "#d62728"),  # canonical red
-    ("per40",  "no"):   "#00D4BC",                              # turquoise
-    ("per40",  "full"): "#D946EF",                              # magenta (fuchsia)
+    ("per240", "no"):   WIND_COLOR_MAP["no"],            # canonical blue
+    ("per240", "full"): WIND_COLOR_MAP["full"],          # canonical red
+    ("per40",  "no"):   _lighten(WIND_COLOR_MAP["no"]),   # light blue
+    ("per40",  "full"): _lighten(WIND_COLOR_MAP["full"]), # light red / pink
 }
 
 WIND_LABEL = {"no": "uten vind", "full": "med vind"}
@@ -131,21 +147,28 @@ XLIM = (max(0.0, m[KA_COL].min()    - _pad_x), m[KA_COL].max()    + _pad_x)
 YLIM = (max(0.0, m[RATIO_COL].min() - _pad_y), m[RATIO_COL].max() + _pad_y)
 
 
-# Marker shape encodes amplitude tier (CH05 visual convention,
-# feedback_ch05_visual_conventions.md):  ○ A1   □ A2   △ A3.
-AMP_MARKER = {0.10: "o", 0.20: "s", 0.30: "^"}
+# Per-(amplitude, frequency) marker encoding via plotter._freq_marker:
+#   A1 (0.10 V): circle family — full / 3/4 / right-half / upper-quarter
+#   A2 (0.20 V): tall rectangle rotated 0° / 45° / 90° / 135°
+#   A3 (0.30 V): triangle pointing up / left / down / right
+# The four orientations within each amp family map to f = 1.3 / 1.4 / 1.5 / 1.6 Hz
+# (sorted ascending). This gives 12 visually-distinct markers for the
+# (amp × freq) combinations on top of the per-tag × wind colour encoding.
+THESIS_FREQS = [1.3, 1.4, 1.5, 1.6]
+FREQ_IDX = {f: i for i, f in enumerate(THESIS_FREQS)}
 
 
 def _make_figure(sub: pd.DataFrame,
                  volt: "float | None" = None) -> plt.Figure:
     """One scatter axis with shared style across per-volt and combined views.
 
-    volt=None        → combined (all 3 amps overlaid, marker shape encodes amp)
-    volt=<float>     → single-amplitude view (single marker shape, circles)
+    volt=None        → combined (all 3 amps overlaid)
+    volt=<float>     → single-amplitude view (single shape family)
 
-    Colour always encodes (per_tag × wind) per PER_WIND_COLOR; ticks, grid,
-    xlim/ylim, and legend layout are identical between modes so the four
-    figures stack visually for direct reading.
+    Marker family encodes amplitude (A1=circle, A2=rectangle, A3=triangle);
+    orientation/fill within each family encodes frequency (1.3 → 1.6 Hz).
+    Colour always encodes (per_tag × wind) per PER_WIND_COLOR. Ticks, grid,
+    xlim/ylim, and legend layout are identical between modes.
     """
     fig, ax = plt.subplots(figsize=(8, 5.5))
 
@@ -153,20 +176,21 @@ def _make_figure(sub: pd.DataFrame,
     amp_iter = ALL_VOLTS if combined else [volt]
 
     for amp_val in amp_iter:
-        marker = AMP_MARKER.get(round(float(amp_val), 2), "o") if combined else "o"
         sub_amp = sub[np.isclose(sub["WaveAmplitudeInput [Volt]"], amp_val)]
         for per_tag in ("per240", "per40"):
             for wind in ALL_WINDS:
-                sel = sub_amp[(sub_amp["per_tag"] == per_tag) &
-                              (sub_amp["WindCondition"] == wind)]
-                if sel.empty:
-                    continue
-                ax.scatter(sel[KA_COL], sel[RATIO_COL],
-                           marker=marker,
-                           color=PER_WIND_COLOR[(per_tag, wind)],
-                           s=50, alpha=0.85,
-                           edgecolors="black", linewidths=0.35,
-                           zorder=3)
+                for freq, fi in FREQ_IDX.items():
+                    sel = sub_amp[(sub_amp["per_tag"] == per_tag) &
+                                  (sub_amp["WindCondition"] == wind) &
+                                  np.isclose(sub_amp["WaveFrequencyInput [Hz]"], freq)]
+                    if sel.empty:
+                        continue
+                    ax.scatter(sel[KA_COL], sel[RATIO_COL],
+                               marker=_freq_marker(amp_val, fi),
+                               color=PER_WIND_COLOR[(per_tag, wind)],
+                               s=55, alpha=0.85,
+                               edgecolors="black", linewidths=0.35,
+                               zorder=3)
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.7, alpha=0.55)
     ax.set_xlim(XLIM); ax.set_ylim(YLIM)
@@ -178,7 +202,7 @@ def _make_figure(sub: pd.DataFrame,
     ax.grid(True, which="major", alpha=0.30)
     ax.grid(True, which="minor", alpha=0.10)
 
-    # Kjøringstype × vind legend — same in both modes (colour-coded).
+    # Kjøringstype × vind legend — colour-coded, same in both modes.
     wind_handles = [
         mlines.Line2D([], [], color=PER_WIND_COLOR[("per240", "no")],
                       marker="o", ls="None", ms=6, mec="black", mew=0.3,
@@ -196,14 +220,34 @@ def _make_figure(sub: pd.DataFrame,
     leg_w = ax.legend(handles=wind_handles, title="Kjøringstype · vind",
                       title_fontsize=8, fontsize=8,
                       loc="lower left", framealpha=0.92)
+    ax.add_artist(leg_w)
 
-    # Amplitude legend — only in the combined view (per-volt has just one shape).
+    # Frequency legend — shows the orientation/fill cycle within each amp
+    # family. In per-volt mode this uses the single relevant amp family
+    # (so the markers in the legend match the data exactly); in combined
+    # mode it uses A2 (rectangles, the visually clearest rotation cycle)
+    # as a representative sample — the reader generalises shape→amp from
+    # the Amplitude legend on the right.
+    freq_legend_amp = volt if not combined else 0.20
+    freq_handles = [
+        mlines.Line2D([], [], color="gray",
+                      marker=_freq_marker(freq_legend_amp, fi),
+                      ls="None", ms=7, mec="black", mew=0.35,
+                      label=f"{f:.1f} Hz")
+        for f, fi in FREQ_IDX.items()
+    ]
+    leg_f = ax.legend(handles=freq_handles, title="Frekvens",
+                      title_fontsize=8, fontsize=8,
+                      loc="upper left", framealpha=0.92)
+
+    # Amplitude legend — only in combined mode. Shows one marker per amp
+    # family (using f=1.3 Hz orientation = "full" / 0° / up).
     if combined:
-        ax.add_artist(leg_w)
+        ax.add_artist(leg_f)
         amp_handles = [
             mlines.Line2D([], [], color="gray",
-                          marker=AMP_MARKER[v], ls="None", ms=7,
-                          mec="black", mew=0.3,
+                          marker=_freq_marker(v, 0),
+                          ls="None", ms=7, mec="black", mew=0.35,
                           label=amp_to_label(v))
             for v in (0.10, 0.20, 0.30)
         ]

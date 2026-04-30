@@ -282,22 +282,27 @@ def draw_anchored_text(ax: plt.Axes, txt: str = "Figuren",
 
 def apply_horizontal_ylabel(ax, label: str, *,
                             fontsize: Optional[int] = None,
-                            y_offset: float = 1.02) -> None:
+                            y_offset_pad: float = 0.012) -> None:
     """
     Place ``label`` horizontally above the leftmost edge of ``ax``'s y-tick
     labels — matches the ch04_plateau_overview / ch05_damping_all_data_scatter
     convention. Drops the rotated side label so the plot uses the full
     horizontal width.
 
-    Call this AFTER subplots_adjust / tight_layout, BEFORE savefig — it draws
-    the canvas once to read the current tick-label positions.
+    Implementation note: uses ``fig.text`` (figure-fraction coords) rather
+    than ``set_label_coords`` because ``bbox_inches='tight'`` reliably tracks
+    fig.text artists, whereas axis labels positioned outside the axes patch
+    via set_label_coords can be cropped by tight-bbox detection.
+
+    Call this AFTER subplots_adjust / tight_layout, BEFORE savefig — it
+    draws the canvas once to read the current tick-label positions.
 
     For multi-pane figures with shared y-axis, call only on the topmost pane.
+
+    ``y_offset_pad`` is added (in figure-fraction) above the axes top to
+    place the label.
     """
-    kwargs = dict(rotation=0, ha="left", va="bottom")
-    if fontsize is not None:
-        kwargs["fontsize"] = fontsize
-    ax.set_ylabel(label, **kwargs)
+    ax.set_ylabel("")   # drop the default rotated label
     fig = ax.figure
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
@@ -306,8 +311,13 @@ def apply_horizontal_ylabel(ax, label: str, *,
     if not ticks:
         return
     left_disp = min(t.get_window_extent(renderer=renderer).x0 for t in ticks)
-    x_axes = ax.transAxes.inverted().transform((left_disp, 0))[0]
-    ax.yaxis.set_label_coords(x_axes, y_offset)
+    inv = fig.transFigure.inverted()
+    x_fig, _ = inv.transform((left_disp, 0))
+    y_fig = ax.get_position().y1 + y_offset_pad
+    text_kwargs = dict(ha="left", va="bottom")
+    if fontsize is not None:
+        text_kwargs["fontsize"] = fontsize
+    fig.text(x_fig, y_fig, label, **text_kwargs)
 
 
 def apply_thesis_style(usetex: bool = False) -> None:
