@@ -788,6 +788,3 @@ At 580 mm depth, the regime depends on frequency. Higher frequencies (shorter λ
 
 Past mistake this rule exists to prevent (2026-04-22): a session memo claimed "H&G window kills the peak-bin bias by construction". A reviewer pointed out that the pre-H&G SNARVEI pipeline also produced integer-cycle windows (via zero-upcrossing snap), so both eras have coherent sampling. The bias was theoretical in both cases, and the memo's framing overstated what the data showed. Lesson: if the observation is "4 methods agree to 0.04 %", write that — not "the H&G window solves the problem".
 
-
-
-# TODO 20. april: - need a variant of a windprofile plot which is perfectly square. Im trying to copy the profile in VOLLESTAD: '/Users/ole/Kodevik/wave_litterature_backup/Vollestad and Jensen - 2021 - Modification of Airflow Structure Due to Wave Breaking on a Submerged Topography.pdf'

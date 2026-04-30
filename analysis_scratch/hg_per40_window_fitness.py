@@ -18,8 +18,9 @@ end-snap in this prototype — kept simple).
 
 Visual purpose: confirm the window sits inside the wavetrain at every
 thesis frequency for both per40 (paddle stops at 40/f s) and per240
-(plenty of paddle-driven signal). x-axis matched at 0–60 s for all
-rows so the four cells stack on the same time scale.
+(plenty of paddle-driven signal). x-axis matched at 0–55 s and y-axis
+shared across all 8 panes so the cells stack on the same time + amplitude
+scale.
 
 Outputs (4 thesis figures + scratch mirrors):
     output/FIGURES/ch04_hg_per40_window_fitness_f13.{pdf,pgf}
@@ -53,7 +54,7 @@ import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import apply_thesis_style, WIND_COLOR_MAP
+from wavescripts.plot_utils import apply_thesis_style, WIND_COLOR_MAP, amp_to_label
 from wavescripts.constants import c_group, HG
 import wavescripts.plot_utils as pu
 
@@ -80,7 +81,7 @@ TANK_DEPTH_M     = HG.TANK_DEPTH_M
 
 # Matched x-axis for ALL rows (per40 and per240) so the reader compares them
 # on the same time scale.
-X_MAX_S = 60.0
+X_MAX_S = 55.0
 
 # Canon — march-2026 cond4 lowrange
 PROCESSED_DIRS = [
@@ -212,7 +213,7 @@ def build_figure_for(target_freq: float):
     print(f"   PROPOSED  IN  (theoretical): [{th_in_s:5.2f}, {th_in_e:5.2f}] s")
     print(f"   PROPOSED  OUT (theoretical): [{th_out_s:5.2f}, {th_out_e:5.2f}] s")
 
-    fig, axes = plt.subplots(4, 2, figsize=(11, 10), sharex=True)
+    fig, axes = plt.subplots(4, 2, figsize=(11, 10), sharex=True, sharey=True)
 
     row_order = [
         ("per40",  "no"),
@@ -281,7 +282,11 @@ def build_figure_for(target_freq: float):
                     bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="#bbb",
                               alpha=0.85, lw=0.4))
 
-    fig.suptitle("", fontsize=11)
+    fig.suptitle(
+        f"$f$ = {target_freq:.1f} Hz · {amp_to_label(TARGET_AMP)}"
+        " (identical paddle drive in all 8 panes)",
+        fontsize=11, y=0.995,
+    )
     fig.tight_layout(rect=[0, 0, 1, 0.97])
 
     f_tag = f"f{int(round(target_freq * 10))}"
@@ -290,7 +295,7 @@ def build_figure_for(target_freq: float):
     scratch_pdf = SCRATCH_DIR / f"hg_per40_window_fitness_{f_tag}.pdf"
     scratch_png = SCRATCH_DIR / f"hg_per40_window_fitness_{f_tag}.png"
     thesis_pdf  = THESIS_FIGS / f"{figure_name}.pdf"
-    thesis_pgf  = THESIS_FIGS / f"{figure_name}.pgf"
+    # thesis_pgf  = THESIS_FIGS / f"{figure_name}.pgf"
 
     fig.savefig(scratch_pdf, bbox_inches="tight")
     fig.savefig(scratch_png, dpi=130, bbox_inches="tight")
