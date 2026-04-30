@@ -2155,41 +2155,19 @@ IN-side ka and OUT-side ka.
 
 Requires: wavenumber column in combined_meta (computed in processor2nd).
 """
-# IN ka (FFT) is fully populated (108/108 wave runs, verified 2026-04-17).
-# plot_damping_ka takes raw meta_df, no grouper needed — each run is one scatter point.
-_pv_damping_ka = {
-    "filters": {
-        "PanelCondition": "full",
-        # Thesis scope: 1.3–1.6 Hz (see _pv_damping_freq).
-        "WaveFrequencyInput [Hz]":   (1.3, 1.6),
-        "min_periods": 10,
-    },
-    "plotting": {
-        "show_plot": False,
-        "save_plot": True,
-        "draft": True,
-        "figure_name": "ch05_damping_ka",
-        "force_stub": True,
-    },
-}
-
-_ka_meta = apply_experimental_filters(meta_results, _pv_damping_ka)
-from wavescripts.plotter import plot_damping_ka
-plot_damping_ka(_ka_meta, _pv_damping_ka, chapter="05")
-
-# Per-voltage standalone variants — three independent figures (one per paddle
-# voltage 0.10 / 0.20 / 0.30 V), each with its own TEXFIGU stub so the thesis
-# caption is fully hand-authored per panel (\caption{} body left blank; a
-# suggested draft is parked in the stub's IMMUTABLE extra_params for reference).
-# Also combines per240 and per40 runs: per240 uses the canonical thesis blue/red
-# (WIND_COLOR_MAP), per40 uses turquoise (#00D4BC, nowind) + magenta (#D946EF,
-# fullwind) for visual separation without breaking the wind-colour convention.
-# Delegated build — see analysis_scratch/damping_ka_per_volt.py for details.
+# Per-voltage figures (A1/A2/A3) AND the combined all-amplitudes figure
+# (ch05_damping_ka) are all produced by analysis_scratch/damping_ka_per_volt.py.
+# All four share the same axes/ticks/grid/colour scheme; the combined view
+# uses marker shape (○ A1, □ A2, △ A3) to encode amplitude on top of the
+# per-tag × wind colour encoding (blue/red for per240, turquoise/magenta
+# for per40 — feedback_wind_color_convention.md).
 _run_delegated_if_missing(
     "analysis_scratch/damping_ka_per_volt.py",
-    [Path("output/TEXFIGU/ch05_damping_ka_A1.tex"),
+    [Path("output/TEXFIGU/ch05_damping_ka.tex"),
+     Path("output/TEXFIGU/ch05_damping_ka_A1.tex"),
      Path("output/TEXFIGU/ch05_damping_ka_A2.tex"),
      Path("output/TEXFIGU/ch05_damping_ka_A3.tex"),
+     Path("output/FIGURES/ch05_damping_ka.pdf"),
      *(Path(f"output/FIGURES/ch05_damping_ka_{t}.pdf") for t in ("A1", "A2", "A3"))],
     label="ch05_damping_ka_per_volt",
 )

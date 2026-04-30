@@ -280,6 +280,36 @@ def draw_anchored_text(ax: plt.Axes, txt: str = "Figuren",
     ax.add_artist(at)
 
 
+def apply_horizontal_ylabel(ax, label: str, *,
+                            fontsize: Optional[int] = None,
+                            y_offset: float = 1.02) -> None:
+    """
+    Place ``label`` horizontally above the leftmost edge of ``ax``'s y-tick
+    labels — matches the ch04_plateau_overview / ch05_damping_all_data_scatter
+    convention. Drops the rotated side label so the plot uses the full
+    horizontal width.
+
+    Call this AFTER subplots_adjust / tight_layout, BEFORE savefig — it draws
+    the canvas once to read the current tick-label positions.
+
+    For multi-pane figures with shared y-axis, call only on the topmost pane.
+    """
+    kwargs = dict(rotation=0, ha="left", va="bottom")
+    if fontsize is not None:
+        kwargs["fontsize"] = fontsize
+    ax.set_ylabel(label, **kwargs)
+    fig = ax.figure
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    ticks = [t for t in ax.yaxis.get_ticklabels()
+             if t.get_visible() and t.get_text().strip()]
+    if not ticks:
+        return
+    left_disp = min(t.get_window_extent(renderer=renderer).x0 for t in ticks)
+    x_axes = ax.transAxes.inverted().transform((left_disp, 0))[0]
+    ax.yaxis.set_label_coords(x_axes, y_offset)
+
+
 def apply_thesis_style(usetex: bool = False) -> None:
     """
     Apply thesis-quality matplotlib rcParams.
@@ -730,15 +760,19 @@ def _save_figure(fig: plt.Figure, filename: str,
     """
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     saved = []
+    # Tight save — apply_thesis_style sets savefig.bbox=tight; pad_inches=0.02
+    # trims the default 0.1" breathing room so the saved PDF runs flush with
+    # the content (matches the all_data_damping_scatter / inspirational
+    # convention adopted 2026-04-30).
     if save_pdf:
         p = FIGURES_DIR / f"{filename}.pdf"
-        fig.savefig(p)
+        fig.savefig(p, pad_inches=0.02)
         saved.append(p)
         print(f"  Saved: {p}")
     if save_pgf and SAVE_PGF:
         p = FIGURES_DIR / f"{filename}.pgf"
         try:
-            fig.savefig(p)
+            fig.savefig(p, pad_inches=0.02)
             saved.append(p)
             print(f"  Saved: {p}")
         except Exception as exc:
@@ -948,7 +982,8 @@ def write_figure_stub(meta: dict, plot_type: str,
                       subfig_captions: Optional[list[str]] = None,
                       force: bool = True,
                       width: str = "\\linewidth",
-                      subfig_layout: str = "row") -> None:
+                      subfig_layout: str = "row",
+                      thispagestyle: Optional[str] = None) -> None:
     """
     Write a LaTeX figure stub in TEXFIGU_DIR.
 
@@ -1029,12 +1064,19 @@ def write_figure_stub(meta: dict, plot_type: str,
     _figure_name = meta.get("figure_name") or stub_filename
     _label = f"fig:{_figure_name}"
 
+    # Optional page-style override — e.g. ``thispagestyle="empty"`` drops
+    # the page number on the page where the float lands. Issued inside
+    # the figure environment so it applies to whichever page LaTeX picks.
+    _pagestyle_line = (f"  \\thispagestyle{{{thispagestyle}}}\n"
+                       if thispagestyle else "")
+
     subfig_files = subfig_filenames or [stub_filename]
     if len(subfig_files) == 1:
         body = (
             "\\begin{figure}[htbp]\n"
             "  \\centering\n"
-            f"  \\includegraphics[width={width}]{{FIGURES/{subfig_files[0]}.pdf}}\n"
+            + _pagestyle_line
+            + f"  \\includegraphics[width={width}]{{FIGURES/{subfig_files[0]}.pdf}}\n"
             + _caption_block
             + f"  \\label{{{_label}}}\n"
             "\\end{figure}\n"
@@ -1070,6 +1112,7 @@ def write_figure_stub(meta: dict, plot_type: str,
         body = (
             f"\\begin{{figure}}[{placement}]\n"
             "  \\centering\n"
+            + _pagestyle_line
             + sub_sep.join(subfigs) + "\n"
             + _caption_block
             + f"  \\label{{{_label}}}\n"

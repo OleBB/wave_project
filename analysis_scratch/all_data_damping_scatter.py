@@ -355,9 +355,9 @@ SCRATCH_PDF.parent.mkdir(parents=True, exist_ok=True)
 OUT_PDF.parent.mkdir(parents=True, exist_ok=True)
 OUT_STUB.parent.mkdir(parents=True, exist_ok=True)
 
-fig.savefig(SCRATCH_PDF, bbox_inches="tight")
+fig.savefig(SCRATCH_PDF, bbox_inches="tight", pad_inches=0.02)
 print(f"   Saved → {SCRATCH_PDF.relative_to(BASE)}")
-fig.savefig(OUT_PDF, bbox_inches="tight")
+fig.savefig(OUT_PDF, bbox_inches="tight", pad_inches=0.02)
 print(f"   Saved → {OUT_PDF.relative_to(BASE)}")
 
 # ── 6. TEXFIGU stub ───────────────────────────────────────────────────────────
@@ -408,7 +408,8 @@ _meta_stub = pu.build_fig_meta(
     },
 )
 pu.write_figure_stub(_meta_stub, plot_type="damping_all_data_scatter",
-                     subfig_filenames=[THESIS_NAME])
+                     subfig_filenames=[THESIS_NAME],
+                     thispagestyle="empty")
 print(f"   Stub → {OUT_STUB.relative_to(BASE)}")
 
 print("\nDone.")

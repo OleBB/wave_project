@@ -67,6 +67,7 @@ from wavescripts.plot_utils import (
     amp_to_label,
     amp_to_tag,
     wind_to_label,
+    apply_horizontal_ylabel,
     apply_legend,
     apply_thesis_style,
     build_fig_meta,
@@ -278,10 +279,11 @@ def _make_damping_freq_fig(
     ax.xaxis.set_label_coords(1.02, -0.025)
     secax.set_xlabel("$f$", fontsize=11)
     secax.xaxis.set_label_coords(1.02, 1.025)
-    # Y-axis: full Norwegian word (rotated, default position) — matches the
-    # surrounding figures (ch05_damping_scatter, ch05_damping_all_data_scatter).
-    ax.set_ylabel("Transmisjonskoeffisient", fontsize=9)
-    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
+    # Y-axis: horizontal $\mathcal{T}$ above leftmost tick — matches the
+    # all_data_damping_scatter / inspirational convention. Frees the left
+    # margin for the data band.
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.85, bottom=0.13)
+    apply_horizontal_ylabel(ax, r"$\mathcal{T}$", fontsize=12)
     return fig
 
 
@@ -426,7 +428,6 @@ def _make_damping_scatter_fig(
         )
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
-    ax.set_ylabel("Transmisjonskoeffisient", fontsize=9)
     # Same y-range as plot_damping_freq's three subfigs — apples-to-apples.
     ax.set_ylim(0.33, 0.93)
     ax.grid(True, alpha=0.3)
@@ -471,7 +472,8 @@ def _make_damping_scatter_fig(
               loc="upper right", bbox_to_anchor=(0.99, 0.83),
               fontsize=7, title_fontsize=7, framealpha=0.92)
 
-    fig.subplots_adjust(left=0.14, right=0.97, top=0.84, bottom=0.13)
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.80, bottom=0.13)
+    apply_horizontal_ylabel(ax, r"$\mathcal{T}$", fontsize=12)
     return fig
 
 
@@ -715,7 +717,6 @@ def _make_damping_ka_fig(
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     ax.set_xlabel("$ka$ (IN probe, measured)", fontsize=9)
-    ax.set_ylabel(r"$A_\mathrm{Ut}/A_\mathrm{inn}$", fontsize=9)
     ax.grid(True, alpha=0.3)
     if xlim is not None:
         ax.set_xlim(xlim)
@@ -761,7 +762,8 @@ def _make_damping_ka_fig(
         ax.legend(handles=wind_handles, fontsize=7,
                   title="vind", title_fontsize=7)
 
-    fig.subplots_adjust(left=0.14, right=0.97, top=0.90, bottom=0.13)
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.85, bottom=0.13)
+    apply_horizontal_ylabel(ax, r"$\mathcal{T}$", fontsize=12)
     return fig
 
 
