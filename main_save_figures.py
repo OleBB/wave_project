@@ -216,6 +216,9 @@ CHAPTER 04 — METHODOLOGY
   §4m   ch04_per40_and_per240_HG_shifted [DELEG] ~  Per40+per240 pooling under probe-shifted H&G window (the answer: yes)
   §4n   ch04_hg_per40_window_fitness_f{13,14,15,16}  [DELEG] ~  Proposed H&G window (N=15 + UC-snap) overlaid on η(t), per40+per240, all 4 thesis freqs
         ch04_window_intervals            [DELEG] ~     └─ companion table: IN/OUT window intervals + samples-per-period at each thesis freq
+  §4o   ch04_window_choice               [DELEG] ~  Option B post-squeeze (N_off=10, N(f)={10,13,13,13}): window vs nowind eyeball + fullwind empirical plateau
+        ch04_window_choice_nowind        [DELEG] ~     └─ companion table (nowind, eyeball plateau)
+        ch04_window_choice_fullwind      [DELEG] ~     └─ companion table (fullwind, empirical plateau ±2%)
   §5    ch04_inspirational_nowind        [DELEG] ~  Reading a time series — nowind canon (macro + 5-period zoom)
         ch04_inspirational_fullwind      [DELEG] ~     └─ same layout, fullwind canon (wind-wave clutter visible at IN)
   §5b   ch04_timeseries_overview         [DFS-canon] ~  Full time-series with stable-window band  (below MEDIUM gate)
@@ -474,6 +477,9 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_hg_per40_window_fitness_f15": "",
     "ch04_hg_per40_window_fitness_f16": "",
     "ch04_window_intervals":           "",
+    "ch04_window_choice":              "",
+    "ch04_window_choice_nowind":       "",
+    "ch04_window_choice_fullwind":     "",
 
     # § 5 — Reading a time series (inspirational opener)
     "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind.",
@@ -565,6 +571,9 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_hg_per40_window_fitness_f15": "",
     "ch04_hg_per40_window_fitness_f16": "",
     "ch04_window_intervals":           "",
+    "ch04_window_choice":              "",
+    "ch04_window_choice_nowind":       "",
+    "ch04_window_choice_fullwind":     "",
     "ch04_inspirational_nowind":       "",
     "ch04_inspirational_fullwind":     "",
     "ch04_first_arrival":              "",
@@ -1662,6 +1671,66 @@ _run_delegated_if_missing(
     "analysis_scratch/window_intervals_table.py",
     [Path("output/TABLES/ch04_window_intervals.tex")],
     label="ch04_window_intervals",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/window_choice_figure.py
+"""
+── CH04 § 4o — Window-choice visual: Option B vs nowind eyeball + fullwind empirical ──
+Geometry-only figure (no per-run data) showing the post-squeeze Option B
+window per (f, probe) overlaid against:
+
+  • upper grey-hash band  → nowind plateau bounds eyeballed in
+                            RampDetectionBrowser (snarvei_eyeballing.md, 0.2 V)
+  • lower red-hash band   → fullwind empirical plateau (per40 sliding A_FFT,
+                            ±2 % relaxed criterion, n=1 per cell) from
+                            per40_plateau_end_aggregated.csv
+
+Option B parameters: t_start = r/c_g(f, h) + 10/f, length N(f)/f, with
+N(f) = {1.3:10, 1.4:13, 1.5:13, 1.6:13}. Markers t_arr (▼ blue),
+t_paras (▽ red), per40 paddle stop (✕ purple) for orientation.
+
+Visual claim: the Option B window sits inside both nowind and fullwind
+plateau bounds at every (f, probe) cell, except (1.3 Hz IN fullwind) where
+the empirical plateau ends ~2 s before the window does — that cell is
+also bound by the parasitic 2f arrival and is the binding case.
+
+Outputs:
+    output/FIGURES/ch04_window_choice.pdf
+    output/TEXFIGU/ch04_window_choice.tex
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/window_choice_figure.py",
+    [Path("output/FIGURES/ch04_window_choice.pdf"),
+     Path("output/TEXFIGU/ch04_window_choice.tex")],
+    label="ch04_window_choice",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/window_choice_table.py
+"""
+── CH04 § 4o (companion tables) — Option B window choice per (f, probe) ─────
+Two LaTeX tables in parallel column structure (one per wind condition).
+Columns: f, probe, t_arr, [t_start, t_end], Δ, t_2f, plateau, N.
+
+Plateau column source differs by wind:
+  • nowind   → eyeball plateau (snarvei_eyeballing.md, RampDetectionBrowser, 0.2 V)
+  • fullwind → empirical plateau (per40 sliding A_FFT, ±2 % relaxed) from
+                per40_plateau_end_aggregated.csv
+
+Numbers come from the same Option B formula as the figure above.
+
+Outputs:
+    output/TABLES/ch04_window_choice_nowind.tex
+    output/TABLES/ch04_window_choice_fullwind.tex
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/window_choice_table.py",
+    [Path("output/TABLES/ch04_window_choice_nowind.tex"),
+     Path("output/TABLES/ch04_window_choice_fullwind.tex")],
+    label="ch04_window_choice_table",
 )
 
 # %%

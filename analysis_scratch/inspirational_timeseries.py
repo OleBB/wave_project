@@ -190,7 +190,7 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
         ax_full.axhline(0, color="#888", lw=0.5, alpha=0.6)
         ax_full.set_xlim(0, x_cutoff)
         ax_full.set_ylim(ylim)
-        ax_full.set_ylabel(r"$\eta$ (mm)")
+        # ax_full.set_ylabel(r"$\eta$ (mm)")
         ax_full.text(
             0.005, 0.92, label,
             transform=ax_full.transAxes, va="top", ha="left",

@@ -278,11 +278,11 @@ def build_figure_for(target_freq: float):
             if row_i == 3:
                 ax.set_xlabel("time from wavemaker start [s]", fontsize=8)
 
-    fig.suptitle(
-        f"$f$ = {target_freq:.1f} Hz · {amp_to_label(TARGET_AMP)}"
-        " (identical paddle drive in all 8 panes)",
-        fontsize=10, y=0.995,
-    )
+    # fig.suptitle( #wasting space
+    #     f"$f$ = {target_freq:.1f} Hz · {amp_to_label(TARGET_AMP)}"
+    #     " (identical paddle drive in all 8 panes)",
+    #     fontsize=10, y=0.995,
+    # )
     fig.tight_layout(rect=[0, 0, 1, 0.97])
     fig.subplots_adjust(wspace=0.05)
 
