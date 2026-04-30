@@ -145,33 +145,31 @@ MANUAL = ManualDetectionPoints()
 
 
 # =============================================================================
-# HUSEBY & GRUE WAVE ANALYSIS WINDOW (pipeline standard from 2026-04-21)
+# HUSEBY & GRUE WAVE ANALYSIS WINDOW (pipeline standard from 2026-04-30)
 # =============================================================================
-# Huseby & Grue (J. Fluid Mech. 2000) chose a 10-period window starting at
-# 50T from wavemaker start, for their probe at r = 12.4 m from the wave
-# paddle. Our tank shares this geometry; our OUT probe sits at exactly
-# r = 12.4 m. The window is chosen so that:
-#   - the leading wavefront has fully passed the measurement point,
-#   - free second-harmonic parasitic waves (travelling at half speed) have
-#     not yet reached the probe,
-#   - reflections from the far-end beach have not returned, and
-#   - the FFT is over exactly 10T → no spectral leakage.
+# Per-probe arrival-anchored window:
 #
-# For probes CLOSER to the paddle than 12.4 m, the same waves arrive
-# earlier by the group-velocity travel-time. The window is therefore
-# PROBE-SHIFTED: for a probe at r_probe < 12.4 m, the window becomes
-#   [(START_T_REF − ΔT)·T, (END_T_REF − ΔT)·T]
-# with ΔT = (12.4 − r_probe) / c_group(f, depth) · f  [periods].
+#     T_start = r_probe · f / c_group(f, h) + N_OFFSET    [periods]
+#     T_end   = T_start + N_LENGTH
 #
-# Replaces the earlier SNARVEI eyeballing (archived below) as the pipeline
-# default. See memory/methodology_hg_probe_shifted.md for validation data.
+# i.e. window starts N_OFFSET periods past wave arrival at the probe and
+# spans N_LENGTH periods. Both endpoints are in periods from wavemaker start.
+# Caller converts to samples and applies the FFT.
+#
+# N_OFFSET = 7, N_LENGTH = 10 are uniform across all four thesis frequencies
+# (1.3 / 1.4 / 1.5 / 1.6 Hz). Locked 2026-04-30 from the plateau-overview
+# sliding-A_FFT(t) study at A_2; see memory/session_2026-04-30.md and the
+# CH04 §4o tables (output/TABLES/ch04_window_choice_*.tex).
+#
+# History: replaces the 2026-04-21 wavemaker-anchored H&G [50T, 60T]
+# probe-shifted window (REF_R_M / START_T_REF / END_T_REF), which itself
+# replaced the SNARVEI eyeballing (archived below).
 
 @dataclass(frozen=True)
 class HusebyGrueParams:
-    REF_R_M:     float = 12.400   # H&G anchor distance (also our OUT probe position)
-    START_T_REF: int   = 50       # window start in periods from wavemaker start
-    END_T_REF:   int   = 60       # window end in periods (10T total, integer → no leakage)
-    TANK_DEPTH_M: float = 0.580   # still-water depth
+    N_OFFSET:     int   = 7        # periods past per-probe arrival before window start
+    N_LENGTH:     int   = 10       # window length in periods (uniform across freqs)
+    TANK_DEPTH_M: float = 0.580    # still-water depth
 
 HG = HusebyGrueParams()
 
@@ -209,15 +207,17 @@ def c_group(f_hz: float, h_m: float = HG.TANK_DEPTH_M, g: float = 9.81) -> float
 
 def hg_window_for_probe(r_probe_m: float, f_hz: float,
                          h_m: float = HG.TANK_DEPTH_M) -> tuple[float, float]:
-    """Probe-shifted H&G window [start_T, end_T] in periods from wavemaker start.
+    """Probe arrival-anchored H&G window [start_T, end_T] in periods from
+    wavemaker start.
 
-    For a probe at `r_probe_m` < HG.REF_R_M, the window is shifted earlier
-    by ΔT = (HG.REF_R_M − r_probe_m) / c_group(f, h) · f periods. Returns
-    the raw (start, end) pair in periods — caller converts to samples and
-    applies the FFT.
+        T_start = r_probe·f / c_group(f, h) + HG.N_OFFSET
+        T_end   = T_start + HG.N_LENGTH
+
+    Returns the raw (start, end) pair in periods — caller converts to
+    samples and applies the FFT.
     """
-    dT = (HG.REF_R_M - r_probe_m) / c_group(f_hz, h_m) * f_hz
-    return (HG.START_T_REF - dT, HG.END_T_REF - dT)
+    t_arr_periods = r_probe_m * f_hz / c_group(f_hz, h_m)
+    return (t_arr_periods + HG.N_OFFSET, t_arr_periods + HG.N_OFFSET + HG.N_LENGTH)
 
 
 # -----------------------------------------------------------------------------

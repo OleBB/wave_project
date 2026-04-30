@@ -248,7 +248,8 @@ ax.text(thesis_k_hi - 0.1, 1.16,
 
 ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.5)
 ax.set_xlabel("$k$", fontsize=11)
-ax.set_ylabel("Transmisjonskoeffisient", fontsize=11)
+ax.set_ylabel(r"$\mathcal{T}$", fontsize=12,
+              rotation=0, ha="left", va="bottom")
 
 # Grid: majors + minors (denser y-grid since the figure is now tall and the
 # story is mostly along y).
@@ -335,6 +336,18 @@ print(f"\n   For caption use:  n = {n_total} kjøringer  "
       f"{n_total - n_final} fra tidligere oppsett).")
 
 fig.subplots_adjust(left=0.10, right=0.98, top=0.95, bottom=0.06)
+
+# Horizontal y-axis label aligned with the leftmost edge of the y-tick labels —
+# mirrors ch04_plateau_overview / ch04_inspirational convention. Maximises the
+# horizontal plotting area by killing the rotated side label.
+fig.canvas.draw()
+_renderer = fig.canvas.get_renderer()
+_ticks = [t for t in ax.yaxis.get_ticklabels()
+          if t.get_visible() and t.get_text().strip()]
+if _ticks:
+    _left_disp = min(t.get_window_extent(renderer=_renderer).x0 for t in _ticks)
+    _x_axes = ax.transAxes.inverted().transform((_left_disp, 0))[0]
+    ax.yaxis.set_label_coords(_x_axes, 1.02)
 
 # ── 5. Save ────────────────────────────────────────────────────────────────────
 print("\n3. Saving figure …")

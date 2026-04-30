@@ -100,17 +100,25 @@ def find_wave_range(
     keep_idx = keep_seconds*250 # 1 sek = 250 målinger
     good_range = keep_idx
 
+    # Per<40 runs are too short for the new H&G [arrival + 7T, +17T] window.
+    # Decision (2026-04-30): per40 is the analysis target; per80 and per240
+    # are kept; anything shorter (per15, per20, per30) is skipped → AFFT NaN.
+    if pd.notna(input_periods) and float(input_periods) < 40:
+        if debug:
+            print(f"[H&G] {data_col}: per{int(input_periods)} < 40 — skip "
+                  f"(window does not fit short runs).")
+        return None, None, None
+
     # ==========================================================
-    # 1.b  Probe-shifted Huseby–Grue window (pipeline standard 2026-04-21)
+    # 1.b  Probe arrival-anchored Huseby–Grue window (pipeline standard 2026-04-30)
     # ==========================================================
-    # H&G window [50 T, 60 T] from wavemaker start, anchored at r = 12.4 m (our
-    # OUT probe position, also the original H&G probe position in the 2000 paper).
-    # For probes closer to the paddle, the same waves arrive earlier by the
-    # group-velocity travel-time, so the window is shifted back per-probe:
+    # Per-probe window starting N_OFFSET periods past wave arrival at the
+    # probe, spanning N_LENGTH periods:
     #
-    #     window = [(START_T_REF − ΔT)·T, (END_T_REF − ΔT)·T]
-    #     ΔT    = (REF_R_M − r_probe) / c_group(f, depth) · f   [periods]
+    #     T_start = r_probe·f / c_group(f, depth) + N_OFFSET   [periods]
+    #     T_end   = T_start + N_LENGTH
     #
+    # N_OFFSET = 7, N_LENGTH = 10 uniform across all thesis frequencies.
     # Math + constants live in wavescripts/constants.py :: HG + c_group() +
     # hg_window_for_probe().  Old eyeballed SNARVEI calibration archived as
     # SNARVEI_ARCHIVE_START / _END in the same file.
@@ -125,7 +133,7 @@ def find_wave_range(
     good_end_idx     = None
     wave_upcrossings = None
     n_found          = 0
-    n_periods_target = HG.END_T_REF - HG.START_T_REF   # 10 periods
+    n_periods_target = HG.N_LENGTH
 
     if _r_probe_m is not None:
         _start_T, _end_T = hg_window_for_probe(_r_probe_m, importertfrekvens)
@@ -202,7 +210,7 @@ def find_wave_range(
             good_start_idx = _snap_to
 
             # End-snap: find the n_periods_target-th upcrossing after start.
-            # `n_periods_target` = HG.END_T_REF - HG.START_T_REF = 10 cycles.
+            # `n_periods_target` = HG.N_LENGTH = 10 cycles.
             # `_snap_to` is itself an upcrossing, so the i-th cycle ends at
             # the upcrossing with offset i in all_upcrossings from _snap_to.
             _start_uc_idx = np.where(all_upcrossings == _snap_to)[0][0]

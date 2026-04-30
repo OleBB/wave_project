@@ -1854,7 +1854,6 @@ def plot_reconstructed_combined(
         wlabel = wind_label_map.get(w, str(w))
         ax.set_title(f"{role} — {wlabel}",
                      fontsize=fontsize + 1, fontweight="bold", pad=6)
-        ax.set_ylabel("Amplitude [mm]", fontsize=fontsize)
         if idx == len(panel_order) - 1:
             ax.set_xlabel("Tid [s]", fontsize=fontsize)
         ax.legend(loc="upper right", fontsize=fontsize - 1, framealpha=0.95)
@@ -1871,6 +1870,24 @@ def plot_reconstructed_combined(
             ax.set_ylim(-span, span)
 
     fig.tight_layout()
+
+    # Horizontal y-axis label above the top pane's leftmost tick label —
+    # mirrors ch04_plateau_overview / ch04_inspirational convention. All
+    # four panels share the same y-range, so a single label on the topmost
+    # pane identifies them all and the rotated side labels are dropped for
+    # maximum horizontal space.
+    _top_ax = axes_flat[0]
+    _top_ax.set_ylabel("Amplitude [mm]",
+                       rotation=0, ha="left", va="bottom", fontsize=fontsize)
+    fig.canvas.draw()
+    _renderer = fig.canvas.get_renderer()
+    _ticks = [t for t in _top_ax.yaxis.get_ticklabels()
+              if t.get_visible() and t.get_text().strip()]
+    if _ticks:
+        _left_disp = min(t.get_window_extent(renderer=_renderer).x0
+                         for t in _ticks)
+        _x_axes = _top_ax.transAxes.inverted().transform((_left_disp, 0))[0]
+        _top_ax.yaxis.set_label_coords(_x_axes, 1.02)
 
     if save_plot:
         meta = build_fig_meta(

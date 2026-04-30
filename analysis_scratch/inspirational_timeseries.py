@@ -166,9 +166,13 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
     ylim = _sym_ylim(eta_in, eta_out)
     x_cutoff = max(in_we, out_we) + 10.0
 
-    zoom_half = 2.5 / FREQ
-    in_zx0,  in_zx1  = (in_ws + in_we) / 2 - zoom_half,  (in_ws + in_we) / 2 + zoom_half
-    out_zx0, out_zx1 = (out_ws + out_we) / 2 - zoom_half, (out_ws + out_we) / 2 + zoom_half
+    # Zoom on the BEGINNING of each probe's H&G window — shows the moment
+    # the measurement window opens. 5-period width with a 0.5-period lead-in
+    # so the window-start edge sits clearly inside the zoom view.
+    zoom_width = 5.0 / FREQ
+    zoom_lead  = 0.5 / FREQ
+    in_zx0,  in_zx1  = in_ws  - zoom_lead, in_ws  - zoom_lead + zoom_width
+    out_zx0, out_zx1 = out_ws - zoom_lead, out_ws - zoom_lead + zoom_width
 
     fig = plt.figure(figsize=(10, 13.0))
     gs = fig.add_gridspec(4, 1, height_ratios=[1, 2, 1, 2], hspace=0.42)
@@ -190,7 +194,6 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
         ax_full.axhline(0, color="#888", lw=0.5, alpha=0.6)
         ax_full.set_xlim(0, x_cutoff)
         ax_full.set_ylim(ylim)
-        # ax_full.set_ylabel(r"$\eta$ (mm)")
         ax_full.text(
             0.005, 0.92, label,
             transform=ax_full.transAxes, va="top", ha="left",
@@ -206,7 +209,6 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
         ax_zoom.axhline(0, color="#888", lw=0.5, alpha=0.6)
         ax_zoom.set_xlim(zx0, zx1)
         ax_zoom.set_ylim(ylim)
-        ax_zoom.set_ylabel(r"$\eta$ (mm)")
 
         for xx in (zx0, zx1):
             con = ConnectionPatch(
@@ -222,6 +224,22 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
         _apply_ticks(ax, x_major=5.0, x_minor=1.0, y_major=5.0, y_minor=1.0)
     for ax in (ax_in_zoom, ax_out_zoom):
         _apply_ticks(ax, x_major=0.5, x_minor=0.1, y_major=5.0, y_minor=1.0)
+
+    # Horizontal y-axis label above the top pane's leftmost tick label —
+    # mirrors the ch04_plateau_overview convention. All four panes share the
+    # same y-range, so a single label on ax_in_full identifies them all and
+    # the rotated side labels are removed for maximum horizontal space.
+    ax_in_full.set_ylabel(r"$\eta$ [mm]",
+                          rotation=0, ha="left", va="bottom", fontsize=10)
+    fig.canvas.draw()
+    _renderer = fig.canvas.get_renderer()
+    _ticks = [t for t in ax_in_full.yaxis.get_ticklabels()
+              if t.get_visible() and t.get_text().strip()]
+    if _ticks:
+        _left_disp = min(t.get_window_extent(renderer=_renderer).x0
+                         for t in _ticks)
+        _x_axes = ax_in_full.transAxes.inverted().transform((_left_disp, 0))[0]
+        ax_in_full.yaxis.set_label_coords(_x_axes, 1.02)
 
     # No in-figure title: LaTeX \caption{} handles identification in the
     # thesis. ka_IN and ka_OUT are already in the immutable stub block
@@ -335,14 +353,15 @@ def _write_stub(wind_tag: str, data: dict, figure_name: str) -> None:
         extra_params=(
             f"run_path={RUNS[wind_tag].relative_to(BASE)}. "
             f"probes=IN:{IN_PROBE}+OUT:{OUT_PROBE}. "
-            f"zoom=5 periods centred on each probe's H&G window "
-            f"(macro = full recording, ~{(data['out_we']+10):.1f} s cutoff). "
-            f"H&G window: probe-shifted [50T, 60T] anchored at r = 12.4 m, "
-            f"IN shifted earlier by group-velocity Δt; start UC-snapped "
-            f"within ±T, end UC-snapped to the 10th upcrossing with ±0.5 T guard. "
-            f"Amber vspan on macro = zoom extent; zoom extent is a 5-period "
-            f"window centred on each probe's own H&G window midpoint so OUT "
-            f"zoom sits later in time (wave-group lag). "
+            f"zoom=5 periods at the start of each probe's H&G window "
+            f"(0.5-period lead-in + 4.5 periods inside the window; "
+            f"macro = full recording, ~{(data['out_we']+10):.1f} s cutoff). "
+            f"H&G window: arrival-anchored [t_arr + 7T, t_arr + 17T] with "
+            f"t_arr = r/c_g(f, h); start UC-snapped within ±T, end UC-snapped "
+            f"to the 10th upcrossing with ±0.5 T guard. "
+            f"Amber vspan on macro = zoom extent; zoom extent sits at each "
+            f"probe's own H&G window start so OUT zoom sits later in time "
+            f"(wave-group lag). "
             f"Colour convention: blue = nowind, red = fullwind — CLAUDE.md "
             f"thesis-wide WIND_COLOR_MAP. "
             f"Typeset in NewComputerModern10 (OTFs from TeXLive's "

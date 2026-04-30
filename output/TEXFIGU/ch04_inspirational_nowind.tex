@@ -7,7 +7,7 @@
 %   computed_in       : analysis_scratch/inspirational_timeseries.py (single-run time-series render)
 %   plot_type         : inspirational_timeseries
 %   data_class        : DELEG
-%   generated_at      : 2026-04-29T09:54:13
+%   generated_at      : 2026-04-30T14:30:17
 %   findings_doc      : memory/methodology_hg_window_kills_peak_bias.md
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -64,64 +64,64 @@
 %   grouper           : 
 %   collapse_panels   : 
 %   fft_window_hz     : 0.1
-%   extra_params      : run_path=wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-nowind-amp0200-freq1400-per240-depth580-mstop30-run1.csv. probes=IN:9373/170+OUT:12400/250. zoom=5 periods centred on each probe's H&G window (macro = full recording, ~52.7 s cutoff). H&G window: probe-shifted [50T, 60T] anchored at r = 12.4 m, IN shifted earlier by group-velocity Δt; start UC-snapped within ±T, end UC-snapped to the 10th upcrossing with ±0.5 T guard. Amber vspan on macro = zoom extent; zoom extent is a 5-period window centred on each probe's own H&G window midpoint so OUT zoom sits later in time (wave-group lag). Colour convention: blue = nowind, red = fullwind — CLAUDE.md thesis-wide WIND_COLOR_MAP. Typeset in NewComputerModern10 (OTFs from TeXLive's newcomputermodern package, registered via font_manager).
+%   extra_params      : run_path=wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-nowind-amp0200-freq1400-per240-depth580-mstop30-run1.csv. probes=IN:9373/170+OUT:12400/250. zoom=5 periods at the start of each probe's H&G window (0.5-period lead-in + 4.5 periods inside the window; macro = full recording, ~44.1 s cutoff). H&G window: arrival-anchored [t_arr + 7T, t_arr + 17T] with t_arr = r/c_g(f, h); start UC-snapped within ±T, end UC-snapped to the 10th upcrossing with ±0.5 T guard. Amber vspan on macro = zoom extent; zoom extent sits at each probe's own H&G window start so OUT zoom sits later in time (wave-group lag). Colour convention: blue = nowind, red = fullwind — CLAUDE.md thesis-wide WIND_COLOR_MAP. Typeset in NewComputerModern10 (OTFs from TeXLive's newcomputermodern package, registered via font_manager).
 %
 % — Summary stats cited in caption ────────────────────────────
-%   stat:ka_inn       : 0.1253
-%   stat:ka_Ut        : 0.0860
-%   stat:A_inn_FFT_mm : 15.369
-%   stat:wavelength_inn_m : 0.7977
-%   stat:wavenumber_inn_per_m : 7.8763
-%   stat:period_inn_s : 0.71500
-%   stat:celerity_inn_m_s : 1.1157
-%   stat:Hm0_inn_mm   : 43.510
-%   stat:Hs_inn_mm    : 31.857
-%   stat:Froude_inn   : 0.22011
-%   stat:Ursell_inn   : 0.10377
+%   stat:ka_inn       : 0.1287
+%   stat:ka_Ut        : 0.0878
+%   stat:A_inn_FFT_mm : 15.319
+%   stat:wavelength_inn_m : 0.7986
+%   stat:wavenumber_inn_per_m : 7.8675
+%   stat:period_inn_s : 0.71540
+%   stat:celerity_inn_m_s : 1.1163
+%   stat:Hm0_inn_mm   : 43.471
+%   stat:Hs_inn_mm    : 31.843
+%   stat:Froude_inn   : 0.22023
+%   stat:Ursell_inn   : 0.10695
 %   stat:wind_over_c_inn : 0.0000
 %   stat:f_over_fPM_inn : nan
-%   stat:wave_stability_inn : 0.8974
-%   stat:period_cv_inn : 0.0114
-%   stat:A_Ut_FFT_mm  : 10.663
-%   stat:wavelength_Ut_m : 0.7982
-%   stat:wavenumber_Ut_per_m : 7.8719
-%   stat:period_Ut_s  : 0.71520
-%   stat:celerity_Ut_m_s : 1.1160
-%   stat:Hm0_Ut_mm    : 30.236
-%   stat:Hs_Ut_mm     : 21.897
-%   stat:Froude_Ut    : 0.22017
-%   stat:Ursell_Ut    : 0.07131
+%   stat:wave_stability_inn : 0.8920
+%   stat:period_cv_inn : 0.0227
+%   stat:A_Ut_FFT_mm  : 10.547
+%   stat:wavelength_Ut_m : 0.7937
+%   stat:wavenumber_Ut_per_m : 7.9160
+%   stat:period_Ut_s  : 0.71320
+%   stat:celerity_Ut_m_s : 1.1129
+%   stat:Hm0_Ut_mm    : 29.921
+%   stat:Hs_Ut_mm     : 21.697
+%   stat:Froude_Ut    : 0.21956
+%   stat:Ursell_Ut    : 0.07162
 %   stat:wind_over_c_Ut : 0.0000
 %   stat:f_over_fPM_Ut : nan
-%   stat:wave_stability_Ut : 0.8975
-%   stat:period_cv_Ut : 0.0188
-%   stat:A_inn_LS_mm  : 15.338
-%   stat:A_inn_Stk2_mm : 0.487
-%   stat:A_inn_percentile_mm : 15.800
-%   stat:A_inn_PSD_mm : 15.422
-%   stat:A_inn_cycles_mean : 15.586
-%   stat:A_inn_phase_mean : 15.547
-%   stat:DC_inn_mm    : 0.2197
-%   stat:residualRMS_inn_mm : 0.3910
-%   stat:window_inn_s : [30.688, 37.832]
-%   stat:hg_snap_shift_inn_samples : 80.0
-%   stat:A_Ut_LS_mm   : 10.671
-%   stat:A_Ut_Stk2_mm : 0.484
-%   stat:A_Ut_percentile_mm : 10.920
-%   stat:A_Ut_PSD_mm  : 10.703
-%   stat:A_Ut_cycles_mean : 10.688
-%   stat:A_Ut_phase_mean : 10.628
-%   stat:DC_Ut_mm     : 0.0232
-%   stat:residualRMS_Ut_mm : 0.3633
-%   stat:window_Ut_s  : [35.548, 42.696]
-%   stat:hg_snap_shift_Ut_samples : -63.0
-%   stat:meta_OUT_over_IN : 0.6938
+%   stat:wave_stability_Ut : 0.8972
+%   stat:period_cv_Ut : 0.0329
+%   stat:A_inn_LS_mm  : 15.211
+%   stat:A_inn_Stk2_mm : 0.772
+%   stat:A_inn_percentile_mm : 16.270
+%   stat:A_inn_PSD_mm : 15.153
+%   stat:A_inn_cycles_mean : 15.479
+%   stat:A_inn_phase_mean : 15.328
+%   stat:DC_inn_mm    : 0.1996
+%   stat:residualRMS_inn_mm : 0.8256
+%   stat:window_inn_s : [22.104, 29.252]
+%   stat:hg_snap_shift_inn_samples : 68.0
+%   stat:A_Ut_LS_mm   : 10.534
+%   stat:A_Ut_Stk2_mm : 0.483
+%   stat:A_Ut_percentile_mm : 11.090
+%   stat:A_Ut_PSD_mm  : 10.512
+%   stat:A_Ut_cycles_mean : 10.529
+%   stat:A_Ut_phase_mean : 10.409
+%   stat:DC_Ut_mm     : 0.0471
+%   stat:residualRMS_Ut_mm : 0.4822
+%   stat:window_Ut_s  : [26.992, 34.120]
+%   stat:hg_snap_shift_Ut_samples : -68.0
+%   stat:meta_OUT_over_IN : 0.6885
 %   stat:file_date    : 2026-03-27
 %   stat:mooring      : below_90_loose300
 %   stat:probe_height_mm : 100.0
 %   stat:probe_range_mode : low
 %   stat:water_depth_mm : 580.0
-%   stat:kd_Ut        : 4.566
+%   stat:kd_Ut        : 4.591
 %   stat:depth_regime : deep
 %   stat:input_freq_Hz : 1.40
 %   stat:input_amp_V  : 0.20
