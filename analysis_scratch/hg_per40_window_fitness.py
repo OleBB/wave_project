@@ -18,7 +18,7 @@ end-snap in this prototype — kept simple).
 
 Visual purpose: confirm the window sits inside the wavetrain at every
 thesis frequency for both per40 (paddle stops at 40/f s) and per240
-(plenty of paddle-driven signal). x-axis matched at 0–55 s and y-axis
+(plenty of paddle-driven signal). x-axis matched at 0–50 s and y-axis
 shared across all 8 panes so the cells stack on the same time + amplitude
 scale.
 
@@ -81,7 +81,7 @@ TANK_DEPTH_M     = HG.TANK_DEPTH_M
 
 # Matched x-axis for ALL rows (per40 and per240) so the reader compares them
 # on the same time scale.
-X_MAX_S = 55.0
+X_MAX_S = 48.0
 
 # Canon — march-2026 cond4 lowrange
 PROCESSED_DIRS = [
@@ -213,7 +213,7 @@ def build_figure_for(target_freq: float):
     print(f"   PROPOSED  IN  (theoretical): [{th_in_s:5.2f}, {th_in_e:5.2f}] s")
     print(f"   PROPOSED  OUT (theoretical): [{th_out_s:5.2f}, {th_out_e:5.2f}] s")
 
-    fig, axes = plt.subplots(4, 2, figsize=(11, 10), sharex=True, sharey=True)
+    fig, axes = plt.subplots(4, 2, figsize=(6.2, 8.5), sharex=True, sharey=True)
 
     row_order = [
         ("per40",  "no"),
@@ -273,21 +273,18 @@ def build_figure_for(target_freq: float):
             ax.set_xlim(0, X_MAX_S)
             ax.grid(True, alpha=0.25, lw=0.4)
             ax.tick_params(labelsize=8)
-            if col_i == 0:
-                ax.set_ylabel(f"{rt} · {wind} wind\n$\\eta$ [mm]", fontsize=8)
+            # All identifying text (y-axis label, row tag, probe tag) lives
+            # in the .tex stub's caption — figure shows numeric ticks only.
             if row_i == 3:
                 ax.set_xlabel("time from wavemaker start [s]", fontsize=8)
-            ax.text(0.99, 0.96, PROBE_LABEL[probe], transform=ax.transAxes,
-                    ha="right", va="top", fontsize=7, color="#444",
-                    bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="#bbb",
-                              alpha=0.85, lw=0.4))
 
     fig.suptitle(
         f"$f$ = {target_freq:.1f} Hz · {amp_to_label(TARGET_AMP)}"
         " (identical paddle drive in all 8 panes)",
-        fontsize=11, y=0.995,
+        fontsize=10, y=0.995,
     )
     fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.subplots_adjust(wspace=0.05)
 
     f_tag = f"f{int(round(target_freq * 10))}"
     figure_name = f"ch04_hg_per40_window_fitness_{f_tag}"
@@ -300,11 +297,11 @@ def build_figure_for(target_freq: float):
     fig.savefig(scratch_pdf, bbox_inches="tight")
     fig.savefig(scratch_png, dpi=130, bbox_inches="tight")
     fig.savefig(thesis_pdf,  bbox_inches="tight")
-    try:
-        fig.savefig(thesis_pgf, bbox_inches="tight")
-    except Exception:
-        # PGF backend can fail on some matplotlib installs — non-fatal.
-        pass
+    # try: % we don't really need PGF anymore
+    #     fig.savefig(thesis_pgf, bbox_inches="tight")
+    # except Exception:
+    #     # PGF backend can fail on some matplotlib installs — non-fatal.
+    #     pass
     plt.close(fig)
     print(f"   scratch → {scratch_pdf.relative_to(BASE)}")
     print(f"   thesis  → {thesis_pdf.relative_to(BASE)}")
