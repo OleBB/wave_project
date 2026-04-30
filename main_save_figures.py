@@ -216,9 +216,12 @@ CHAPTER 04 — METHODOLOGY
   §4m   ch04_per40_and_per240_HG_shifted [DELEG] ~  Per40+per240 pooling under probe-shifted H&G window (the answer: yes)
   §4n   ch04_hg_per40_window_fitness_f{13,14,15,16}  [DELEG] ~  Proposed H&G window (N=15 + UC-snap) overlaid on η(t), per40+per240, all 4 thesis freqs
         ch04_window_intervals            [DELEG] ~     └─ companion table: IN/OUT window intervals + samples-per-period at each thesis freq
-  §4o   ch04_window_choice               [DELEG] ~  Option B post-squeeze (N_off=10, N(f)={10,13,13,13}): window vs nowind eyeball + fullwind empirical plateau
+  §4o   ch04_window_choice               [DELEG] ~  Post-squeeze window (N_off=7, N_len=10 uniform): window vs nowind eyeball + fullwind empirical plateau
         ch04_window_choice_nowind        [DELEG] ~     └─ companion table (nowind, eyeball plateau)
         ch04_window_choice_fullwind      [DELEG] ~     └─ companion table (fullwind, empirical plateau ±2%)
+        ch04_plateau_overview_A{1,2,3}   [DELEG] ~     └─ reader-facing plateau (sliding A_FFT, 4×2 IN/OUT panels, both winds), one per amp tier
+        ch04_plateau_values              [DELEG] ~     └─ appendix table (A_IN, A_OUT, OUT/IN at chosen window per (f, amp, wind))
+        ch04_tidsvindu                   [DELEG] ~     └─ main-text table (c_g, IN/OUT vindu, Δt, vindusbredde — 5×4, read from meta)
   §5    ch04_inspirational_nowind        [DELEG] ~  Reading a time series — nowind canon (macro + 5-period zoom)
         ch04_inspirational_fullwind      [DELEG] ~     └─ same layout, fullwind canon (wind-wave clutter visible at IN)
   §5b   ch04_timeseries_overview         [DFS-canon] ~  Full time-series with stable-window band  (below MEDIUM gate)
@@ -480,6 +483,11 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_window_choice":              "",
     "ch04_window_choice_nowind":       "",
     "ch04_window_choice_fullwind":     "",
+    "ch04_plateau_overview_A1":        "",
+    "ch04_plateau_overview_A2":        "",
+    "ch04_plateau_overview_A3":        "",
+    "ch04_plateau_values":             "",
+    "ch04_tidsvindu":                  "",
 
     # § 5 — Reading a time series (inspirational opener)
     "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind.",
@@ -574,6 +582,11 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_window_choice":              "",
     "ch04_window_choice_nowind":       "",
     "ch04_window_choice_fullwind":     "",
+    "ch04_plateau_overview_A1":        "",
+    "ch04_plateau_overview_A2":        "",
+    "ch04_plateau_overview_A3":        "",
+    "ch04_plateau_values":             "",
+    "ch04_tidsvindu":                  "",
     "ch04_inspirational_nowind":       "",
     "ch04_inspirational_fullwind":     "",
     "ch04_first_arrival":              "",
@@ -1731,6 +1744,91 @@ _run_delegated_if_missing(
     [Path("output/TABLES/ch04_window_choice_nowind.tex"),
      Path("output/TABLES/ch04_window_choice_fullwind.tex")],
     label="ch04_window_choice_table",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/plateau_overview.py
+"""
+── CH04 § 4o — Plateau overview at A_1 / A_2 / A_3 (sliding A_FFT) ──────────
+Three reader-facing figures, one per amplitude tier (A_1=0.10 V, A_2=0.20 V,
+A_3=0.30 V). Each laid out 4 rows (f) × 2 cols (IN, OUT), with both wind
+conditions overlaid (blue=nowind, red=fullwind). Sliding A_FFT(t) at the
+paddle frequency, window length matches the chosen post-squeeze rule
+(N_off = 7, N_len = 10 — uniform across all four thesis frequencies).
+
+Each panel shows: individual canon runs (thin lines), the chosen window
+(green band), and four reference vertical lines — paddle stop (40/f),
+2nd harmonic arrival (r/c_g(2f)), back-wall reflection arrival
+((2L−r)/c_phase, L=25 m), and the long-wave first-motion arrival
+(r/√(gh)).
+
+Visual claim: the chosen window encloses a flat A_FFT plateau at every
+(f, probe, wind, amp) cell.
+
+Outputs:
+    output/FIGURES/ch04_plateau_overview_A{1,2,3}.pdf
+    output/TEXFIGU/ch04_plateau_overview_A{1,2,3}.tex
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/plateau_overview.py",
+    [Path("output/FIGURES/ch04_plateau_overview_A1.pdf"),
+     Path("output/FIGURES/ch04_plateau_overview_A2.pdf"),
+     Path("output/FIGURES/ch04_plateau_overview_A3.pdf"),
+     Path("output/TEXFIGU/ch04_plateau_overview_A1.tex"),
+     Path("output/TEXFIGU/ch04_plateau_overview_A2.tex"),
+     Path("output/TEXFIGU/ch04_plateau_overview_A3.tex")],
+    label="ch04_plateau_overview",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/plateau_values_table.py
+"""
+── CH04 § 4o (companion table) — Plateau A_FFT values inside chosen window ──
+Numerical companion to ch04_plateau_overview_A{1,2,3}: per (f, amp, wind)
+cell, the median A_IN, A_OUT, and OUT/IN ratio computed over the chosen
+window (probe-shifted, N_off=7, N_len=10). Plus per-cell run-to-run σ on
+the ratio and the cell's run count n.
+
+24 cells (4 freqs × 3 amps × 2 winds), grouped into three amp blocks.
+Bridges the figure (visual plateau) to the CH05 result (OUT/IN values).
+
+Outputs:
+    output/TABLES/ch04_plateau_values.tex
+    analysis_scratch/plateau_values.csv
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/plateau_values_table.py",
+    [Path("output/TABLES/ch04_plateau_values.tex")],
+    label="ch04_plateau_values",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/tidsvindu_table.py
+"""
+── CH04 § 4o — Tidsvindu (main-text companion to plateau figure) ────────────
+Compact 5-row × 4-freq-col table read directly from canon meta:
+
+    c_g, Innkommende vindu [s], Utgående vindu [s], Δt, Vindusbredde [s]
+
+Window times come from `Computed Probe {pos} start / end` in meta (median
+across canon runs at each thesis frequency). The table therefore tracks
+whatever window the pipeline currently produces — when the pipeline is
+updated to a new N_off / N_len, regen this table and the numbers follow.
+
+Inferred N_offset / N_length recorded in the immutable provenance block
+of the generated .tex so it's always clear which window the table reflects.
+
+Outputs:
+    output/TABLES/ch04_tidsvindu.tex
+    analysis_scratch/tidsvindu.csv
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/tidsvindu_table.py",
+    [Path("output/TABLES/ch04_tidsvindu.tex")],
+    label="ch04_tidsvindu",
 )
 
 # %%

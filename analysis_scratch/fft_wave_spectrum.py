@@ -20,7 +20,7 @@ IN and OUT guide lines, labeled with:
 
 Outputs:
   output/FIGURES/ch04_fft_wave.pdf
-  output/FIGURES/ch04_fft_wave.pgf
+  # output/FIGURES/ch04_fft_wave.pgf
   output/TEXFIGU/ch04_fft_wave.tex    (force-written, single-includegraphics)
 
 Type face: NewComputerModern10 (OTFs shipped with TeX Live's
@@ -234,11 +234,11 @@ for ax_top in axes[0, :]:
 fig.tight_layout()
 
 out_pdf = FIGURES_DIR / "ch04_fft_wave.pdf"
-out_pgf = FIGURES_DIR / "ch04_fft_wave.pgf"
+# out_pgf = FIGURES_DIR / "ch04_fft_wave.pgf"
 fig.savefig(out_pdf, bbox_inches="tight")
 fig.savefig(out_pgf, bbox_inches="tight")
 plt.close(fig)
-print(f"   → {out_pdf.relative_to(BASE)}  (+ .pgf)")
+print(f"   → {out_pdf.relative_to(BASE)} ")
 
 
 # ─── TEXFIGU stub ─────────────────────────────────────────────────────────

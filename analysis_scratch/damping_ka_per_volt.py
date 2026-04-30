@@ -16,9 +16,9 @@ Data scope — same as main_save_figures.py `_pv_damping_ka`:
   - per240 and per40 only (per15 excluded — window too short for H&G)
 
 Outputs (one per voltage):
-    output/FIGURES/ch05_damping_ka_10V.pdf (+ .pgf)
-    output/FIGURES/ch05_damping_ka_20V.pdf (+ .pgf)
-    output/FIGURES/ch05_damping_ka_30V.pdf (+ .pgf)
+    output/FIGURES/ch05_damping_ka_10V.pdf
+    output/FIGURES/ch05_damping_ka_20V.pdf
+    output/FIGURES/ch05_damping_ka_30V.pdf
     output/TEXFIGU/ch05_damping_ka_10V.tex
     output/TEXFIGU/ch05_damping_ka_20V.tex
     output/TEXFIGU/ch05_damping_ka_30V.tex
@@ -281,11 +281,11 @@ for volt in ALL_VOLTS:
     print(f"\n{volt_tag}: {len(sub)} runs")
     fig = _make_figure(sub, volt)
     out_pdf = FIGURES_DIR / f"{figure_name}.pdf"
-    out_pgf = FIGURES_DIR / f"{figure_name}.pgf"
+    # out_pgf = FIGURES_DIR / f"{figure_name}.pgf"
     fig.savefig(out_pdf, bbox_inches="tight")
     fig.savefig(out_pgf, bbox_inches="tight")
     plt.close(fig)
-    print(f"   → {out_pdf.relative_to(BASE)}  (+ .pgf)")
+    print(f"   → {out_pdf.relative_to(BASE)}")
     _write_stub(sub, volt, figure_name)
 
 print("\nDone.")

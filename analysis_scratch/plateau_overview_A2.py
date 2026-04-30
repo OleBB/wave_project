@@ -86,7 +86,7 @@ SLIDING_STEP_S   = 0.10
 SLIDING_T_LO_S   = 0.0
 SLIDING_T_HI_S   = 55.0     # crop after the post-window region of interest
 
-Y_LO, Y_HI       = 0.0, 20.0    # mm — fits A_2 IN (~16) and OUT (~12) with margin
+Y_LO, Y_HI       = 0.0, 18.0    # mm — fits A_2 IN (~16) and OUT (~12) with margin
 
 WINDS            = ["no", "full"]
 
@@ -261,59 +261,60 @@ for row_i, f in enumerate(THESIS_FREQS):
             ax.plot(ts, A, color=color, lw=0.9, alpha=0.7)
 
         # Option B window (green band)
-        ax.axvspan(win_s, win_e, color="#2ECC71", alpha=0.20, lw=0)
-        ax.axvline(win_s, color="#1A6E2A", ls="--", lw=0.7, alpha=0.7)
-        ax.axvline(win_e, color="#1A6E2A", ls="--", lw=0.7, alpha=0.7)
+        ax.axvspan(win_s, win_e, color="#2ECC71", alpha=0.22, lw=0)
+        ax.axvline(win_s, color="#1A6E2A", ls="--", lw=1.4, alpha=0.85)
+        ax.axvline(win_e, color="#1A6E2A", ls="--", lw=1.4, alpha=0.85)
 
-        # Geometric reference times (subtle)
+        # Geometric reference times (now thicker; signal still on top via alpha)
         t_refl_p   = t_refl(r_m, f)
         t_seiche_p = t_seiche(r_m)
-        ax.axvline(paddle_stop, color="#7F3FBF", ls=":",  lw=0.9, alpha=0.7)
-        ax.axvline(t_paras_p,   color="#D62728", ls=":",  lw=0.9, alpha=0.7)
-        ax.axvline(t_refl_p,    color="#E67E22", ls="-.", lw=0.9, alpha=0.7)
-        ax.axvline(t_seiche_p,  color="#17A2B8", ls="-.", lw=0.9, alpha=0.7)
+        ax.axvline(paddle_stop, color="#7F3FBF", ls=":",  lw=1.7, alpha=0.85)
+        ax.axvline(t_paras_p,   color="#D62728", ls=":",  lw=1.7, alpha=0.85)
+        ax.axvline(t_refl_p,    color="#E67E22", ls="-.", lw=1.7, alpha=0.85)
+        ax.axvline(t_seiche_p,  color="#17A2B8", ls="-.", lw=1.7, alpha=0.85)
 
         # Header in upper-left corner — frequency (Norwegian comma) + window length
         f_label = f"{f:.1f}".replace(".", ",")
         ax.text(0.012, 0.97,
                 f"$f$ = {f_label} Hz\n{L_T} perioder",
                 transform=ax.transAxes, ha="left", va="top",
-                fontsize=8, color="#222",
+                fontsize=10, color="#222",
                 bbox=dict(boxstyle="round,pad=0.25", fc="white",
                           ec="#bbb", alpha=0.85, lw=0.4))
 
         ax.set_ylim(Y_LO, Y_HI)
         ax.set_xlim(SLIDING_T_LO_S, SLIDING_T_HI_S)
         ax.grid(True, alpha=0.25, lw=0.4)
+        ax.tick_params(labelsize=10)
         if row_i == len(THESIS_FREQS) - 1:
-            ax.set_xlabel("vindusstart [s fra bølgemaker-start]", fontsize=9)
+            ax.set_xlabel("[s]", fontsize=12)
         if col_i == 0 and row_i == 0:
-            ax.set_ylabel(r"$A_\mathrm{FFT}$  [mm]", fontsize=9,
+            ax.set_ylabel(r"$A_\mathrm{FFT}$  [mm]", fontsize=12,
                           rotation=0, ha="left", va="bottom")
 
 # Single legend at the bottom
 legend_handles = [
     Line2D([], [], color=WIND_COLOR_MAP["no"],   lw=1.2, label="uten vind"),
     Line2D([], [], color=WIND_COLOR_MAP["full"], lw=1.2, label="full vind"),
-    Line2D([], [], color="#2ECC71", lw=8, alpha=0.4,
+    Line2D([], [], color="#2ECC71", lw=8, alpha=0.45,
            label=fr"Tidsvindu [{N_OFFSET}T, {N_OFFSET + N_LENGTH}T]"),
-    Line2D([], [], color="#7F3FBF", ls=":", lw=1.0,
+    Line2D([], [], color="#7F3FBF", ls=":", lw=1.7,
            label=r"Bølgeskyver stoppet"),
-    Line2D([], [], color="#D62728", ls=":", lw=1.0,
-           label=r"andre harmoniske, $2f$"),
-    Line2D([], [], color="#E67E22", ls="-.", lw=1.0,
-           label=r"Refleksjon, $(2L-r)/c_\phi$"),
-    Line2D([], [], color="#17A2B8", ls="-.", lw=1.0,
+    Line2D([], [], color="#D62728", ls=":", lw=1.7,
+           label=r"Andre harmoniske, $2f$"),
+    Line2D([], [], color="#E67E22", ls="-.", lw=1.7,
+           label=r"Refleksjon, $(2L-r)/c$"),
+    Line2D([], [], color="#17A2B8", ls="-.", lw=1.7,
            label=r"Første bevegelse, $r/\sqrt{gh}$"),
 ]
 fig.legend(handles=legend_handles, loc="lower center", ncol=3,
-           fontsize=8, bbox_to_anchor=(0.5, -0.005), frameon=True)
+           fontsize=12, bbox_to_anchor=(0.5, -0.005), frameon=True)
 
-fig.suptitle(
-    f"$A_\\mathrm{{FFT}}(t)$ sliding plateau · $A_2$ ({TARGET_AMP:.2f} V) · "
-    f"canon March-2026 cond4 lowrange",
-    fontsize=10, y=0.995,
-)
+# fig.suptitle(
+#     f"$A_\\mathrm{{FFT}}(t)$ sliding plateau · $A_2$ ({TARGET_AMP:.2f} V) · "
+#     f"canon March-2026 cond4 lowrange",
+#     fontsize=10, y=0.995,
+# )
 fig.tight_layout(rect=[0, 0.025, 1, 0.97])
 
 # Align the horizontal y-axis label's left edge with the leftmost edge of the

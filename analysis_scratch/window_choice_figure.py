@@ -235,7 +235,7 @@ fig.tight_layout(rect=[0, 0.07, 1, 1])
 fig.savefig(SCRATCH_PDF, bbox_inches="tight")
 fig.savefig(SCRATCH_PNG, dpi=130, bbox_inches="tight")
 thesis_pdf = THESIS_FIGS / f"{THESIS_NAME}.pdf"
-thesis_pgf = THESIS_FIGS / f"{THESIS_NAME}.pgf"
+# thesis_pgf = THESIS_FIGS / f"{THESIS_NAME}.pgf"
 fig.savefig(thesis_pdf, bbox_inches="tight")
 plt.close(fig)
 print(f"saved → {SCRATCH_PDF.relative_to(BASE)}")

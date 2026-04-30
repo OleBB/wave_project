@@ -23,10 +23,10 @@ shared across all 8 panes so the cells stack on the same time + amplitude
 scale.
 
 Outputs (4 thesis figures + scratch mirrors):
-    output/FIGURES/ch04_hg_per40_window_fitness_f13.{pdf,pgf}
-    output/FIGURES/ch04_hg_per40_window_fitness_f14.{pdf,pgf}
-    output/FIGURES/ch04_hg_per40_window_fitness_f15.{pdf,pgf}
-    output/FIGURES/ch04_hg_per40_window_fitness_f16.{pdf,pgf}
+    output/FIGURES/ch04_hg_per40_window_fitness_f13.{pdf}
+    output/FIGURES/ch04_hg_per40_window_fitness_f14.{pdf}
+    output/FIGURES/ch04_hg_per40_window_fitness_f15.{pdf}
+    output/FIGURES/ch04_hg_per40_window_fitness_f16.{pdf}
     output/TEXFIGU/ch04_hg_per40_window_fitness_f{13,14,15,16}.tex
     analysis_scratch/hg_per40_window_fitness_f{13,14,15,16}.{pdf,png}
 

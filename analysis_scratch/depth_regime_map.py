@@ -21,7 +21,7 @@ ALL processed datasets (methodology figure — uses combined_meta, not
 meta_results).
 
 Outputs:
-    output/FIGURES/ch04_depth_regime.pdf (+ .pgf)
+    output/FIGURES/ch04_depth_regime.pdf
     output/TEXFIGU/ch04_depth_regime.tex  (CAPTIONS-dict driven, force=True)
 """
 
@@ -300,11 +300,11 @@ ax_bot.grid(True, which="minor", alpha=0.12)
 fig.tight_layout()
 
 out_pdf = FIGURES_DIR / "ch04_depth_regime.pdf"
-out_pgf = FIGURES_DIR / "ch04_depth_regime.pgf"
+# out_pgf = FIGURES_DIR / "ch04_depth_regime.pgf"
 fig.savefig(out_pdf, bbox_inches="tight")
 fig.savefig(out_pgf, bbox_inches="tight")
 plt.close(fig)
-print(f"\n   → {out_pdf.relative_to(BASE)}  (+ .pgf)")
+print(f"\n   → {out_pdf.relative_to(BASE)}")
 
 
 # ─── TEXFIGU stub ─────────────────────────────────────────────────────────
