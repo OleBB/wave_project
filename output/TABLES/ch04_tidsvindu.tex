@@ -6,9 +6,9 @@
 %   script            : analysis_scratch/tidsvindu_table.py
 %   plot_type         : tidsvindu_table
 %   chapter           : 04
-%   generated_at      : 2026-04-30T13:51:51
+%   generated_at      : 2026-05-01T22:01:28
 %   caption_label     : tab:ch04_tidsvindu
-%   caption_short     : 
+%   caption_short     : Frekvensenes tidsvindu
 %
 % — Method ────────────────────────────────────────────────────
 %   Window times read from meta columns:
@@ -20,8 +20,8 @@
 %   Δt = (r_OUT − r_IN) / c_g(f, h)
 %
 % — Inferred window (from meta data, snap-rounded median) ───────
-%   N_offset (median, in T)   : 16.83
-%   N_length (median, in T)   : 10.00
+%   N_offset (median, in T)   : 7.15
+%   N_length (median, in T)   : 10.03
 %   These are derived from the cached 'Computed Probe' values; if the
 %   pipeline is later updated to a new N_offset / N_length, regenerate
 %   this table to track it.
@@ -35,13 +35,13 @@
 % — Inputs ────────────────────────────────────────────────────
 %   frequencies [Hz]  : 1.3, 1.4, 1.5, 1.6
 %   filter            : PanelCondition=full, quality_flag=ok, canon March-2026 cond4 lowrange
-%   n_runs per freq   : 1.3=30, 1.4=15, 1.5=16, 1.6=18
+%   n_runs per freq   : 1.3=30, 1.4=16, 1.5=16, 1.6=18
 %
 % ── end immutable block ─────────────────────────────────────────
 \begin{table}[hbt]
   \centering
-  \caption{
-    % TODO: write caption
+  \caption[Frekvensenes tidsvindu]{
+    Frekvensenes tidsvinduer
   }
   \label{tab:ch04_tidsvindu}
   \begin{tabular}{lcccc}
@@ -57,26 +57,26 @@
       $\num{0.559}$ &
       $\num{0.521}$ &
       $\num{0.488}$ \\
-    Innkommende vindu [\unit{\second}] &
-      \tabnumrange{33.3}{41.0} &
-      \tabnumrange{30.5}{37.7} &
-      \tabnumrange{27.6}{34.3} &
-      \tabnumrange{25.1}{31.3} \\
-    Utgående vindu [\unit{\second}] &
-      \tabnumrange{38.2}{45.9} &
-      \tabnumrange{35.6}{42.7} &
-      \tabnumrange{33.3}{39.9} &
-      \tabnumrange{31.2}{37.5} \\
-    $\Delta t$ mellom sondene [\unit{\second}] &
+    $\Delta t$, reisetid for c_g [\unit{\second}] &
       $\num{5.02}$ &
       $\num{5.42}$ &
       $\num{5.81}$ &
       $\num{6.20}$ \\
-    Vindusbredde [\unit{\second}] &
+    Innkommende vindu [\unit{\second}] &
+      \tabnumrange{21.0}{28.7} &
+      \tabnumrange{22.0}{29.1} &
+      \tabnumrange{22.8}{29.5} &
+      \tabnumrange{23.6}{29.9} \\
+    Utgående vindu [\unit{\second}] &
+      \tabnumrange{25.9}{33.6} &
+      \tabnumrange{27.4}{34.6} &
+      \tabnumrange{28.5}{35.2} &
+      \tabnumrange{29.8}{36.1} \\
+    Tidsvinduets lengde [\unit{\second}] &
       $\num{7.69}$ &
-      $\num{7.16}$ &
-      $\num{6.67}$ &
-      $\num{6.25}$ \\
+      $\num{7.15}$ &
+      $\num{6.70}$ &
+      $\num{6.29}$ \\
     \bottomrule
   \end{tabular}
 \end{table}

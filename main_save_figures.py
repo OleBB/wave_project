@@ -496,7 +496,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_plateau_overview_A2":        "",
     "ch04_plateau_overview_A3":        "",
     "ch04_plateau_values":             "",
-    "ch04_tidsvindu":                  "",
+    "ch04_tidsvindu":                  "Frekvensenes tidsvinduer",
 
     # § 4p — Wind transition overview (parent + 4 subfigs: ramp-up + decay × full + zoom)
     "ch04_wind_transition_overview":   "Vindens påvirkning på vannets nivå. Merk: Ulike x-akser.",
@@ -512,8 +512,8 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_wind_qc_boxplot":            "",
 
     # § 5 — Reading a time series (inspirational opener)
-    "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind.",
-    "ch04_inspirational_fullwind":     "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, med vind.",
+    "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: \num{0.1287},   ka, ut:  \num{0.0878}",#todo: consider changing these numbers if the pipeline changes... if amplitude changes slightly..
+    "ch04_inspirational_fullwind":     "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, med vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn:   \num{0.1531}, ka, ut: \num{0.0979}", #however these are illustrative plots...and i think the precision perhaps doesnt matter too much in plots. tables are more important.
 
     # § 6–9 — Wave-range detection, autocorrelation, lateral
     "ch04_first_arrival":              "",
@@ -612,7 +612,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_plateau_overview_A2":        "",
     "ch04_plateau_overview_A3":        "",
     "ch04_plateau_values":             "",
-    "ch04_tidsvindu":                  "",
+    "ch04_tidsvindu":                  "Frekvensenes tidsvindu",
     "ch04_wind_transition_overview":   "",
     "ch04_wind_pre_paddle_psd":        "",
     "ch04_wind_pre_paddle_table":      "",

@@ -7,7 +7,7 @@ Per thesis frequency, tabulate:
   - c_g [m/s]                 — group velocity (full dispersion ω²=gk·tanh(kh))
   - Innkommende vindu [s]     — IN-probe window [t_start, t_end], read from meta
   - Utgående vindu [s]        — OUT-probe window, same
-  - Δt mellom sondene [s]     — propagation delay (= IN→OUT window shift)
+  - Δt mellom probene [s]     — propagation delay (= IN→OUT window shift)
   - Vindusbredde [s]          — window length (t_end − t_start)
 
 Window times come from the live pipeline via the meta columns
@@ -270,12 +270,12 @@ table_body = (
     "    \\midrule\n"
     "    $c_g$ [\\unit{\\meter\\per\\second}] &\n"
     f"      {cg_cells} \\\\\n"
+    "    $\\Delta t$, reisetid for $c_g$ [\\unit{\\second}] &\n"
+    f"      {delta_t_cells} \\\\\n"
     "    Innkommende vindu [\\unit{\\second}] &\n"
     f"      {in_window_cells} \\\\\n"
     "    Utgående vindu [\\unit{\\second}] &\n"
     f"      {out_window_cells} \\\\\n"
-    "    $\\Delta t$, reisetid for c_g [\\unit{\\second}] &\n"
-    f"      {delta_t_cells} \\\\\n"
     "    Tidsvinduets lengde [\\unit{\\second}] &\n"
     f"      {width_cells} \\\\\n"
     "    \\bottomrule\n"
