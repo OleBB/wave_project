@@ -242,6 +242,8 @@ CHAPTER 05 — RESULTS
   §1    ch05_damping_freq                [META]  ✓  OUT/IN (FFT) vs frequency  ← primary result
   §2    ch05_damping_scatter             [META]  ✓  OUT/IN scatter vs amplitude
   §3    ch05_wind_effect_table           [DELEG] ~  Wind effect: per-(freq,amp) Δτ + % gains/reductions table
+  §3a   ch05_transmission_wind_ratios    [DELEG] ~  R_IN, R_OUT, R_T per (freq, amp) — main thesis table
+        ch05_transmission_wind_amplitudes [DELEG] ~     └─ supporting/appendix: A_IN, A_OUT, T per (freq, amp, wind)
   §3b   ch05_t_cross                     [DELEG] ✓  T_cross: honest wind effect via clean nowind ref
   §4    ch05_damping_ka                  [META]  ~  Damping vs ka (wavenumber × amplitude)
         ch05_damping_ka_{A1,A2,A3}       [DELEG] ✓     └─ standalone per-amplitude-tier (per240+per40, magenta palette)
@@ -535,6 +537,10 @@ FIGURE_CAPTIONS: dict[str, str] = {
     #         archived 2026-04-28).
     "ch05_wind_effect_table":          "",
 
+    # § 3a — Transmission/wind ratio summary tables (per-(f, amp) main + supporting)
+    "ch05_transmission_wind_ratios":     "",
+    "ch05_transmission_wind_amplitudes": "",
+
     # § 3b — T_cross (parent + 3 subfigs)
     "ch05_t_cross":                    "",
     "ch05_t_cross_A1":                 "",
@@ -624,6 +630,8 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_damping_freq":               "",
     "ch05_damping_scatter":            "",
     "ch05_wind_effect_table":          "",
+    "ch05_transmission_wind_ratios":     "",
+    "ch05_transmission_wind_amplitudes": "",
     "ch05_t_cross":                    "",
     "ch05_damping_ka":                 "",
     "ch05_damping_ka_A1":              "",
@@ -2260,6 +2268,56 @@ _run_delegated_if_missing(
     "analysis_scratch/wind_effect_table.py",
     [Path("output/TABLES/ch05_wind_effect_table.tex")],
     label="ch05_wind_effect_table",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/wind_effect_per_condition.py (precondition CSV)
+"""
+── CH05 § 3a precondition — Per-run wind/no-wind amplitudes ─────────────────
+Runs the LS-fit-based per-(run, probe) amplitude extraction over the canon
+March-2026 lowrange folders, fullpanel, quality_flag=ok, 1.3–1.6 Hz × A1/A2/A3
+(A3@1.6 Hz excluded for high-amp dropout per feedback_freq_amp_limits.md).
+
+Drives the `analysis_scratch/wind_effect_ratios_summary.png` plot inline AND
+the per-run CSV consumed by the table cell below. Registering only the
+per-run CSV as the gate output — the script also writes long/ratios CSVs
+and several scatter PNGs as side products, kept for scratch iteration.
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/wind_effect_per_condition.py",
+    [Path("analysis_scratch/wind_effect_per_condition_per_run.csv")],
+    label="ch05_wind_effect_per_condition",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/transmission_wind_tables.py
+"""
+── CH05 § 3a — Transmission/wind ratio summary tables ──────────────────────
+Reads analysis_scratch/wind_effect_per_condition_per_run.csv (cell above),
+applies symmetric NaN filtering (drop a run if either A_IN or A_OUT is
+missing), and emits two LaTeX tables to output/TABLES/:
+
+  - ch05_transmission_wind_ratios.tex      (main; one row per (f, A))
+       R_IN, R_OUT, R_T mean ± propagated σ + n_runs per wind state.
+  - ch05_transmission_wind_amplitudes.tex  (supporting; one row per (f, A, wind))
+       A_IN, A_OUT mean ± std (mm) + T mean ± std + n_runs.
+
+Both ratio columns are ratio-of-means at the (f, A) level (matches the
+R_IN / R_OUT plot in wind_effect_per_condition.py); σ is independent-Gaussian
+propagation of the run-mean estimators. Console preview (markdown snippet for
+A1/A2/A3 tiers) is intentional — user copies it from the terminal.
+
+Captions are blank in FIGURE_CAPTIONS — populated by the user later. The
+immutable block records provenance (source CSV path, datasets, filters,
+canonicalisation) and the σ-propagation formula.
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/transmission_wind_tables.py",
+    [Path("output/TABLES/ch05_transmission_wind_ratios.tex"),
+     Path("output/TABLES/ch05_transmission_wind_amplitudes.tex")],
+    label="ch05_transmission_wind_tables",
 )
 
 # %%

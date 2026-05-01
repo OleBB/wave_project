@@ -371,9 +371,22 @@ for c in phase_disp.columns:
 print(phase_disp.to_string(index=False))
 
 
-# ── Figure (a): R_IN, R_OUT, R_T per condition ───────────────────────────
+# ── Figure (a): R_IN, R_OUT per condition ─────────────────────────────────
+# Visual conventions (per user 2026-05-01):
+#   - Color: bright purple closer to red than blue, since both wind states
+#     are mixed in the ratio (red=fullwind ÷ blue=nowind ⇒ wind-leaning purple).
+#   - Line style: IN solid, OUT dotted.
+#   - Marker shape per amplitude tier (project-wide):
+#       circle=A1 (0.1 V), square=A2 (0.2 V), triangle=A3 (0.3 V).
+#   - R_T = R_OUT / R_IN is dropped from the plot — it's algebraically
+#     redundant with the two ratio curves and visually redundant with the
+#     existing CH05 transmission-vs-frequency gap. Quote the delta inline
+#     where needed instead.
 apply_thesis_style(usetex=False)
 plt.rcParams.update({"axes.grid": True, "grid.alpha": 0.3})
+
+WIND_MIX_COLOR = "#C71585"    # mediumvioletred — wind-mixed ratio
+AMP_MARKER     = {0.1: "o", 0.2: "s", 0.3: "^"}
 
 amps_sorted = sorted([a for a in ratio_df["amp_v"].unique() if not np.isnan(a)])
 fig, axes = plt.subplots(1, len(amps_sorted), figsize=(3.6 * len(amps_sorted), 4.0),
@@ -381,25 +394,24 @@ fig, axes = plt.subplots(1, len(amps_sorted), figsize=(3.6 * len(amps_sorted), 4
 if len(amps_sorted) == 1:
     axes = [axes]
 
-R_COLOR = {"R_IN_mean": "#1F77B4", "R_OUT": "#2CA02C", "R_T_IN_mean": "#D62728"}
-R_MARKER = {"R_IN_mean": "o", "R_OUT": "s", "R_T_IN_mean": "D"}
-R_LABEL  = {"R_IN_mean": r"$R_\mathrm{IN}$ (IN mean)",
-            "R_OUT":     r"$R_\mathrm{OUT}$",
-            "R_T_IN_mean": r"$R_T = T_\mathrm{wind}/T_\mathrm{now}$"}
-
 for ax, amp in zip(axes, amps_sorted):
-    sub = ratio_df[ratio_df["amp_v"] == amp].sort_values("freq_hz")
-    for col in ("R_IN_mean", "R_OUT", "R_T_IN_mean"):
-        ax.plot(sub["freq_hz"], sub[col], "-",
-                color=R_COLOR[col], marker=R_MARKER[col], lw=1.4, ms=7,
-                label=R_LABEL[col])
+    sub    = ratio_df[ratio_df["amp_v"] == amp].sort_values("freq_hz")
+    marker = AMP_MARKER.get(amp, "D")
+    ax.plot(sub["freq_hz"], sub["R_IN_mean"],
+            color=WIND_MIX_COLOR, marker=marker, ls="-",  lw=1.4, ms=7,
+            label=r"$R_\mathrm{IN}$  (solid)")
+    ax.plot(sub["freq_hz"], sub["R_OUT"],
+            color=WIND_MIX_COLOR, marker=marker, ls=":",  lw=1.4, ms=7,
+            markerfacecolor="white", markeredgewidth=1.2,
+            label=r"$R_\mathrm{OUT}$ (dotted)")
     ax.axhline(1.0, color="#888", lw=0.7, ls="--")
     ax.set_xlabel(r"$f_p$ [Hz]")
     ax.set_title(f"{AMP_LABEL.get(amp, '?')} ({amp:.1f} V)")
     ax.set_xticks(CANON_FREQS)
     ax.legend(fontsize=8, loc="upper left")
 axes[0].set_ylabel(r"ratio (wind / nowind)")
-fig.suptitle("Wind effect at $f_p$ — IN-mean, OUT, transmission ratios", fontsize=11)
+fig.suptitle(r"Wind effect at $f_p$ — IN (solid) and OUT (dotted), per amplitude tier",
+             fontsize=11)
 fig.tight_layout()
 
 png_a = Path("analysis_scratch/wind_effect_ratios_summary.png")

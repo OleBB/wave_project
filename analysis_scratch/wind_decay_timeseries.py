@@ -22,6 +22,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
+from wavescripts.plot_utils import apply_thesis_style
+
+# Thesis-grade rcParams (NewComputerModern body font + math via mathtext,
+# 10pt body, 9pt ticks/legend, tight bbox on save). Idempotent — safe to
+# call here for delegated scratch scripts that don't go through plotter.py.
+apply_thesis_style()
 
 FS = 250.0
 BASE = Path("/Users/ole/Kodevik/wave_project")
@@ -179,20 +185,27 @@ def plot_run_zoom(tag: str, processed_dir_name: str, run_csv_rel: str,
 
     ax.set_xlim(*xlim_plot)        # tight — exactly the signal range, no padding
     ax.set_ylim(*ylim)
-    ax.set_xlabel(x_label, fontsize=12)
-    ax.set_ylabel(r"$\eta - \mu_0$ [mm]", fontsize=12)
+    # Font sizes inherit from apply_thesis_style() rcParams (10pt labels,
+    # 9pt ticks/legend) — no per-axis fontsize overrides here.
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(r"$\eta - \mu_0$ [mm]")
     title_kind = "Wind decay" if kind == "decay" else "Wind ramp-up"
     span_lbl   = (f"first {int(round(span_plot))} min"
                   if x_unit == "minutes" else
                   f"first {int(round(span_plot))} s")
     if full_range:
         span_lbl = f"full record ({T:.1f} s = {T/60:.2f} min)"
-    ax.set_title(
-        f"{title_kind} — {span_lbl} — {tag} — {Path(run_csv).name}\n"
-        f"per-probe baseline μ₀ = mean of {zero_label}",
-        fontsize=11,
-    )
-    ax.legend(loc="upper right", fontsize=10, framealpha=0.95, ncol=2)
+    # Title is included on scratch PNGs (kept verbose for sanity) but
+    # suppressed on the thesis PDF — the LaTeX \caption{} carries the
+    # identification, matching the inspirational_timeseries pattern.
+    # Dropping the title also saves ~0.4–0.5 in of vertical space, helping
+    # the four subfigures fit a single A4 page at 1-inch margins.
+    if thesis_name is None:
+        ax.set_title(
+            f"{title_kind} — {span_lbl} — {tag} — {Path(run_csv).name}\n"
+            f"per-probe baseline μ₀ = mean of {zero_label}",
+        )
+    ax.legend(loc="upper right", framealpha=0.95, ncol=2)
 
     fname_kind = "wind_decay_timeseries" if kind == "decay" else "wind_rampup_timeseries"
     if full_range:
@@ -292,9 +305,27 @@ RAMPUP = dict(
 )
 INOUT = ["9373/170", "12400/250"]
 
-# figsize: zooms taller than full views — they benefit more from vertical room.
-FIGSIZE_FULL = (14.0, 5.0)
-FIGSIZE_ZOOM = (14.0, 9.0)
+# figsize: tuned so the four subfigures (rampup_full + rampup_zoom +
+# decay_full + decay_zoom, each at 1.0\linewidth in the .tex stub) fit a
+# single A4 page at 1-inch margins. The in-figure title is suppressed for
+# thesis output (see plot_run_zoom: `if thesis_name is None`) so the saved
+# PDF aspect tracks figsize aspect closely (xlabel + legend only add a
+# small bbox margin).
+#
+# Aspect ratio is what matters here, since \includegraphics[width=\linewidth]
+# scales the rendered image to the textblock width (~6.27 in at a4paper +
+# 1-in margins). At those settings:
+#     full → displayed height ≈ 1.15 in
+#     zoom → displayed height ≈ 2.22 in
+# Total image stack ≈ 6.7 in, leaving ~3.0 in for the parent caption + four
+# subfig captions + 3 × \\[1ex] inter-subfig spacing within the ~9.7 in A4
+# textblock height. Comfortable margin even when captions grow.
+#
+# Zoom is intentionally taller than full (~1.95×) so the closeup gets clearly
+# more vertical real estate than the overview, per the visual-rhetoric intent
+# ("the zoom deserves more vertical space; the full is an overview anyway").
+FIGSIZE_FULL = (14.0, 2.0)
+FIGSIZE_ZOOM = (14.0, 4.5)
 
 # Full record (minutes, tight xlim — set inside the function when xlim=None)
 plot_run_zoom(**RAMPUP, xlim=None, ylim=(-15, 15),
