@@ -226,6 +226,9 @@ CHAPTER 04 — METHODOLOGY
         ch04_wind_rampup_full / _zoom60  [DELEG] ~     └─ subfigs: 20260314 fan 0 → max
         ch04_wind_decay_full  / _zoom60  [DELEG] ~     └─ subfigs: 20260327 fan max → 0 (endofday)
   §4q   ch04_wind_pre_paddle_psd         [DELEG] ~  3 s pre-paddle ensemble PSD vs 5 long nowave-fullwind runs (IN-wall) — validates pre-paddle window as wind sample
+        ch04_wind_pre_paddle_table       [CSV]   ~     └─ companion summary table (4 probes × {long σ, 3 s σ, Δ%, 3 s scatter})
+        ch04_wind_qc_control_chart       [DELEG] ~     └─ appendix QC: σ_η per ok run, chronological, full+no+lowest
+        ch04_wind_qc_boxplot             [DELEG] ~     └─ appendix QC: σ_η distribution by (wind × date)
   §5    ch04_inspirational_nowind        [DELEG] ~  Reading a time series — nowind canon (macro + 5-period zoom)
         ch04_inspirational_fullwind      [DELEG] ~     └─ same layout, fullwind canon (wind-wave clutter visible at IN)
   §5b   ch04_timeseries_overview         [DFS-canon] ~  Full time-series with stable-window band  (below MEDIUM gate)
@@ -502,6 +505,9 @@ FIGURE_CAPTIONS: dict[str, str] = {
 
     # § 4q — Pre-paddle wind PSD validation (3 s snippet vs long nowave runs)
     "ch04_wind_pre_paddle_psd":        "",
+    "ch04_wind_pre_paddle_table":      "",
+    "ch04_wind_qc_control_chart":      "",
+    "ch04_wind_qc_boxplot":            "",
 
     # § 5 — Reading a time series (inspirational opener)
     "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind.",
@@ -603,6 +609,9 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_tidsvindu":                  "",
     "ch04_wind_transition_overview":   "",
     "ch04_wind_pre_paddle_psd":        "",
+    "ch04_wind_pre_paddle_table":      "",
+    "ch04_wind_qc_control_chart":      "",
+    "ch04_wind_qc_boxplot":            "",
     "ch04_inspirational_nowind":       "",
     "ch04_inspirational_fullwind":     "",
     "ch04_first_arrival":              "",
@@ -1907,6 +1916,76 @@ _run_delegated_if_missing(
     [Path("output/FIGURES/ch04_wind_pre_paddle_psd.pdf"),
      Path("output/TEXFIGU/ch04_wind_pre_paddle_psd.tex")],
     label="ch04_wind_pre_paddle_psd",
+)
+
+# %%
+# [DATA: CSV]  — analysis_scratch/wind_pre_paddle_table.py
+"""
+── CH04 § 4q — Pre-paddle wind summary table (companion to PSD figure) ─────
+Four-row table: per probe, long-run σ_η vs 3 s pre-paddle σ_η, % delta, and
+3 s 1σ scatter across 70 wave runs. Reads
+analysis_scratch/wind_2s_vs_360s_stats_3s.csv (produced by the cell above)
+and renders a LaTeX table to output/TABLES/.
+
+Caption is blank in FIGURE_CAPTIONS — the user populates it later. The
+immutable block flags the OUT-probe noise-floor caveat (12400/250 σ ≈
+probe stillwater noise floor; the −8.6 % delta is sampling noise, not
+window-length bias) and the long-run duration spread (31–381 s, only 2 of
+5 ≥ 360 s) so the caption can phrase it correctly.
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/wind_pre_paddle_table.py",
+    [Path("output/TABLES/ch04_wind_pre_paddle_table.tex")],
+    label="ch04_wind_pre_paddle_table",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/wind_qc_3s.py (precondition CSV)
+"""
+── CH04 appendix — QC inputs ───────────────────────────────────────────────
+Runs the per-run σ_η computation over the canon campaign so the thesis
+QC plots downstream have their data CSV. Side products (PNGs in
+analysis_scratch/) are kept for scratch iteration.
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/wind_qc_3s.py",
+    [Path("analysis_scratch/wind_qc_3s_per_run.csv")],
+    label="ch04_wind_qc_3s_inputs",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/wind_qc_3s_thesis.py
+"""
+── CH04 appendix — Wind-QC thesis figures ──────────────────────────────────
+Two diagnostic figures promoted to thesis quality:
+    output/FIGURES/ch04_wind_qc_control_chart.pdf
+    output/FIGURES/ch04_wind_qc_boxplot.pdf
++ matching TEXFIGU stubs.
+
+Captions are blank in FIGURE_CAPTIONS — user populates later. Each stub's
+immutable block records two caveats requested 2026-05-01:
+  (1) These QC plots are stratified only by WindCondition × date so far;
+      other run-level factors (Mooring, PanelCondition, run-type
+      per40/per240, time-of-day) are NOT yet decomposed and may account
+      for part of the within-group scatter. Refine before publication.
+  (2) OUT (12400/250) σ_η sits in the probe's stillwater noise floor
+      envelope (0.14–0.36 mm), so apparent OUT-side scatter is partly
+      probe noise, not genuine wind-wave variability.
+
+Inputs:
+    analysis_scratch/wind_qc_3s_per_run.csv              (cell above)
+    analysis_scratch/wind_2s_vs_360s_per_long_run_3s.csv (CH04 §4q PSD cell)
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/wind_qc_3s_thesis.py",
+    [Path("output/FIGURES/ch04_wind_qc_control_chart.pdf"),
+     Path("output/FIGURES/ch04_wind_qc_boxplot.pdf"),
+     Path("output/TEXFIGU/ch04_wind_qc_control_chart.tex"),
+     Path("output/TEXFIGU/ch04_wind_qc_boxplot.tex")],
+    label="ch04_wind_qc_thesis",
 )
 
 # %%

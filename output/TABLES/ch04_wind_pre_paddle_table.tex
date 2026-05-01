@@ -1,0 +1,65 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/wind_pre_paddle_table.py
+%   plot_type         : wind_pre_paddle_table
+%   chapter           : 04
+%   generated_at      : 2026-05-01T14:36:39
+%   caption_label     : tab:ch04_wind_pre_paddle_table
+%   caption_short     : 
+%
+% — Inputs ────────────────────────────────────────────────────
+%   stats CSV         : analysis_scratch/wind_2s_vs_360s_stats_3s.csv
+%   per-long-run CSV  : analysis_scratch/wind_2s_vs_360s_per_long_run_3s.csv
+%   datasets          : PROCESSED-20260326-*-lowrange,
+%                       PROCESSED-20260327-*-lowrange (canon)
+%   long-run set      : 5 fullwind+nowave runs
+%   long-run durations: 31, 33, 63, 360, 381 s  (only 2 of 5 are ≥ 360 s)
+%   3 s ensemble      : 70 fullwind+wave runs, one 3 s pre-paddle
+%                       snippet each (paddle-free: √(gh)=2.39 m/s,
+%                       closest probe at 8804 mm → safe to 3.68 s)
+%
+% — Method ────────────────────────────────────────────────────
+%   sigma_eta = std(eta), Hs = 4 sigma_eta, mean = mean(eta).
+%   long-run column     : ensemble mean of per-run sigma over long runs
+%   3 s mean column     : ensemble mean of per-snippet sigma over 70 runs
+%   delta column        : (sigma_3s − sigma_long) / sigma_long, percent
+%   3 s 1σ scatter      : std (ddof=1) of per-snippet sigma across 70 runs
+%
+% — Caveats ───────────────────────────────────────────────────
+%   OUT probe (12400/250):
+%     long-run sigma = 0.36 mm; 3 s sigma = 0.33 mm; delta = -8.6 %.
+%     The probe's measured stillwater noise floor is ~0.14 mm
+%     (gold standard, CLAUDE.md §16) and ranges 0.14-0.36 mm
+%     across settled stillwater runs. The -8.6 % delta sits inside
+%     this noise-floor envelope, so it is consistent with sampling
+%     noise, not a window-length bias. Caption should reflect this
+%     when interpreting the OUT row.
+%   Long-run reference set: 5 runs total, durations vary 31-381 s
+%     (median 63 s; only 2 of 5 are ≥ 360 s). Phrase as e.g. 
+%     "five fullwind+nowave runs, durations 31-381 s" — not "5 × 360 s".
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch04_wind_pre_paddle_table}
+  \begin{tabular}{lcccc}
+    \toprule
+    sonde &
+      $\sigma_\eta$ (lang) [\unit{\milli\metre}] &
+      $\sigma_\eta$ (\qty{3}{\second}) [\unit{\milli\metre}] &
+      $\Delta$ [\%] &
+      $\sigma_\eta$ (\qty{3}{\second}, $1\sigma$) [\unit{\milli\metre}] \\
+    \midrule
+    8804/250 (upstream) & $\num{3.62}$ & $\num{3.76}$ & $+\num{4.0}$ & $\num{0.64}$ \\
+    9373/170 (IN, wall) & $\num{4.28}$ & $\num{4.04}$ & $-\num{5.6}$ & $\num{0.83}$ \\
+    9373/340 (IN, far) & $\num{4.08}$ & $\num{4.12}$ & $+\num{1.1}$ & $\num{0.60}$ \\
+    12400/250 (OUT) & $\num{0.36}$ & $\num{0.33}$ & $-\num{8.6}$ & $\num{0.04}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}

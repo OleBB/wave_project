@@ -1,0 +1,12 @@
+quantity,value_mm,note
+f_p_Hz,1.4,
+df_nowind_Hz,0.13966480446927373,
+df_fullwind_Hz,0.13966480446927373,
+delta_band_Hz,0.05,
+A_meta_FFT_nowind_mm,14.959148062969685,cached
+A_psd_raw_nowind_mm,14.96883461217795,"PSD-derived, should match cached"
+A_psd_clean_nowind_mm,14.968834282184101,minus P_still
+A_meta_FFT_fullwind_mm,16.412504221096814,cached
+A_psd_raw_fullwind_mm,16.423900772193527,"PSD-derived, should match cached"
+A_psd_clean_fullwind_3s_mm,16.42275939158446,minus P_wind_3s + P_still
+A_psd_clean_fullwind_long_mm,16.423287063857806,minus P_longwind + P_still
