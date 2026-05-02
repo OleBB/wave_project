@@ -11,12 +11,18 @@ probe per run is stored in:
     Computed Probe {pos} start         (post-snap, used by FFT/LS/etc.)
 
 This script produces a series of breakdown tables so another agent can
-verify numbers referenced in session_2026-04-22.md (the "~-0.2 T OUT
-offset" discussion and the "1.4 Hz nowind→fullwind flip").
+inspect the per-probe snap-shift distribution under the current
+per-probe-arrival H&G window (N_OFFSET=7, N_LENGTH=10 uniform; rolled
+out 2026-05-02). The earlier wavemaker-anchored [50T, 60T] window
+(2026-04-21 → 2026-05-02) reported a systematic ~−0.2 T offset at the
+OUT probe; under the new window that offset is no longer present (see
+Table 1). Tables retained for cross-window comparison and to surface
+the new IN-side observation: a non-trivial median snap shift at IN
+under nowind, with high std consistent with bimodal upcrossing
+selection at low-SNR window starts.
 
-Also adds the amplitude-dependence breakdown (0.1 V / 0.2 V / 0.3 V) —
-a test of whether finite-amplitude nonlinearity contributes to the
-offset.
+Also includes the amplitude-dependence breakdown (0.1 V / 0.2 V / 0.3 V)
+in case finite-amplitude effects appear in the residual.
 
 Scope: fullpanel wave runs in the canon March-2026 lowrange folders,
 quality_flag=ok.
@@ -25,7 +31,7 @@ Output:
     analysis_scratch/hg_snap_shift_diagnostic.csv       (per-run raw)
     analysis_scratch/hg_snap_shift_diagnostic_summary.csv (long form)
     analysis_scratch/hg_snap_shift_diagnostic.md        (tables + verdict)
-    analysis_scratch/hg_snap_shift_diagnostic.png       (heatmap figure)
+    analysis_scratch/hg_snap_shift_diagnostic.png       (figure)
 """
 
 import sys

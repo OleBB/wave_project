@@ -212,7 +212,7 @@ CHAPTER 04 — METHODOLOGY
   §4i   ch04_fft_window_length_sens      [DELEG] ~  Window-length sensitivity (N ∈ {5,8,10,12,15,20})
   §4j   ch04_fft_window_position_sens    [DELEG] ~  Window-position sensitivity (T_ref ∈ [40,80]T)
   §4k   ch04_fft_window_position_trace   [DELEG] ~  Visual: sweep windows overlaid on η(t)
-  §4L   ch04_paddle_contamination        [DELEG] ~  Paddle-freq IN contamination + wind correction + T_cross validation
+  §4L   ch04_paddle_contamination        [DELEG-HEAVY] ~  Paddle-freq IN contamination + wind correction + T_cross validation  (cell moved below HEAVY LOAD GATE)
   §4m   ch04_per40_and_per240_HG_shifted [DELEG] ~  Per40+per240 pooling under probe-shifted H&G window (the answer: yes)
   §4n   ch04_hg_per40_window_fitness_f{13,14,15,16}  [DELEG] ~  Proposed H&G window (N=15 + UC-snap) overlaid on η(t), per40+per240, all 4 thesis freqs
         ch04_window_intervals            [DELEG] ~     └─ companion table: IN/OUT window intervals + samples-per-period at each thesis freq
@@ -1581,39 +1581,10 @@ _run_delegated_if_missing(
     label="ch04_fft_window_position_trace",
 )
 
-# %%
-# [DATA: DELEG]  — analysis_scratch/paddle_contamination_study.py
-"""
-── CH04 § 4L — Paddle-frequency IN contamination + window-size sensitivity ──
-Three methodology questions on one 2×3 figure (rows: window-length / wind
-correction; cols: 0.1, 0.2, 0.3 V):
-
-  (A) Window-size sensitivity — OUT/IN vs N_periods ∈ {20, 40, 60, 100, full}.
-      Flat curve ⇒ metric robust to window choice.
-  (B) Incoherent wind-subtraction on A_in under fullwind, using PSD_wind
-      estimated from (fullwind − nowind) residual PSD:
-          A_in_corrected = √(max(0, A_in_fw² − E[A_wind²]))
-  (C) T_cross cross-check: A_in_corrected(fw) vs A_in(nw) — closes the loop
-      without relying on any single assumption.
-
-Headline findings (see analysis_scratch/paddle_contamination_findings.md
-and memory/methodology_wind_enhances_A_in.md):
-  - Window drift < 0.012 across N sweep (metric robust).
-  - Contamination ~2 % at the paddle bin.
-  - Wind *enhances* A_in by 10–17 % at 1.5–1.6 Hz, 0.2–0.3 V — NOT
-    spectral contamination. Reframes the T_cross vs OUT/IN_fw gap as a
-    physically meaningful wind-on-IN effect.
-
-Script writes output/FIGURES/ch04_paddle_contamination.pdf and
-output/TEXFIGU/ch04_paddle_contamination.tex directly.
-"""
-
-_run_delegated_if_missing(
-    "analysis_scratch/paddle_contamination_study.py",
-    [Path("output/FIGURES/ch04_paddle_contamination.pdf"),
-     Path("output/TEXFIGU/ch04_paddle_contamination.tex")],
-    label="ch04_paddle_contamination",
-)
+# %% ── §4L moved below the HEAVY LOAD GATE ─────────────────────────────────
+# `ch04_paddle_contamination` is the slowest §4 DELEG (~minutes). Relocated
+# below the HEAVY LOAD GATE so a `--regen` pass can finish §4 + §5 quickly
+# and reach this only when explicitly continuing past the gate.
 
 # %%
 # [DATA: DELEG]  — analysis_scratch/per40_and_per240_HG_shifted.py
@@ -2690,6 +2661,48 @@ if _remaining_dirs:
 else:
     print(f"Heavy load gate — all folders already loaded "
           f"(processed_dfs: {len(processed_dfs)} total), skipping")
+
+
+# %% ── HEAVY DELEG: §4 cells relocated below the heavy gate ─────────────────
+# Cells that hang main_save_figures.py for minutes when REGENERATE_DELEGATED
+# is on. They are subprocess-driven (do NOT consume `processed_dfs`), so
+# their position is purely an execution-order convenience. The heavy gate is
+# the natural breakpoint where you can stop a `--regen` pass without missing
+# any §4 / §5 publication output.
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/paddle_contamination_study.py
+"""
+── CH04 § 4L — Paddle-frequency IN contamination + window-size sensitivity ──
+Three methodology questions on one 2×3 figure (rows: window-length / wind
+correction; cols: 0.1, 0.2, 0.3 V):
+
+  (A) Window-size sensitivity — OUT/IN vs N_periods ∈ {20, 40, 60, 100, full}.
+      Flat curve ⇒ metric robust to window choice.
+  (B) Incoherent wind-subtraction on A_in under fullwind, using PSD_wind
+      estimated from (fullwind − nowind) residual PSD:
+          A_in_corrected = √(max(0, A_in_fw² − E[A_wind²]))
+  (C) T_cross cross-check: A_in_corrected(fw) vs A_in(nw) — closes the loop
+      without relying on any single assumption.
+
+Headline findings (see analysis_scratch/paddle_contamination_findings.md
+and memory/methodology_wind_enhances_A_in.md):
+  - Window drift < 0.012 across N sweep (metric robust).
+  - Contamination ~2 % at the paddle bin.
+  - Wind *enhances* A_in by 10–17 % at 1.5–1.6 Hz, 0.2–0.3 V — NOT
+    spectral contamination. Reframes the T_cross vs OUT/IN_fw gap as a
+    physically meaningful wind-on-IN effect.
+
+Script writes output/FIGURES/ch04_paddle_contamination.pdf and
+output/TEXFIGU/ch04_paddle_contamination.tex directly.
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/paddle_contamination_study.py",
+    [Path("output/FIGURES/ch04_paddle_contamination.pdf"),
+     Path("output/TEXFIGU/ch04_paddle_contamination.tex")],
+    label="ch04_paddle_contamination",
+)
 
 
 # %% ── DIAGNOSTICS ───────────────────────────────────────────────────────────
