@@ -3,9 +3,16 @@
 import re
 import numpy as np
 import os
+import sys
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from datetime import datetime
+from collections import defaultdict
+
+# match the thesis font / sizes used by the wind-profile plot
+sys.path.insert(0, os.path.expanduser("~/Kodevik/wave_project"))
+from wavescripts.plot_utils import apply_thesis_style
+apply_thesis_style()
 
 # --- USER SETTINGS ---
 ein_folder = r"/Users/ole/Kodevik/wave_project/pressuredata/20251107-fullwindUP2-allpanel-angleTest"
@@ -216,22 +223,54 @@ def make_plots(results, split=False, save=False):
 
     if split:
         figs = []
-        fig1, ax1 = plt.subplots(figsize=(7, 4))
-        fig2, ax2 = plt.subplots(figsize=(7, 4))
-        fig3, ax3 = plt.subplots(figsize=(7, 4))
+        fig1, ax1 = plt.subplots(figsize=(6.27, 3.0))
+        fig2, ax2 = plt.subplots(figsize=(6.27, 3.9))
+        fig3, ax3 = plt.subplots(figsize=(6.27, 3.9))
         figs = [(fig1, ax1), (fig2, ax2), (fig3, ax3)]
     else:
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 11), sharex=True)
         fig.suptitle("Vindfart per grad (LabView)", fontsize=13)
 
-    # --- Panel 1: mean wind speed + error bars ---
-    for r, c in zip(results, colors):
-        ax1.errorbar(r["angle"], r["mean_speed"], yerr=r["total_unc"],
-                     fmt='o', color=c, capsize=4, markersize=5)
-    ax1.set_ylabel("Gjennomsnittlig vindfart [m/s]")
-    ax1.set_title("Estimert vindfart med samlet usikkerhet")
-    ax1.legend(handles=run_legend, fontsize=9)
-    style_ax(ax1)
+    # --- Panel 1: pooled angle response, normalised, cos-theta reference ---
+    by_angle = defaultdict(list)
+    for r in results:
+        by_angle[r["angle"]].append((r["mean_speed"], r["total_unc"]))
+    angs    = sorted(by_angle.keys())
+    U_0     = float(np.mean([v for v, _ in by_angle[min(angs)]]))
+    means   = np.array([np.mean([v for v, _ in by_angle[a]]) for a in angs]) / U_0
+    spread  = np.array([
+        np.std([v for v, _ in by_angle[a]], ddof=1) if len(by_angle[a]) > 1
+        else by_angle[a][0][1]
+        for a in angs
+    ]) / U_0
+    ang_max = int(max(angs))
+
+    # operational range used in main experiment (edit if your alignment differs)
+    ax1.axvspan(0, 2, alpha=0.15, color='tab:green',
+                label="Brukt i hovedforsøk")
+
+    # cos(theta) geometric reference
+    th = np.linspace(0, ang_max, 200)
+    ax1.plot(th, np.cos(np.deg2rad(th)),
+             linestyle='--', color='dimgray', linewidth=1.0,
+             label=r"$\cos\theta$ (geometrisk forventning)")
+
+    # measured response (runs pooled at each angle)
+    ax1.errorbar(angs, means, yerr=spread,
+                 fmt='o-', color='tab:blue', markersize=3,
+                 linewidth=0.8, capsize=2, elinewidth=0.6, capthick=0.6,
+                 label="Måling")
+
+    ax1.axhline(1.0, color='dimgray', linewidth=0.5, alpha=0.4)
+    ax1.set_xlabel("Vinkel mellom probe og strømning [grader]")
+    ax1.set_ylabel(r"$U(\theta)\,/\,U_0$")
+    ax1.set_xlim(-0.5, ang_max + 0.5)
+    ax1.set_ylim(0.7, 1.1)
+    ax1.set_xticks(range(0, ang_max + 1, 5))
+    ax1.set_xticks(range(0, ang_max + 1), minor=True)
+    ax1.grid(True, which='major', linestyle='--', linewidth=0.5)
+    ax1.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.4)
+    ax1.legend(fontsize=10, loc='lower left')
 
     # --- Panel 2: uncertainty components ---
     tri = mlines.Line2D([], [], color='gray', marker='^', linestyle='None',
@@ -383,3 +422,317 @@ def plot_distributions(results):
     plt.show()
 
 plot_distributions(results)
+
+
+# %%
+# --- Visual: pitot at each tested angle, vertical stack ---
+# Reader-friendly geometric view of the cosine-law angle response.
+# Each row: probe rotated to the tested angle, horizontal wind arrow,
+# green arrow showing the wind component along the probe axis,
+# and the measured U(theta)/U_0 ratio.
+
+def plot_angle_visual(results):
+    from matplotlib.patches import Rectangle
+    import matplotlib.transforms as mtr
+
+    by_angle = defaultdict(list)
+    for r in results:
+        by_angle[r["angle"]].append(r["mean_speed"])
+    angs   = sorted(by_angle.keys())
+    U_0    = float(np.mean(by_angle[min(angs)]))
+    ratios = {a: float(np.mean(by_angle[a])) / U_0 for a in angs}
+
+    PROBE_LEN = 1.4
+    PROBE_W   = 0.10
+    WIND_LEN  = 1.2
+    PIVOT_X   = 0.0
+    SPACING   = 1.5
+    n_rows    = len(angs)
+
+    fig, ax = plt.subplots(figsize=(4.8, 1.0 * n_rows + 1.2))
+
+    for i, ang in enumerate(angs):
+        y     = -i * SPACING
+        theta = np.deg2rad(ang)
+        ratio = ratios[ang]
+
+        # incoming wind (horizontal, fixed length)
+        ax.annotate(
+            "", xy=(PIVOT_X - 0.05, y),
+            xytext=(PIVOT_X - 0.05 - WIND_LEN, y),
+            arrowprops=dict(arrowstyle="-|>", color='steelblue', lw=1.3),
+            zorder=3,
+        )
+
+        # probe rectangle, rotated about its tip at (PIVOT_X, y)
+        rect = Rectangle(
+            (PIVOT_X, y - PROBE_W / 2),
+            PROBE_LEN, PROBE_W,
+            facecolor='lightgray', edgecolor='black', linewidth=0.8,
+            zorder=4,
+        )
+        rect.set_transform(
+            mtr.Affine2D().rotate_deg_around(PIVOT_X, y, ang) + ax.transData
+        )
+        ax.add_patch(rect)
+
+        # captured component along probe axis (length = WIND_LEN * cos(theta))
+        proj_len = WIND_LEN * np.cos(theta)
+        proj_end = (PIVOT_X + proj_len * np.cos(theta),
+                    y       + proj_len * np.sin(theta))
+        ax.annotate(
+            "", xy=proj_end, xytext=(PIVOT_X, y),
+            arrowprops=dict(arrowstyle="-|>", color='tab:green', lw=1.5),
+            zorder=5,
+        )
+
+        # right-side label
+        ax.text(PIVOT_X + PROBE_LEN + 0.4, y,
+                f"{ang}°,  $U(\\theta)/U_0 = {ratio:.3f}$",
+                va='center', ha='left', fontsize=10)
+
+    # legend at the top
+    legend_elements = [
+        mlines.Line2D([0], [0], color='steelblue', lw=1.3,
+                      label="Vind (horisontal)"),
+        mlines.Line2D([0], [0], color='tab:green', lw=1.5,
+                      label=r"Fanget komponent ($\propto \cos\theta$)"),
+        mlines.Line2D([0], [0], color='black', lw=0,
+                      marker='s', markerfacecolor='lightgray', markersize=10,
+                      label="Pitotrør"),
+    ]
+    ax.legend(handles=legend_elements, loc='upper left',
+              fontsize=9, frameon=True, bbox_to_anchor=(0.0, 1.0))
+
+    ax.set_xlim(PIVOT_X - WIND_LEN - 0.4, PIVOT_X + PROBE_LEN + 3.0)
+    ax.set_ylim(-(n_rows - 1) * SPACING - 0.8, 1.4)
+    ax.set_aspect('equal')
+    ax.axis('off')
+
+    fig.tight_layout()
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    fig_path = os.path.expanduser("~/Kodevik/wave_project/windresults")
+    out = os.path.join(fig_path, f"angle_visual_{ts}.pdf")
+    fig.savefig(out, bbox_inches='tight')
+    print(f"Saved: {out}")
+    plt.show()
+
+
+plot_angle_visual(results)
+
+
+# %%
+# --- Visual: loss in measured wind speed vs angular misalignment ---
+# Plots 100 * (1 - U(θ)/U_0) — the percentage of wind speed lost to
+# pitot-axis misalignment θ. The reader reads the methodology answer
+# directly: "if our alignment uncertainty is ±X°, our error is ≤ Y%".
+#
+# The cos-curve becomes a prediction we're testing; the threshold line
+# is a numeric commitment we're meeting.
+
+def plot_angle_loss(results, theta_max_deg=30,
+                    alignment_unc_deg=2.0, threshold_pct=1.0):
+    by_angle = defaultdict(list)
+    for r in results:
+        by_angle[r["angle"]].append(r["mean_speed"])
+    angs   = sorted(by_angle.keys())
+    U_0    = float(np.mean(by_angle[min(angs)]))
+    losses = {a: 100.0 * (1 - float(np.mean(by_angle[a])) / U_0) for a in angs}
+
+    angs_use   = [a for a in angs if a <= theta_max_deg]
+    losses_use = [losses[a] for a in angs_use]
+
+    fig, ax = plt.subplots(figsize=(6.27, 3.5))
+
+    # cosine prediction: 100 * (1 - cos θ)
+    th = np.linspace(0, theta_max_deg, 200)
+    cos_loss = 100.0 * (1 - np.cos(np.deg2rad(th)))
+    ax.plot(th, cos_loss,
+            linestyle='-', color='dimgray', linewidth=1.0,
+            label=r"$100\,(1-\cos\theta)$ (forventet)")
+
+    # alignment-uncertainty band — what we claim our alignment was within
+    ax.axvspan(0, alignment_unc_deg, color='tab:green', alpha=0.15,
+               label=f"Justeringsusikkerhet (±{alignment_unc_deg:g}°)")
+
+    # threshold line — the loss the reader agrees is acceptable
+    ax.axhline(threshold_pct, color='tab:red', linestyle='--',
+               linewidth=0.8, alpha=0.8,
+               label=f"{threshold_pct:g}% terskel")
+
+    # angle at which cos crosses the threshold
+    theta_cross = float(np.degrees(np.arccos(1 - threshold_pct / 100.0)))
+    if theta_cross < theta_max_deg:
+        ax.axvline(theta_cross, color='tab:red', linestyle=':',
+                   linewidth=0.6, alpha=0.7)
+        ax.text(theta_cross + 0.4, threshold_pct + 0.4,
+                f"{threshold_pct:g}% nås ved {theta_cross:.1f}°",
+                fontsize=8, color='tab:red',
+                va='bottom', ha='left')
+
+    # measurements
+    ax.scatter(angs_use, losses_use, s=26, color='tab:blue', zorder=5,
+               label="Måling")
+
+    # report the worst-case loss within the alignment uncertainty band
+    worst_loss = 100.0 * (1 - np.cos(np.deg2rad(alignment_unc_deg)))
+    ax.text(0.02, 0.95,
+            (f"Innenfor ±{alignment_unc_deg:g}°: "
+             f"tap $\\leq$ {worst_loss:.2f}%"),
+            transform=ax.transAxes, fontsize=9,
+            va='top', ha='left',
+            bbox=dict(facecolor='white', edgecolor='tab:green',
+                      boxstyle='round,pad=0.3', alpha=0.9))
+
+    ax.set_xlabel(r"Avvik fra strømlinje, $\theta$ [grader]")
+    ax.set_ylabel(r"Tap i målt vindfart $\;100\,(1-U/U_0)$ [%]")
+    ax.set_xlim(0, theta_max_deg)
+    ymax = max(losses_use + [cos_loss.max()]) * 1.12
+    ax.set_ylim(0, ymax)
+    ax.set_xticks(range(0, theta_max_deg + 1, 5))
+    ax.set_xticks(range(0, theta_max_deg + 1), minor=True)
+    ax.grid(True, which='major', linestyle='--', linewidth=0.5)
+    ax.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.4)
+    ax.legend(fontsize=9, loc='upper left',
+              bbox_to_anchor=(0.02, 0.85))
+
+    fig.tight_layout()
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    fig_path = os.path.expanduser("~/Kodevik/wave_project/windresults")
+    out = os.path.join(fig_path, f"angle_loss_{ts}.pdf")
+    fig.savefig(out, bbox_inches='tight')
+    print(f"Saved: {out}")
+    plt.show()
+
+
+plot_angle_loss(results, theta_max_deg=30,
+                alignment_unc_deg=2.0, threshold_pct=1.0)
+
+
+# %%
+# --- Variant: loss plot with errorbars + ±1σ noise band ---
+# Same x/y axes as plot_angle_loss, but each dot now carries its own
+# yerr (propagated from total_unc on numerator + denominator), and the
+# cosine prediction is wrapped in a shaded ±1σ band representing the
+# typical measurement-floor on the ratio. Dots whose errorbars overlap
+# the band are consistent with cos law, regardless of where the central
+# value lands. The white box now reports both the predicted loss and
+# the measurement floor so the reader can compare them.
+
+def plot_angle_loss_with_uncertainty(results, theta_max_deg=30,
+                                     alignment_unc_deg=2.0,
+                                     threshold_pct=1.0):
+    by_angle_speed = defaultdict(list)
+    by_angle_unc   = defaultdict(list)
+    for r in results:
+        by_angle_speed[r["angle"]].append(r["mean_speed"])
+        by_angle_unc[r["angle"]].append(r["total_unc"])
+
+    angs    = sorted(by_angle_speed.keys())
+    a_min   = min(angs)
+    U_0     = float(np.mean(by_angle_speed[a_min]))
+    # uncertainty on the denominator: pool runs at the smallest angle.
+    # Use run-to-run std if multiple runs, else mean of total_unc values.
+    if len(by_angle_speed[a_min]) > 1:
+        sigma_U_0 = float(np.std(by_angle_speed[a_min], ddof=1))
+    else:
+        sigma_U_0 = float(np.mean(by_angle_unc[a_min]))
+
+    # per-angle measured speed, total_unc, and propagated ratio uncertainty
+    angs_use, losses_use, loss_err_use = [], [], []
+    for a in angs:
+        if a > theta_max_deg:
+            continue
+        U_t   = float(np.mean(by_angle_speed[a]))
+        if len(by_angle_speed[a]) > 1:
+            sigma_U_t = float(np.std(by_angle_speed[a], ddof=1))
+        else:
+            sigma_U_t = float(np.mean(by_angle_unc[a]))
+        ratio = U_t / U_0
+        # gaussian error propagation:
+        # sigma_ratio = ratio * sqrt((sigma_U_t/U_t)^2 + (sigma_U_0/U_0)^2)
+        sigma_ratio = ratio * np.sqrt((sigma_U_t / U_t) ** 2
+                                      + (sigma_U_0 / U_0) ** 2)
+        angs_use.append(a)
+        losses_use.append(100.0 * (1 - ratio))
+        loss_err_use.append(100.0 * sigma_ratio)
+
+    # representative noise band: median errorbar across measurements
+    sigma_band_pp = float(np.median(loss_err_use)) if loss_err_use else 0.0
+
+    fig, ax = plt.subplots(figsize=(6.27, 3.5))
+
+    th = np.linspace(0, theta_max_deg, 200)
+    cos_loss = 100.0 * (1 - np.cos(np.deg2rad(th)))
+
+    # ±1σ noise band around the cosine prediction
+    ax.fill_between(th,
+                    cos_loss - sigma_band_pp,
+                    cos_loss + sigma_band_pp,
+                    color='dimgray', alpha=0.15,
+                    label=f"±1σ målestøy ($\\approx${sigma_band_pp:.1f} %-poeng)")
+
+    # cosine prediction line
+    ax.plot(th, cos_loss,
+            linestyle='-', color='dimgray', linewidth=1.0,
+            label=r"$100\,(1-\cos\theta)$ (forventet)")
+
+    # alignment-uncertainty band
+    ax.axvspan(0, alignment_unc_deg, color='tab:green', alpha=0.15,
+               label=f"Justeringsusikkerhet (±{alignment_unc_deg:g}°)")
+
+    # threshold line
+    ax.axhline(threshold_pct, color='tab:red', linestyle='--',
+               linewidth=0.8, alpha=0.8,
+               label=f"{threshold_pct:g}% terskel")
+
+    theta_cross = float(np.degrees(np.arccos(1 - threshold_pct / 100.0)))
+    if theta_cross < theta_max_deg:
+        ax.axvline(theta_cross, color='tab:red', linestyle=':',
+                   linewidth=0.6, alpha=0.7)
+
+    # measurements with errorbars
+    ax.errorbar(angs_use, losses_use, yerr=loss_err_use,
+                fmt='o', color='tab:blue', markersize=4,
+                capsize=2, elinewidth=0.8, capthick=0.8,
+                zorder=5, label="Måling")
+
+    # info box: predicted loss within alignment band vs measurement floor
+    pred_loss_band = 100.0 * (1 - np.cos(np.deg2rad(alignment_unc_deg)))
+    info_lines = [
+        f"Innenfor ±{alignment_unc_deg:g}°:  forventet tap $\\leq$ {pred_loss_band:.2f}%",
+        f"Måleoppløsning på forholdet:  $\\sim${sigma_band_pp:.1f} %-poeng",
+    ]
+    ax.text(0.98, 0.95,
+            "\n".join(info_lines),
+            transform=ax.transAxes, fontsize=8,
+            va='top', ha='right',
+            bbox=dict(facecolor='white', edgecolor='gray',
+                      boxstyle='round,pad=0.3', alpha=0.9))
+
+    ax.set_xlabel(r"Avvik fra strømlinje, $\theta$ [grader]")
+    ax.set_ylabel(r"Tap i målt vindfart $\;100\,(1-U/U_0)$ [%]")
+    ax.set_xlim(0, theta_max_deg)
+    ymax = max([l + e for l, e in zip(losses_use, loss_err_use)]
+               + [cos_loss.max() + sigma_band_pp]) * 1.10
+    ymin = min([l - e for l, e in zip(losses_use, loss_err_use)]
+               + [-sigma_band_pp]) * 1.10
+    ax.set_ylim(ymin, ymax)
+    ax.set_xticks(range(0, theta_max_deg + 1, 5))
+    ax.set_xticks(range(0, theta_max_deg + 1), minor=True)
+    ax.grid(True, which='major', linestyle='--', linewidth=0.5)
+    ax.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.4)
+    ax.legend(fontsize=8, loc='upper left',
+              bbox_to_anchor=(0.02, 0.78))
+
+    fig.tight_layout()
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    fig_path = os.path.expanduser("~/Kodevik/wave_project/windresults")
+    out = os.path.join(fig_path, f"angle_loss_with_uncertainty_{ts}.pdf")
+    fig.savefig(out, bbox_inches='tight')
+    print(f"Saved: {out}")
+    plt.show()
+
+
+plot_angle_loss_with_uncertainty(results, theta_max_deg=30,
+                                 alignment_unc_deg=2.0, threshold_pct=1.0)

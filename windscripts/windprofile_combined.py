@@ -493,7 +493,7 @@ fw_heights_cm = np.array(fw_heights) / 10.0
 lw_heights_cm = np.array(lw_heights) / 10.0
 ROOF_CM       = ROOF_MM / 10.0
 
-fig3, ax3 = plt.subplots(figsize=(9, 7))
+fig3, ax3 = plt.subplots(figsize=(6.27, 3.9))
 
 ax3.errorbar(fw_speed, fw_heights_cm, xerr=fw_spread,
              fmt='D-', color=fw_color, linewidth=0.1, markersize=3,
@@ -522,28 +522,40 @@ ax3.legend(fontsize=12, loc='best')
 
 
 from matplotlib.patches import Rectangle
-import matplotlib.transforms as mtransforms
 
-# Pitot probe: hangs from roof (38 cm) down to 27.2 cm — 10.8 cm long
+PROBE_X         = 1.0
+PROBE_WIDTH     = 0.1
 PROBE_TIP_CM    = 27.2
-PROBE_X_FRAC    = 0.93          # 93% from the left of the axes
-PROBE_WIDTH_FRAC = 0.025        # 2.5% of axes width — skinny
+EXTENSION_BOT   = 10.0
 
-trans = mtransforms.blended_transform_factory(ax3.transAxes, ax3.transData)
-
+# probe body (solid, filled): roof → 27.2 cm
 probe = Rectangle(
-    (PROBE_X_FRAC, PROBE_TIP_CM),                # (x_left, y_bottom)
-    PROBE_WIDTH_FRAC,                            # width (axes-fraction)
-    ROOF_CM - PROBE_TIP_CM,                      # height (data, cm)
+    (PROBE_X - PROBE_WIDTH / 2, PROBE_TIP_CM),
+    PROBE_WIDTH,
+    ROOF_CM - PROBE_TIP_CM,
     facecolor='lightgray', edgecolor='black', linewidth=0.6,
-    alpha=0.85, zorder=4, transform=trans,
+    alpha=0.85, zorder=4,
 )
 ax3.add_patch(probe)
 
-# optional small label next to the tip
-ax3.text(PROBE_X_FRAC + PROBE_WIDTH_FRAC + 0.005, PROBE_TIP_CM,
-         "pitotrør\n(rekkevidde)", transform=trans,
-         ha='left', va='center', fontsize=7, color='dimgray')
+# reach extension (dashed outline, no fill): 27.2 cm → 10 cm
+reach = Rectangle(
+    (PROBE_X - PROBE_WIDTH / 2, EXTENSION_BOT),
+    PROBE_WIDTH,
+    PROBE_TIP_CM - EXTENSION_BOT,
+    facecolor='none', edgecolor='gray', linewidth=0.8,
+    linestyle='--', zorder=4,
+)
+ax3.add_patch(reach)
+
+# optional label next to the dashed extension
+ax3.text(PROBE_X + PROBE_WIDTH, ( EXTENSION_BOT),
+         "Endelig probehøyde", fontsize=10, color='black',
+         va='center', ha='left')
+
+ax3.text(PROBE_X + PROBE_WIDTH, (PROBE_TIP_CM),
+         "Innledende probehøyde", fontsize=10, color='black',
+         va='center', ha='left')
 
 fig3.tight_layout()
 if SAVE:
