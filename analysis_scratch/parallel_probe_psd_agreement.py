@@ -346,17 +346,27 @@ def _load_psd_data_from_project(target_freqs=TARGET_FREQS,
     psd_data = {}
     for path in sel_paths:
         df = psd_dict[path]
-        run_id = Path(path).stem
-        psd_data[run_id] = {}
+        # Include parent folder in the run_id; the two canon March-2026
+        # folders share filenames (only the mooring config differs in the
+        # folder name), so Path(path).stem alone collides.
+        run_id = f"{Path(path).parent.name}/{Path(path).stem}"
+        per_run = {}
         for probe in PROBES:
             col = f"Pxx {probe}"
             if col not in df.columns:
                 continue
             ser = df[col].dropna()
-            psd_data[run_id][probe] = {
+            if len(ser) < 2:
+                continue
+            per_run[probe] = {
                 "f": ser.index.to_numpy(),
                 "Pxx": ser.to_numpy(),
             }
+        # Only keep runs where BOTH probes have data — the paired t-test
+        # downstream requires row-aligned stacks.
+        if all(p in per_run for p in PROBES):
+            psd_data[run_id] = per_run
+    print(f"  {len(psd_data)} runs retained (both parallel probes present).")
     return psd_data
 
 
