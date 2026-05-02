@@ -16,7 +16,8 @@ Both UC-snap start to nearest upcrossing within ±T. Both use nearest-bin FFT am
 
 Direct comparison of the per-probe paddle-frequency amplitudes (no OUT/IN ratio compounding). Median across all (23) (frequency × amplitude × wind) cells:
 
-| Probe | n cells | median \|Δ\|/A_HG | max \|Δ\|/A_HG | within ±5% |
+
+| Probe | n cells | median abs(Δ)/A_HG | max (abs(Δ)/A_HG | within ±5% |
 |---|---:|---:|---:|---:|
 | 9373/170  (IN)  | 23  | **0.86%**  | 11.88% | 22/23 |
 | 12400/250 (OUT) | 23 | **1.91%** | 7.07% | 21/23 |

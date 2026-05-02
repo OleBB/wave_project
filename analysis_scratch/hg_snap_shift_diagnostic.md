@@ -1,6 +1,6 @@
 # H&G snap-shift diagnostic — pulled from meta.json
 
-Generated: 2026-05-02T16:03:26Z
+Generated: 2026-05-02T18:36:27Z
 
 **Dataset**: fullpanel wave runs, quality_flag=ok, from the two canonical
 March-2026 lowrange folders. n_runs = 103.
@@ -22,22 +22,24 @@ window LATER than the theoretical H&G position.
 
 ## Table 2 — IN-vs-OUT shift disagreement
 
-If the ~−0.2 T offset at OUT were purely a wavemaker phase reference issue,
-ALL probes should show the same median shift (c_g(f) predicts the same
-arrival phase at every probe relative to paddle). Any cross-probe
-disagreement argues for tank-local physics (amplitude dispersion,
-reflections, near-panel effects) rather than a pure-phase-reference cause.
+Under the per-probe-arrival window (`r·f/c_g + 7T`), an accurate `c_g(f)`
+should produce zero median shift at every probe (snap = expected up to
+UC quantization). Any per-probe systematic shift flags either a residual
+`c_g` error at that probe OR a probe-local detection artefact (e.g. window
+start sitting on the rising edge of the wave-train envelope, where small
+detector-noise picks adjacent upcrossings on either side of the threshold).
 
 | wind | IN (9373/170) median | OUT (12400/250) median | IN − OUT |
 |---|---|---|---|
 | no | +0.286 | +0.052 | **+0.234** |
 | full | +0.056 | +0.035 | **+0.021** |
 
-## Table 3 — Amplitude dependence of OUT-probe shift
+## Table 3 — Amplitude dependence of probe shift
 
-Does the −0.2 T offset grow (or shrink) with paddle amplitude? A Stokes-
-nonlinearity mechanism would predict the offset magnitude scales with wave
-steepness (roughly ∝ ka ∝ amplitude at fixed frequency).
+Both probes are tabulated against paddle amplitude. A finite-amplitude
+(Stokes) correction to `c_g` would scale roughly ∝ ka, so any systematic
+trend with amplitude is the signature to look for. A flat or noise-like
+dependence rules Stokes out and points at probe-local detection effects.
 
 OUT probe (12400/250), median shift in periods per (amp, wind):
 
@@ -55,13 +57,15 @@ Same table for IN probe (9373/170):
 | 0.2 | -0.269 ± 0.352  (n=9) | +0.218 ± 0.160  (n=13) |
 | 0.3 | +0.317 ± 0.119  (n=9) | +0.073 ± 0.084  (n=18) |
 
-## Table 4 — The 1.4 Hz OUT-probe flip
+## Table 4 — 1.4 Hz OUT-probe per-run shifts
 
-Observation in the session log: at 1.4 Hz, median OUT shift flips from
-~-0.35 T (nowind) to ~+0.35 T (fullwind). A ±0.5 T jump is the boundary
-where 'nearest upcrossing' can flip between two adjacent ones. Listing
-all 1.4 Hz OUT runs below with individual shifts so another agent can
-confirm or falsify.
+Under the previous wavemaker-anchored window the 1.4 Hz OUT shift flipped
+median sign between nowind and fullwind. With the new per-probe-arrival
+window the per-cell medians no longer flip in a clean way (Table 5), but
+individual 1.4 Hz runs still show shifts close to the ±0.5 T snap boundary,
+which is where 'nearest upcrossing' can switch between adjacent cycles.
+Listed below for transparency — useful when sampling individual runs to
+inspect their snap behaviour directly.
 
 | path | amp [V] | wind | shift (T) | hg_expected_start | snap start (Computed start) |
 |---|---|---|---|---|---|
@@ -203,50 +207,45 @@ Long-form table, see also `hg_snap_shift_diagnostic_summary.csv`.
 
 ## Observations (facts)
 
-- **O1**: OUT probe (12400/250) shows median shift ~−0.18 T under nowind,
-  ~−0.23 T under fullwind. Systematic negative bias across all amplitudes.
-- **O2**: IN probes (9373/170 and 9373/340) show median shifts near zero
-  (~+0.04 T nowind, ~0 fullwind). Much smaller than OUT.
-- **O3**: IN − OUT median shift is ~+0.21 T (nowind) and ~+0.30 T (fullwind).
-  Any explanation purely about wavemaker phase reference would predict 0.
-- **O4**: The 1.4 Hz OUT flip (Table 4) is driven by individual runs with
-  shifts near ±0.5 T — at that boundary 'nearest upcrossing' can flip.
-- **O5**: Amplitude dependence of OUT shift (Table 3) — examine the numbers,
-  see whether the offset grows with amplitude (Stokes test).
+- **O1**: OUT probe (12400/250) median shift ≈ +0.05 T (nowind) and
+  +0.04 T (fullwind), std ≈ 0.24 T. Effectively zero on this dataset —
+  consistent with `c_g` predicting OUT arrival accurately under the
+  per-probe-arrival window. The previous wavemaker-anchored window's
+  ~−0.2 T OUT offset (2026-04-22 finding) is not present here.
+- **O2**: IN probes (9373/170 and 9373/340) show median shift +0.28 T
+  (nowind) and ≈ +0.07 T (fullwind), with high std (~0.29 T) under
+  nowind. The two IN probes track each other closely (+0.286 vs +0.281
+  nowind), so the offset is not a probe-individual effect.
+- **O3**: IN − OUT median shift is +0.234 T (nowind), +0.021 T (fullwind).
+  Under the new window the disagreement is now driven by the IN side, not
+  by an OUT-side anomaly.
+- **O4**: Within each (freq, amp, wind) cell the IN-nowind shift is tight
+  (per-cell std typically 0.01–0.04 T, n=2–9), but between cells the median
+  flips sign across freq/amp combinations — e.g. IN-nowind 1.5 Hz at 0.1 V
+  sits at −0.31 T while 1.5 Hz at 0.3 V sits at +0.34 T (Table 5). The
+  pooled +0.286 T median in Table 1 is a population mean over cells with
+  varying sign, not a single coherent offset.
+- **O5**: Upstream probe 8804/250 shows median shift −0.07 T regardless of
+  wind. Smaller in magnitude than IN-nowind, opposite in sign.
+- **O6**: The 1.4 Hz OUT-probe per-run shifts (Table 4) sit close to the
+  ±0.5 T snap boundary (range −0.45 to +0.48 T across listed runs).
 
 ## Candidate explanations (hypotheses, not verified)
 
-- **H1** (wavemaker soft-start phase reference): would produce equal-
-  magnitude offsets at ALL probes → inconsistent with O3. Partially rule out.
-- **H2** (group-velocity underestimate for 12.4 m travel): if c_g at OUT
-  is slightly slower than deep-water prediction, actual wave arrives later
-  than predicted → snap finds upcrossing AFTER expected → POSITIVE shift.
-  Observed sign is NEGATIVE, so this mechanism doesn't fit either.
-- **H3** (group-velocity OVERESTIMATE for 12.4 m travel): predicted arrival
-  later than actual; snap finds upcrossing BEFORE expected → NEGATIVE shift.
-  Sign matches. Requires c_g to be ~0.2 T too fast over the longer travel.
-  In deep water, a 0.2 T error at 1.4 Hz ≈ 0.14 s travel-time error over
-  12.4 m = effective c_g 0.9 m/s (vs predicted 0.56) or ~60% faster. Not
-  physically credible for a linear deep-water wave.
-- **H4** (finite-amplitude Stokes correction to c_g): second-order Stokes
-  nonlinearity slightly modifies c_phase and c_g at large ka. Effect size
-  is small (typically < few percent at ka ~0.1). Probably insufficient to
-  account for 0.2 T, but Table 3 would show it as an amplitude dependence.
-- **H5** (near-panel reflection at OUT probe changing detected upcrossing):
-  the OUT probe sits between the panel and the beach. If a partial
-  reflection from the panel creates a standing-wave pattern at the OUT
-  probe, local phase is shifted relative to the free-running tone. Would
-  affect OUT much more than IN. Magnitude depends on reflection coefficient
-  (measured ~0.05–0.07 under nowind 0.2 V — see mansard_funke_findings.md).
-  Could plausibly shift OUT upcrossing by up to ~0.2 T for R in that range.
-- **H6** (sensor-response lag on ULS probe): each ULS probe has its own
-  electronic response. A small but probe-specific delay would produce a
-  constant per-probe offset. Doesn't depend on frequency, amplitude, or wind.
-  Would require bench measurement to verify.
-
-To go further: the amplitude-dependence in Table 3 is the most useful
-discriminator — if shift magnitude scales with amplitude, H4 / H5 gain
-support; if flat, H6 or H3 (rejected for different reasons) are in play.
+- **H1** (UC-snap edge case at low-SNR window starts): the per-probe-arrival
+  window starts at `r/c_g + 7T`, which puts the IN window very early in
+  the wave train (where the envelope is still rising). At a window start
+  this close to the rising-edge envelope, which upcrossing the snap locks
+  onto can shift between adjacent cycles depending on cell-specific signal
+  shape — consistent with O4's tight within-cell std plus large between-
+  cell sign flips. Under fullwind the IN-nowind +0.286 T median collapses
+  to +0.056 T (Table 1), suggesting the wind background tilts the snap
+  consistently. The two IN probes seeing the same wavefront would also
+  explain their nearly-identical pooled medians (O2). Not directly tested.
+- **H2** (finite-amplitude Stokes correction to `c_g`): second-order Stokes
+  nonlinearity slightly modifies `c_phase` and `c_g` at large `ka`. If
+  active, Table 3 should show median shift growing monotonically with
+  amplitude. Inspect the per-(amp, wind) values for a clean trend.
 
 ## For another agent wanting to re-derive these numbers
 
