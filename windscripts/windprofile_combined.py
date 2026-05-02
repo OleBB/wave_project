@@ -6,7 +6,13 @@ Each dataset is shown as a faint individual line.
 A combined profile (mean across runs at each height) is shown bold.
 Heights measured in only one run get a different marker to flag lower confidence.
 """
-import os
+import sys, os
+sys.path.insert(0, os.path.expanduser("~/Kodevik/wave_project"))   # only if needed
+from wavescripts.plot_utils import apply_thesis_style
+
+apply_thesis_style()              # draft — fast, NCM via OTF, no LaTeX round-trip
+# apply_thesis_style(usetex=True)   # final — true LaTeX/Computer Modern, slower
+
 import re
 import numpy as np
 import matplotlib.pyplot as plt
@@ -475,68 +481,77 @@ def style_ax3(ax):
     ax.yaxis.grid(True, which='minor', linestyle='--', linewidth=0.3, alpha=0.5)
     if SHOW_ROOF:
         ax.set_ylim(bottom=0, top=ROOF_MM)
-        ax.axhline(ROOF_MM, color='brown', linewidth=1.0, linestyle='-', alpha=0.6)
+        ax.axhline(ROOF_MM, color='brown', linewidth=0.2, linestyle='-', alpha=0.6)
 
 fw_color = "tab:red"
 lw_color = "tab:green"
 fw_markers_ind = ['o', 's', '^', 'D', 'v']
 lw_markers_ind = ['o', 's', '^', 'D', 'v']
 
-fig3, ax3 = plt.subplots(figsize=(7, 7))
-fig3.suptitle("Vindprofil — full og laveste vind kombinert", fontsize=12)
+# heights in cm just for this plot
+fw_heights_cm = np.array(fw_heights) / 10.0
+lw_heights_cm = np.array(lw_heights) / 10.0
+ROOF_CM       = ROOF_MM / 10.0
 
-# individual fullwind runs (faint)
-for (res, label), m in zip(fw_loaded, fw_markers_ind):
-    z   = np.array([r["height_mm"]  for r in res])
-    spd = np.array([r["mean_speed"] for r in res])
-    ax3.plot(spd, z, marker=m, linestyle='--', color=fw_color, alpha=0.30,
-             linewidth=1, markersize=4, label=f"Full vind – {label}")
+fig3, ax3 = plt.subplots(figsize=(9, 7))
 
-# individual lowestwind runs (faint)
-for (res, label), m in zip(lw_loaded, lw_markers_ind):
-    z   = np.array([r["height_mm"]  for r in res])
-    spd = np.array([r["mean_speed"] for r in res])
-    ax3.plot(spd, z, marker=m, linestyle='--', color=lw_color, alpha=0.30,
-             linewidth=1, markersize=4, label=f"Laveste vind – {label}")
-
-# combined fullwind
-ax3.errorbar(fw_speed, fw_heights, xerr=fw_spread,
-             fmt='D-', color=fw_color, linewidth=2, markersize=6,
-             capsize=4, label=f"Full vind kombinert (n={len(FULLWIND_DATASETS)})", zorder=5)
-ax3.fill_betweenx(fw_heights,
+ax3.errorbar(fw_speed, fw_heights_cm, xerr=fw_spread,
+             fmt='D-', color=fw_color, linewidth=0.1, markersize=3,
+             capsize=4, label="Full vind", zorder=5)
+ax3.fill_betweenx(fw_heights_cm,
                   fw_speed - fw_spread, fw_speed + fw_spread,
                   alpha=0.15, color=fw_color)
 
-# combined lowestwind
-ax3.errorbar(lw_speed, lw_heights, xerr=lw_spread,
-             fmt='o-', color=lw_color, linewidth=2, markersize=6,
-             capsize=4, label=f"Laveste vind kombinert (n={len(LOWESTWIND_DATASETS)})", zorder=5)
-ax3.fill_betweenx(lw_heights,
+ax3.errorbar(lw_speed, lw_heights_cm, xerr=lw_spread,
+             fmt='o-', color=lw_color, linewidth=0.1, markersize=3,
+             capsize=4, label="Laveste vind", zorder=5)
+ax3.fill_betweenx(lw_heights_cm,
                   lw_speed - lw_spread, lw_speed + lw_spread,
                   alpha=0.15, color=lw_color)
 
-# mark single-run heights with ×
-for heights_arr, speed_arr, n_arr, color in [
-    (np.array(fw_heights), fw_speed, fw_n, fw_color),
-    (np.array(lw_heights), lw_speed, lw_n, lw_color),
-]:
-    single = n_arr == 1
-    if single.any():
-        ax3.scatter(speed_arr[single], heights_arr[single],
-                    marker='x', color=color, s=50, zorder=6, label='Kun én kjøring')
-
 ax3.set_xlabel("Vindfart [m/s]")
-ax3.set_title("Kombinert vindprofil per vindkondisjon")
 ax3.set_xlim(left=0)
-ax3.legend(fontsize=8)
-style_ax3(ax3)
+ax3.set_ylabel("Høyde over vannet [cm]")
+ax3.set_ylim(0, ROOF_CM)
+ax3.set_yticks(range(0, int(ROOF_CM) + 1,2))           # 0, 1, 2, ..., 38
+ax3.set_yticks(range(0, int(ROOF_CM) + 1), minor=True) #grid only           # 0, 1, 2, ..., 38
+ax3.grid(True, which='minor', linestyle='--', linewidth=0.5, alpha=0.4)
+# ax3.axhline(ROOF_CM, color='brown', linewidth=1.0, linestyle='-',
+#             alpha=0.6, label="Tak")
+ax3.legend(fontsize=12, loc='best')
+
+
+from matplotlib.patches import Rectangle
+import matplotlib.transforms as mtransforms
+
+# Pitot probe: hangs from roof (38 cm) down to 27.2 cm — 10.8 cm long
+PROBE_TIP_CM    = 27.2
+PROBE_X_FRAC    = 0.93          # 93% from the left of the axes
+PROBE_WIDTH_FRAC = 0.025        # 2.5% of axes width — skinny
+
+trans = mtransforms.blended_transform_factory(ax3.transAxes, ax3.transData)
+
+probe = Rectangle(
+    (PROBE_X_FRAC, PROBE_TIP_CM),                # (x_left, y_bottom)
+    PROBE_WIDTH_FRAC,                            # width (axes-fraction)
+    ROOF_CM - PROBE_TIP_CM,                      # height (data, cm)
+    facecolor='lightgray', edgecolor='black', linewidth=0.6,
+    alpha=0.85, zorder=4, transform=trans,
+)
+ax3.add_patch(probe)
+
+# optional small label next to the tip
+ax3.text(PROBE_X_FRAC + PROBE_WIDTH_FRAC + 0.005, PROBE_TIP_CM,
+         "pitotrør\n(rekkevidde)", transform=trans,
+         ha='left', va='center', fontsize=7, color='dimgray')
+
 fig3.tight_layout()
 if SAVE:
     out = os.path.join(fig_path, f"windprofile_combined_conditions_{ts}.pdf")
     fig3.savefig(out, bbox_inches='tight')
     print(f"Saved: {out}")
 plt.show()
-
+# %%
 # --- figure 4: same as figure 3 but log y-axis in metres ---
 
 def mm_to_m(arr):
@@ -549,26 +564,26 @@ for (res, label), m in zip(fw_loaded, fw_markers_ind):
     z   = mm_to_m([r["height_mm"]  for r in res])
     spd = np.array([r["mean_speed"] for r in res])
     ax4.plot(spd, z, marker=m, linestyle='--', color=fw_color, alpha=0.30,
-             linewidth=1, markersize=4, label=f"Full vind – {label}")
+             linewidth=0.1, markersize=4, label=f"Full vind – {label}")
 
 for (res, label), m in zip(lw_loaded, lw_markers_ind):
     z   = mm_to_m([r["height_mm"]  for r in res])
     spd = np.array([r["mean_speed"] for r in res])
     ax4.plot(spd, z, marker=m, linestyle='--', color=lw_color, alpha=0.30,
-             linewidth=1, markersize=4, label=f"Laveste vind – {label}")
+             linewidth=0.1, markersize=4, label=f"Laveste vind – {label}")
 
 fw_heights_m = mm_to_m(fw_heights)
 lw_heights_m = mm_to_m(lw_heights)
 
 ax4.errorbar(fw_speed, fw_heights_m, xerr=fw_spread,
-             fmt='D-', color=fw_color, linewidth=2, markersize=6,
+             fmt='D-', color=fw_color, linewidth=0.5, markersize=6,
              capsize=4, label=f"Full vind kombinert (n={len(FULLWIND_DATASETS)})", zorder=5)
 ax4.fill_betweenx(fw_heights_m,
                   fw_speed - fw_spread, fw_speed + fw_spread,
                   alpha=0.15, color=fw_color)
 
 ax4.errorbar(lw_speed, lw_heights_m, xerr=lw_spread,
-             fmt='o-', color=lw_color, linewidth=2, markersize=6,
+             fmt='o-', color=lw_color, linewidth=0.5, markersize=6,
              capsize=4, label=f"Laveste vind kombinert (n={len(LOWESTWIND_DATASETS)})", zorder=5)
 ax4.fill_betweenx(lw_heights_m,
                   lw_speed - lw_spread, lw_speed + lw_spread,
@@ -612,23 +627,23 @@ for (res, label), m in zip(fw_loaded, fw_markers_ind):
     z   = mm_to_m([r["height_mm"]  for r in res])
     spd = -np.array([r["mean_speed"] for r in res])
     ax5.plot(spd, z, marker=m, linestyle='--', color=fw_color, alpha=0.30,
-             linewidth=1, markersize=4, label="_nolegend_")
+             linewidth=0.5, markersize=4, label="_nolegend_")
 
 for (res, label), m in zip(lw_loaded, lw_markers_ind):
     z   = mm_to_m([r["height_mm"]  for r in res])
     spd = -np.array([r["mean_speed"] for r in res])
     ax5.plot(spd, z, marker=m, linestyle='--', color=lw_color, alpha=0.30,
-             linewidth=1, markersize=4, label="_nolegend_")
+             linewidth=0.5, markersize=4, label="_nolegend_")
 
 ax5.errorbar(-fw_speed, fw_heights_m, xerr=fw_spread,
-             fmt='D-', color=fw_color, linewidth=2, markersize=6,
+             fmt='D-', color=fw_color, linewidth=0.5, markersize=6,
              capsize=4, label="Full vind", zorder=5)
 ax5.fill_betweenx(fw_heights_m,
                   -fw_speed - fw_spread, -fw_speed + fw_spread,
                   alpha=0.15, color=fw_color)
 
 ax5.errorbar(-lw_speed, lw_heights_m, xerr=lw_spread,
-             fmt='o-', color=lw_color, linewidth=2, markersize=6,
+             fmt='o-', color=lw_color, linewidth=0.5, markersize=6,
              capsize=4, label="Laveste vind", zorder=5)
 ax5.fill_betweenx(lw_heights_m,
                   -lw_speed - lw_spread, -lw_speed + lw_spread,
@@ -1076,16 +1091,16 @@ _TI_max = np.nanmax(np.concatenate([fw_TI, lw_TI])) * 100
 axT.set_xlim(0, max(8, _TI_max * 1.1))
 
 # Skew panel — Gaussian at 0
-_plot_metric(axS, "Skewness", fw_z_sk, fw_sk, lw_z_sk, lw_sk)
+_plot_metric(axS, "Skjevhet", fw_z_sk, fw_sk, lw_z_sk, lw_sk)
 axS.axvspan(-0.3, 0.3, color='green', alpha=0.07, label='_nolegend_')
-axS.axvline(0, color='black', linestyle=':', linewidth=1, alpha=0.7, label="Gauss (skew = 0)")
+axS.axvline(0, color='black', linestyle=':', linewidth=1, alpha=0.7, label="Gauss (skjevhet = 0)")
 _sk_absmax = np.nanmax(np.abs(np.concatenate([fw_sk, lw_sk])))
 axS.set_xlim(-max(0.5, _sk_absmax * 1.1), max(0.5, _sk_absmax * 1.1))
 
 # Excess kurtosis panel — Gaussian at 0. Source column is LabVIEW `Kurt`
 # from the mAstats files, which is *already* excess kurt (NI convention,
 # μ4/σ⁴ − 3). We do not subtract anything further.
-_plot_metric(axK, "Excess kurtosis (Gauss = 0)", fw_z_ek, fw_ek, lw_z_ek, lw_ek)
+_plot_metric(axK, "Ekstra Kurtose (Gauss = 0)", fw_z_ek, fw_ek, lw_z_ek, lw_ek)
 axK.axvspan(-1, 1, color='green', alpha=0.07, label='_nolegend_')
 axK.axvline(0, color='black', linestyle=':', linewidth=1, alpha=0.7, label="Gauss (exc.kurt = 0)")
 _ek_max = np.nanmax(np.concatenate([fw_ek, lw_ek]))
@@ -1100,7 +1115,7 @@ axT.set_ylabel("Høyde over vannet [m]")
 for ax in (axT, axS, axK):
     ax.legend(fontsize=8, loc='best')
 
-fig11.suptitle("Turbulenskarakter — TI, skevhet og ekstra kurtose mot høyde", fontsize=12)
+fig11.suptitle("Turbulenskarakter — TI, skevhet og ekstra kurtose per høyde", fontsize=12)
 fig11.tight_layout()
 if SAVE:
     out = os.path.join(fig_path, f"windprofile_turbulence_character_{ts}.pdf")
