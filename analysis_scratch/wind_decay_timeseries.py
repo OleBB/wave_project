@@ -81,9 +81,9 @@ LABELS = {
 }
 COLORS = {
     "8804/250":  "#888888",
-    "9373/170":  "#FEA11B",   # IN  — amber orange (UiO color pallette)
+    "9373/170":  "#1E9C68",   # IN — new green (not UiO)
     "9373/340":  "#2ca02c",
-    "12400/250": "#1E9C68",   # OUT — new green (not UiO)
+    "12400/250": "#FEA11B",   # OUT  — amber orange (UiO color pallette)
 }
 
 
