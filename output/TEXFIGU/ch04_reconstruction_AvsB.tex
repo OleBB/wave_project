@@ -7,7 +7,7 @@
 %   computed_in       : analysis_scratch/reconstruction_A_vs_B.py (FFT peak-bin vs ±0.05 Hz band-integrated IFFT; residual PSDs via scipy.signal.welch)
 %   plot_type         : reconstruction_AvsB
 %   data_class        : DELEG
-%   generated_at      : 2026-04-29T09:50:16
+%   generated_at      : 2026-05-02T16:55:46
 %   findings_doc      : analysis_scratch/reconstruction_A_vs_B_findings.md
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -26,7 +26,7 @@
 %   mooring           : 
 %
 % — Data provenance ────────────────────────────────────────────
-%   n_runs            : 102
+%   n_runs            : 103
 %   in_probes_used    : 9373/170+9373/340
 %   out_probes_used   : 12400/250
 %   probe_configs     : march2026_better_rearranging
@@ -44,7 +44,7 @@
 %   extra_params      : demo_run=1.4 Hz, 0.2 V, full panel; band_half_hz=0.05; wind_band_hz=2.0-6.0; probes=['9373/170', '12400/250']
 %
 % — Summary stats cited in caption ────────────────────────────
-%   stat:n_thesis_scope : 158
+%   stat:n_thesis_scope : 160
 %   stat:ewind_absmax_pct : 0.0
 %   stat:bandpeak_max : 1.0
 %   stat:A_B_over_A_A : 1.0000 (method equivalence)
@@ -56,7 +56,7 @@
   \centering
   \includegraphics[width=\linewidth]{FIGURES/ch04_reconstruction_AvsB.pdf}
   \caption{
-    Peak-bin (method A, solid blue) and band-integrated (method B, dashed red) reconstructions of the paddle wave at the IN probe (left) and OUT probe (right) under no-wind (rows 1--2) and full-wind (rows 3--4) conditions at the representative run $f=1.4$\,Hz, $A=0.20$\,V, full panel. Odd rows overlay the two reconstructions on the raw signal; even rows show the corresponding residual power spectra (log scale). Shaded bands mark the paddle band ($\pm 0.05$\,Hz around the paddle peak, blue) and the wind band (2--6\,Hz, orange). Across all thesis-scope runs ($f \in [1.3,1.6]$\,Hz, $n=158$ probe$\times$run pairs) the two reconstructions give identical wind-band residual energy to four-decimal precision and amplitude ratio $A_\mathrm{B}/A_\mathrm{A}=1.0000$. Any wind characterisation based on the method-A residual is therefore equivalent to one based on method B: the paddle-band sinc-leakage that A misses stays pinned inside the paddle band and does not contaminate the wind band.
+    Peak-bin (method A, solid blue) and band-integrated (method B, dashed red) reconstructions of the paddle wave at the IN probe (left) and OUT probe (right) under no-wind (rows 1--2) and full-wind (rows 3--4) conditions at the representative run $f=1.4$\,Hz, $A=0.20$\,V, full panel. Odd rows overlay the two reconstructions on the raw signal; even rows show the corresponding residual power spectra (log scale). Shaded bands mark the paddle band ($\pm 0.05$\,Hz around the paddle peak, blue) and the wind band (2--6\,Hz, orange). Across all thesis-scope runs ($f \in [1.3,1.6]$\,Hz, $n=160$ probe$\times$run pairs) the two reconstructions give identical wind-band residual energy to four-decimal precision and amplitude ratio $A_\mathrm{B}/A_\mathrm{A}=1.0000$. Any wind characterisation based on the method-A residual is therefore equivalent to one based on method B: the paddle-band sinc-leakage that A misses stays pinned inside the paddle band and does not contaminate the wind band.
   }
   \label{fig:ch04_reconstruction_AvsB}
 \end{figure}

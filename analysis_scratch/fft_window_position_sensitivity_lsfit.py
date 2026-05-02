@@ -51,7 +51,15 @@ T_REF_MAX  = 80
 T_REF_STEP = 1
 T_REF_SWEEP = np.arange(T_REF_MIN, T_REF_MAX + 1, T_REF_STEP)
 
-T_REF_CANON = HG.START_T_REF   # = 50 — the pipeline default
+# Legacy H&G [50T, 60T] anchor at r = 12.4 m — kept here as the canonical
+# reference for this position-sensitivity sweep. The 2026-05-02 pipeline
+# switch to per-probe [r·f/c_g + 7, +17]T removed these from `HG` (see
+# wavescripts/constants.py); this script keeps them as local constants
+# because the sweep methodology is anchored at OUT-probe coordinates.
+OLD_HG_REF_R_M  = 12.400
+OLD_HG_START_T  = 50
+OLD_HG_END_T    = 60
+T_REF_CANON     = OLD_HG_START_T
 
 TARGET_DIRS = [
     BASE / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
@@ -76,7 +84,7 @@ OUT_MD  = SCRATCH / "fft_window_position_sensitivity_lsfit_findings.md"
 def _probe_local_start_T(T_ref: float, r_probe_m: float, f_hz: float) -> float:
     """T_ref is in OUT-probe coordinates (r=12.4 m). Shift to probe-local time
     by subtracting group-velocity travel time ΔT = (R_ref − r)/c_group · f."""
-    dT = (HG.REF_R_M - r_probe_m) / c_group(f_hz, HG.TANK_DEPTH_M) * f_hz
+    dT = (OLD_HG_REF_R_M - r_probe_m) / c_group(f_hz, HG.TANK_DEPTH_M) * f_hz
     return T_ref - dT
 
 

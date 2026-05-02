@@ -82,10 +82,14 @@ TANK_DEPTH_M       = HG.TANK_DEPTH_M
 
 SNAP_HALFWIDTH_T   = 1.0   # ±1 wave period UC search window
 
-# OLD pipeline parameters
-OLD_HG_START_T     = HG.START_T_REF       # 50
-OLD_HG_END_T       = HG.END_T_REF         # 60
-OLD_HG_REF_R_M     = HG.REF_R_M           # 12.4 m
+# OLD pipeline parameters — the [50T, 60T] H&G window anchored at r=12.4 m
+# (= our OUT probe). Kept here as local constants because this prototype
+# script's whole point is OLD-vs-NEW comparison; the HG dataclass
+# (wavescripts/constants.py) was reformulated 2026-05-02 to per-probe
+# arrival anchoring and no longer carries START_T_REF / END_T_REF / REF_R_M.
+OLD_HG_REF_R_M      = 12.400
+OLD_HG_START_T      = 50
+OLD_HG_END_T        = 60
 OLD_WINDOW_LENGTH_T = OLD_HG_END_T - OLD_HG_START_T   # 10
 
 # NEW formula parameters

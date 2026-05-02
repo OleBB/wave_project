@@ -555,8 +555,11 @@ print(f"   Saved → {OUT_PDF.relative_to(BASE)}")
 r_medians = primary[primary["wind"] == "no"].groupby("mooring")["R"].median()
 n_primary = int((primary["wind"] == "no").sum())
 # Underscores in mooring labels must be escaped for LaTeX caption.
+def _esc_mooring(m: str) -> str:
+    return m.replace("below_90_", "b90_").replace("_", "\\_")
+
 _med_by_moor = ", ".join(
-    f"{m.replace('below_90_', 'b90_').replace('_', r'\_')} {v:.3f}"
+    f"{_esc_mooring(m)} {v:.3f}"
     for m, v in r_medians.items()
 )
 _caption = (

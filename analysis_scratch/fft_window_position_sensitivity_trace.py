@@ -48,7 +48,14 @@ PROBE_R_M = {IN_PROBE: 9.373, OUT_PROBE: 12.400}
 
 # Positions to overlay (every 5 periods across the sweep range)
 T_REF_OVERLAYS = [40, 45, 50, 55, 60, 65, 70, 75, 80]
-T_REF_CANON = HG.START_T_REF  # 50
+
+# Legacy H&G [50T, 60T] anchor at r = 12.4 m — kept here as the canonical
+# reference for this trace plot. The 2026-05-02 pipeline switch removed
+# these from `HG`; this script keeps them as local constants because the
+# overlay sweep is anchored at OUT-probe coordinates.
+OLD_HG_REF_R_M = 12.400
+OLD_HG_START_T = 50
+T_REF_CANON    = OLD_HG_START_T
 N_PERIODS = 10
 
 # Time range for the plot
@@ -96,7 +103,7 @@ samples_per_period = int(round(FS / TARGET_FREQ))
 for col_idx, (probe, r_m) in enumerate([(IN_PROBE, PROBE_R_M[IN_PROBE]),
                                          (OUT_PROBE, PROBE_R_M[OUT_PROBE])]):
     # Probe-local ΔT
-    dT_periods = (HG.REF_R_M - r_m) / c_group(TARGET_FREQ, HG.TANK_DEPTH_M) * TARGET_FREQ
+    dT_periods = (OLD_HG_REF_R_M - r_m) / c_group(TARGET_FREQ, HG.TANK_DEPTH_M) * TARGET_FREQ
     dT_seconds = dT_periods / TARGET_FREQ
 
     # last window end in probe-local seconds:  (T_ref_max - ΔT) / f + N_PERIODS / f
