@@ -249,6 +249,144 @@ def plot_three_panel(f, summary, diff_mean, diff_std, target_freqs, out_path,
     plt.close(fig)
 
 
+# === Thesis-table writer (LaTeX tabular -> output/TABLES/) ==================
+
+THESIS_TABLE_NAME = "ch04_parallel_probe_psd_agreement"
+
+
+def write_tex_table(rows, out_path):
+    """Render `rows` (from harmonic_summary) as a thesis-ready LaTeX tabular.
+
+    Caption resolved via the central FIGURE_CAPTIONS / FIGURE_CAPTIONS_SHORT
+    dicts in main_save_figures.py (per the project-wide invariant). Layout
+    matches the 10-column markdown table previously circulated in chat:
+    f, N, mean dB, std dB, p, r, sigma_wall, sigma_far, sigma_mean, var-change.
+
+    Bolding rules:
+      - p column         : bold when p < 0.05 (paired t-test significant).
+      - sigma A columns  : bold the smallest sigma in the row (best precision).
+    """
+    from datetime import datetime as _dt
+    from wavescripts.plot_utils import _lookup_central_caption
+
+    caption_full = _lookup_central_caption(THESIS_TABLE_NAME, kind="full")
+    caption_short = _lookup_central_caption(THESIS_TABLE_NAME, kind="short")
+    if caption_full and caption_short:
+        caption_block = (f"  \\caption[{caption_short}]{{\n"
+                         f"    {caption_full}\n  }}\n")
+    elif caption_full:
+        caption_block = f"  \\caption{{\n    {caption_full}\n  }}\n"
+    else:
+        caption_block = ("  \\caption{\n"
+                         "    % TODO: write caption "
+                         "(edit FIGURE_CAPTIONS in main_save_figures.py)\n"
+                         "  }\n")
+
+    n_runs = rows[0]["n"] if rows else 0
+    freq_list = ", ".join(f"{r['freq']:.1f}" for r in rows)
+    immutable = "\n".join([
+        "%! TEX root = ../main.tex",
+        "% ==============================================================",
+        "% IMMUTABLE — generated automatically, do not edit this block",
+        "%",
+        "% — Provenance ───────────────────────────────────────────────────",
+        "%   script            : analysis_scratch/parallel_probe_psd_agreement.py",
+        "%   plot_type         : parallel_probe_psd_agreement_table",
+        "%   chapter           : 04",
+        f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
+        f"%   caption_label     : tab:{THESIS_TABLE_NAME}",
+        f"%   caption_short     : {caption_short or ''}",
+        "%",
+        "% — Method ────────────────────────────────────────────────────",
+        "%   Pairwise comparison of 9373/170 (wall) and 9373/340 (far) at",
+        "%   each thesis paddle frequency (1.3, 1.4, 1.5, 1.6 Hz).",
+        "%   Δ̄        : mean across runs of 10·log10(P_far) − 10·log10(P_wall)",
+        "%               at the PSD bin nearest f.",
+        "%   σ_Δ       : std across runs of the same per-bin difference.",
+        "%   p         : two-sided paired t-test, H0: Δ̄ = 0 dB.",
+        "%   r(A)      : Pearson correlation across runs of band-integrated",
+        "%               amplitudes A = sqrt(2·∫ S(f) df) over ±0.1 Hz of f.",
+        "%   σA        : std across runs of A.",
+        "%   ΔVar(mean): % change in Var(½(A_wall + A_far)) vs the smaller",
+        "%               of Var(A_wall), Var(A_far). Positive ⇒ averaging",
+        "%               worsens precision relative to the better single probe.",
+        "%",
+        "% — Inputs ────────────────────────────────────────────────────",
+        f"%   N runs            : {n_runs}",
+        "%   data scope        : panel-full, quality-ok, both probes present,",
+        "%                       canon March-2026 lowrange folders.",
+        f"%   target frequencies: {freq_list} Hz",
+        "%",
+        "% — Bolding ───────────────────────────────────────────────────",
+        "%   Bold in p column        ⇒ paired t-test significant at α = 0.05",
+        "%   Bold in σA columns      ⇒ smallest σA in that row (best probe)",
+        "%",
+        "% ── end immutable block ─────────────────────────────────────────",
+    ])
+
+    body_lines = []
+    for r in rows:
+        sigmas = {"a": r["std_a"], "b": r["std_b"], "m": r["std_mean"]}
+        sigmas_finite = {k: v for k, v in sigmas.items() if np.isfinite(v)}
+        best = min(sigmas_finite, key=sigmas_finite.get) if sigmas_finite else None
+
+        def _bold(s, do):
+            return f"\\textbf{{{s}}}" if do else s
+
+        f_cell  = f"\\num{{{r['freq']:.2f}}}"
+        n_cell  = f"\\num{{{r['n']}}}"
+        d_cell  = f"\\num{{{r['mean_db']:+.2f}}}"
+        sd_cell = f"\\num{{{r['std_db']:.2f}}}"
+        p_val   = r["p_value"]
+        p_str   = f"\\num{{{p_val:.3g}}}" if np.isfinite(p_val) else "n/a"
+        p_cell  = _bold(p_str, np.isfinite(p_val) and p_val < 0.05)
+        r_cell  = (f"\\num{{{r['corr']:+.3f}}}"
+                   if np.isfinite(r["corr"]) else "n/a")
+        sa_cell = _bold(f"\\num{{{r['std_a']:.3f}}}", best == "a")
+        sb_cell = _bold(f"\\num{{{r['std_b']:.3f}}}", best == "b")
+        sm_cell = _bold(f"\\num{{{r['std_mean']:.3f}}}", best == "m")
+        # Sign convention in the IMMUTABLE block + column header:
+        # positive ⇒ averaging WORSENS precision vs the better single probe.
+        # `reduction_pct` is the fractional REDUCTION (negative when worse), so
+        # negate to get the worsening %.
+        v_cell  = (f"\\num{{{-r['reduction_pct']:+.1f}}}"
+                   if np.isfinite(r["reduction_pct"]) else "n/a")
+
+        body_lines.append(
+            f"    {f_cell} & {n_cell} & {d_cell} & {sd_cell} & {p_cell} & "
+            f"{r_cell} & {sa_cell} & {sb_cell} & {sm_cell} & {v_cell} \\\\"
+        )
+
+    table_body = (
+        "\\begin{table}[hbt]\n"
+        "  \\centering\n"
+        "  \\small\n"
+        + caption_block
+        + f"  \\label{{tab:{THESIS_TABLE_NAME}}}\n"
+        "  \\begin{tabular}{cccccccccc}\n"
+        "    \\toprule\n"
+        "    $f$ [\\unit{\\hertz}] &\n"
+        "      $N$ &\n"
+        "      $\\bar\\Delta$ [dB] &\n"
+        "      $\\sigma_\\Delta$ [dB] &\n"
+        "      $p$ &\n"
+        "      $r(A)$ &\n"
+        "      $\\sigma_{A,\\mathrm{wall}}$ [\\unit{\\milli\\metre}] &\n"
+        "      $\\sigma_{A,\\mathrm{far}}$ [\\unit{\\milli\\metre}] &\n"
+        "      $\\sigma_{A,\\mathrm{mean}}$ [\\unit{\\milli\\metre}] &\n"
+        "      $\\Delta\\mathrm{Var}_\\mathrm{mean}$ [\\%]\\\\\n"
+        "    \\midrule\n"
+        + "\n".join(body_lines) + "\n"
+        "    \\bottomrule\n"
+        "  \\end{tabular}\n"
+        "\\end{table}\n"
+    )
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(immutable + "\n" + table_body)
+    print(f"Saved -> {out_path}")
+
+
 # === Stdout reporting =======================================================
 
 def print_summary_table(rows, n_runs):
@@ -387,6 +525,12 @@ def main():
 
     out_pdf = Path(__file__).parent / "parallel_probe_psd_agreement.pdf"
     plot_three_panel(f, summary, diff_mean, diff_std, TARGET_FREQS, str(out_pdf))
+
+    # Thesis table (CH04 §3e sibling) — central caption resolution.
+    base = Path(__file__).resolve().parent.parent
+    out_tex = base / "output" / "TABLES" / f"{THESIS_TABLE_NAME}.tex"
+    write_tex_table(rows, out_tex)
+
     print_summary_table(rows, n_runs=len(harmonized))
     print_implications(rows)
 

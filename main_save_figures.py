@@ -162,8 +162,12 @@ Data-class tag:   [META]       combined_meta + FFT/PSD dicts — loaded up front
                   [DELEG]      subprocess-calls a scratch script; data-agnostic here
                                (the subprocess loads whatever it needs on its own)
                   [CSV]        reads a pre-computed CSV (regenerated via [DELEG] helper)
+                  [OUTDATED]   cell commented out (dropped/superseded). Body kept as a
+                               marker; description records the replacement figure name.
+                               The agent should NEVER cite or re-enable these without
+                               the user's explicit go-ahead.
 
-Every cell starts with a `# [DATA: X]` line matching one of the five tags. If
+Every cell starts with a `# [DATA: X]` line matching one of the six tags. If
 you add a cell, add its tag too; the gates rely on [DFS-*] cells sitting below
 their respective gate. Figures in the index are listed in thesis order — the
 two [DFS-*] entries are flagged "(below MEDIUM gate)" to signal their physical
@@ -193,8 +197,9 @@ CHAPTER 04 — METHODOLOGY
   §3b   ch04_probe_height                [DELEG] ✓  Probe height & range-mode validity
   §3c   ch04_mooring_comparison          [DELEG] ✓  Mooring rubber band length: loose230 vs loose300
   §3d   ch04_sound_speed                 [META]  ~  Speed-of-sound / lab temperature drift
-  §3e   ch04_parallel_probe_agreement    [DELEG] —  superseded by ch04_parallel_probe_agreement_by_freq (cell commented out)
+  §3e   ch04_parallel_probe_agreement    [OUTDATED]  replaced by ch04_parallel_probe_agreement_by_freq
         ch04_parallel_probe_agreement_by_freq  [DELEG] ✓  9373/170 vs 9373/340 — mean-IN canonical ref, faceted by frequency (2x2 grid)
+        ch04_parallel_probe_psd_agreement      [DELEG] ✓  table: paired t-test + variance-reduction stats (output/TABLES/)
   §3f   ch04_depth_regime                [DELEG] ✓  Depth-regime map: kd vs f at d=0.58 m + deep-water-approx error
   §4-1  ch04_wind_psd                    [META]  ~  Wind PSD per probe (nowave runs)
   §4-2  ch04_wind_reflection             [META]  ✗  Wind reflection from panel  [TODO]
@@ -467,6 +472,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_sound_speed":                "",
     "ch04_parallel_probe_agreement":   "",
     "ch04_parallel_probe_agreement_by_freq": "",
+    "ch04_parallel_probe_psd_agreement":     "",
     "ch04_depth_regime":               "",
 
     # § 4 — Wind characterisation / FFT methodology
@@ -586,6 +592,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_sound_speed":                "",
     "ch04_parallel_probe_agreement":   "",
     "ch04_parallel_probe_agreement_by_freq": "",
+    "ch04_parallel_probe_psd_agreement":     "",
     "ch04_depth_regime":               "",
     "ch04_wind_psd":                   "",
     "ch04_wind_reflection":            "",
@@ -630,7 +637,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
 
     # ── CHAPTER 05 ───────────────────────────────────────────────────────────
     "ch05_damping_freq":               "",
-    "ch05_damping_scatter":            "",
+    "ch05_damping_scatter":            "Transmisjon per frekvens",
     "ch05_wind_effect_table":          "",
     "ch05_transmission_wind_ratios":     "",
     "ch05_transmission_wind_amplitudes": "",
@@ -1009,18 +1016,23 @@ _pv_sound_speed = {
 plot_sound_speed(combined_meta, _pv_sound_speed, chapter="04")
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/parallel_probe_agreement.py  (DROPPED)
-# Superseded 2026-05-02 by the per-frequency facet sibling below
-# (ch04_parallel_probe_agreement_by_freq). The 3-panel scatter +
-# disagreement-vs-V + heatmap form gave too much surface area to defend
-# given the wall/far probes' unequal noise-floor spec; the freq-faceted
-# 2x2 scatter + the PSD agreement table together carry the methodology.
-# Cell kept as a marker so the §3e history stays visible in this file.
-# Output PDF + TEXFIGU stub on disk are NOT touched (project convention:
-# never rm artefacts; remove via `git rm` if you decide they should go).
+# [DATA: OUTDATED]  — replaced by analysis_scratch/parallel_probe_agreement_by_freq.py
+# Original cell: analysis_scratch/parallel_probe_agreement.py (3-panel scatter
+# + disagreement-vs-V + heatmap). Superseded 2026-05-02 by the per-frequency
+# facet sibling below (ch04_parallel_probe_agreement_by_freq) — the 3-panel
+# form gave too much surface area to defend given the wall/far probes'
+# unequal noise-floor spec; the freq-faceted 2x2 scatter + the PSD agreement
+# table together carry the methodology. Cell body kept as a marker so the
+# §3e history stays visible in this file.
+#
+# Agent: do NOT cite, regen, or re-enable this cell without an explicit
+# user request. Output PDF + TEXFIGU stub on disk are intentionally left in
+# place (project convention: never rm artefacts; remove via `git rm` if the
+# user decides they should go).
 #
 # To re-enable: uncomment the docstring + _run_delegated_if_missing call,
-# and flip the FIGURE INDEX status back from "—" to "✓".
+# flip the FIGURE INDEX tag back from "[OUTDATED]" to "[DELEG] ✓", and
+# change this header back to "# [DATA: DELEG]".
 #
 # """
 # ── CH04 § 3e — Parallel-probe agreement (mean-IN validation) ────────────────
