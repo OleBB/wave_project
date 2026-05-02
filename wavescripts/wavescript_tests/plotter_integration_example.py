@@ -116,105 +116,10 @@ def plot_timeseries(processed_dfs: dict,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PATTERN B — Scalar / scatter plot (Type A in your terminology)
-# (maps to your plot_p2_vs_p3_scatter family)
+# PATTERN B — was Swell/Wind/Total scatter; removed 2026-05-02 along with
+# the underlying PSD-band columns. See plot_damping_scatter (in plotter.py)
+# for a maintained scatter pattern using FFT amplitude columns.
 # ─────────────────────────────────────────────────────────────────────────────
-
-def plot_p2_vs_p3_scatter(combined_meta_sel: pd.DataFrame,
-                          filter_vars: dict,
-                          chapter: str = "05") -> None:
-    """
-    P2 vs P3 amplitude scatter, one panel per frequency band.
-
-    Same show_plot / save_plot pattern.
-    """
-    from wavescripts.filters import filter_for_amplitude_plot
-    from wavescripts.constants import (
-        ProbeColumns as PC, GlobalColumns as GC,
-        ColumnGroups as CG,
-    )
-
-    plotting   = filter_vars.get("plotting", {})
-    show_plot  = plotting.get("show_plot", True)
-    save_plot  = plotting.get("save_plot", False)
-
-    band_amplitudes = filter_for_amplitude_plot(combined_meta_sel, filter_vars)
-
-    BAND_CONSTANTS = {
-        "Swell": PC.SWELL_AMPLITUDE_PSD,
-        "Wind":  PC.WIND_AMPLITUDE_PSD,
-        "Total": PC.TOTAL_AMPLITUDE_PSD,
-    }
-
-    unique_winds  = band_amplitudes[GC.WIND_CONDITION].unique()  \
-                    if GC.WIND_CONDITION in band_amplitudes.columns else []
-    unique_panels = band_amplitudes[GC.PANEL_CONDITION].unique() \
-                    if GC.PANEL_CONDITION in band_amplitudes.columns else []
-
-    fig, axes = plt.subplots(1, len(BAND_CONSTANTS),
-                             figsize=plotting.get("figsize", (12, 4)),
-                             sharey=False)
-
-    for ax, (band_name, col_template) in zip(axes, BAND_CONSTANTS.items()):
-        p2_col = col_template.format(i=2)
-        p3_col = col_template.format(i=3)
-
-        if p2_col not in band_amplitudes.columns or \
-           p3_col not in band_amplitudes.columns:
-            ax.text(0.5, 0.5, "Missing columns",
-                    ha="center", va="center", transform=ax.transAxes)
-            ax.set_title(band_name)
-            continue
-
-        p2 = band_amplitudes[p2_col].to_numpy()
-        p3 = band_amplitudes[p3_col].to_numpy()
-
-        for wind in unique_winds:
-            for panel in unique_panels:
-                mask = (
-                    (band_amplitudes[GC.WIND_CONDITION] == wind) &
-                    (band_amplitudes[GC.PANEL_CONDITION] == panel)
-                )
-                if mask.sum() > 0:
-                    ax.scatter(
-                        p2[mask], p3[mask],
-                        alpha=0.7,
-                        color=WIND_COLOR_MAP.get(wind, "gray"),
-                        marker=PANEL_MARKERS.get(panel, "o"),
-                        s=80,
-                        label=f"{wind}/{panel}",
-                        edgecolors="black", linewidths=0.5,
-                    )
-
-        valid = np.isfinite(p2) & np.isfinite(p3)
-        if valid.sum() > 0:
-            lim = max(p2[valid].max(), p3[valid].max()) * 1.05
-            ax.plot([0, lim], [0, lim], "k--", lw=1, alpha=0.5, zorder=1)
-            ax.set_xlim(0, lim); ax.set_ylim(0, lim)
-
-        ax.set_title(f"{band_name} Band", fontweight="bold")
-        ax.set_xlabel("P2 amplitude")
-        ax.set_ylabel("P3 amplitude")
-        ax.grid(True, alpha=0.3)
-        ax.set_aspect("equal")
-        ax.legend(fontsize=7, loc="upper left", framealpha=0.9)
-
-    plt.suptitle("P2 vs P3 Amplitude Comparison", fontsize=13, y=0.98)
-    plt.tight_layout()
-
-    # ── Save ─────────────────────────────────────────────────────────────────
-    if save_plot:
-        meta = build_fig_meta(filter_vars, chapter=chapter,
-                              extra={"script": "plotter.py::plot_p2_vs_p3_scatter"})
-        # Override probes — this plot always shows p2 vs p3
-        meta["probes"] = [2, 3]
-        save_and_stub(fig, meta, plot_type="scatter_p2p3",
-                      save_pgf=plotting.get("save_pgf", True))
-
-    if show_plot:
-        plt.show()
-    else:
-        plt.close(fig)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

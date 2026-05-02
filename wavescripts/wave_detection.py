@@ -100,7 +100,7 @@ def find_wave_range(
     keep_idx = keep_seconds*250 # 1 sek = 250 målinger
     good_range = keep_idx
 
-    # Per<40 runs are too short for the new H&G [arrival + 7T, +17T] window.
+    # Per<40 runs are too short for the H&G [arrival + 7T, +17T] window.
     # Decision (2026-04-30): per40 is the analysis target; per80 and per240
     # are kept; anything shorter (per15, per20, per30) is skipped → AFFT NaN.
     if pd.notna(input_periods) and float(input_periods) < 40:
@@ -120,8 +120,11 @@ def find_wave_range(
     #
     # N_OFFSET = 7, N_LENGTH = 10 uniform across all thesis frequencies.
     # Math + constants live in wavescripts/constants.py :: HG + c_group() +
-    # hg_window_for_probe().  Old eyeballed SNARVEI calibration archived as
+    # hg_window_for_probe(). Old eyeballed SNARVEI calibration archived as
     # SNARVEI_ARCHIVE_START / _END in the same file.
+    # See the header comment in constants.py for the back-and-forth that
+    # settled on 7/10 uniform (a brief 10/{10,13,13,13} squeeze was tried
+    # then reverted because the per40 plateau width narrows with frequency).
 
     # r_probe in metres — parse from the probe column name "Probe DIST/LAT".
     try:

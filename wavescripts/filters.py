@@ -90,64 +90,6 @@ def filter_chosen_files(meta, processvariables):
 # %%
 
 
-def filter_for_amplitude_plot(meta_df: pd.DataFrame, amplotvars: dict) -> pd.DataFrame:
-    overordnet = amplotvars.get("overordnet", {})
-    chooseAll = overordnet.get("chooseAll", False)
-    chooseFirst = overordnet.get("chooseFirst", False)
-
-    df = meta_df.copy()
-    n_original = len(df)
-
-    if chooseAll:
-        print("No filtering — chooseAll = True")
-        return df.copy()
-
-    if chooseFirst:
-        print("Selected only first row — chooseFirst = True")
-        return df.iloc[[0]].copy()
-
-    filters = amplotvars.get("filters", {})
-    mask = pd.Series(True, index=df.index)
-    print("Starting with full dataset:", n_original, "rows")
-
-    for key, value in filters.items():
-        if value is None:
-            continue
-
-        col_name = filters.get("filters", key) # column_map.get(key, key)
-        if col_name not in df.columns:
-            print(f"  ✗ Column '{col_name}' not found → skipping {key}")
-            continue
-
-        before = mask.sum()
-
-        if isinstance(value, (list, tuple, set, np.ndarray)):
-            if "all" in [v.lower() if isinstance(v,str) else v for v in value]:
-                print(f"  ✓ {key}: 'all' in list → no filter applied")
-                continue
-            mask &= df[col_name].isin(value)
-            applied = f"isin({value})"
-        elif callable(value):
-            mask &= value(df[col_name])
-            applied = "custom function"
-        else:
-            if value == "all":
-                print(f"  ✓ {key}: 'all' → no filter")
-                continue
-            mask &= df[col_name] == value
-            applied = f"== {value!r}"
-
-        after = mask.sum()
-        removed = before - after
-        print(f"  ✓ {key}: {applied}  → kept {after} rows (removed {removed})")
-
-    filtered_df = df[mask].copy()
-
-    print(f"Final result: {len(filtered_df)} rows (removed {n_original - len(filtered_df)})")
-    return filtered_df
-
-
-# %%
 
 
 

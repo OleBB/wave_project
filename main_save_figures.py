@@ -247,7 +247,7 @@ CHAPTER 05 — RESULTS
   §3b   ch05_t_cross                     [DELEG] ✓  T_cross: honest wind effect via clean nowind ref
   §4    ch05_damping_ka                  [META]  ~  Damping vs ka (wavenumber × amplitude)
         ch05_damping_ka_{A1,A2,A3}       [DELEG] ✓     └─ standalone per-amplitude-tier (per240+per40, magenta palette)
-  §5    ch05_swell_scatter               [META]  —  DROPPED (cell commented in place)
+  §5    (removed — was Swell/Wind/Total band scatter; PSD-band columns dropped 2026-05-02)
   §6    (moved → CH04 §4-3b as ch04_reconstructed)
   §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions
 
@@ -304,7 +304,6 @@ from wavescripts.plotter import (
     plot_reconstructed,
     plot_reconstructed_combined,
     plot_sound_speed,
-    plot_swell_scatter,
     plot_td_vs_fft,
     plot_timeseries_overview,
     plot_wave_stability,
@@ -2386,54 +2385,6 @@ _run_delegated_if_missing(
      *(Path(f"output/FIGURES/ch05_damping_ka_{t}.pdf") for t in ("A1", "A2", "A3"))],
     label="ch05_damping_ka_per_volt",
 )
-
-# %%
-# [DATA: META]  — cell body DROPPED (kept as a marker)
-"""
-── CH05 § 5 — DROPPED: Swell / wind / total band amplitude scatter ──────────
-Kept here commented-out as a reminder of what we tried and rejected.
-
-Original idea: plot IN vs OUT amplitude for the "Swell" / "Wind" / "Total"
-PSD bands (columns `Probe {pos} Swell Amplitude (PSD)` etc., populated by
-processor2nd.py). Intent was to show which energy bands the panel
-attenuates.
-
-Why dropped (2026-04-18 design chat):
-  - The swell/wind cut doesn't match the physics we actually care about.
-    The relevant contrast is paddle-frequency wave (e.g. 1.3 Hz) vs
-    wind-wave band (3–5 Hz) vs everything else (drift skirt below ~1.3 Hz,
-    instrument noise above ~5 Hz up to Nyquist = 125 Hz).
-  - If / when a band-residual plot is wanted, do it on-demand from
-    `combined_psd_dict` in the plotter. The PSDs are already loaded; band
-    integration is one line. No need to freeze band definitions into
-    meta.json columns — that's the premature-columnisation failure mode
-    we're explicitly avoiding.
-  - The existing `SWELL / WIND / TOTAL` amplitude-PSD columns in
-    processor2nd.py could also go away on the next major pipeline pass,
-    once we're sure nothing else depends on them.
-
-Return here if a multi-band residual scatter becomes useful in CH05 or CH04
-wind characterisation. See chat history / session log for the discussion
-that led here.
-
-_pv_swell_scatter = {
-    "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],
-        "WaveFrequencyInput [Hz]":   (1.3, 1.6),
-        "WindCondition":             None,
-        "PanelCondition":            None,
-    },
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,
-        "draft":       True,
-        "figure_name": "ch05_swell_scatter",
-        "force_stub":  True,
-    },
-}
-
-plot_swell_scatter(meta_results, _pv_swell_scatter, chapter="05")
-"""
 
 # %%
 # [DATA: DELEG]  — analysis_scratch/all_data_damping_scatter.py

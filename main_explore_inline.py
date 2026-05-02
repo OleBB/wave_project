@@ -30,7 +30,6 @@ from wavescripts.filters import (
     apply_experimental_filters,
     damping_all_amplitude_grouper,
     damping_grouper,
-    filter_for_amplitude_plot,
     filter_for_damping,
     filter_for_frequencyspectrum,
 )
@@ -48,7 +47,6 @@ from wavescripts.plotter import (
     plot_damping_scatter,
     plot_frequency_spectrum,
     plot_reconstructed,
-    plot_swell_scatter,
 )
 end0 = time.perf_counter()
 print(f"imports  {end0 - start0:.4f} s")
@@ -260,39 +258,6 @@ fig, axes = plot_frequency_spectrum(
 fig, axes = plot_frequency_spectrum(
     combined_psd_dict, filtrert_frequencies, freqplotvariables, data_type="psd"
 )
-
-# %% ── swell scatter ──────────────────────────────────────────────────────────
-swellplotvariables = {
-    "overordnet": {
-        "chooseAll": False,
-        "chooseFirst": False,
-        "chooseFirstUnique": True,
-    },
-    "filters": {
-        "WaveAmplitudeInput [Volt]": [0.1, 0.2, 0.3],
-        "WaveFrequencyInput [Hz]":   None,
-        "WavePeriodInput":           None,
-        "WindCondition":             ["no", "lowest", "full"],
-        "TunnelCondition":           None,
-        "Mooring":                   None,
-        "PanelCondition":            None,  # set to match your data
-    },
-    "plotting": {
-        "show_plot":  True,
-        # "save_plot":  False, go to main_save_figures for saving
-        "figsize":    (5, 5),
-        "linewidth":  0.7,
-        "facet_by":   "probe",
-        "max_points": 120,
-        "xlim":       (0, 5.2),
-        "legend":     "inside",
-        "logaritmic": False,
-        "peaks":      3,
-        "probes":     ["12400/250", "9373/170"],
-    },
-}
-
-plot_swell_scatter(combined_meta, swellplotvariables)
 
 # %% ── wavenumber study ───────────────────────────────────────────────────────
 _probe_positions = ANALYSIS_PROBES

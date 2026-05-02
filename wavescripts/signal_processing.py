@@ -25,6 +25,9 @@ from wavescripts.constants import (
 
 
 # %% - Fysisk amplitude
+_MIN_SIGNAL_SAMPLES = 2  # below this an FFT/LS fit has no positive-frequency
+                         # bins and the downstream argmin/solve crashes.
+
 def _extract_probe_signal(
     df: pd.DataFrame,
     row: pd.Series,
@@ -36,6 +39,12 @@ def _extract_probe_signal(
     available, falling back to eta_{pos}. Returns the single longest contiguous
     non-NaN run within the stable analysis window — joining segments across gaps
     would destroy phase coherence and produce a wrong FFT amplitude.
+
+    Returns None if the longest contiguous segment is shorter than
+    `_MIN_SIGNAL_SAMPLES` (= 2). One caller hit a 1-sample segment on a
+    LabView-error run (`fullpanel-nowind-ULSonly-withLabviewError.csv` in
+    PROCESSED-20260323-...height100), where the FFT positive-bin slice is
+    empty and `compute_amplitudes_from_fft` crashes in its fallback branch.
     """
     interp_col = f"eta_{pos}_interp"
     raw_col    = f"eta_{pos}"
@@ -61,7 +70,7 @@ def _extract_probe_signal(
     # Find all contiguous non-NaN segments; return the longest one.
     is_valid = ~np.isnan(window)
     if is_valid.all():
-        return window  # fast path: no gaps at all
+        return window if window.size >= _MIN_SIGNAL_SAMPLES else None
 
     runs = np.diff(np.concatenate([[0], is_valid.astype(int), [0]]))
     seg_starts = np.where(runs == 1)[0]
@@ -72,7 +81,7 @@ def _extract_probe_signal(
 
     longest_idx = int(np.argmax(seg_ends - seg_starts))
     best = window[seg_starts[longest_idx]:seg_ends[longest_idx]]
-    return best if best.size > 0 else None
+    return best if best.size >= _MIN_SIGNAL_SAMPLES else None
     
 
 def _extract_probe_amplitude(
@@ -234,6 +243,10 @@ def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.
     With typical signal lengths (10–60 s) and fs=250 Hz the FFT bin spacing
     is 0.017–0.1 Hz, so ±0.1 Hz always catches at least one bin.
 
+    Returns (NaN, NaN) if the input frequency array is empty — happens for
+    pathologically short signals (e.g. LabView-error runs whose post-snap
+    H&G window collapses to ≤ 1 valid sample).
+
     Args:
         fft_freqs: Frequency array from FFT (positive half)
         fft_magnitude: Magnitude spectrum (already normalised to amplitude)
@@ -243,6 +256,9 @@ def compute_amplitudes_from_fft(fft_freqs, fft_magnitude, target_freq, window=0.
     Returns:
         (amplitude, frequency) at the bin nearest target_freq
     """
+    if len(fft_freqs) == 0:
+        return np.nan, np.nan
+
     mask = (fft_freqs >= target_freq - window) & (fft_freqs <= target_freq + window)
 
     if not mask.any():

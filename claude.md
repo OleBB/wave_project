@@ -316,7 +316,7 @@ General principles learned the hard way this day — worth internalising before 
 
 Two-step procedure in `wavescripts/wave_detection.py::find_wave_range`:
 
-### Step 1 — probe-shifted Huseby & Grue window (deterministic)
+### Step 1 — probe arrival-anchored Huseby & Grue window (deterministic)
 
 ```python
 _start_T, _end_T = hg_window_for_probe(r_probe_m, f_paddle)
@@ -324,15 +324,35 @@ good_start_idx   = round(_start_T * samples_per_period)
 good_end_idx     = round(_end_T   * samples_per_period)
 ```
 
-Window length is ALWAYS `10 × samples_per_period` samples (10 wave periods). The H&G reference `[50·T, 60·T]` is anchored at **r = 12.400 m** (HG.REF_R_M; corresponds to our OUT probe / the rail position, which is ~10 mm closer to paddle than H&G 2000's actual 12.41 m — the 10 mm gives a global ~0.026 T offset that doesn't matter for analysis; see `analysis_scratch/hg_snap_shift_diagnostic.md`).
+The window per probe (locked 2026-04-30 from the CH04 §4o plateau-overview study at A_2):
 
-For probes closer to the paddle, the window is shifted **earlier** by `ΔT = (REF_R_M − r_probe) / c_group(f, depth) · f` periods. `c_group` uses the full dispersion `ω² = gk·tanh(kh)` with h = 0.58 m; at thesis frequencies (1.3–1.7 Hz) this matches the deep-water shortcut `g/(4πf)` to < 0.1 % — see `wavescripts/constants.py::c_group`.
+```
+T_start = r_probe·f / c_group(f, h) + N_OFFSET    [periods]
+T_end   = T_start + N_LENGTH
+```
 
-Result: at the OUT probe, the window spans samples `[50T, 60T]`. At the IN probe (r = 9.373 m, ΔT ≈ 7.6 periods at 1.4 Hz), it spans `[42.4T, 52.4T]` from wavemaker onset.
+With `N_OFFSET = 7`, `N_LENGTH = 10`, uniform across all thesis frequencies. (A brief 2026-04-30 squeeze experiment tried `N_OFFSET = 10` with per-frequency `N_LENGTH(f) = {1.3: 10, 1.4: 13, 1.5: 13, 1.6: 13}` and produced the artifacts in `output/{TABLES,FIGURES}/ch04_window_choice_*` — those are stale; the squeeze was reverted in the afternoon because the per40 OUT plateau width narrows from ~26 T at 1.3 Hz to ~20 T at 1.6 Hz, leaving too little headroom at OUT 1.6 Hz. See the source comment in `wavescripts/constants.py` for the back-and-forth and the in-tree `analysis_scratch/plateau_overview_A2.py` for the live decision.)
+
+Canonical numbers (from `session_2026-04-30.md` per-cell table):
+
+| Probe | f [Hz] | window [s] |
+|-------|--------|------------|
+| IN  (9.373 m) | 1.3 | 20.9 – 28.6 |
+| OUT (12.4 m)  | 1.3 | 25.9 – 33.6 |
+| IN            | 1.4 | 21.8 – 28.9 |
+| OUT           | 1.4 | 27.2 – 34.3 |
+| IN            | 1.5 | 22.7 – 29.3 |
+| OUT           | 1.5 | 28.5 – 35.1 |
+| IN            | 1.6 | 23.6 – 29.8 |
+| OUT           | 1.6 | 29.8 – 36.0 |
+
+`c_group` uses the full dispersion `ω² = gk·tanh(kh)` with h = 0.58 m (`wavescripts/constants.py::c_group`).
+
+History: this replaces the 2026-04-21 wavemaker-anchored H&G [50T, 60T] window (anchored at r = 12.400 m and shifted earlier per probe via group-velocity travel time). The new formula reads as "7 periods past wave-front arrival at THIS probe, length 10 periods" — same width, anchored at the per-probe arrival rather than at the OUT-probe-50T reference.
 
 ### Step 2 — ±T upcrossing snap (pipeline default since commit `71e67c5`, 2026-04-22)
 
-After Step 1, the theoretical start is snapped to the **nearest zero-upcrossing of the raw ULS signal** within ±1 full wave period. Both window endpoints shift by the same amount (preserving the 10-period length). The snapped window is guaranteed to contain an integer number of cycles of the actual measured wave train — maximum FFT alignment.
+After Step 1, the theoretical start is snapped to the **nearest zero-upcrossing of the raw ULS signal** within ±1 full wave period, and the end is snapped to the `HG.N_LENGTH = 10`-th detected upcrossing past start (commit `b57d4a6`, ±0.5 T sanity guard `eefba87`). The snapped window is guaranteed to contain an integer number of cycles of the actual measured wave train — maximum FFT alignment.
 
 Result: `Computed Probe {pos} start/end` = snap-adjusted window (used by FFT / LS / cycles / phase). Three diagnostic columns per probe record the snap:
 - `Probe {pos} hg_expected_start` — pre-snap theoretical H&G start
@@ -384,7 +404,7 @@ Defined in `improved_data_loader.py` as `PROBE_CONFIGS`:
 - **`processor2nd.py`**: post-processing after main pipeline — sets `in_position`, `out_position`, `OUT/IN (FFT)`, band amplitudes
 - **`signal_processing.py`**: `compute_fft_with_amplitudes`, `compute_psd_with_amplitudes`, `compute_amplitudes_from_fft`, `compute_amplitudes_from_lsfit`, `compute_lsfit_with_amplitudes` (LS sinusoid fit + Stokes-2f, added 2026-04-22)
 - **`filters.py`**: `apply_experimental_filters`, `filter_for_frequencyspectrum`, `damping_grouper`, `damping_all_amplitude_grouper`
-- **`plotter.py`**: `plot_all_probes`, `plot_damping_freq`, `plot_frequency_spectrum`, `plot_reconstructed`, `plot_swell_scatter`
+- **`plotter.py`**: `plot_all_probes`, `plot_damping_freq`, `plot_frequency_spectrum`, `plot_reconstructed`
 - **`plot_quicklook.py`**: `explore_damping_vs_freq`, `explore_damping_vs_amp`, `save_interactive_plot` — no Qt, no save_plot
 - **`plot_browsers.py`**: `SignalBrowserFiltered`, `RampDetectionBrowser` (Qt, only imported when used)
 - **`constants.py`**: `MEASUREMENT` (sampling rate 250 Hz), `GlobalColumns (GC)`, `ProbeColumns (PC)`, `ColumnGroups (CG)`
@@ -658,7 +678,7 @@ Gates track loaded folders via `_loaded_dirs` — re-running the medium gate is 
 | Script | Role | Stability |
 |--------|------|-----------|
 | `plot_utils.py` | Style + save infrastructure: `apply_thesis_style`, `save_and_stub`, `build_fig_meta`, `WIND_COLOR_MAP` | **Core — never dead code** |
-| `plotter.py` | Reusable publication-grade plot functions: `plot_all_probes`, `plot_damping_freq`, `plot_frequency_spectrum`, `plot_swell_scatter` | **Core — stable public API** |
+| `plotter.py` | Reusable publication-grade plot functions: `plot_all_probes`, `plot_damping_freq`, `plot_frequency_spectrum` | **Core — stable public API** |
 | `plot_quicklook.py` | Fast exploratory functions: `explore_damping_vs_freq`, `explore_damping_vs_amp` — no save_plot, no TeX stubs | Exploratory — **will accumulate dead code** |
 | `plot_browsers.py` | Qt interactive browsers: `SignalBrowserFiltered`, `RampDetectionBrowser` — diagnostic / calibration only | Diagnostic — stable but narrow scope |
 

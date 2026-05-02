@@ -153,13 +153,29 @@ MANUAL = ManualDetectionPoints()
 #     T_end   = T_start + N_LENGTH
 #
 # i.e. window starts N_OFFSET periods past wave arrival at the probe and
-# spans N_LENGTH periods. Both endpoints are in periods from wavemaker start.
-# Caller converts to samples and applies the FFT.
+# spans N_LENGTH periods. Both endpoints are in periods from wavemaker
+# start. Caller converts to samples and applies the FFT.
 #
-# N_OFFSET = 7, N_LENGTH = 10 are uniform across all four thesis frequencies
-# (1.3 / 1.4 / 1.5 / 1.6 Hz). Locked 2026-04-30 from the plateau-overview
-# sliding-A_FFT(t) study at A_2; see memory/session_2026-04-30.md and the
-# CH04 §4o tables (output/TABLES/ch04_window_choice_*.tex).
+# Locked 2026-04-30 from the plateau-overview sliding-A_FFT(t) study at A_2:
+#     N_OFFSET = 7
+#     N_LENGTH = 10
+# Both uniform across all thesis frequencies (1.3 / 1.4 / 1.5 / 1.6 Hz).
+#
+# Window length went back and forth on 2026-04-30:
+#   - settled at N_LENGTH = 10 uniform (morning)
+#   - tried per-frequency N_LENGTH(f) = {1.3: 10, 1.4: 13, 1.5: 13, 1.6: 13}
+#     in a brief squeeze experiment (window_choice_table.py / window_choice_figure.py
+#     artifacts at output/{TABLES,FIGURES}/ch04_window_choice_*)
+#   - reverted to N_LENGTH = 10 uniform (afternoon, as captured in
+#     plateau_overview_A2.py and the end-of-day session memo)
+# Reason for revert: the per40 stable plateau narrows with frequency
+# (≈ 26 / 24 / 22 / 20 T at 1.3 / 1.4 / 1.5 / 1.6 Hz at OUT), so 13-period
+# windows leave too little headroom at OUT 1.6 Hz. The artifacts under
+# output/ for the squeeze experiment may still be on disk and should be
+# regenerated to match before being cited.
+#
+# N_OFFSET briefly tried 10 in the same squeeze; reverted to 7 with the
+# rest of the parameters. 7 / 10 is the pipeline-standard pair.
 #
 # History: replaces the 2026-04-21 wavemaker-anchored H&G [50T, 60T]
 # probe-shifted window (REF_R_M / START_T_REF / END_T_REF), which itself
@@ -606,9 +622,6 @@ class ProbeColumns:
 
     # PSD-derived metrics
     AMPLITUDE_PSD = "Probe {i} Amplitude (PSD)"
-    SWELL_AMPLITUDE_PSD = "Probe {i} Swell Amplitude (PSD)"
-    WIND_AMPLITUDE_PSD = "Probe {i} Wind Amplitude (PSD)"
-    TOTAL_AMPLITUDE_PSD = "Probe {i} Total Amplitude (PSD)"
 
     # Signal quality metrics
     WAVE_STABILITY = "Probe {i} wave_stability"

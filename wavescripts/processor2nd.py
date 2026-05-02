@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from wavescripts.improved_data_loader import update_processed_metadata, get_configuration_for_date
-from typing import Mapping, Any, Optional, Sequence, Dict, Tuple, Iterable
+from typing import Optional
 from wavescripts.constants import SIGNAL, RAMP, MEASUREMENT, get_smoothing_window
 from wavescripts.constants import (
     ProbeColumns as PC,
@@ -21,152 +21,6 @@ from wavescripts.constants import (
     CalculationResultColumns as RC
 )
 
-# %% Band
-def compute_amplitude_by_band(
-    psd_dict: Mapping[str, pd.DataFrame],
-    *,
-    freq_bands: Optional[Dict[str, Tuple[float, float]]] = None,
-    probes: Iterable[int] = (1, 2, 3, 4),
-    verbose: bool = False,
-    integration: str = "sum",          # "sum"  → simple Δf * Σ PSD
-                                        # "trapez" → np.trapezoid on the real freq axis
-    freq_resolution: Optional[float] = None,
-) -> pd.DataFrame:
-    """
-    Compute wave‑amplitude estimates for a set of frequency bands from PSD data.
-
-    Parameters
-    ----------
-    psd_dict : mapping of ``path → pd.DataFrame``
-        Each DataFrame must be indexed by frequency (Hz) and contain columns
-        named ``'Pxx 1'``, ``'Pxx 2'``, … for the different probes.
-    freq_bands : dict, optional
-        Mapping ``band_name → (f_low, f_high)`` in Hz.  If omitted the
-        classic three‑band set is used:
-
-        .. code-block:: python
-
-            {
-                "swell":      (1.0, 1.6),
-                "wind_waves": (3.0, 10.0),
-                "total":      (0.0, 10.0),
-            }
-
-    probes : iterable of int, default (1,2,3,4)
-        Which probe columns (``'Pxx i'``) to process.
-    verbose : bool, default ``False``
-        Print a short diagnostic for each file / band (mirrors the second
-        version you posted).
-    integration : {"sum", "trapez"}, default ``"sum"``
-        * ``"sum"`` – assumes a *uniform* frequency spacing and computes the
-          variance as ``Δf * Σ PSD``.  This is the fastest option and matches
-          the first two snippets.
-        * ``"trapez"`` – uses ``np.trapezoid`` on the *actual* frequency axis,
-          which is more accurate when the spacing is irregular (third snippet).
-    freq_resolution : float, optional
-        Explicit frequency resolution (Δf).  If ``None`` and ``integration=="sum"``,
-        the function derives Δf from the first two frequency points of each
-        DataFrame (the original behaviour).
-
-    Returns
-    -------
-    pd.DataFrame
-        One row per ``path`` with columns
-
-        ``'Probe {i} {band_name} amplitude'``
-
-        containing the peak‑to‑trough amplitude estimate
-        $A = 2\sqrt{\mathrm{variance}}$.
-    """
-
-    # ----------------------------------------------------------------------
-    #  Default frequency‑band definitions (kept from the first two versions)
-    # ----------------------------------------------------------------------
-    if freq_bands is None:
-        freq_bands = {
-            "Swell":      (0.0, 2.6),
-            "Wind": (2.60000001, 16.0),
-            "Total":      (0.0, 16.0),
-        }
-
-    # ----------------------------------------------------------------------
-    #  Validate the chosen integration method
-    # ----------------------------------------------------------------------
-    if integration not in {"sum", "trapez"}:
-        raise ValueError("integration must be either 'sum' or 'trapz'")
-
-    # ----------------------------------------------------------------------
-    #  Main loop over all PSD files (paths)
-    # ----------------------------------------------------------------------
-    rows = []
-    for path, df in psd_dict.items():
-        # Store results for this path
-        row = {"path": path}
-
-        if verbose:
-            print(f"\n=== Path: {path} ===")
-            print(f"  Frequency range: {df.index.min():.3f}–{df.index.max():.3f} Hz")
-            if integration == "sum":
-                # Δf will be derived later; show a placeholder now
-                print("  Integration method: sum (Δf * Σ PSD)")
-
-        # ------------------------------------------------------------------
-        #1 Determine frequency resolution if needed (only for "sum")
-        # ------------------------------------------------------------------
-        if integration == "sum":
-            # Assume uniform spacing – take the difference of the first two points.
-            # If the user supplied an explicit value, honour it.
-            if freq_resolution is None:
-                # Guard against a single‑point index (unlikely for a PSD)
-                if len(df.index) < 2:
-                    raise ValueError(f"Not enough frequency points in {path} to infer Δf")
-                freq_res = float(df.index[1] - df.index[0])
-            else:
-                freq_res = float(freq_resolution)
-
-            if verbose:
-                print(f"  Frequency resolution Δf: {freq_res:.6f} Hz")
-
-        # ------------------------------------------------------------------
-        # Loop over available Pxx columns (position-based: "Pxx 9373/170" etc.)
-        # ------------------------------------------------------------------
-        pxx_cols = [c for c in df.columns if c.startswith("Pxx ")]
-
-        for col in pxx_cols:
-            pos = col[4:]  # strip "Pxx " → "9373/170", "12545", etc.
-
-            for band_name, (f_low, f_high) in freq_bands.items():
-                mask = (df.index >= f_low) & (df.index <= f_high)
-                n_points = int(mask.sum())
-
-                if n_points == 0:
-                    row[f"Probe {pos} {band_name} Amplitude (PSD)"] = 0.0
-                    continue
-
-                if integration == "sum":
-                    variance = df.loc[mask, col].sum() * freq_res
-                else:
-                    freqs = df.index.to_numpy(dtype=float)[mask]
-                    psd_vals = df.loc[mask, col].to_numpy(dtype=float)
-                    variance = np.trapezoid(psd_vals, x=freqs)
-
-                amplitude = 2.0 * np.sqrt(variance)
-
-                if verbose:
-                    print(
-                        f"  Probe {pos} – {band_name} [{f_low}-{f_high}] Hz: "
-                        f"{n_points} pts, amplitude={amplitude:.4f}"
-                    )
-
-                row[f"Probe {pos} {band_name} Amplitude (PSD)"] = amplitude
-
-        rows.append(row)
-
-    # ----------------------------------------------------------------------
-    #  Convert list‑of‑dicts → DataFrame (preserves column order)
-    # ----------------------------------------------------------------------
-    return pd.DataFrame(rows)
-# %%
 
 
 def compute_inter_run_timing(
@@ -439,23 +293,6 @@ def _update_more_metrics(
         if col_wall in meta_indexed.columns and col_far in meta_indexed.columns:
             ratio = meta_indexed[col_wall] / meta_indexed[col_far]
             meta_indexed["parallel_ratio"] = ratio.replace([np.inf, -np.inf], np.nan)
-
-    # ── Band amplitudes ──────────────────────────────────────────────
-    # Assuming compute_amplitude_by_band returns a DataFrame with "path" column
-    band_amplitudes = compute_amplitude_by_band(psd_dict)
-
-    if not band_amplitudes.empty:
-        # Set same index and select only the band columns you want to add
-        band_indexed = band_amplitudes.set_index("path")
-
-        # Option A: aggressive overwrite of whatever columns come back
-        meta_indexed[band_indexed.columns] = band_indexed
-
-        # Option B: more controlled — only specific columns
-        # band_cols = [c for c in band_indexed.columns if "band" in c.lower()]  # example
-        # meta_indexed[band_cols] = band_indexed[band_cols]
-
-    # You can add more blocks here later (e.g. using fft_dict)
 
     # Return to normal shape
     return meta_indexed.reset_index(names="path")
