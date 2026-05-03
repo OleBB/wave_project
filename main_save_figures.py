@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # %%
+
+"""USER UPDATE: disabled some plots on may 3rd.  """
+
 """
 Save publication-quality figures and tables for the thesis.
 
@@ -264,6 +267,8 @@ DIAGNOSTICS
 
 # %% ── dev: reload modules (run this cell after editing wavescripts/) ─────────
 import importlib, wavescripts.plotter as _pm, wavescripts.filters as _fm
+
+from numpy._core.numeric import False_
 
 importlib.reload(_pm); importlib.reload(_fm);
 
@@ -1110,37 +1115,37 @@ _run_delegated_if_missing(
 
 # %%
 # [DATA: DELEG]  — subprocess-calls analysis_scratch/depth_regime_map.py
-"""
-── CH04 § 3f — Depth-regime map (kd vs f) at d = 0.58 m ─────────────────────
-Two-panel figure that justifies the full dispersion relation ω² = g·k·tanh(kd)
-used throughout the pipeline (wavescripts.constants.c_group,
-wavescripts.plot_utils.freq_to_k).
+# """
+# ── CH04 § 3f — Depth-regime map (kd vs f) at d = 0.58 m ─────────────────────
+# Two-panel figure that justifies the full dispersion relation ω² = g·k·tanh(kd)
+# used throughout the pipeline (wavescripts.constants.c_group,
+# wavescripts.plot_utils.freq_to_k).
 
-    Top panel: kd vs paddle frequency at d = 580 mm. Shaded regime bands
-    (deep / intermediate / shallow) with thresholds kd=π and kd=π/10.
-    Run-frequency markers sized by n_runs, coded by regime (colour + shape).
-    Vertical band marks the thesis scope (1.3–1.6 Hz). Secondary right-hand
-    axis shows wavelength λ in metres.
+#     Top panel: kd vs paddle frequency at d = 580 mm. Shaded regime bands
+#     (deep / intermediate / shallow) with thresholds kd=π and kd=π/10.
+#     Run-frequency markers sized by n_runs, coded by regime (colour + shape).
+#     Vertical band marks the thesis scope (1.3–1.6 Hz). Secondary right-hand
+#     axis shows wavelength λ in metres.
 
-    Bottom panel: relative error in λ if the deep-water approximation
-    λ_deep = g/(2π f²) were used instead of full dispersion, as % on a
-    symlog y-axis. Quantifies "by how much does the full dispersion matter".
+#     Bottom panel: relative error in λ if the deep-water approximation
+#     λ_deep = g/(2π f²) were used instead of full dispersion, as % on a
+#     symlog y-axis. Quantifies "by how much does the full dispersion matter".
 
-At 580 mm depth, thesis-scope runs (1.3–1.6 Hz) are comfortably deep
-(kd > π, deep-water approximation error < 0.11 %). Sub-1 Hz frequencies
-drift into intermediate water (kd < π at 1.0 Hz; up to ~15 % λ-error at
-0.7 Hz) — consistent with the bottom-motion observation from 2026-03-12
-annotated on the figure. Scope boundary `f < 1 Hz out of scope`
-(MEMORY.md) has a direct physical rationale visible here.
+# At 580 mm depth, thesis-scope runs (1.3–1.6 Hz) are comfortably deep
+# (kd > π, deep-water approximation error < 0.11 %). Sub-1 Hz frequencies
+# drift into intermediate water (kd < π at 1.0 Hz; up to ~15 % λ-error at
+# 0.7 Hz) — consistent with the bottom-motion observation from 2026-03-12
+# annotated on the figure. Scope boundary `f < 1 Hz out of scope`
+# (MEMORY.md) has a direct physical rationale visible here.
 
-Delegated build — see analysis_scratch/depth_regime_map.py.
-"""
-_run_delegated_if_missing(
-    "analysis_scratch/depth_regime_map.py",
-    [Path("output/FIGURES/ch04_depth_regime.pdf"),
-     Path("output/TEXFIGU/ch04_depth_regime.tex")],
-    label="ch04_depth_regime",
-)
+# Delegated build — see analysis_scratch/depth_regime_map.py.
+# """
+# _run_delegated_if_missing(
+#     "analysis_scratch/depth_regime_map.py",
+#     [Path("output/FIGURES/ch04_depth_regime.pdf"),
+#      Path("output/TEXFIGU/ch04_depth_regime.tex")],
+#     label="ch04_depth_regime",
+# )
 
 # _pv_probe_height = {
 #     "filters": {"run_category": "standard"},
@@ -1152,55 +1157,55 @@ _run_delegated_if_missing(
 #     },
 # }
 
-# %%
+# %% !disabled - this one is pretty old. Other psd plots have come further.
 # [DATA: META]  — reads combined_psd_dict (loaded alongside combined_meta)
-"""
-── CH04 § 4-1 — Wind characterisation ─────────────────────────────────────────
-Goal: characterise what the wind does to the water surface — spectrum, spatial
-extent, interaction with the panel.
+# """
+# ── CH04 § 4-1 — Wind characterisation ─────────────────────────────────────────
+# Goal: characterise what the wind does to the water surface — spectrum, spatial
+# extent, interaction with the panel.
 
-Subtopics:
-  4a. Wind-wave PSD at each probe (broadband, 2–10 Hz dominant)
-  4b. Wind-only amplitude vs probe position (SNR context)
-  4c. Wind-only amplitude: IN probe (~10 mm) vs OUT probe (~0.9 mm) —
-      panel attenuates wind waves almost completely at 12400 mm
-  4d. Lateral coherence: cross-correlate /170 and /340 at same distance
-      (coherent = tank-wide fetch; incoherent = local turbulence)
+# Subtopics:
+#   4a. Wind-wave PSD at each probe (broadband, 2–10 Hz dominant)
+#   4b. Wind-only amplitude vs probe position (SNR context)
+#   4c. Wind-only amplitude: IN probe (~10 mm) vs OUT probe (~0.9 mm) —
+#       panel attenuates wind waves almost completely at 12400 mm
+#   4d. Lateral coherence: cross-correlate /170 and /340 at same distance
+#       (coherent = tank-wide fetch; incoherent = local turbulence)
 
-Data: combined_psd_dict (nowave entries), nowave+fullwind rows of combined_meta.
+# Data: combined_psd_dict (nowave entries), nowave+fullwind rows of combined_meta.
 
-Figures:
-  - Plot:  wind PSD per probe, fullwind vs stillwater overlay (log y-axis)
-  - Plot:  wind-only amplitude vs longitudinal distance, bar per probe
-  - Plot:  cross-correlation coefficient /170 vs /340 for fullwind runs
-"""
-from wavescripts.filters import apply_experimental_filters as _aef
+# Figures:
+#   - Plot:  wind PSD per probe, fullwind vs stillwater overlay (log y-axis)
+#   - Plot:  wind-only amplitude vs longitudinal distance, bar per probe
+#   - Plot:  cross-correlation coefficient /170 vs /340 for fullwind runs
+# """
+# from wavescripts.filters import apply_experimental_filters as _aef
 
-_pv_wind_psd = {
-    "filters": {
-        "WaveFrequencyInput [Hz]": None,
-        "WindCondition":           None,
-        "PanelCondition":          None,
-        # exclude diagnostic/experimental runs by filename keyword
-        "exclude_run_keywords": ["nestenstille", "mstop"],
-    },
-    "plotting": {
-        "show_plot":     True,
-        "save_plot":     True,          # set True when ready
-        "figure_name":   "ch04_wind_psd",
-        "force_stub":    True,
-        "figsize":       (11, 4 * 4),
-        "linewidth":     1.0,
-        "facet_by":      "probe",
-        "probes":        ANALYSIS_PROBES,
-        "xlim":          (0, 5),
-        "logaritmic":    False,
-        "peaks":         0,
-        "max_points":    500,
-        "grid":          True,
-        "legend":        "inside",
-    },
-}
+# _pv_wind_psd = {
+#     "filters": {
+#         "WaveFrequencyInput [Hz]": None,
+#         "WindCondition":           None,
+#         "PanelCondition":          None,
+#         # exclude diagnostic/experimental runs by filename keyword
+#         "exclude_run_keywords": ["nestenstille", "mstop"],
+#     },
+#     "plotting": {
+#         "show_plot":     True,
+#         "save_plot":     True,          # set True when ready
+#         "figure_name":   "ch04_wind_psd",
+#         "force_stub":    True,
+#         "figsize":       (11, 4 * 4),
+#         "linewidth":     1.0,
+#         "facet_by":      "probe",
+#         "probes":        ANALYSIS_PROBES,
+#         "xlim":          (0, 5),
+#         "logaritmic":    False,
+#         "peaks":         0,
+#         "max_points":    500,
+#         "grid":          True,
+#         "legend":        "inside",
+#     },
+# }
 
 _meta_nowave_all = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].isna()].copy()
 _meta_nowave     = _aef(_meta_nowave_all, _pv_wind_psd)
@@ -2071,88 +2076,88 @@ _run_delegated_if_missing(
 
 # NOTE: CH04 §5b (ch04_timeseries_overview, grid of runs) and §6 (ch04_first_arrival)
 # have been relocated to below the Heavy load gate at the bottom of this file.
-# They are the only two figure cells that need processed_dfs (raw time series).
+# They are currently the only two figure cells that need processed_dfs (raw time series).
 
-# %%
+# %% !disabled but, TODO: consider repurposing this
 # [DATA: META]
-"""
-── CH04 § 7 — Autocorrelation A: wavetrain stability ────────────────────────
-Goal: show wave_stability and period_cv as quality metrics. Demonstrate that
-fullwind + low amplitude (0.1 V) degrades IN probe stability, while OUT probe
-stays clean.
+# """
+# ── CH04 § 7 — Autocorrelation A: wavetrain stability ────────────────────────
+# Goal: show wave_stability and period_cv as quality metrics. Demonstrate that
+# fullwind + low amplitude (0.1 V) degrades IN probe stability, while OUT probe
+# stays clean.
 
-Data: combined_meta, wave_stability {pos} and period_cv {pos} columns.
+# Data: combined_meta, wave_stability {pos} and period_cv {pos} columns.
 
-Figures:
-  - Plot:  wave_stability vs frequency, faceted by probe, coloured by wind
-  - Plot:  period_cv vs frequency, same layout
-  - Note:  this motivates use of FFT amplitude (not time-domain) for OUT/IN
-"""
+# Figures:
+#   - Plot:  wave_stability vs frequency, faceted by probe, coloured by wind
+#   - Plot:  period_cv vs frequency, same layout
+#   - Note:  this motivates use of FFT amplitude (not time-domain) for OUT/IN
+# """
 
-_pv_wave_stability = {
-    "filters": {
-        "min_periods":               10,
-        "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   (0.9,1.6),
-        "WindCondition":             None,
-        "PanelCondition":            "full",
-        # "run_category": "standard",   # re-enable after --force-recompute
-    },
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,          # DRAFT — wave stability not yet polished
-        "draft":       True,
-        "figure_name": "ch04_wave_stability",
-        "force_stub":  True,
-        "figsize":     (10, 3.5),
-        "probes":      ANALYSIS_PROBES,
-        # caption printed to terminal on first run — paste the one-liner here:
-        # "caption": "...",
-    },
-}
+# _pv_wave_stability = {
+#     "filters": {
+#         "min_periods":               10,
+#         "WaveAmplitudeInput [Volt]": None,
+#         "WaveFrequencyInput [Hz]":   (0.9,1.6),
+#         "WindCondition":             None,
+#         "PanelCondition":            "full",
+#         # "run_category": "standard",   # re-enable after --force-recompute
+#     },
+#     "plotting": {
+#         "show_plot":   True,
+#         "save_plot":   True,          # DRAFT — wave stability not yet polished
+#         "draft":       True,
+#         "figure_name": "ch04_wave_stability",
+#         "force_stub":  True,
+#         "figsize":     (10, 3.5),
+#         "probes":      ANALYSIS_PROBES,
+#         # caption printed to terminal on first run — paste the one-liner here:
+#         # "caption": "...",
+#     },
+# }
 
-_fig_stab = plot_wave_stability(combined_meta, ANALYSIS_PROBES, _pv_wave_stability)
+# _fig_stab = plot_wave_stability(combined_meta, ANALYSIS_PROBES, _pv_wave_stability)
 
-# %%
+# %% !disabled
 # [DATA: META]
-"""
-── CH04 § 8 — Autocorrelation B: lateral wave equality ──────────────────────
-Goal: show that the paddle wave is laterally uniform (parallel probes agree)
-under no-wind conditions, and that full wind introduces lateral asymmetry.
+# """
+# ── CH04 § 8 — Autocorrelation B: lateral wave equality ──────────────────────
+# Goal: show that the paddle wave is laterally uniform (parallel probes agree)
+# under no-wind conditions, and that full wind introduces lateral asymmetry.
 
-Data: combined_meta, parallel_ratio column, wave_stability columns.
+# Data: combined_meta, parallel_ratio column, wave_stability columns.
 
-Figures:
-  - Plot:  parallel_ratio vs frequency, no-wind runs (should be ~1.0)
-  - Plot:  parallel_ratio vs frequency, fullwind runs (asymmetry visible?)
-  - Table: mean parallel_ratio ± std by (WindCondition, frequency)
-"""
+# Figures:
+#   - Plot:  parallel_ratio vs frequency, no-wind runs (should be ~1.0)
+#   - Plot:  parallel_ratio vs frequency, fullwind runs (asymmetry visible?)
+#   - Table: mean parallel_ratio ± std by (WindCondition, frequency)
+# """
 
-# Lateral equality uses the same plot_parallel_ratio function (already defined in §3),
-# but filtered to a single wind condition at a time for the per-wind breakdown.
-_pv_lateral_nowind = {
-    "filters": {"WindCondition": "no", "run_category": "standard"},
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,          # DRAFT — lateral equality not yet polished
-        "draft":       True,
-        "figure_name": "ch04_lateral_nowind",
-        "force_stub":  True,
-    },
-}
-_fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)
+# # Lateral equality uses the same plot_parallel_ratio function (already defined in §3),
+# # but filtered to a single wind condition at a time for the per-wind breakdown.
+# _pv_lateral_nowind = {
+#     "filters": {"WindCondition": "no", "run_category": "standard"},
+#     "plotting": {
+#         "show_plot":   True,
+#         "save_plot":   True,          # DRAFT — lateral equality not yet polished
+#         "draft":       True,
+#         "figure_name": "ch04_lateral_nowind",
+#         "force_stub":  True,
+#     },
+# }
+# _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)
 
-_pv_lateral_nowind_scatter = {
-    "filters": {**_pv_lateral_nowind["filters"]},
-    "plotting": {
-        **_pv_lateral_nowind["plotting"],
-        "scatter":     True,
-        "figure_name": "ch04_lateral_nowind_scatter",
-    },
-}
-plot_parallel_ratio(combined_meta, _pv_lateral_nowind_scatter)
+# _pv_lateral_nowind_scatter = {
+#     "filters": {**_pv_lateral_nowind["filters"]},
+#     "plotting": {
+#         **_pv_lateral_nowind["plotting"],
+#         "scatter":     True,
+#         "figure_name": "ch04_lateral_nowind_scatter",
+#     },
+# }
+# plot_parallel_ratio(combined_meta, _pv_lateral_nowind_scatter)
 
-# %%
+# %% !disabled
 # [DATA: META]  — cell body currently commented out ("perhaps skip this one")
 # """
 # ── CH04 § 9 — Amplitude profile across all probes ───────────────────────────

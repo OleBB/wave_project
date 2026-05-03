@@ -138,6 +138,8 @@ def _load_run(wind_tag: str):
         "ka_out":  float(row["OUT ka (FFT)"]),
     }
 
+#A1 ylim = ...
+# A2 ylim =.. well problem, the tall peaks reaches y=21, while troughs only down to
 #TODO I want both nowind and fullwind to share the same ylim on their normal plots, and correspoindingly for zoomed plots. So they are instantly visually comparable.
 def _sym_ylim(*sigs, pad=0.15):
     y = np.concatenate(sigs)
