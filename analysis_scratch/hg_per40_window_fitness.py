@@ -276,7 +276,7 @@ def build_figure_for(target_freq: float):
             # All identifying text (y-axis label, row tag, probe tag) lives
             # in the .tex stub's caption — figure shows numeric ticks only.
             if row_i == 3:
-                ax.set_xlabel("time from wavemaker start [s]", fontsize=8)
+                ax.set_xlabel("Tid fra start [s]", fontsize=8)
 
     # fig.suptitle( #wasting space
     #     f"$f$ = {target_freq:.1f} Hz · {amp_to_label(TARGET_AMP)}"

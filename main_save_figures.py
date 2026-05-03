@@ -893,48 +893,48 @@ _save_placeholder("ch04_stillwater_timing", "CH04 §2 — Stillwater timing", ch
 
 # %%
 # [DATA: META]
-"""
-── CH04 § 3 — Probe placement: longitudinal and lateral effects ─────────────
-Goal: show what parallel probes tell us — lateral uniformity without wind,
-lateral asymmetry with wind. Also: why the longitudinal positions were chosen.
+# """
+# ── CH04 § 3 — Probe placement: longitudinal and lateral effects ─────────────
+# Goal: show what parallel probes tell us — lateral uniformity without wind,
+# lateral asymmetry with wind. Also: why the longitudinal positions were chosen.
 
-Data: combined_meta, parallel_ratio column, no-wind wave runs. But,
-the probes placed downstream are to be trusted more, because no interference from mooring and panel.
+# Data: combined_meta, parallel_ratio column, no-wind wave runs. But,
+# the probes placed downstream are to be trusted more, because no interference from mooring and panel.
 
-Figures:
-  - Plot:  parallel_ratio vs frequency, coloured by WindCondition
-  - Plot:  parallel_ratio vs frequency, coloured by PanelCondition (reflection)
-  - Table: parallel_ratio summary (mean, std) by wind/panel group
-"""
+# Figures:
+#   - Plot:  parallel_ratio vs frequency, coloured by WindCondition
+#   - Plot:  parallel_ratio vs frequency, coloured by PanelCondition (reflection)
+#   - Table: parallel_ratio summary (mean, std) by wind/panel group
+# """
 
-""" PRINTOUT
-Ratio of wall-side to far-side probe amplitude at the same longitudinal distance, for 154 wave runs across 1 panel configurations. A ratio of 1 indicates lateral symmetry. Deviations indicate wall reflections or wind-driven lateral asymmetry. Error bars: standard deviation across runs at the same frequency. Dashed line: ratio = 1.
-"""
+# """ PRINTOUT
+# Ratio of wall-side to far-side probe amplitude at the same longitudinal distance, for 154 wave runs across 1 panel configurations. A ratio of 1 indicates lateral symmetry. Deviations indicate wall reflections or wind-driven lateral asymmetry. Error bars: standard deviation across runs at the same frequency. Dashed line: ratio = 1.
+# """
 
-_pv_parallel_ratio = {
-    "filters": {},
-    "plotting": {
-        "show_plot": True,
-        "save_plot": True,            # DRAFT — parallel ratio not yet polished
-        "draft":     True,
-        "figure_name": "ch04_parallel_ratio",
-        "force_stub": True,
-    },
-}
-start = time.perf_counter()
-_fig_pr = plot_parallel_ratio(combined_meta, _pv_parallel_ratio)
-end = time.perf_counter()
-print(f"Lateral symmetry of plot_parallel_ratio {end-start:.4f} seconds")
+# _pv_parallel_ratio = {
+#     "filters": {},
+#     "plotting": {
+#         "show_plot": True,
+#         "save_plot": True,            # DRAFT — parallel ratio not yet polished
+#         "draft":     True,
+#         "figure_name": "ch04_parallel_ratio",
+#         "force_stub": True,
+#     },
+# }
+# start = time.perf_counter()
+# _fig_pr = plot_parallel_ratio(combined_meta, _pv_parallel_ratio)
+# end = time.perf_counter()
+# print(f"Lateral symmetry of plot_parallel_ratio {end-start:.4f} seconds")
 
-_pv_parallel_ratio_scatter = {
-    "filters": {},
-    "plotting": {
-        **_pv_parallel_ratio["plotting"],
-        "scatter":     True,
-        "figure_name": "ch04_parallel_ratio_scatter",
-    },
-}
-plot_parallel_ratio(combined_meta, _pv_parallel_ratio_scatter)
+# _pv_parallel_ratio_scatter = {
+#     "filters": {},
+#     "plotting": {
+#         **_pv_parallel_ratio["plotting"],
+#         "scatter":     True,
+#         "figure_name": "ch04_parallel_ratio_scatter",
+#     },
+# }
+# plot_parallel_ratio(combined_meta, _pv_parallel_ratio_scatter)
 
 # %%
 # [DATA: DELEG]  — analysis_scratch/probe_height_figure.py

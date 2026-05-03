@@ -138,7 +138,7 @@ def _load_run(wind_tag: str):
         "ka_out":  float(row["OUT ka (FFT)"]),
     }
 
-
+#TODO I want both nowind and fullwind to share the same ylim on their normal plots, and correspoindingly for zoomed plots. So they are instantly visually comparable.
 def _sym_ylim(*sigs, pad=0.15):
     y = np.concatenate(sigs)
     lo, hi = np.nanpercentile(y, [0.5, 99.5])

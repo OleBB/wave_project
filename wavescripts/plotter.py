@@ -1539,18 +1539,18 @@ def plot_reconstructed_combined(
         fft_swell[mirror_idx] = fft_ord[mirror_idx]
         signal_swell = np.real(np.fft.ifft(fft_swell))
         signal_resid = signal_full - signal_swell
-        amplituden = np.round(max(signal_swell), 3)
+        amplituden = max(signal_swell)
 
         if show_full:
             ax.plot(time_axis, signal_full, lw=linewidth * 0.7,
                     label="full", color=color_full, alpha=0.6, zorder=1)
         ax.plot(
             time_axis, signal_swell, lw=linewidth * 2.5,
-            label=f"bølge ({actual_freq:.4f} Hz) amplitude: {amplituden}",
+            label=f"Hovedbølgen ({actual_freq:.1f} Hz, amplitude: {amplitude:.2f})",
             color=color_wave, alpha=0.95, zorder=3,
         )
         ax.plot(time_axis, signal_resid, lw=linewidth,
-                label="rest", color=color_rest, alpha=0.9, zorder=3)
+                label="Resterende frekvenser", color=color_rest, alpha=0.9, zorder=3)
         ax.axhline(0, color="black", lw=0.5, alpha=0.3)
         if show_grid:
             ax.grid(which="major", linestyle="--", alpha=0.3)
