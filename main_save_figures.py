@@ -877,24 +877,8 @@ print(f"probe uncertainty-plot took {end - start:.4f} s")
 
 
 
-# %%
-# [DATA: META]  — [TODO] cell currently empty
-"""
-── CH04 § 2 — Stillwater timing (how long to wait between runs) ─────────────
-Goal: show that long-wave swell from previous runs decays over time, and that
-wind dramatically shortens the required waiting time.
 
-Data: repeated stillwater runs at different times after wave runs; look at
-low-frequency PSD content in eta_* columns over time.
-
-Figures:
-  - Plot:  PSD of eta at the OUT probe vs time-after-wave (semi-log, low freqs)
-  - Note:  wind-only runs show near-immediate settling(return to wind-wave spectrum) — physical explanation
-           (wind chops suppress long-wave coherence in the tank).
-"""
-# TODO: implement stillwater timing figure
-_save_placeholder("ch04_stillwater_timing", "CH04 §2 — Stillwater timing", chapter="04")
-
+# removed: # ── CH04 § 2 — Stillwater timing (how long to wait between runs) ─────────────
 
 # %%
 # [DATA: META]
@@ -1011,7 +995,7 @@ _pv_sound_speed = {
     "plotting": {
         "show_plot":   True,
         "save_plot":   True,            # DRAFT — not yet polished
-        "draft":       True,
+        "draft":       False,
         "figure_name": "ch04_sound_speed",
         "force_stub":  True,
         "figsize":     (10, 3),
