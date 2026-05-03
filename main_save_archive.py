@@ -96,3 +96,120 @@
 # # TODO: implement wind reflection figure
 # _save_placeholder("ch04_wind_reflection", "CH04 §4-2 — Wind reflection from panel", chapter="04")
 #
+
+
+# NOTE: CH04 §5b (ch04_timeseries_overview, grid of runs) and §6 (ch04_first_arrival)
+# have been relocated to below the Heavy load gate at the bottom of this file.
+# They are currently the only two figure cells that need processed_dfs (raw time series).
+
+# %% !disabled but, TODO: consider repurposing this
+# [DATA: META]
+# """
+# ── CH04 § 7 — Autocorrelation A: wavetrain stability ────────────────────────
+# Goal: show wave_stability and period_cv as quality metrics. Demonstrate that
+# fullwind + low amplitude (0.1 V) degrades IN probe stability, while OUT probe
+# stays clean.
+
+# Data: combined_meta, wave_stability {pos} and period_cv {pos} columns.
+
+# Figures:
+#   - Plot:  wave_stability vs frequency, faceted by probe, coloured by wind
+#   - Plot:  period_cv vs frequency, same layout
+#   - Note:  this motivates use of FFT amplitude (not time-domain) for OUT/IN
+# """
+
+# _pv_wave_stability = {
+#     "filters": {
+#         "min_periods":               10,
+#         "WaveAmplitudeInput [Volt]": None,
+#         "WaveFrequencyInput [Hz]":   (0.9,1.6),
+#         "WindCondition":             None,
+#         "PanelCondition":            "full",
+#         # "run_category": "standard",   # re-enable after --force-recompute
+#     },
+#     "plotting": {
+#         "show_plot":   True,
+#         "save_plot":   True,          # DRAFT — wave stability not yet polished
+#         "draft":       True,
+#         "figure_name": "ch04_wave_stability",
+#         "force_stub":  True,
+#         "figsize":     (10, 3.5),
+#         "probes":      ANALYSIS_PROBES,
+#         # caption printed to terminal on first run — paste the one-liner here:
+#         # "caption": "...",
+#     },
+# }
+
+# _fig_stab = plot_wave_stability(combined_meta, ANALYSIS_PROBES, _pv_wave_stability)
+
+# %% !disabled
+# [DATA: META]
+# """
+# ── CH04 § 8 — Autocorrelation B: lateral wave equality ──────────────────────
+# Goal: show that the paddle wave is laterally uniform (parallel probes agree)
+# under no-wind conditions, and that full wind introduces lateral asymmetry.
+
+# Data: combined_meta, parallel_ratio column, wave_stability columns.
+
+# Figures:
+#   - Plot:  parallel_ratio vs frequency, no-wind runs (should be ~1.0)
+#   - Plot:  parallel_ratio vs frequency, fullwind runs (asymmetry visible?)
+#   - Table: mean parallel_ratio ± std by (WindCondition, frequency)
+# """
+
+# # Lateral equality uses the same plot_parallel_ratio function (already defined in §3),
+# # but filtered to a single wind condition at a time for the per-wind breakdown.
+# _pv_lateral_nowind = {
+#     "filters": {"WindCondition": "no", "run_category": "standard"},
+#     "plotting": {
+#         "show_plot":   True,
+#         "save_plot":   True,          # DRAFT — lateral equality not yet polished
+#         "draft":       True,
+#         "figure_name": "ch04_lateral_nowind",
+#         "force_stub":  True,
+#     },
+# }
+# _fig_lat_nw = plot_parallel_ratio(combined_meta, _pv_lateral_nowind)
+
+# _pv_lateral_nowind_scatter = {
+#     "filters": {**_pv_lateral_nowind["filters"]},
+#     "plotting": {
+#         **_pv_lateral_nowind["plotting"],
+#         "scatter":     True,
+#         "figure_name": "ch04_lateral_nowind_scatter",
+#     },
+# }
+# plot_parallel_ratio(combined_meta, _pv_lateral_nowind_scatter)
+
+# %% !disabled
+# [DATA: META]  — cell body currently commented out ("perhaps skip this one")
+# """
+# ── CH04 § 9 — Amplitude profile across all probes ───────────────────────────
+# Goal: show measured amplitude at each probe position for all runs, giving a
+# # physical overview of how wave energy is distributed along the tank.
+# Colour = wind condition, linestyle = panel condition.
+# Data: combined_meta wave rows, all Probe {pos} Amplitude columns.
+# """
+
+# _pv_all_probes = {
+#     "filters": {
+#         "WaveAmplitudeInput [Volt]": None,
+#         "WaveFrequencyInput [Hz]":   None,
+#         "WindCondition":             None,
+#         "PanelCondition":            None,
+#     },
+#     "plotting": {
+#         "show_plot":   True,
+#         "save_plot":   False,            # this one is mostly
+#         "draft":       True,
+#         "figure_name": "ch04_amplitude_profile",
+#         "force_stub":  True,
+#         "figsize":     (10, 6),
+#         "annotate":    False,
+#     },
+# }
+
+# _ap_meta = apply_experimental_filters(
+#     combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()], _pv_all_probes
+# )
+# plot_all_probes(_ap_meta, _pv_all_probes, chapter="04")

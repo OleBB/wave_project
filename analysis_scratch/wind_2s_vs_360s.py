@@ -36,6 +36,11 @@ from scipy.signal import welch, periodogram
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
 
+import wavescripts.plot_utils as pu
+from wavescripts.plot_utils import (
+    apply_thesis_style, build_fig_meta, save_and_stub, WIND_COLOR_MAP,
+)
+
 FS = 250.0
 BASE = Path("/Users/ole/Kodevik/wave_project")
 
@@ -58,7 +63,7 @@ PROBES = ["8804/250", "9373/170", "9373/340", "12400/250"]
 LABELS = {
     "8804/250":  "8804/250 (upstream)",
     "9373/170":  "9373/170 (IN, wall)",
-    "9373/340":  "9373/340 (IN, far)",
+    "9373/340":  "9373/340 (IN, far)", #todo: recent findings shows this is really the better one, Im considering the switch.
     "12400/250": "12400/250 (OUT)",
 }
 
@@ -191,6 +196,8 @@ per_run_csv = Path(__file__).parent / f"wind_2s_vs_360s_per_long_run_{TAG}.csv"
 per_run_table.to_csv(per_run_csv, index=False)
 print(f"  → {per_run_csv.relative_to(BASE)}")
 
+pu.apply_thesis_style()
+
 # ── Spectrum plot — IN probe only ────────────────────────────────────────
 nperseg = int(8 * FS)   # 8 s segments → Δf = 0.125 Hz (per long-run Welch)
 
@@ -235,22 +242,22 @@ snip_p84 = np.nanpercentile(snip_psds, 84, axis=0)
 fig, ax = plt.subplots(figsize=(11, 6))
 
 ax.fill_between(freqs_long, long_p16, long_p84, color="#1E9C68", alpha=0.20,
-                label=f"long-run 16–84 % (n={long_psds.shape[0]})")
+                label=f"lang serie 16–84 % (n={long_psds.shape[0]})")
 ax.semilogy(freqs_long, long_p50, color="#1E9C68", lw=2.0,
-            label=f"long-run median (n={long_psds.shape[0]}, Welch nperseg=8 s)")
-
+            label=f"lang serie median (n={long_psds.shape[0]}, Welch nperseg=8 s)")
+#todo - fix the lables explaining 16 84  in words or terminology...
 ax.fill_between(freqs_snip, snip_p16, snip_p84, color="#FEA11B", alpha=0.22,
-                label=f"{SNIPPET_S:g} s pre-paddle 16–84 % (n={snip_psds.shape[0]})")
+                label=f"{SNIPPET_S:g} s etter start, 16–84 % (n={snip_psds.shape[0]})")
 ax.semilogy(freqs_snip, snip_p50, color="#FEA11B", lw=1.8, ls="--",
-            label=f"{SNIPPET_S:g} s pre-paddle median (n={snip_psds.shape[0]})")
+            label=f"Median, {SNIPPET_S:g} s etter start, (n={snip_psds.shape[0]})")
 
-ax.set_xlabel("Frequency [Hz]")
+ax.set_xlabel("Frekvens [Hz]")
 ax.set_ylabel(r"$S_\eta(f)$  [mm$^2$/Hz]")
 ax.set_xlim(0, 16)
-ax.set_title(
-    f"Wind PSD — {len(long_present)} long nowave runs vs ensemble of {SNIPPET_S:g} s pre-paddle snippets\n"
-    f"probe {LABELS[PSD_PROBE]} | canon datasets 20260326+27 -lowrange | fullwind"
-)
+# ax.set_title(
+#     f" PSD — {len(long_present)} long nowave runs vs ensemble of {SNIPPET_S:g} s pre-paddle snippets\n"
+#     f"probe {LABELS[PSD_PROBE]} | canon datasets 20260326+27 -lowrange | fullwind"
+# )
 ax.grid(True, which="major", alpha=0.40)
 ax.grid(True, which="minor", alpha=0.18)
 ax.legend(loc="upper right", fontsize=10)
