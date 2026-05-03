@@ -599,8 +599,8 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_parallel_probe_agreement_by_freq": "Parallelle prober, fire frekvenser.",
     "ch04_parallel_probe_psd_agreement":     "",
     "ch04_depth_regime":               "",
-    "ch04_wind_psd":                   "",
-    "ch04_wind_reflection":            "",
+    # "ch04_wind_psd":                   "", - moved to main_save_archive.py
+    # "ch04_wind_reflection":            "", - moved to main_save_archive.py
     "ch04_fft_wave":                   "Fourierspektrum med og uten vind.",
     "ch04_reconstructed":              "Rekonstruerte bølger",
     "ch04_wind_snr":                   "",
@@ -1157,84 +1157,11 @@ _run_delegated_if_missing(
 #     },
 # }
 
-# %% !disabled - this one is pretty old. Other psd plots have come further.
-# [DATA: META]  — reads combined_psd_dict (loaded alongside combined_meta)
-# """
-# ── CH04 § 4-1 — Wind characterisation ─────────────────────────────────────────
-# Goal: characterise what the wind does to the water surface — spectrum, spatial
-# extent, interaction with the panel.
-
-# Subtopics:
-#   4a. Wind-wave PSD at each probe (broadband, 2–10 Hz dominant)
-#   4b. Wind-only amplitude vs probe position (SNR context)
-#   4c. Wind-only amplitude: IN probe (~10 mm) vs OUT probe (~0.9 mm) —
-#       panel attenuates wind waves almost completely at 12400 mm
-#   4d. Lateral coherence: cross-correlate /170 and /340 at same distance
-#       (coherent = tank-wide fetch; incoherent = local turbulence)
-
-# Data: combined_psd_dict (nowave entries), nowave+fullwind rows of combined_meta.
-
-# Figures:
-#   - Plot:  wind PSD per probe, fullwind vs stillwater overlay (log y-axis)
-#   - Plot:  wind-only amplitude vs longitudinal distance, bar per probe
-#   - Plot:  cross-correlation coefficient /170 vs /340 for fullwind runs
-# """
-# from wavescripts.filters import apply_experimental_filters as _aef
-
-# _pv_wind_psd = {
-#     "filters": {
-#         "WaveFrequencyInput [Hz]": None,
-#         "WindCondition":           None,
-#         "PanelCondition":          None,
-#         # exclude diagnostic/experimental runs by filename keyword
-#         "exclude_run_keywords": ["nestenstille", "mstop"],
-#     },
-#     "plotting": {
-#         "show_plot":     True,
-#         "save_plot":     True,          # set True when ready
-#         "figure_name":   "ch04_wind_psd",
-#         "force_stub":    True,
-#         "figsize":       (11, 4 * 4),
-#         "linewidth":     1.0,
-#         "facet_by":      "probe",
-#         "probes":        ANALYSIS_PROBES,
-#         "xlim":          (0, 5),
-#         "logaritmic":    False,
-#         "peaks":         0,
-#         "max_points":    500,
-#         "grid":          True,
-#         "legend":        "inside",
-#     },
-# }
-
-_meta_nowave_all = combined_meta[combined_meta["WaveFrequencyInput [Hz]"].isna()].copy()
-_meta_nowave     = _aef(_meta_nowave_all, _pv_wind_psd)
-_nowave_paths    = set(_meta_nowave["path"])
-_wind_psd_dict   = {k: v for k, v in combined_psd_dict.items() if k in _nowave_paths}
-
-start = time.perf_counter()
-_fig_wind_psd, _ = plot_frequency_spectrum(
-    _wind_psd_dict, _meta_nowave, _pv_wind_psd, data_type="psd", chapter="04"
-)
-end = time.perf_counter()
-print(f"Wind PSD plot took {end - start:.4f} s")
 
 
 
-# %%
-# [DATA: META]  — [TODO] cell currently empty
-"""
-── CH04 § 4-2 — Wind wave-reflection from panel ─────────────────────────────────────────
-Goal: find out the reflection — spectrum, spatial
-extent, interaction with the panel.
 
-Data: combined_psd_dict (nowave entries), nowave+fullwind rows of combined_meta.
 
-Figures:
-  - Plot:
-"""
-# TODO: implement wind reflection figure
-_save_placeholder("ch04_wind_reflection", "CH04 §4-2 — Wind reflection from panel", chapter="04")
 
 # %%
 # [DATA: DELEG]  — subprocess-calls analysis_scratch/fft_wave_spectrum.py
