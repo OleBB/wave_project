@@ -152,7 +152,7 @@ def t_paras_at(r_m, f):   return r_m / c_group(2.0 * f, TANK_DEPTH_M)
 
 
 def c_phase(f_hz, h_m=TANK_DEPTH_M, g=9.81):
-    """Phase velocity (celerity) under full dispersion ω² = gk·tanh(kh)."""
+    """Phase speed (celerity) under full dispersion ω² = gk·tanh(kh)."""
     from scipy.optimize import brentq
     omega = 2.0 * np.pi * f_hz
     k_deep = omega ** 2 / g

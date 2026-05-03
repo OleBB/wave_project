@@ -455,11 +455,11 @@ FIGURE_CAPTIONS: dict[str, str] = {
     # ── CHAPTER 04 — METHODOLOGY ─────────────────────────────────────────────
 
     # § 1 — Probe noise floor (parent + 4 subfigs)
-    "ch04_probe_noise_floor":          "",
-    "ch04_probe_noise_floor_group0":   "",
+    "ch04_probe_noise_floor":          "Hver enkelt probes støygulv",
+    "ch04_probe_noise_floor_group0":   "Prober hengende høyt over vannet.",
     "ch04_probe_noise_floor_group1":   "",
     "ch04_probe_noise_floor_group2":   "",
-    "ch04_probe_noise_floor_group3":   "",
+    "ch04_probe_noise_floor_group3":   "Prober hengende lavt over vannet.",
 
     # § 2 — Stillwater timing (placeholder)
     "ch04_stillwater_timing":          "",
@@ -471,7 +471,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_mooring_comparison":         "",
     "ch04_sound_speed":                "",
     "ch04_parallel_probe_agreement":   "",
-    "ch04_parallel_probe_agreement_by_freq": "",
+    "ch04_parallel_probe_agreement_by_freq": "Forskjell mellom høyre og venstre prober. Hvert vindu viser én frekvens og tre amplituder.",
     "ch04_parallel_probe_psd_agreement":     "",
     "ch04_depth_regime":               "",
 
@@ -499,9 +499,9 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_window_choice":              "",
     "ch04_window_choice_nowind":       "",
     "ch04_window_choice_fullwind":     "",
-    "ch04_plateau_overview_A1":        "",
-    "ch04_plateau_overview_A2":        "",
-    "ch04_plateau_overview_A3":        "",
+    "ch04_plateau_overview_A1":        "Glidende gjennomsnitt av amplitude. Innkommende til venstre, utgående til høyre.",
+    "ch04_plateau_overview_A2":        "Platå, A2",
+    "ch04_plateau_overview_A3":        "Platå, A3",
     "ch04_plateau_values":             "",
     "ch04_tidsvindu":                  "Frekvensenes tidsvinduer",
 
@@ -583,7 +583,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
 FIGURE_CAPTIONS_SHORT: dict[str, str] = {
 
     # ── CHAPTER 04 ───────────────────────────────────────────────────────────
-    "ch04_probe_noise_floor":          "",
+    "ch04_probe_noise_floor":          "Probes støygulv",
     "ch04_stillwater_timing":          "",
     "ch04_parallel_ratio":             "",
     "ch04_parallel_ratio_scatter":     "",
@@ -591,13 +591,13 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_mooring_comparison":         "",
     "ch04_sound_speed":                "",
     "ch04_parallel_probe_agreement":   "",
-    "ch04_parallel_probe_agreement_by_freq": "",
+    "ch04_parallel_probe_agreement_by_freq": "Parallelle prober, fire frekvenser.",
     "ch04_parallel_probe_psd_agreement":     "",
     "ch04_depth_regime":               "",
     "ch04_wind_psd":                   "",
     "ch04_wind_reflection":            "",
-    "ch04_fft_wave":                   "",
-    "ch04_reconstructed":              "Rekonstrukerte bølger",
+    "ch04_fft_wave":                   "Fourierspektrum med og uten vind.",
+    "ch04_reconstructed":              "Rekonstruerte bølger",
     "ch04_wind_snr":                   "",
     "ch04_td_vs_fft":                  "",
     "ch04_td_vs_fft_scatter":          "",
@@ -617,9 +617,9 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_window_choice":              "",
     "ch04_window_choice_nowind":       "",
     "ch04_window_choice_fullwind":     "",
-    "ch04_plateau_overview_A1":        "",
-    "ch04_plateau_overview_A2":        "",
-    "ch04_plateau_overview_A3":        "",
+    "ch04_plateau_overview_A1":        "Platå, A1",
+    "ch04_plateau_overview_A2":        "Platå, A2",
+    "ch04_plateau_overview_A3":        "Platå, A3",
     "ch04_plateau_values":             "",
     "ch04_tidsvindu":                  "Frekvensenes tidsvindu",
     "ch04_wind_transition_overview":   "",
@@ -627,8 +627,8 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_wind_pre_paddle_table":      "",
     "ch04_wind_qc_control_chart":      "",
     "ch04_wind_qc_boxplot":            "",
-    "ch04_inspirational_nowind":       "",
-    "ch04_inspirational_fullwind":     "",
+    "ch04_inspirational_nowind":       "Tidsserie uten vind",
+    "ch04_inspirational_fullwind":     "Tidsserie med vind",
     "ch04_first_arrival":              "",
     "ch04_timeseries_overview":        "",
     "ch04_wave_stability":             "",
