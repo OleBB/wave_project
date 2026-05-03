@@ -262,7 +262,7 @@ def build_figure_for(target_amp: float, amp_label_tex: str,
             if row_i == len(THESIS_FREQS) - 1:
                 ax.set_xlabel("[s]", fontsize=12)
             if col_i == 0 and row_i == 0:
-                ax.set_ylabel(r"$A_\mathrm{FFT}$  [mm]", fontsize=12,
+                ax.set_ylabel(r"$A$ [mm]", fontsize=12,
                               rotation=0, ha="left", va="bottom")
 
     legend_handles = [

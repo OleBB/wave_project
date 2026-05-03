@@ -499,9 +499,9 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_window_choice":              "",
     "ch04_window_choice_nowind":       "",
     "ch04_window_choice_fullwind":     "",
-    "ch04_plateau_overview_A1":        "Glidende gjennomsnitt av amplitude. Innkommende til venstre, utgående til høyre.",
-    "ch04_plateau_overview_A2":        "Platå, A2",
-    "ch04_plateau_overview_A3":        "Platå, A3",
+    "ch04_plateau_overview_A1":        "Glidende gjennomsnitt av amplitude. $A_1$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
+    "ch04_plateau_overview_A2":        "Glidende gjennomsnitt av amplitude. $A_2$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
+    "ch04_plateau_overview_A3":        "Glidende gjennomsnitt av amplitude. $A_3$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
     "ch04_plateau_values":             "",
     "ch04_tidsvindu":                  "Frekvensenes tidsvinduer",
 
