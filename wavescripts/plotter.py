@@ -78,6 +78,7 @@ from wavescripts.plot_utils import (
     save_and_stub,
     write_figure_stub,
 )
+from wavescripts.wavescript_tests import amplitude_improvements
 # get_positive_spectrum imported lazily (pulls in scipy.signal, ~2s)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1546,7 +1547,7 @@ def plot_reconstructed_combined(
                     label="full", color=color_full, alpha=0.6, zorder=1)
         ax.plot(
             time_axis, signal_swell, lw=linewidth * 2.5,
-            label=f"Hovedbølgen ({actual_freq:.1f} Hz, amplitude: {amplitude:.2f})",
+            label=f"Hovedbølgen ({actual_freq:.1f} Hz, amplitude: {amplituden:.2f})",
             color=color_wave, alpha=0.95, zorder=3,
         )
         ax.plot(time_axis, signal_resid, lw=linewidth,

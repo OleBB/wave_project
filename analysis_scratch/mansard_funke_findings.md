@@ -1,6 +1,6 @@
 # Mansard-Funke reflection analysis
 
-**Date**: 2026-04-17
+**Date**: 2026-05-03
 **Script**: `analysis_scratch/mansard_funke.py`
 **Figure**: `analysis_scratch/mansard_funke.png`
 
@@ -54,70 +54,70 @@ phase estimate at the paddle frequency. Fullwind R values are shown but interpre
 
 ```
   freq             mooring    wind     mean R    std R     n
-   0.50                above_50    full   0.2395      nan     1
-   0.60                above_50    full   0.1469   0.0188     2
-   0.70                above_50    full   0.1074   0.0121     3
-   0.80                above_50    full   0.0421   0.0101     2
-   0.90                above_50    full   0.0343   0.0274     2
-   1.00                above_50    full   0.0582   0.0061     2
-   1.10                above_50    full   0.0851   0.0660     2
-   1.30                above_50    full   0.0643   0.0314     2
-   1.40                above_50    full   0.1422   0.1116     2
-   1.50                above_50    full   0.1288   0.0407     2
-   1.60                above_50    full   0.3312   0.0983     2
-   1.70                above_50    full   0.8622   0.3162     2
-   1.80                above_50    full   0.2442   0.0199     3
-   1.90                above_50    full   0.1140   0.0101     2
-   0.70                above_50      no   0.1163      nan     1
-   0.80                above_50      no   0.0408      nan     1
-   0.90                above_50      no   0.0435      nan     1
-   1.00                above_50      no   0.0454   0.0178     2
-   1.10                above_50      no   0.0470   0.0162     2
-   1.30                above_50      no   0.0651   0.0224     2
-   1.40                above_50      no   0.0663   0.0267     2
-   1.50                above_50      no   0.0225   0.0065     2
-   1.60                above_50      no   0.0453   0.0247     3
-   1.70                above_50      no   0.1188      nan     1
-   0.80       below_90_loose230    full   0.0459      nan     1
-   0.90       below_90_loose230    full   0.0596      nan     1
-   1.00       below_90_loose230    full   0.0297      nan     1
-   1.10       below_90_loose230    full   0.0273      nan     1
-   1.30       below_90_loose230    full   0.0878   0.0672     4
-   1.40       below_90_loose230    full   0.0973   0.0163     6
-   1.50       below_90_loose230    full   0.1395   0.0274     5
-   1.60       below_90_loose230    full   0.2380   0.0840     5
-   1.70       below_90_loose230    full   0.8455   0.5122     4
-   0.80       below_90_loose230      no   0.0507      nan     1
-   0.90       below_90_loose230      no   0.0640      nan     1
-   1.00       below_90_loose230      no   0.0747      nan     1
-   1.10       below_90_loose230      no   0.0697      nan     1
-   1.30       below_90_loose230      no   0.0486   0.0228     5
-   1.40       below_90_loose230      no   0.0369   0.0202     5
-   1.50       below_90_loose230      no   0.0255   0.0130     5
-   1.60       below_90_loose230      no   0.0597   0.0190     4
-   1.70       below_90_loose230      no   0.1864      nan     1
-   0.80       below_90_loose300    full   0.0139      nan     1
-   0.90       below_90_loose300    full   0.0239      nan     1
-   1.00       below_90_loose300    full   0.0255      nan     1
-   1.10       below_90_loose300    full   0.0526      nan     1
-   1.30       below_90_loose300    full   0.0428   0.0272     2
-   1.40       below_90_loose300    full   0.0992   0.0164     2
-   1.50       below_90_loose300    full   0.1259   0.0196     2
-   1.60       below_90_loose300    full   0.3046   0.0668     2
-   1.30       below_90_loose300      no   0.0481   0.0052     2
-   1.40       below_90_loose300      no   0.0129   0.0099     2
-   1.50       below_90_loose300      no   0.0450   0.0045     2
-   1.60       below_90_loose300      no   0.1146   0.0152     2
-   1.70       below_90_loose300      no   0.1075      nan     1
+   0.50                above_50    full   0.1511      nan     1
+   0.60                above_50    full   0.1015   0.0019     2
+   0.70                above_50    full   0.0127   0.0069     3
+   0.80                above_50    full   0.0209   0.0119     2
+   0.90                above_50    full   0.0089   0.0079     2
+   1.00                above_50    full   0.0761   0.0145     2
+   1.10                above_50    full   0.1087   0.0132     2
+   1.30                above_50    full   0.1086   0.0052     2
+   1.40                above_50    full   0.1683   0.1323     2
+   1.50                above_50    full   0.1464   0.0178     2
+   1.60                above_50    full   0.3085   0.1310     2
+   1.70                above_50    full   1.8848   1.0317     2
+   1.80                above_50    full   0.2888   0.0214     3
+   1.90                above_50    full   0.2832   0.0932     2
+   0.70                above_50      no   0.0155      nan     1
+   0.80                above_50      no   0.0106      nan     1
+   0.90                above_50      no   0.0247      nan     1
+   1.00                above_50      no   0.0376   0.0090     2
+   1.10                above_50      no   0.0500   0.0219     2
+   1.30                above_50      no   0.0613   0.0190     2
+   1.40                above_50      no   0.0652   0.0041     2
+   1.50                above_50      no   0.0206   0.0070     2
+   1.60                above_50      no   0.0526   0.0296     3
+   1.70                above_50      no   0.0614      nan     1
+   0.80       below_90_loose230    full   0.0202      nan     1
+   0.90       below_90_loose230    full   0.0120      nan     1
+   1.00       below_90_loose230    full   0.0290      nan     1
+   1.10       below_90_loose230    full   0.0998      nan     1
+   1.30       below_90_loose230    full   0.0827   0.0693     4
+   1.40       below_90_loose230    full   0.1330   0.0181     6
+   1.50       below_90_loose230    full   0.1740   0.0342     5
+   1.60       below_90_loose230    full   0.2888   0.0787     5
+   1.70       below_90_loose230    full   1.3271   0.6121     4
+   0.80       below_90_loose230      no   0.0102      nan     1
+   0.90       below_90_loose230      no   0.0318      nan     1
+   1.00       below_90_loose230      no   0.0295      nan     1
+   1.10       below_90_loose230      no   0.0716      nan     1
+   1.30       below_90_loose230      no   0.0372   0.0191     5
+   1.40       below_90_loose230      no   0.0381   0.0274     5
+   1.50       below_90_loose230      no   0.0206   0.0087     4
+   1.60       below_90_loose230      no   0.0313   0.0199     4
+   1.70       below_90_loose230      no   0.0742      nan     1
+   0.80       below_90_loose300    full   0.0080      nan     1
+   0.90       below_90_loose300    full   0.0232      nan     1
+   1.00       below_90_loose300    full   0.0569      nan     1
+   1.10       below_90_loose300    full   0.0524      nan     1
+   1.30       below_90_loose300    full   0.0829   0.0511     2
+   1.40       below_90_loose300    full   0.1198   0.0098     2
+   1.50       below_90_loose300    full   0.1571   0.0047     2
+   1.60       below_90_loose300    full   0.3380   0.0363     2
+   1.30       below_90_loose300      no   0.0514   0.0073     2
+   1.40       below_90_loose300      no   0.0300   0.0160     2
+   1.50       below_90_loose300      no   0.0494   0.0087     2
+   1.60       below_90_loose300      no   0.1049   0.0001     2
+   1.70       below_90_loose300      no   0.0944      nan     1
 ```
 
 ## Overall R by mooring (0.2V, nowind, well-conditioned, all freq)
 
 | Mooring | n | mean R | median R | max R |
 |---------|---|--------|----------|-------|
-| above_50 | 17 | 0.0558 | 0.0474 | 0.1188 |
-| below_90_loose230 | 24 | 0.0516 | 0.0493 | 0.1864 |
-| below_90_loose300 | 9 | 0.0610 | 0.0481 | 0.1254 |
+| above_50 | 17 | 0.0435 | 0.0439 | 0.0815 |
+| below_90_loose230 | 23 | 0.0348 | 0.0304 | 0.0801 |
+| below_90_loose300 | 9 | 0.0629 | 0.0556 | 0.1049 |
 
 ## Interpretation
 

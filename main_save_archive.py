@@ -213,3 +213,37 @@
 #     combined_meta[combined_meta["WaveFrequencyInput [Hz]"].notna()], _pv_all_probes
 # )
 # plot_all_probes(_ap_meta, _pv_all_probes, chapter="04")
+
+
+
+# %% !disabled - not really relevant as a plot
+# [DATA: DFS-canon]
+# """
+# ── CH04 § 6 — Wave-range detection ──────────────────────────────────────────
+# Goal: explain and validate _SNARVEI_CALIB. Show how the stable wavetrain
+# window is detected: (1) threshold crossing, (2) ramp-up skip, (3) n periods.
+
+# Data: processed_dfs, Computed Probe {pos} start/end columns.
+
+# Figures:
+#   - Plot:  single run with detected start/end marked, one probe panel per row
+#   - Plot:  start sample vs frequency (all probes) — show _SNARVEI_CALIB points
+# """
+
+# _pv_first_arrival = {
+#     "filters": {},
+#     "plotting": {
+#         "show_plot":        True,
+#         "save_plot":        True,       # DRAFT — threshold not yet calibrated
+#         "draft":            True,
+#         "figure_name":      "ch04_first_arrival",
+#         "force_stub":       True,
+#         "probes":           ANALYSIS_PROBES,
+#         "threshold_factor": 5.0,        # TODO: calibrate per-probe after noise floor analysis
+#         "window_s":         2.5,
+#         "min_arrival_s":    0.5,
+#         "figsize":          (9, 5),
+#     },
+# }
+
+# plot_first_arrival(combined_meta, processed_dfs, _pv_first_arrival, chapter="04")

@@ -194,7 +194,7 @@ Figure-stub invariants (2026-04-24 durable rule):
 
 CHAPTER 04 — METHODOLOGY
   §1    ch04_probe_noise_floor           [META]  ~  Stillwater noise floor per probe / hw config
-  §2    ch04_stillwater_timing           [META]  ✗  Swell decay time vs wait time  [TODO]
+  # §2    ch04_stillwater_timing           [META]  ✗  Swell decay time vs wait time  [TODO]
   §3    ch04_parallel_ratio              [META]  ~  Wall/far-side amplitude ratio vs frequency
         ch04_parallel_ratio_scatter      [META]  ~     └─ per-run scatter sibling
   §3b   ch04_probe_height                [DELEG] ✓  Probe height & range-mode validity
@@ -240,7 +240,7 @@ CHAPTER 04 — METHODOLOGY
         ch04_wind_qc_boxplot             [DELEG] ~     └─ appendix QC: σ_η distribution by (wind × date)
   §5    ch04_inspirational_nowind        [DELEG] ~  Reading a time series — nowind canon (macro + 5-period zoom)
         ch04_inspirational_fullwind      [DELEG] ~     └─ same layout, fullwind canon (wind-wave clutter visible at IN)
-  §5b   ch04_timeseries_overview         [DFS-canon] ~  Full time-series with stable-window band  (below MEDIUM gate)
+  §5b   ch04_timeseries_overview         [!disabled] ~  Full time-series with stable-window band  (below MEDIUM gate) (? redundant because of hg_per40_window_fitness)
   §6    ch04_first_arrival               [DFS-canon] ~  First wave arrival vs probe distance      (below MEDIUM gate)
   §7    ch04_wave_stability              [META]  ~  Wave stability and period_cv vs frequency
   §8    ch04_lateral_nowind              [META]  ~  Lateral equality (parallel ratio, no-wind)
@@ -467,11 +467,11 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_probe_noise_floor_group3":   "Prober hengende lavt over vannet.",
 
     # § 2 — Stillwater timing (placeholder)
-    "ch04_stillwater_timing":          "",
+    # "ch04_stillwater_timing":          "", !archived
 
     # § 3 — Probe placement / parallel probes
-    "ch04_parallel_ratio":             "",
-    "ch04_parallel_ratio_scatter":     "",
+    # "ch04_parallel_ratio":             "",
+    # "ch04_parallel_ratio_scatter":     "",
     "ch04_probe_height":               "",
     "ch04_mooring_comparison":         "",
     "ch04_sound_speed":                "",
@@ -589,13 +589,13 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
 
     # ── CHAPTER 04 ───────────────────────────────────────────────────────────
     "ch04_probe_noise_floor":          "Probes støygulv",
-    "ch04_stillwater_timing":          "",
-    "ch04_parallel_ratio":             "",
-    "ch04_parallel_ratio_scatter":     "",
+    # "ch04_stillwater_timing":          "", !archived
+    # "ch04_parallel_ratio":             "", !disabled
+    # "ch04_parallel_ratio_scatter":     "", !disabled
     "ch04_probe_height":               "",
     "ch04_mooring_comparison":         "",
     "ch04_sound_speed":                "",
-    "ch04_parallel_probe_agreement":   "",
+    # "ch04_parallel_probe_agreement":   "", !disabled
     "ch04_parallel_probe_agreement_by_freq": "Parallelle prober, fire frekvenser.",
     "ch04_parallel_probe_psd_agreement":     "",
     "ch04_depth_regime":               "",
@@ -796,7 +796,7 @@ def _save_placeholder(figure_name: str, section_label: str, chapter: str) -> Non
 # =============================================================================
 # CHAPTER 04 — METHODOLOGY
 # =============================================================================
-# %%
+# %% TODO: simplify the plot - i need to remove the exluded from the plot(and verify its not affecting the results)
 # [DATA: META]
 """
 ── CH04 § 1 — Probe uncertainty / noise floor ───────────────────────────────
@@ -836,26 +836,24 @@ _pv_noise_floor = {
     "filters": {},
     "plotting": {
         "show_plot": True,
-        "save_plot": True,            # DRAFT — noise floor plot not yet polished
-        "draft":     True,
+        "save_plot": True,
+        "draft":     False,
         "figure_name": "ch04_probe_noise_floor",
         "force_stub": True,
-        # ↓↓↓ NEW — add this block ↓↓↓
             "text": {
                 "ylabel": "Støyamplitude (95 %)  [mm]",
                 "legend_mean_amp":    "Gjennomsnittlig støyamplitude  (±1σ)",
                 "legend_per_run":     "Per kjøring",
                 "legend_threshold":   "Terskel  max({k_sigma:.0f}σ, {k_q:.0f}q)  [mm]",
                 "legend_quantization":"Halvt kvantiseringssteg  q/2  [mm]",
-                "legend_highlight":   "Uthevet kjøring  ({highlight_keyword})",
+                # "legend_highlight":   "Uthevet kjøring",
                 "legend_excluded":    "Ekskludert (ikke satt seg)",
                 "title": {
-                    "h272 / high": "h=272 mm — referanseoppsett",
+                    "h272 / high": "h=272 mm — innledende eoppsett",
                     "h100 / low":  "h=100 mm - endelig oppsett ",
                     # groups not listed here keep their default title
                 },
             },
-            # ↑↑↑ end new block ↑↑↑
     },
 }
 
@@ -1004,7 +1002,7 @@ _pv_sound_speed = {
 
 plot_sound_speed(combined_meta, _pv_sound_speed, chapter="04")
 
-# %%
+# %% !disabled  (sibling below)
 # [DATA: OUTDATED]  — replaced by analysis_scratch/parallel_probe_agreement_by_freq.py
 # Original cell: analysis_scratch/parallel_probe_agreement.py (3-panel scatter
 # + disagreement-vs-V + heatmap). Superseded 2026-05-02 by the per-frequency
@@ -1288,43 +1286,43 @@ _pv_td_vs_fft_scatter = {
 }
 plot_td_vs_fft(combined_meta, _pv_td_vs_fft_scatter, chapter="04")
 
-# %%
+# %% !disabled - either repurpose or archive
 # [DATA: CSV]  — analysis_scratch/fft_peak_bias_outin_impact.py regens CSV;
 #                then plotter reads it
-"""
-── CH04 § 4b — FFT peak-bin bias cancels in OUT/IN ──────────────────────────
-Goal: establish that although nearest-bin FFT amplitudes are biased by
-paddle-drift vs bin-grid alignment (sinc attenuation up to ~40% for
-individual amplitudes), the OUT/IN ratio is robust because IN and OUT
-probes use matching analysis window lengths → same bin grid → bias
-cancels. Empirical: mean |Δ(OUT/IN)|/OUT/IN < 0.5% across ~360 runs.
+# """
+# ── CH04 § 4b — FFT peak-bin bias cancels in OUT/IN ──────────────────────────
+# Goal: establish that although nearest-bin FFT amplitudes are biased by
+# paddle-drift vs bin-grid alignment (sinc attenuation up to ~40% for
+# individual amplitudes), the OUT/IN ratio is robust because IN and OUT
+# probes use matching analysis window lengths → same bin grid → bias
+# cancels. Empirical: mean |Δ(OUT/IN)|/OUT/IN < 0.5% across ~360 runs.
 
-Data: precomputed CSV at analysis_scratch/fft_peak_bias_outin_impact.csv
-(generated by analysis_scratch/fft_peak_bias_outin_impact.py, which
-loads processed_dfs). If the CSV is missing or stale, re-run that script.
+# Data: precomputed CSV at analysis_scratch/fft_peak_bias_outin_impact.csv
+# (generated by analysis_scratch/fft_peak_bias_outin_impact.py, which
+# loads processed_dfs). If the CSV is missing or stale, re-run that script.
 
-This figure documents the headline methodology safeguard: the thesis's
-primary OUT/IN (FFT) result is not an artifact of FFT binning.
-"""
+# This figure documents the headline methodology safeguard: the thesis's
+# primary OUT/IN (FFT) result is not an artifact of FFT binning.
+# """
 
-# The plotter reads a per-run CSV that the scratch script generates;
-# regenerate the CSV via subprocess if it's missing, then call the plotter.
-_run_delegated_if_missing(
-    "analysis_scratch/fft_peak_bias_outin_impact.py",
-    [Path("analysis_scratch/fft_peak_bias_outin_impact.csv")],
-    label="fft_peak_bias_outin_impact.csv",
-)
-_pv_fft_peak_bias = {
-    "filters": {},
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,            # DRAFT — polish on review
-        "draft":       True,
-        "figure_name": "ch04_fft_peak_bias_cancellation",
-        "force_stub":  True,
-    },
-}
-plot_fft_peak_bias_cancellation(_pv_fft_peak_bias, chapter="04")
+# # The plotter reads a per-run CSV that the scratch script generates;
+# # regenerate the CSV via subprocess if it's missing, then call the plotter.
+# _run_delegated_if_missing(
+#     "analysis_scratch/fft_peak_bias_outin_impact.py",
+#     [Path("analysis_scratch/fft_peak_bias_outin_impact.csv")],
+#     label="fft_peak_bias_outin_impact.csv",
+# )
+# _pv_fft_peak_bias = {
+#     "filters": {},
+#     "plotting": {
+#         "show_plot":   True,
+#         "save_plot":   True,            # DRAFT — polish on review
+#         "draft":       True,
+#         "figure_name": "ch04_fft_peak_bias_cancellation",
+#         "force_stub":  True,
+#     },
+# }
+# plot_fft_peak_bias_cancellation(_pv_fft_peak_bias, chapter="04")
 
 # %%
 # [DATA: DELEG]  — analysis_scratch/mansard_funke.py
@@ -1609,7 +1607,7 @@ _run_delegated_if_missing(
     label="ch04_per40_and_per240_HG_shifted",
 )
 
-# %%
+# %% TODO - consider repurpose this - we are no longer using hg window, we use our "earliest possible" window, because the analysis said its better for our limited per40 runs.
 # [DATA: DELEG]  — analysis_scratch/hg_per40_window_fitness.py
 """
 ── CH04 § 4n — Proposed H&G window fitness on per40+per240, all 4 freqs ─────
@@ -2435,76 +2433,44 @@ else:
           f"(processed_dfs: {len(processed_dfs)} total), skipping")
 
 
-# %%
+# %% !disabled  - this is perhaps redundant because of hg_per40_window_fitnes
 # [DATA: DFS-canon]
-"""
-── CH04 § 5 — What does a full signal look like? ────────────────────────────
-Goal: show the full signal for a select few runs — stillwater baseline,
-wavemaker ramp, stable wavetrain, decay. Wind-wave noise visible at IN probe
-vs clean signal at OUT probe.
+# """
+# ── CH04 § 5 — What does a full signal look like? ────────────────────────────
+# Goal: show the full signal for a select few runs — stillwater baseline,
+# wavemaker ramp, stable wavetrain, decay. Wind-wave noise visible at IN probe
+# vs clean signal at OUT probe.
 
-Layout: rows = probes, columns = runs selected by filters.
-Grey band = detected stable-window used for all amplitude/FFT analysis.
-"""
+# Layout: rows = probes, columns = runs selected by filters.
+# Grey band = detected stable-window used for all amplitude/FFT analysis.
+# """
 
-_pv_timeseries = {
-    "filters": {
-        # Pick a representative condition — adjust as needed:
-        "WaveFrequencyInput [Hz]": 1.3,
-        "WaveAmplitudeInput [Volt]": 0.2,
-        "WindCondition": None,      # None = all wind conditions
-        "PanelCondition": "full",
-        # "run_category": "standard",
-    },
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,           # DRAFT — timeseries overview not yet polished
-        "draft":       True,
-        "figure_name": "ch04_timeseries_overview",
-        "force_stub":  True,
-        "probes":      ["9373/170", "12400/250"],   # IN and OUT only
-        "max_runs":    4,           # cap columns; reduce if too crowded
-        "xlim":        None,        # e.g. (0, 60) to zoom; None = full run
-        "ylim":        None,        # e.g. (-30, 30); None = auto per row
-        # caption printed on first run — paste the one-liner here:
-        # "caption": "...",
-    },
-}
+# _pv_timeseries = {
+#     "filters": {
+#         # Pick a representative condition — adjust as needed:
+#         "WaveFrequencyInput [Hz]": 1.3,
+#         "WaveAmplitudeInput [Volt]": 0.2,
+#         "WindCondition": None,      # None = all wind conditions
+#         "PanelCondition": "full",
+#         # "run_category": "standard",
+#     },
+#     "plotting": {
+#         "show_plot":   True,
+#         "save_plot":   True,           # DRAFT — timeseries overview not yet polished
+#         "draft":       True,
+#         "figure_name": "ch04_timeseries_overview",
+#         "force_stub":  True,
+#         "probes":      ["9373/170", "12400/250"],   # IN and OUT only
+#         "max_runs":    4,           # cap columns; reduce if too crowded
+#         "xlim":        None,        # e.g. (0, 60) to zoom; None = full run
+#         "ylim":        None,        # e.g. (-30, 30); None = auto per row
+#         # caption printed on first run — paste the one-liner here:
+#         # "caption": "...",
+#     },
+# }
 
-_fig_ts = plot_timeseries_overview(combined_meta, processed_dfs, _pv_timeseries)
+# _fig_ts = plot_timeseries_overview(combined_meta, processed_dfs, _pv_timeseries)
 
-
-# %%
-# [DATA: DFS-canon]
-"""
-── CH04 § 6 — Wave-range detection ──────────────────────────────────────────
-Goal: explain and validate _SNARVEI_CALIB. Show how the stable wavetrain
-window is detected: (1) threshold crossing, (2) ramp-up skip, (3) n periods.
-
-Data: processed_dfs, Computed Probe {pos} start/end columns.
-
-Figures:
-  - Plot:  single run with detected start/end marked, one probe panel per row
-  - Plot:  start sample vs frequency (all probes) — show _SNARVEI_CALIB points
-"""
-
-_pv_first_arrival = {
-    "filters": {},
-    "plotting": {
-        "show_plot":        True,
-        "save_plot":        True,       # DRAFT — threshold not yet calibrated
-        "draft":            True,
-        "figure_name":      "ch04_first_arrival",
-        "force_stub":       True,
-        "probes":           ANALYSIS_PROBES,
-        "threshold_factor": 5.0,        # TODO: calibrate per-probe after noise floor analysis
-        "window_s":         2.5,
-        "min_arrival_s":    0.5,
-        "figsize":          (9, 5),
-    },
-}
-
-plot_first_arrival(combined_meta, processed_dfs, _pv_first_arrival, chapter="04")
 
 
 # %% ═══════════════════════════════════════════════════════════════════════════

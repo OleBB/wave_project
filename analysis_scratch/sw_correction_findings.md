@@ -1,6 +1,6 @@
 # Standing-wave correction analysis
 
-**Date**: 2026-05-02
+**Date**: 2026-05-03
 **Script**: `analysis_scratch/sw_correction.py`
 **Figure**: `analysis_scratch/sw_correction.png`
 

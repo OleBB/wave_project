@@ -242,7 +242,7 @@ snip_p84 = np.nanpercentile(snip_psds, 84, axis=0)
 fig, ax = plt.subplots(figsize=(11, 6))
 
 ax.fill_between(freqs_long, long_p16, long_p84, color="#1E9C68", alpha=0.20,
-                label=f"lang serie 16–84 % (n={long_psds.shape[0]})")
+                label=f"lang serie 16–84 % (n={long_psds.shape[0]})") #better to just say 68%?
 ax.semilogy(freqs_long, long_p50, color="#1E9C68", lw=2.0,
             label=f"lang serie median (n={long_psds.shape[0]}, Welch nperseg=8 s)")
 #todo - fix the lables explaining 16 84  in words or terminology...
