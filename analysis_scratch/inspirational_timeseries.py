@@ -110,6 +110,35 @@ def _load_run(wind_tag: str):
     df  = proc[csv]
     t   = np.arange(len(df)) / FS
 
+    # ── Mean-level handling — this script does NOT zero the signal here ────
+    # `eta_{pos}` and `eta_{pos}_interp` arrive from the pipeline already
+    # mean-zeroed against a per-run stillwater anchor. The chain is:
+    #
+    #   1. processor.ensure_stillwater_columns (processor.py:72) computes a
+    #      Stillwater value PER RUN, PER PROBE, and writes it into meta as
+    #      "Stillwater Probe {pos}":
+    #        - nowave runs (no paddle) → median of the FULL run
+    #        - wave runs (with paddle) → mean of the first
+    #          STILLWATER.PRE_WAVE_S = 2.0 s, before the wave front arrives
+    #      Self-calibrating: each run uses its own water level, so wind
+    #      setup (which can shift the level by mm and takes ~10 min to
+    #      decay after wind off) is automatically tracked.
+    #
+    #   2. processor._zero_and_smooth_signals (processor.py:759) applies it:
+    #          eta_{pos} = -(raw_ULS - stillwater)
+    #      The minus sign converts raw probe distance (sensor-to-water,
+    #      decreasing as water rises) into surface elevation (positive up).
+    #
+    # By construction, eta_{pos} has ≈0 mean across the pre-wave window for
+    # every run. Verified for the canon nowind run used here:
+    #   IN  9373/170 — pre-wave (0–2 s) eta mean = −0.011 mm
+    #   OUT 12400/250 — pre-wave (0–2 s) eta mean = −0.009 mm
+    #
+    # Crest-vs-trough asymmetry (max+min ≈ +1.6 mm at IN, +1.6 mm at OUT)
+    # is therefore NOT a baseline error — it's Stokes-2 nonlinearity:
+    # nonlinear waves have taller, steeper crests and shallower, broader
+    # troughs. For ka ≈ 0.13 at IN, second-order theory predicts ≈ +1 mm
+    # of (max+min) asymmetry, which matches what's plotted.
     def get_eta(probe):
         col = f"eta_{probe}_interp"
         if col not in df.columns:

@@ -1,37 +1,34 @@
 """
-Wind-effect table — CH05 §3.
-============================
+Wind-effect table — CH05 §3, AMP-FIRST sort variant.
+====================================================
 
-Replaces the archived `ch05_damping_wind_delta` 2-row scatter (see
-ignore_this_archive/wavescripts/plot_damping_wind_delta_2026-04-28.py).
-Same data path: canon March-2026 lowrange folders, full panel, 1.3–1.6 Hz,
-quality_flag=ok, both wind conditions.
+Sibling of analysis_scratch/wind_effect_table.py. Identical data,
+filters, formulas, and column set — only the row order is changed:
 
-Per (freq, amp) cell, computes:
+    wind_effect_table.py          → outer = frequency, inner = amplitude
+    wind_effect_table_by_amp.py   → outer = amplitude, inner = frequency
 
-    τ_nw     = mean OUT/IN(FFT) at no-wind
-    τ_fw     = mean OUT/IN(FFT) at full-wind
-    Δτ       = τ_fw − τ_nw                     (signed transmission change, pp)
-    % T-gain = Δτ / τ_nw · 100                 (relative transmission change)
-    % D-red  = (D_nw − D_fw) / D_nw · 100      where D = 1 − τ
-                                               (relative damping reduction)
+So one row-block per amplitude tier (A1 / A2 / A3), four rows each
+(1.3 / 1.4 / 1.5 / 1.6 Hz), midrule between amp blocks. Useful when
+the thesis paragraph reads "for A1, wind shifts τ from … to …" rather
+than "at 1.3 Hz, the three amplitudes …".
 
-All three percentage columns share a sign convention: positive Δτ ↔
-positive % T-gain ↔ positive % D-red ↔ "wind makes more wave get through
-the panel" (i.e. the panel damps less).
+See wind_effect_table.py for the column definitions; the immutable
+provenance block at the bottom of the .tex output also lists them.
 
 Outputs:
-    output/TABLES/ch05_wind_effect_table.tex   (thesis include)
-    analysis_scratch/wind_effect_table.csv     (human-readable companion)
+    output/TABLES/ch05_wind_effect_table_by_amp.tex   (thesis include)
+    analysis_scratch/wind_effect_table_by_amp.csv     (companion CSV)
 
-Caption text is read from FIGURE_CAPTIONS["ch05_wind_effect_table"] in
-main_save_figures.py via output/.figure_captions.json.
+Caption text is read from FIGURE_CAPTIONS["ch05_wind_effect_table_by_amp"]
+in main_save_figures.py via output/.figure_captions.json.
 """
 
+import os
 import sys
 import warnings
 from pathlib import Path
-import glob
+from datetime import datetime as _dt
 
 warnings.filterwarnings("ignore")
 
@@ -40,8 +37,6 @@ import pandas as pd
 
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
-
-import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
@@ -50,12 +45,12 @@ from wavescripts.filters import (apply_experimental_filters,
 from wavescripts.plot_utils import _lookup_central_caption, amp_to_label
 
 # ── I/O ────────────────────────────────────────────────────────────────────
-SCRATCH_CSV = Path(__file__).parent / "wind_effect_table.csv"
-THESIS_NAME = "ch05_wind_effect_table"
+SCRATCH_CSV = Path(__file__).parent / "wind_effect_table_by_amp.csv"
+THESIS_NAME = "ch05_wind_effect_table_by_amp"
 OUT_TEX     = BASE / "output" / "TABLES" / f"{THESIS_NAME}.tex"
 CHAPTER     = "05"
 
-# Same canon scope as ch05_damping_freq + ch05_damping_scatter.
+# Same canon scope as wind_effect_table.py.
 RESULTS_DIRS = [
     BASE / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
     BASE / "waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange",
@@ -93,7 +88,6 @@ pivot = stats.pivot_table(
     aggfunc="first",
 ).reset_index()
 
-# Same pivot for std + n.
 pivot_std = stats.pivot_table(
     index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
     columns="WindCondition",
@@ -120,11 +114,13 @@ table["std_fw"]      = pivot_std["full"]
 table["n_nw"]        = pivot_n["no"].astype("Int64")
 table["n_fw"]        = pivot_n["full"].astype("Int64")
 
-# Keep only thesis-scope (freq, amp) cells, in the canonical order.
+# Keep only thesis-scope (freq, amp) cells.
+# Sort: amplitude OUTER, frequency INNER (the only structural difference
+# vs wind_effect_table.py).
 table = table[table["WaveFrequencyInput [Hz]"].isin(THESIS_FREQS)
               & table["WaveAmplitudeInput [Volt]"].isin(THESIS_AMPS)].copy()
-table = table.sort_values(["WaveFrequencyInput [Hz]",
-                           "WaveAmplitudeInput [Volt]"]).reset_index(drop=True)
+table = table.sort_values(["WaveAmplitudeInput [Volt]",
+                           "WaveFrequencyInput [Hz]"]).reset_index(drop=True)
 
 # Drop cells where either wind condition is missing (no Δ to compute).
 n_before = len(table)
@@ -148,28 +144,30 @@ def _fmt_signed(x: float, decimals: int = 1) -> str:
         return "—"
     return f"{x:+.{decimals}f}"
 
+
 def _fmt_unsigned(x: float, decimals: int = 3) -> str:
     if pd.isna(x):
         return "—"
     return f"{x:.{decimals}f}"
 
 
-# Body rows. Insert \midrule between frequency blocks for visual grouping.
+# Body rows. Insert \midrule between AMPLITUDE blocks for visual grouping.
+# Column order: Amp, f, τ_nw, τ_fw, Δτ, T-økn., D-red.
 body_rows = []
-last_freq = None
+last_amp = None
 for _, r in table.iterrows():
     f = float(r["WaveFrequencyInput [Hz]"])
     a = float(r["WaveAmplitudeInput [Volt]"])
-    if last_freq is not None and f != last_freq:
+    if last_amp is not None and a != last_amp:
         body_rows.append(r"\midrule")
     body_rows.append(
-        f"  {f:.1f} & {amp_to_label(a)} & "
+        f"  {amp_to_label(a)} & {f:.1f} & "
         f"{_fmt_unsigned(r['tau_nw'], 3)} & {_fmt_unsigned(r['tau_fw'], 3)} & "
         f"{_fmt_signed(r['Delta_tau'] * 100, 1)} & "  # Δτ in pp
         f"{_fmt_signed(r['pct_T_gain'], 1)} & "
         f"{_fmt_signed(r['pct_D_red'], 1)} \\\\"
     )
-    last_freq = f
+    last_amp = a
 
 # Caption from central FIGURE_CAPTIONS dict (via JSON cache).
 caption_full  = _lookup_central_caption(THESIS_NAME, kind="full")
@@ -195,8 +193,7 @@ else:
         "  }\n"
     )
 
-# IMMUTABLE provenance block — same idea as figure stubs but for a table.
-from datetime import datetime as _dt
+# IMMUTABLE provenance block.
 n_total_runs = int(table["n_nw"].fillna(0).sum() + table["n_fw"].fillna(0).sum())
 immutable = "\n".join([
     "%! TEX root = ../main.tex",
@@ -204,8 +201,8 @@ immutable = "\n".join([
     "% IMMUTABLE — generated automatically, do not edit this block",
     "%",
     "% — Provenance ───────────────────────────────────────────────────",
-    "%   script            : analysis_scratch/wind_effect_table.py",
-    "%   plot_type         : wind_effect_table",
+    "%   script            : analysis_scratch/wind_effect_table_by_amp.py",
+    "%   plot_type         : wind_effect_table_by_amp",
     f"%   chapter           : {CHAPTER}",
     f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
     f"%   caption_label     : tab:{THESIS_NAME}",
@@ -226,6 +223,7 @@ immutable = "\n".join([
     "%",
     "% — Method ────────────────────────────────────────────────────",
     "%   grouper           : damping_all_amplitude_grouper",
+    "%   sort_order        : amplitude outer, frequency inner",
     "%   metric_definitions:",
     "%     tau_nw / tau_fw    : mean OUT/IN(FFT) at no- / full-wind",
     "%     Delta_tau (pp)     : (tau_fw - tau_nw) * 100",
@@ -235,16 +233,15 @@ immutable = "\n".join([
     "% ── end immutable block ─────────────────────────────────────────",
 ])
 
-# Note: the column headers below are intentionally shorter than the verbal
-# names in the body of the thesis. The IMMUTABLE block above has the full
-# definitions; the table caption + thesis prose can spell them out.
+# Same column SET as wind_effect_table.py, just with Amp and f swapped
+# in the leading two columns to match the new sort order.
 table_body = (
     "\\begin{table}[htbp]\n"
     "  \\centering\n"
     "  \\small\n"
     "  \\begin{tabular}{cc cc r r r}\n"
     "    \\toprule\n"
-    "      $f$ [Hz] & Amp & $\\tau_\\text{uten}$ & $\\tau_\\text{vind}$ "
+    "      Amp & $f$ [Hz] & $\\tau_\\text{uten}$ & $\\tau_\\text{vind}$ "
     "& $\\Delta\\tau$ [pp] & T-økn. [\\%] & D-red. [\\%] \\\\\n"
     "    \\midrule\n"
     + "\n".join(body_rows) + "\n"
