@@ -1,0 +1,53 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/parallel_probe_psd_agreement_simple.py
+%   plot_type         : parallel_probe_psd_agreement_simple_table
+%   chapter           : 04
+%   generated_at      : 2026-05-04T13:46:40
+%   caption_label     : tab:ch04_parallel_probe_psd_agreement_simple
+%   caption_short     : 
+%
+% — Method ────────────────────────────────────────────────────
+%   probes            : 9373/170 (wall) vs 9373/340 (far)
+%   band              : ±0.10 Hz around f, integrated PSD
+%   <A>               : 0.5·(mean A_wall + mean A_far) across runs
+%   Δ (far−wall) [%]  : mean across runs of
+%                       100 · (A_far − A_wall) / [½ · (A_far + A_wall)]
+%                       Sign: + ⇒ far reads higher than wall.
+%
+% — Inputs ────────────────────────────────────────────────────
+%   N runs            : 80
+%   data scope        : panel-full, quality-ok, both probes present,
+%                       canon March-2026 lowrange folders.
+%   target frequencies: 1.3, 1.4, 1.5, 1.6 Hz
+%
+% — Headline ──────────────────────────────────────────────────
+%   worst |Δ|         : 2.07 %  (across all rows)
+%   companion table   : ch04_parallel_probe_psd_agreement.tex
+%                       (full 10-column statistical breakdown)
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \small
+  \caption{
+    % TODO: write caption (edit FIGURE_CAPTIONS in main_save_figures.py)
+  }
+  \label{tab:ch04_parallel_probe_psd_agreement_simple}
+  \begin{tabular}{cccc}
+    \toprule
+    $f$ [\unit{\hertz}] &
+      $N$ &
+      $\langle A \rangle$ [\unit{\milli\metre}] &
+      $\Delta$ (far$-$wall) [\%] \\
+    \midrule
+    \num{1.30} & \num{80} & \num{8.03} & \num{-1.48} \\
+    \num{1.40} & \num{80} & \num{9.38} & \num{-1.78} \\
+    \num{1.50} & \num{80} & \num{8.75} & \num{-1.84} \\
+    \num{1.60} & \num{80} & \num{6.64} & \num{-2.07} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
