@@ -22,6 +22,8 @@
 
 **Known physical complication**: at full wind + low amplitude (0.1 V), the IN probe signal is ~2/3 wind-wave energy — time-domain OUT/IN is meaningless for damping. FFT amplitude at the paddle frequency is the only trustworthy metric.
 
+> **⚠ TOP-PRIORITY OPEN FINDING (2026-05-04)** — three CH05 tables (`ch05_wind_effect_table`, `ch05_wind_effect_table_by_amp`, `ch05_damping_freq_table`) silently pick ONE mooring per (freq, amp, wind) cell via `pivot_table(aggfunc="first")`. At (1.4 Hz, A₂) the published Δτ = +0.135 vs +0.038 from a verified single canon pair — factor ~3.5× discrepancy from aggregation choice alone. Don't cite specific Δτ from these tables until fixed. Memo: `memory/finding_wind_effect_table_aggregation_bias.md`. Source data: `analysis_scratch/mean_level_check-{user,gpt}.md`.
+
 ---
 
 ## 0. How to use this document
