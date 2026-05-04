@@ -256,7 +256,7 @@ def _make_figure(sub: pd.DataFrame,
                   loc="upper right", framealpha=0.92)
 
     fig.subplots_adjust(left=0.07, right=0.97, top=0.88, bottom=0.13)
-    apply_horizontal_ylabel(ax, r"$\mathcal{T}$", fontsize=12)
+    apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
     return fig
 
 

@@ -202,11 +202,11 @@ def draw_t_cross_ax(ax, sub: pd.DataFrame, amp: float):
                     capsize=3, markersize=5, lw=1.6, alpha=0.92)
 
     _line(sub["outin_nw"].values, sub["outin_nw_std"].values,
-          COLOR_NW, r"$(OUT/IN)_{nw}$  clean baseline", "o")
+          COLOR_NW, r"$K_{t,\mathrm{nw}}$  clean baseline", "o")
     _line(sub["tcross"].values, sub["tcross_std"].values,
-          COLOR_TCROSS, r"$T_{\mathrm{cross}}$  $= A_{out}^{fw} / A_{in}^{nw}$", "s")
+          COLOR_TCROSS, r"$K_{t,\mathrm{cross}}$  $= A_{out}^{fw} / A_{in}^{nw}$", "s")
     _line(sub["outin_fw"].values, sub["outin_fw_std"].values,
-          COLOR_FW, r"$(OUT/IN)_{fw}$  standard metric", "^")
+          COLOR_FW, r"$K_{t,\mathrm{fw}}$  standard metric", "^")
 
     # Shade the honest wind effect (green − blue) where both exist
     mask = np.isfinite(sub["outin_nw"].values) & np.isfinite(sub["tcross"].values)
@@ -218,7 +218,7 @@ def draw_t_cross_ax(ax, sub: pd.DataFrame, amp: float):
 
     ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.4)
     ax.set_xlabel(r"$k$ (rad/m)", fontsize=9)
-    ax.set_ylabel("transmission", fontsize=9)
+    ax.set_ylabel(r"$K_t$", fontsize=9)
     ax.set_title("", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=7, loc="lower left", framealpha=0.92)
@@ -280,9 +280,9 @@ else:
 
 _caption = (
     r"Wind effect on transmission measured three ways: "
-    r"$(OUT/IN)_{nw}$ (blue, nowind baseline); "
-    r"$T_{\mathrm{cross}} = A_{out}^{fw}/A_{in}^{nw}$ (green, fullwind OUT referenced "
-    r"to the clean nowind IN); and $(OUT/IN)_{fw}$ (red, standard fullwind metric). "
+    r"$K_{t,\mathrm{nw}}$ (blue, nowind baseline); "
+    r"$K_{t,\mathrm{cross}} = A_{out}^{fw}/A_{in}^{nw}$ (green, fullwind OUT referenced "
+    r"to the clean nowind IN); and $K_{t,\mathrm{fw}}$ (red, standard fullwind metric). "
     r"The green--blue gap is the wind effect measured with the clean incident "
     r"reference. The red--blue gap is the same effect as reported by the standard "
     r"ratio; the two disagree where the IN probe is contaminated by wind noise at "
@@ -311,7 +311,7 @@ _meta_stub = pu.build_fig_meta(
         "plotting": {
             "figure_name": THESIS_BASE,
             "caption":     _caption,
-            "caption_short": "T_cross: wind effect via clean nowind reference",
+            "caption_short": r"$K_{t,\mathrm{cross}}$: wind effect via clean nowind reference",
         },
     },
     chapter="05",

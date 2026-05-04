@@ -328,7 +328,7 @@ for wind in WINDS:
                     label=WIND_LABELS[wind], capsize=3, markersize=5, lw=1.5)
 ax_cor.axhline(1.0, color="k", lw=0.5, ls="--", alpha=0.3)
 ax_cor.set_xlabel("Frequency [Hz]", fontsize=8)
-ax_cor.set_ylabel("T_corrected  [OUT/IN × SW_factor]", fontsize=8)
+ax_cor.set_ylabel(r"$K_{t,\mathrm{corr}}$  [OUT/IN $\times$ SW_factor]", fontsize=8)
 ax_cor.set_title("", fontsize=9)
 ax_cor.legend(fontsize=8)
 ax_cor.set_ylim(0, 1.4)

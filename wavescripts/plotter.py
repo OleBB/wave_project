@@ -231,7 +231,7 @@ def _draw_damping_freq_ax(
         )
 
     ax.set_xlabel("$k$ (rad/m)", fontsize=9)
-    ax.set_ylabel(r"$A_\mathrm{Ut}/A_\mathrm{inn}$", fontsize=9)
+    ax.set_ylabel(r"$K_t$", fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.legend(title="Amplitude", fontsize=7, title_fontsize=7)
 
@@ -282,7 +282,7 @@ def _make_damping_freq_fig(
     # all_data_damping_scatter / inspirational convention. Frees the left
     # margin for the data band.
     fig.subplots_adjust(left=0.07, right=0.97, top=0.85, bottom=0.13)
-    apply_horizontal_ylabel(ax, r"$\mathcal{T}$", fontsize=12)
+    apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
     return fig
 
 
@@ -496,7 +496,7 @@ def _make_damping_scatter_fig(
               fontsize=7, title_fontsize=7, framealpha=0.92)
 
     fig.subplots_adjust(left=0.07, right=0.97, top=0.80, bottom=0.13)
-    apply_horizontal_ylabel(ax, r"$\mathcal{T}$", fontsize=12)
+    apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
     return fig
 
 
@@ -786,7 +786,7 @@ def _make_damping_ka_fig(
                   title="vind", title_fontsize=7)
 
     fig.subplots_adjust(left=0.07, right=0.97, top=0.85, bottom=0.13)
-    apply_horizontal_ylabel(ax, r"$\mathcal{T}$", fontsize=12)
+    apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
     return fig
 
 
@@ -3432,7 +3432,7 @@ def plot_fft_peak_bias_cancellation(
                        edgecolor="none")
         ax.axhline(0, color="k", ls="--", lw=0.7, alpha=0.5)
         ax.set_xlabel("Wave frequency (Hz)")
-        ax.set_ylabel(r"$\Delta(A_\mathrm{Ut}/A_\mathrm{inn})$")
+        ax.set_ylabel(r"$\Delta K_t$")
         ax.set_title("")
         ax.legend(fontsize=7, loc="lower left")
         ax.grid(True, alpha=0.3)
@@ -3451,7 +3451,7 @@ def plot_fft_peak_bias_cancellation(
         ax.axhline(0, color="k", ls="--", lw=0.5, alpha=0.5)
         ax.axvline(0, color="k", ls="--", lw=0.5, alpha=0.5)
         ax.set_xlabel("Paddle peak offset at IN (mHz from nominal)")
-        ax.set_ylabel(r"$\Delta(A_\mathrm{Ut}/A_\mathrm{inn})$")
+        ax.set_ylabel(r"$\Delta K_t$")
         ax.set_title("")
         ax.legend(fontsize=7, loc="lower left")
         ax.grid(True, alpha=0.3)

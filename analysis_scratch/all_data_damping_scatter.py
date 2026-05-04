@@ -248,7 +248,7 @@ ax.text(thesis_k_hi - 0.1, 1.16,
 
 ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.5)
 ax.set_xlabel("$k$", fontsize=11)
-ax.set_ylabel(r"$\mathcal{T}$", fontsize=12,
+ax.set_ylabel(r"$K_t$", fontsize=12,
               rotation=0, ha="left", va="bottom")
 
 # Grid: majors + minors (denser y-grid since the figure is now tall and the

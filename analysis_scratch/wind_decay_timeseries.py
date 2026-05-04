@@ -22,7 +22,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
-from wavescripts.plot_utils import apply_thesis_style
+from wavescripts.plot_utils import apply_thesis_style, apply_horizontal_ylabel
 
 # Thesis-grade rcParams (NewComputerModern body font + math via mathtext,
 # 10pt body, 9pt ticks/legend, tight bbox on save). Idempotent — safe to
@@ -75,9 +75,9 @@ RUNS_RAMPUP = [
 PROBES = ["8804/250", "9373/170", "9373/340", "12400/250"]
 LABELS = {
     "8804/250":  "8804/250 (upstream)",
-    "9373/170":  "9373/170 (IN)",
+    "9373/170":  "Innkommende posisjon",
     "9373/340":  "9373/340 (parallel)",
-    "12400/250": "12400/250 (OUT)",
+    "12400/250": "Utgående posisjon",
 }
 COLORS = {
     "8804/250":  "#888888",
@@ -90,6 +90,7 @@ COLORS = {
 def plot_run_zoom(tag: str, processed_dir_name: str, run_csv_rel: str,
                   *, kind: str, xlim: tuple[float, float] | None = (0, 60),
                   zero_kind: str = "first", zero_secs: float = 2.0,
+                  wind_secs: float = 5.0,
                   ylim: tuple[float, float] = (-15.0, 15.0),
                   probes: list[str] | None = None,
                   name_suffix: str = "",
@@ -102,7 +103,19 @@ def plot_run_zoom(tag: str, processed_dir_name: str, run_csv_rel: str,
     xlim       = (start_s, end_s) in seconds, or None → full record
     x_unit     = "seconds" | "minutes" — labelling + tick spacing
     zero_kind  = "first" → subtract per-probe mean of t ∈ [0, zero_secs]
+                          and read the fully-developed-wind level from the
+                          last `wind_secs` seconds (rampup case).
     zero_kind  = "last"  → subtract per-probe mean of t ∈ [T-zero_secs, T]
+                          and read the fully-developed-wind level from the
+                          first `wind_secs` seconds (decay case).
+    wind_secs  = length of the wind-on window placed on the opposite end of
+                 the recording from the zero window. Default 5 s reflects
+                 the ~12-m jog from computer to fans — for `zero_kind="last"`
+                 (decay) the first 5 s of the recording is guaranteed to be
+                 fully-developed wind because the fans had not yet been
+                 reached when recording started; symmetrically for the
+                 rampup, the last 5 s sits well after the fans were turned
+                 on and the operator returned.
     """
     from matplotlib.ticker import MultipleLocator
 
@@ -123,14 +136,16 @@ def plot_run_zoom(tag: str, processed_dir_name: str, run_csv_rel: str,
         xlim = (0.0, T)
     full_range = abs(xlim[0]) < 1e-9 and abs(xlim[1] - T) < 1e-3
     print(f"\n{tag} ({xlim[0]:.1f}-{xlim[1]:.1f} s, "
-          f"zero={zero_kind} {zero_secs}s, x={x_unit}) …")
+          f"zero={zero_kind} {zero_secs}s, wind={wind_secs}s, x={x_unit}) …")
 
     if zero_kind == "first":
         zero_mask = (t >= 0.0) & (t <= zero_secs)
         zero_label = f"first {zero_secs:g} s"
+        wind_mask  = (t >= T - wind_secs) & (t <= T)
     elif zero_kind == "last":
         zero_mask = (t >= T - zero_secs) & (t <= T)
         zero_label = f"last {zero_secs:g} s"
+        wind_mask  = (t >= 0.0) & (t <= wind_secs)
     else:
         raise ValueError(f"zero_kind must be 'first' or 'last', got {zero_kind!r}")
 
@@ -158,10 +173,15 @@ def plot_run_zoom(tag: str, processed_dir_name: str, run_csv_rel: str,
         if col not in df.columns:
             continue
         eta = df[col].to_numpy(dtype=float)
-        baseline = float(np.nanmean(eta[zero_mask]))
+        baseline      = float(np.nanmean(eta[zero_mask]))
+        wind_baseline = float(np.nanmean(eta[wind_mask]))
+        # Δη > 0 ⇒ wind raised the surface at this probe relative to the
+        # settled (zero-window) reference. Sign is "wind-on minus settled"
+        # regardless of recording direction.
+        delta_eta = wind_baseline - baseline
         eta_z = eta - baseline
         ax.plot(t_plot[m], eta_z[m], lw=1.0, color=COLORS[probe], alpha=0.9,
-                label=f"{LABELS[probe]}  (μ₀={baseline:+.2f} mm)")
+                label=f"{LABELS[probe]}  Δη={delta_eta:+.2f} mm")
 
     ax.axhline(0, color="#444", lw=0.6, alpha=0.6)
 
@@ -188,7 +208,6 @@ def plot_run_zoom(tag: str, processed_dir_name: str, run_csv_rel: str,
     # Font sizes inherit from apply_thesis_style() rcParams (10pt labels,
     # 9pt ticks/legend) — no per-axis fontsize overrides here.
     ax.set_xlabel(x_label)
-    ax.set_ylabel(r"$\eta - \mu_0$ [mm]")
     title_kind = "Wind decay" if kind == "decay" else "Wind ramp-up"
     span_lbl   = (f"first {int(round(span_plot))} min"
                   if x_unit == "minutes" else
@@ -215,6 +234,10 @@ def plot_run_zoom(tag: str, processed_dir_name: str, run_csv_rel: str,
     else:
         range_tag = f"_zoom{int(round(span_plot))}min"
     out = Path(__file__).parent / f"{fname_kind}_{tag}{range_tag}{name_suffix}.png"
+    # Horizontal y-axis label above the leftmost tick — matches the
+    # ch04_plateau_overview / ch05_damping_ka convention. Frees the left
+    # margin so the time-series uses the full plot width.
+    apply_horizontal_ylabel(ax, r"$\eta - \mu_0$ [mm]", fontsize=10)
     fig.savefig(out, dpi=160, bbox_inches="tight")
     print(f"   → {out.relative_to(BASE)}")
 

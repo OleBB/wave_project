@@ -168,13 +168,13 @@ for i, amp in enumerate(THESIS_AMPS):
     if i > 0:
         body_lines.append("    \\midrule")
     body_lines.append(
-        f"    {label} & $\\tau$ (uten vind) & {_row_for(amp, 'nw')} \\\\"
+        f"    {label} & $K_t$ (uten vind) & {_row_for(amp, 'nw')} \\\\"
     )
     body_lines.append(
-        f"          & $\\tau$ (full vind) & {_row_for(amp, 'fw')} \\\\"
+        f"          & $K_t$ (full vind) & {_row_for(amp, 'fw')} \\\\"
     )
     body_lines.append(
-        f"          & $\\Delta\\tau$       & {_row_for(amp, 'delta')} \\\\"
+        f"          & $\\Delta K_t$       & {_row_for(amp, 'delta')} \\\\"
     )
 
 # Caption from central FIGURE_CAPTIONS dict (via JSON cache).
