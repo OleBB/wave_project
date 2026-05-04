@@ -1,0 +1,59 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/damping_freq_table.py
+%   plot_type         : damping_freq_table
+%   chapter           : 05
+%   generated_at      : 2026-05-04T11:39:30
+%   caption_label     : tab:ch05_damping_freq_table
+%   caption_short     : 
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : full
+%   wind              : no, full
+%   amplitude [V]     : 0.1, 0.2, 0.3
+%   frequency [Hz]    : 1.3, 1.4, 1.5, 1.6
+%   quality_flag      : ok
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_cells           : 12
+%   n_runs (nw + fw)  : 41
+%   datasets        :
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%
+% — Method ────────────────────────────────────────────────────
+%   grouper           : damping_all_amplitude_grouper
+%   metric_definitions:
+%     tau (uten vind)   : mean OUT/IN(FFT) at no-wind
+%     tau (full vind)   : mean OUT/IN(FFT) at full-wind
+%     Delta tau         : tau_fw - tau_nw  (signed, raw ratio units)
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{ll cccc}
+    \toprule
+     &  & 1.3\,Hz & 1.4\,Hz & 1.5\,Hz & 1.6\,Hz \\
+    \midrule
+    $A_1$ & $\tau$ (uten vind) & 0.646 & 0.502 & 0.453 & 0.367 \\
+          & $\tau$ (full vind) & 0.830 & 0.812 & 0.764 & 0.647 \\
+          & $\Delta\tau$       & +0.184 & +0.310 & +0.311 & +0.280 \\
+    \midrule
+    $A_2$ & $\tau$ (uten vind) & 0.811 & 0.687 & 0.594 & 0.486 \\
+          & $\tau$ (full vind) & 0.882 & 0.822 & 0.789 & 0.687 \\
+          & $\Delta\tau$       & +0.071 & +0.135 & +0.195 & +0.201 \\
+    \midrule
+    $A_3$ & $\tau$ (uten vind) & 0.830 & 0.672 & 0.612 & 0.522 \\
+          & $\tau$ (full vind) & 0.819 & 0.757 & 0.727 & 0.699 \\
+          & $\Delta\tau$       & -0.011 & +0.085 & +0.116 & +0.177 \\
+    \bottomrule
+  \end{tabular}
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch05_damping_freq_table}
+\end{table}

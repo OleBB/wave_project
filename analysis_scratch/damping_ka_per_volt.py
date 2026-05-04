@@ -86,7 +86,7 @@ PER_WIND_COLOR = {
     ("per40",  "full"): _lighten(WIND_COLOR_MAP["full"]), # light red / pink
 }
 
-WIND_LABEL = {"no": "uten vind", "full": "med vind"}
+WIND_LABEL = {"no": "uten vind", "full": "full vind"}
 
 
 # ─── NCM font (thesis body) ───────────────────────────────────────────────
@@ -206,20 +206,20 @@ def _make_figure(sub: pd.DataFrame,
     wind_handles = [
         mlines.Line2D([], [], color=PER_WIND_COLOR[("per240", "no")],
                       marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"per240 · {WIND_LABEL['no']}"),
+                      label=f"Lang tidsserie · {WIND_LABEL['no']}"),
         mlines.Line2D([], [], color=PER_WIND_COLOR[("per240", "full")],
                       marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"per240 · {WIND_LABEL['full']}"),
+                      label=f"Lang tidsserie · {WIND_LABEL['full']}"),
         mlines.Line2D([], [], color=PER_WIND_COLOR[("per40",  "no")],
                       marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"per40 · {WIND_LABEL['no']}"),
+                      label=f"Kort tidsserie · {WIND_LABEL['no']}"),
         mlines.Line2D([], [], color=PER_WIND_COLOR[("per40",  "full")],
                       marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"per40 · {WIND_LABEL['full']}"),
+                      label=f"Kort tidsserie · {WIND_LABEL['full']}"),
     ]
     leg_w = ax.legend(handles=wind_handles, title="Kjøringstype · vind",
                       title_fontsize=8, fontsize=8,
-                      loc="lower left", framealpha=0.92)
+                      loc="lower right", framealpha=0.92)
     ax.add_artist(leg_w)
 
     # Frequency legend — shows the orientation/fill cycle within each amp

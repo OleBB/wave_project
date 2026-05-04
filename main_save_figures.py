@@ -537,13 +537,13 @@ FIGURE_CAPTIONS: dict[str, str] = {
     # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
 
     # § 1 — Damping vs frequency (parent + 3 subfigs)
-    "ch05_damping_freq":               "",
-    "ch05_damping_freq_full_A1":       "",
-    "ch05_damping_freq_full_A2":       "",
-    "ch05_damping_freq_full_A3":       "",
+    "ch05_damping_freq":               "Transmisjonskoeffisient per frekvens. Endelig oppsett. Usikkerhetsstolper viser standardavvik. Ingen stolpe hvis kun én serie er brukt.",
+    "ch05_damping_freq_full_A1":       "Amplitudevalg $A_1$",
+    "ch05_damping_freq_full_A2":       "Amplitudevalg $A_2$",
+    "ch05_damping_freq_full_A3":       "Amplitudevalg $A_3$",
 
     # § 2 — Damping vs amplitude
-    "ch05_damping_scatter":            "",
+    "ch05_damping_scatter":            "Transmisjonskoeffisient per frekvens. Endelig oppsett. Samlet figur med alle tre amplitudene. Usikkerhetsstolper er fjernet.",
 
     # § 3 — Wind effect (table; replaces the old scatter ch05_damping_wind_delta,
     #         archived 2026-04-28).
@@ -560,10 +560,10 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_t_cross_A3":                 "",
 
     # § 4 — Damping vs ka
-    "ch05_damping_ka":                 "",
-    "ch05_damping_ka_A1":              "",
-    "ch05_damping_ka_A2":              "",
-    "ch05_damping_ka_A3":              "",
+    "ch05_damping_ka":                 "Transmisjonskoeffisient per bølgesteilhet $ka$. ",
+    "ch05_damping_ka_A1":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_1$.",
+    "ch05_damping_ka_A2":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_2$.",
+    "ch05_damping_ka_A3":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_3$.",
 
     # § 6 — moved to CH04 §4-3b as ch04_reconstructed (paired with ch04_fft_wave)
 
@@ -647,10 +647,10 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_transmission_wind_ratios":     "",
     "ch05_transmission_wind_amplitudes": "",
     "ch05_t_cross":                    "",
-    "ch05_damping_ka":                 "",
-    "ch05_damping_ka_A1":              "",
-    "ch05_damping_ka_A2":              "",
-    "ch05_damping_ka_A3":              "",
+    "ch05_damping_ka":                 "Transmisjon per ka. Samlet.",
+    "ch05_damping_ka_A1":              "Transmisjon per ka. A1",
+    "ch05_damping_ka_A2":              "Transmisjon per ka. A2",
+    "ch05_damping_ka_A3":              "Transmisjon per ka. A3",
     "ch05_damping_all_data_scatter":   "",
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
@@ -2072,7 +2072,7 @@ _pv_damping_scatter = {
         # "run_category":            "standard",   # re-enable after --force-recompute
     },
     "plotting": {
-        "show_plot":   True,
+        "show_plot":   False,
         "save_plot":   True,         # set True when figure is ready for thesis
         "figure_name": "ch05_damping_scatter",
         "force_stub":  True,

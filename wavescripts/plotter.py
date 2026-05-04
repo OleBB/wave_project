@@ -351,6 +351,30 @@ def plot_damping_freq(
         _extra_stats["n_panels"]     = len(panel_conditions)
         _extra_stats["n_amplitudes"] = len(amplitudes)
 
+        # ─── Per-data-point n_runs provenance ──────────────────────────
+        # stats_df carries one row per (panel, amp, wind, freq, mooring,
+        # ...) group with an "n_runs" column. We surface the grid into
+        # the stub so the reader can see exactly how many runs back each
+        # errorbar (n=1 → std=NaN → no whisker drawn).
+        # Token format: "<wind>-<freq>Hz:n=<k>", semicolon-separated.
+        _extra_stats["n_total_points"] = int(len(stats_df))
+        _extra_stats["n_runs_total"]   = int(stats_df["n_runs"].sum())
+        _extra_stats["points_with_n1"] = int((stats_df["n_runs"] == 1).sum())
+        for panel in panel_conditions:
+            for amp in amplitudes:
+                sub = stats_df[
+                    (stats_df[GC.PANEL_CONDITION] == panel)
+                    & (stats_df[GC.WAVE_AMPLITUDE_INPUT] == amp)
+                ].sort_values([GC.WIND_CONDITION, GC.WAVE_FREQUENCY_INPUT])
+                if sub.empty:
+                    continue
+                tag = f"{panel}_{amp_to_tag(amp)}"
+                tokens = [
+                    f"{r[GC.WIND_CONDITION]}-{r[GC.WAVE_FREQUENCY_INPUT]:.2f}Hz:n={int(r['n_runs'])}"
+                    for _, r in sub.iterrows()
+                ]
+                _extra_stats[f"n_per_point_{tag}"] = "; ".join(tokens)
+
         meta_base = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
