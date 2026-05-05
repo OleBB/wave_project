@@ -322,7 +322,7 @@ table_body = (
     "      $n$ &\n"
     "      $A_\\mathrm{Inn}$ [\\unit{\\milli\\meter}] &\n"
     "      $A_\\mathrm{Ut}$ [\\unit{\\milli\\meter}] &\n"
-    "      K_t &\n"
+    "      $K_t$ &\n"
     "      $\\sigma (K_t)$ \\\\\n"
     "    \\midrule\n"
     + "\n".join(body_lines) + "\n"

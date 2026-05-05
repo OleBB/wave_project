@@ -592,6 +592,7 @@ def build_fig_meta(plotvariables: dict,
                    fft_window_hz: Optional[float] = None,
                    extra_params: Optional[str] = None,
                    extra_stats: Optional[dict] = None,
+                   method_doc: Optional[str | list[str]] = None,
                    max_run_paths: int = 20) -> dict:
     """
     Extract figure metadata from a plotvariables dict.
@@ -651,6 +652,13 @@ def build_fig_meta(plotvariables: dict,
         Summary statistics cited in the caption, rendered as ``stat:<key>``
         lines in the immutable block. Makes the caption numbers
         reproducible from the stub alone.
+    method_doc : str or list[str]
+        Free-form, multi-line documentation of how the plotted values
+        were calculated. Rendered as a "Method documentation" section
+        in the immutable block. Aimed at a reader who opens the stub
+        cold and wants to know what each metric means without re-reading
+        the generator script. Strings are split on newlines; a list of
+        lines is emitted verbatim. Pass nothing to omit the section.
     max_run_paths : int
         Threshold below which the contributing CSV paths are listed in
         full. When the data has more rows than this, the ``run_paths``
@@ -681,6 +689,7 @@ def build_fig_meta(plotvariables: dict,
         "fft_window_hz":   fft_window_hz,
         "extra_params":    extra_params,
         "extra_stats":     dict(extra_stats) if extra_stats else {},
+        "method_doc":      method_doc,
     }
     if data_df is not None and hasattr(data_df, "columns") and len(data_df):
         meta["n_runs"] = int(len(data_df))
@@ -931,6 +940,25 @@ def _build_immutable_block(meta: dict, plot_type: str,
         L("collapse_panels", meta.get("collapse_panels")),
         L("fft_window_hz",   meta.get("fft_window_hz")),
         L("extra_params",    meta.get("extra_params")),
+    ]
+
+    # Optional multi-line method documentation. Lets a generator script
+    # walk the reader through how the plotted values are calculated, in
+    # the figure's own stub. Skipped silently when no doc was passed.
+    _method_doc = meta.get("method_doc")
+    if _method_doc:
+        if isinstance(_method_doc, str):
+            _doc_lines = _method_doc.splitlines()
+        else:
+            _doc_lines = list(_method_doc)
+        lines += [
+            "%",
+            "% — Method documentation ────────────────────────────────────",
+        ]
+        for _ln in _doc_lines:
+            lines.append(f"%   {_ln}" if _ln else "%")
+
+    lines += [
         "%",
         "% — Summary stats cited in caption ────────────────────────────",
     ]

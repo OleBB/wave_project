@@ -1,0 +1,207 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/fft_wave_spectrum.py
+%   computed_in       : analysis_scratch/fft_wave_spectrum.py (single-run FFT spectrum bar plot)
+%   plot_type         : spectrum_fft
+%   data_class        : DELEG
+%   generated_at      : 2026-05-05T13:08:38
+%   findings_doc      : memory/methodology_hg_window_kills_peak_bias.md
+%
+% — Thesis context ──────────────────────────────────────────────
+%   chapter           : 04
+%   caption_label     : fig:ch04_fft_wave
+%   caption_short     : Fourierspektrum med og uten vind.
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : full
+%   wind              : 
+%   amplitude [V]     : 0.2
+%   frequency [Hz]    : 1.4
+%   probes            : 
+%   run_category      : 
+%   quality_flag      : ok
+%   mooring           : 
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_runs            : 
+%   in_probes_used    : 
+%   out_probes_used   : 
+%   probe_configs     : 
+%   non_final_config_n: 
+%   datasets        :
+%     PROCESSED-20251005-sixttry6roof-highMooring
+%     PROCESSED-20251110-tett6roof-lowMooring
+%     PROCESSED-20251110-tett6roof-lowMooring-2
+%     PROCESSED-20251112-tett6roof
+%     PROCESSED-20251113-tett6roof
+%     PROCESSED-20251113-tett6roof-loosepaneltaped
+%     PROCESSED-20251113-tett6roof-probeadjusted
+%     PROCESSED-20260305-newProbePos-tett6roof
+%     PROCESSED-20260306-newProbePos-tett6roof
+%     PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof
+%     PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof
+%     PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof
+%     PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof
+%     PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof
+%     PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring
+%     PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring
+%     PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED
+%     PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136
+%     PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%   run_paths       :
+%     (omitted — aggregate over > threshold runs, see datasets)
+%
+% — Method / numerical parameters ─────────────────────────────
+%   grouper           : 
+%   collapse_panels   : 
+%   fft_window_hz     : 0.1
+%   extra_params      : run_paths=nowind:wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-nowind-amp0200-freq1400-per240-depth580-mstop30-run1.csv | fullwind:wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-amp0200-freq1400-per240-depth580-mstop30-run1.csv. probes=IN:9373/170+OUT:12400/250. xlim=[0, 6.0] Hz; harmonic vertical markers at k·f for k=1..4 (1.4, 2.8, 4.2, 5.6 Hz). Top x-axis carries the harmonic labels (f, 2f, 3f, 4f) on the nowind row; bottom x-axis carries the numeric frequency ticks on both rows. fft_engine=numpy.fft.fft on windowed eta_{pos}_interp (H&G probe-shifted [50T, 60T] window, start UC-snapped within ±T, end UC-snapped to the 10th upcrossing, ±0.5 T guard; see memory/methodology_hg_window_kills_peak_bias.md). amplitude_axis = 2*|FFT|/N (one-sided real amplitude, mm); matches Probe {pos} Amplitude (FFT) in meta.json to 4 dp. Δ = A_inn − A_Ut per row (per-wind, using each row's own IN and OUT paddle peaks); ratio = A_Ut / A_inn per row. Horizontal reference lines match the row's own IN/OUT peaks. bar_width = 0.9 * FFT_bin_spacing (per-probe bin spacing is the real FFT resolution fs/N for that probe's window). Colour convention: blue = no wind (nowind), red = med vind (fullwind) — CLAUDE.md thesis-wide WIND_COLOR_MAP. Typeset in NewComputerModern10 (OTFs from TeXLive's newcomputermodern package, registered via font_manager).
+%
+% — Summary stats cited in caption ────────────────────────────
+%   stat:A_inn_nowind_mm : 15.210
+%   stat:A_Ut_nowind_mm : 10.547
+%   stat:delta_nowind_mm : 4.663
+%   stat:ratio_nowind : 0.6935
+%   stat:A_inn_fullwind_mm : 15.724
+%   stat:A_Ut_fullwind_mm : 11.508
+%   stat:delta_fullwind_mm : 4.217
+%   stat:ratio_fullwind : 0.7318
+%   stat:bin_width_inn_nowind_Hz : 0.13982
+%   stat:bin_width_Ut_nowind_Hz : 0.14021
+%   stat:N_inn_nowind_samples : 1788
+%   stat:N_Ut_nowind_samples : 1783
+%   stat:bin_width_inn_fullwind_Hz : 0.13943
+%   stat:bin_width_Ut_fullwind_Hz : 0.13959
+%   stat:N_inn_fullwind_samples : 1793
+%   stat:N_Ut_fullwind_samples : 1791
+%   stat:ka_inn_nowind : 0.1287
+%   stat:ka_Ut_nowind : 0.0878
+%   stat:ka_inn_fullwind : 0.1531
+%   stat:ka_Ut_fullwind : 0.0979
+%   stat:wavelength_inn_nowind_m : 0.7986
+%   stat:wavenumber_inn_nowind_per_m : 7.8675
+%   stat:period_inn_nowind_s : 0.71540
+%   stat:celerity_inn_nowind_m_s : 1.1163
+%   stat:Hm0_inn_nowind_mm : 43.471
+%   stat:Hs_inn_nowind_mm : 31.843
+%   stat:Froude_inn_nowind : 0.22023
+%   stat:Ursell_inn_nowind : 0.10695
+%   stat:wind_over_c_inn_nowind : 0.0000
+%   stat:f_over_fPM_inn_nowind : nan
+%   stat:wavelength_Ut_nowind_m : 0.7937
+%   stat:wavenumber_Ut_nowind_per_m : 7.9160
+%   stat:period_Ut_nowind_s : 0.71320
+%   stat:celerity_Ut_nowind_m_s : 1.1129
+%   stat:Hm0_Ut_nowind_mm : 29.921
+%   stat:Hs_Ut_nowind_mm : 21.697
+%   stat:Froude_Ut_nowind : 0.21956
+%   stat:Ursell_Ut_nowind : 0.07162
+%   stat:wind_over_c_Ut_nowind : 0.0000
+%   stat:f_over_fPM_Ut_nowind : nan
+%   stat:wavelength_inn_fullwind_m : 0.8044
+%   stat:wavenumber_inn_fullwind_per_m : 7.8107
+%   stat:period_inn_fullwind_s : 0.71800
+%   stat:celerity_inn_fullwind_m_s : 1.1204
+%   stat:Hm0_inn_fullwind_mm : 45.546
+%   stat:Hs_inn_fullwind_mm : 38.232
+%   stat:Froude_inn_fullwind : 0.22103
+%   stat:Ursell_inn_fullwind : 0.13000
+%   stat:wind_over_c_inn_fullwind : 5.1768
+%   stat:f_over_fPM_inn_fullwind : 5.3102
+%   stat:wavelength_Ut_fullwind_m : 0.8009
+%   stat:wavenumber_Ut_fullwind_per_m : 7.8456
+%   stat:period_Ut_fullwind_s : 0.71640
+%   stat:celerity_Ut_fullwind_m_s : 1.1179
+%   stat:Hm0_Ut_fullwind_mm : 32.740
+%   stat:Hs_Ut_fullwind_mm : 24.540
+%   stat:Froude_Ut_fullwind : 0.22054
+%   stat:Ursell_Ut_fullwind : 0.08202
+%   stat:wind_over_c_Ut_fullwind : 5.1883
+%   stat:f_over_fPM_Ut_fullwind : 5.3221
+%   stat:meta_OUT_over_IN_nowind : 0.6885
+%   stat:meta_OUT_over_IN_fullwind : 0.7371
+%   stat:wave_stability_inn_nowind : 0.8920
+%   stat:wave_stability_Ut_nowind : 0.8972
+%   stat:period_cv_inn_nowind : 0.0227
+%   stat:period_cv_Ut_nowind : 0.0329
+%   stat:wave_stability_inn_fullwind : 0.8619
+%   stat:wave_stability_Ut_fullwind : 0.8939
+%   stat:period_cv_inn_fullwind : 0.0599
+%   stat:period_cv_Ut_fullwind : 0.0360
+%   stat:A_inn_nowind_LS_mm : 15.211
+%   stat:A_inn_nowind_Stk2_mm : 0.772
+%   stat:A_inn_nowind_percentile_mm : 16.270
+%   stat:A_inn_nowind_PSD_mm : 15.153
+%   stat:A_inn_nowind_cycles_mean : 15.479
+%   stat:A_inn_nowind_phase_mean : 15.328
+%   stat:DC_inn_nowind_mm : 0.1996
+%   stat:residualRMS_inn_nowind_mm : 0.8256
+%   stat:A_Ut_nowind_LS_mm : 10.534
+%   stat:A_Ut_nowind_Stk2_mm : 0.483
+%   stat:A_Ut_nowind_percentile_mm : 11.090
+%   stat:A_Ut_nowind_PSD_mm : 10.512
+%   stat:A_Ut_nowind_cycles_mean : 10.529
+%   stat:A_Ut_nowind_phase_mean : 10.409
+%   stat:DC_Ut_nowind_mm : 0.0471
+%   stat:residualRMS_Ut_nowind_mm : 0.4822
+%   stat:A_inn_fullwind_LS_mm : 15.745
+%   stat:A_inn_fullwind_Stk2_mm : 1.660
+%   stat:A_inn_fullwind_percentile_mm : 19.172
+%   stat:A_inn_fullwind_PSD_mm : 15.789
+%   stat:A_inn_fullwind_cycles_mean : 17.041
+%   stat:A_inn_fullwind_phase_mean : 15.386
+%   stat:DC_inn_fullwind_mm : 0.7226
+%   stat:residualRMS_inn_fullwind_mm : 2.2553
+%   stat:A_Ut_fullwind_LS_mm : 11.514
+%   stat:A_Ut_fullwind_Stk2_mm : 0.734
+%   stat:A_Ut_fullwind_percentile_mm : 12.475
+%   stat:A_Ut_fullwind_PSD_mm : 11.649
+%   stat:A_Ut_fullwind_cycles_mean : 11.778
+%   stat:A_Ut_fullwind_phase_mean : 11.490
+%   stat:DC_Ut_fullwind_mm : 0.2169
+%   stat:residualRMS_Ut_fullwind_mm : 0.7672
+%   stat:window_inn_nowind_s : [22.104, 29.252]
+%   stat:hg_snap_shift_inn_nowind_samples : 68.0
+%   stat:window_Ut_nowind_s : [26.992, 34.120]
+%   stat:hg_snap_shift_Ut_nowind_samples : -68.0
+%   stat:window_inn_fullwind_s : [21.940, 29.108]
+%   stat:hg_snap_shift_inn_fullwind_samples : 27.0
+%   stat:window_Ut_fullwind_s : [27.568, 34.728]
+%   stat:hg_snap_shift_Ut_fullwind_samples : 76.0
+%   stat:file_date_nowind : 2026-03-27
+%   stat:mooring_nowind : below_90_loose300
+%   stat:probe_height_nowind_mm : 100.0
+%   stat:probe_range_mode_nowind : low
+%   stat:water_depth_nowind_mm : 580.0
+%   stat:file_date_fullwind : 2026-03-27
+%   stat:mooring_fullwind : below_90_loose300
+%   stat:probe_height_fullwind_mm : 100.0
+%   stat:probe_range_mode_fullwind : low
+%   stat:water_depth_fullwind_mm : 580.0
+%   stat:kd_Ut_nowind : 4.591
+%   stat:depth_regime_nowind : deep
+%   stat:kd_Ut_fullwind : 4.550
+%   stat:depth_regime_fullwind : deep
+%   stat:input_freq_Hz : 1.40
+%   stat:input_amp_V  : 0.20
+%   stat:sampling_rate_Hz : 250.0
+%
+% — Subfigures available ───────────────────────────────────────
+%     FIGURES/ch04_fft_wave.pdf
+% ── end immutable block ─────────────────────────────────────────
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{FIGURES/ch04_fft_wave.pdf}
+  \caption[Fourierspektrum med og uten vind.]{
+    Frekvensspekter for bølge på \qty{1.4}{\hertz}, amplitudevalg $A_2$. Oppe uten vind, ned med vind. Innkommende til venstre, utgående til høyre.
+  }
+  \label{fig:ch04_fft_wave}
+\end{figure}

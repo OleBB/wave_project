@@ -835,7 +835,7 @@ Groups: probe_height_mm × probe_range_mode — 4 hardware configurations:
   h100/low
 
 Metrics (all from combined_meta, shift-invariant — valid at any probe height):
-  noise_95pct_amp_mm   (P97.5−P2.5)/2   mean across accepted runs in group
+  noise_95pct_amp_mm   (P99.5−P0.5)/2   mean across accepted runs in group  [legacy col name; values are 99 % half-range]
   noise_rms_mm         std(raw signal)   mean across accepted runs in group
   mean_level_mm        median level      mean across accepted runs in group
   bias_vs_ref_mm       mean_level − cross-probe mean (within group)
@@ -866,16 +866,16 @@ _pv_noise_floor = {
         "xtick_fontsize": 7,
         "show_excluded":  False,   # 2026-05-05: hide X markers + legend entry; run still dropped from stats
             "text": {
-                "ylabel": "Støyamplitude (95 %)  [mm]",
+                "ylabel": "Støyamplitude (99 %)  [mm]",
                 "legend_mean_amp":    "Gjennomsnittlig støyamplitude  (±1σ)",
                 "legend_per_run":     "Per kjøring",
                 "legend_threshold":   "Terskel  max({k_sigma:.0f}σ, {k_q:.0f}q)  [mm]",
                 "legend_quantization":"Halvt kvantiseringssteg  q/2  [mm]",
-                "title": {
-                    "h272 / high": "h=272 mm — innledende eoppsett",
-                    "h100 / low":  "h=100 mm - endelig oppsett ",
+                # "title": {
+                #     "h272 / high": "h=272 mm — innledende eoppsett",
+                #     "h100 / low":  "h=100 mm - endelig oppsett ",
                     # groups not listed here keep their default title
-                },
+                # },
             },
     },
 }

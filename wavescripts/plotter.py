@@ -2089,7 +2089,7 @@ def plot_probe_noise_floor(
     Data sources (all from combined_meta unless noted):
       mean_level_mm        "Stillwater Probe {pos}"  — per-run mean level
       noise_rms_mm         "Probe {pos} Stillwater Std"  — std of raw signal
-      noise_95pct_amp_mm   "Probe {pos} Amplitude"  — (P97.5−P2.5)/2
+      noise_95pct_amp_mm   "Probe {pos} Amplitude"  — (P99.5−P0.5)/2  [legacy column name, contents are 99 % half-range]
       bias_vs_ref_mm       mean_level_mm − mean(all probes, same group)
       quantization_step_mm P5 of nonzero |diff(eta_{pos})|  — needs processed_dfs
       detection_threshold_mm  max(k_sigma·rms, k_q·q)
@@ -2301,7 +2301,7 @@ def plot_probe_noise_floor(
         Line2D([0], [0], color="crimson", linewidth=1.8, linestyle="--"),
     ]
     _leg_labels = [
-        T("legend_mean_amp",  default="Mean 95% noise amp.  (±1σ)"),
+        T("legend_mean_amp",  default="Mean 99% noise amp.  (±1σ)"),
         T("legend_per_run",   default="Per-run value"),
         T("legend_threshold", default="Threshold  max({k_sigma:.0f}σ,  {k_q:.0f}q)  [mm]"),
     ]
@@ -2382,7 +2382,7 @@ def plot_probe_noise_floor(
               extra_slots={"group": grp, "n_grp": n_grp}),
             fontsize=10,
         )
-        ax.set_ylabel(T("ylabel", default="Stillwater 95% noise amplitude  [mm]"))
+        ax.set_ylabel(T("ylabel", default="Stillwater 99% noise amplitude  [mm]"))
         ax.grid(True, axis="y", alpha=0.3)
         ax.legend(_leg_handles, _leg_labels, fontsize=8, loc="upper right", framealpha=0.9)
 
@@ -2443,6 +2443,50 @@ def plot_probe_noise_floor(
                 if np.isfinite(_mean_thr):
                     _extra_stats[f"threshold_mm_{pos}"] = round(_mean_thr, 3)
 
+        _method_doc = (
+            "Per-probe metrics — one row per (group, probe) in `summary`:\n"
+            "\n"
+            "  σ      = `Probe {pos} Stillwater Std` — sample std-dev of\n"
+            "           the raw stillwater signal during the run [mm].\n"
+            "  amp99  = `Probe {pos} Amplitude` — half the central 99 %\n"
+            "           range: (P99.5 − P0.5) / 2 [mm]. Robust to non-\n"
+            "           Gaussian tails. Note: column name uses legacy\n"
+            "           '95pct' suffix; the value is the 99 % half-range.\n"
+            "  q      = quantization step — P5 of nonzero |Δη| between\n"
+            "           consecutive samples in eta_{pos}_interp [mm].\n"
+            "           Smallest non-zero output the probe ever reports.\n"
+            "           NaN when processed_dfs is not loaded at the time\n"
+            "           the cell runs (light tier in main_save_figures).\n"
+            "\n"
+            "Group aggregation (mean over accepted stillwater runs):\n"
+            "  noise_rms_mm          = mean(σ)\n"
+            "  noise_99pct_amp_mm    = mean(amp99)            ← bar height\n"
+            "  noise_99pct_std_mm    = std(amp99)             ← errorbar\n"
+            "  quantization_step_mm  = q (first run with data)\n"
+            "  bias_vs_ref_mm        = mean(level) − cross-probe mean,\n"
+            "                          where level = `Stillwater Probe {pos}`.\n"
+            "\n"
+            f"Detection threshold (red dashed line per probe):\n"
+            f"  threshold_mm = max(k_sigma · noise_rms_mm,\n"
+            f"                     k_q     · quantization_step_mm)\n"
+            f"               = max({k_sigma:g}·σ̄, {k_q:g}·q).\n"
+            "  A signal below this line cannot be reliably distinguished\n"
+            "  from probe random noise (k_sigma·σ ≈ 99.7 % CI for Gaussian)\n"
+            "  AND probe quantization (k_q·q = k_q output-grid steps).\n"
+            "  The dotted grey line shows q/2.\n"
+            "\n"
+            "Run filtering (visible only in the figure, not in stats):\n"
+            f"  exclude_keywords    : {list(exclude_keywords)} → dropped from\n"
+            "                        the aggregation entirely (treated as\n"
+            "                        not-settled).\n"
+            f"  highlight_keyword   : {highlight_keyword!r} → marked with a\n"
+            "                        gold star, included in stats.\n"
+            "  show_excluded       : when False (caller's choice), the X\n"
+            "                        markers + legend entry for excluded\n"
+            "                        runs are hidden; runs are still\n"
+            "                        excluded from aggregation."
+        )
+
         meta_base = build_fig_meta(
             {**plotvariables, "plotting": {**plotting, "caption": _caption}},
             chapter=chapter,
@@ -2462,6 +2506,7 @@ def plot_probe_noise_floor(
                 f"threshold=max(k_sigma·σ, k_q·q)"
             ),
             extra_stats=_extra_stats,
+            method_doc=_method_doc,
         )
         force_stub = plotting.get("force_stub", True)
         if len(figs) == 1:

@@ -45,6 +45,19 @@ TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 TEXFIGU_DIR.mkdir(parents=True, exist_ok=True)
 
+# Shared y-limit for the η(t) panels (2026-05-05). Hardcoded so both
+# the nowind and fullwind figures use the same scale and the amplitude
+# difference (and the wind-induced ripple on top) is immediately
+# obvious side-by-side. Resolves the per-run _sym_ylim mismatch flagged
+# in the in-source TODO above the helper.
+YLIM_MM = (-24.0, 24.0)
+
+# Shared x-limit for the FULL (macro) η(t) panels only — covers the
+# wave train through the longest H&G window end + a 10-s tail. Zoom
+# panels stay anchored on each run's own H&G window so the visible
+# slice still tracks per-run wave arrival.
+MACRO_XLIM_S = (0.0, 45.0)
+
 TARGET_DIR = BASE / "waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"
 DATADIR    = BASE / "wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"
 
@@ -167,9 +180,10 @@ def _load_run(wind_tag: str):
         "ka_out":  float(row["OUT ka (FFT)"]),
     }
 
-#A1 ylim = ...
-# A2 ylim =.. well problem, the tall peaks reaches y=21, while troughs only down to
-#TODO I want both nowind and fullwind to share the same ylim on their normal plots, and correspoindingly for zoomed plots. So they are instantly visually comparable.
+# Per-run symmetric y-limit helper. Retained for variants that want a
+# data-driven scale; the canonical thesis figures use the hardcoded
+# YLIM_MM module constant instead so nowind/fullwind are directly
+# comparable side-by-side.
 def _sym_ylim(*sigs, pad=0.15):
     y = np.concatenate(sigs)
     lo, hi = np.nanpercentile(y, [0.5, 99.5])
@@ -194,16 +208,17 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
     t = data["t"]
     in_ws, in_we   = data["in_ws"],  data["in_we"]
     out_ws, out_we = data["out_ws"], data["out_we"]
-    ylim = _sym_ylim(eta_in, eta_out)
-    x_cutoff = max(in_we, out_we) + 10.0
+    ylim = YLIM_MM           # shared across nowind / fullwind for direct comparison
+    macro_xlim = MACRO_XLIM_S  # shared across nowind / fullwind for direct comparison
+    x_cutoff = macro_xlim[1]   # legacy name; preserved for any later inline use
 
     # Zoom on the BEGINNING of each probe's H&G window — shows the moment
-    # the measurement window opens. 5-period width with a 0.5-period lead-in
-    # so the window-start edge sits clearly inside the zoom view.
+    # the measurement window opens. The zoom x-range is the TRUE computed
+    # window start through start + 5 periods (no lead-in), so the visible
+    # slice is the first 5 cycles inside the analysis window.
     zoom_width = 5.0 / FREQ
-    zoom_lead  = 0.5 / FREQ
-    in_zx0,  in_zx1  = in_ws  - zoom_lead, in_ws  - zoom_lead + zoom_width
-    out_zx0, out_zx1 = out_ws - zoom_lead, out_ws - zoom_lead + zoom_width
+    in_zx0,  in_zx1  = in_ws,  in_ws  + zoom_width
+    out_zx0, out_zx1 = out_ws, out_ws + zoom_width
 
     fig = plt.figure(figsize=(10, 13.0))
     gs = fig.add_gridspec(4, 1, height_ratios=[1, 2, 1, 2], hspace=0.42)
@@ -223,7 +238,7 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
         ax_full.plot(t, sig, color=color, lw=0.5)
         ax_full.axvspan(zx0, zx1, color=WIN_COLOR, alpha=0.55, zorder=0)
         ax_full.axhline(0, color="#888", lw=0.5, alpha=0.6)
-        ax_full.set_xlim(0, x_cutoff)
+        ax_full.set_xlim(*macro_xlim)
         ax_full.set_ylim(ylim)
         ax_full.text(
             0.005, 0.92, label,
@@ -276,7 +291,7 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
     # thesis. ka_IN and ka_OUT are already in the immutable stub block
     # (extra_stats → stat:ka_in / stat:ka_out) and in the caption text.
     fig.savefig(out_pdf, bbox_inches="tight")
-    fig.savefig(out_pdf.with_suffix(".png"), dpi=160, bbox_inches="tight")
+    # fig.savefig(out_pdf.with_suffix(".png"), dpi=160, bbox_inches="tight")
     plt.close(fig)
     print(f"   → {out_pdf.relative_to(BASE)}  (+ .png)")
 

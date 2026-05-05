@@ -7,7 +7,7 @@
 %   computed_in       : plotter.py::plot_probe_noise_floor (per-run Amplitude / Stillwater Std from combined_meta)
 %   plot_type         : probe_noise_floor
 %   data_class        : DFS
-%   generated_at      : 2026-05-05T12:52:20
+%   generated_at      : 2026-05-05T13:12:44
 %   findings_doc      : 
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -42,6 +42,49 @@
 %   collapse_panels   : False
 %   fft_window_hz     : 0.1
 %   extra_params      : k_sigma=3.0, k_q=2.0, highlight_keyword=None, exclude_keywords=['nestenstille'], threshold=max(k_sigma·σ, k_q·q)
+%
+% — Method documentation ────────────────────────────────────
+%   Per-probe metrics — one row per (group, probe) in `summary`:
+%
+%     σ      = `Probe {pos} Stillwater Std` — sample std-dev of
+%              the raw stillwater signal during the run [mm].
+%     amp99  = `Probe {pos} Amplitude` — half the central 99 %
+%              range: (P99.5 − P0.5) / 2 [mm]. Robust to non-
+%              Gaussian tails. Note: column name uses legacy
+%              '95pct' suffix; the value is the 99 % half-range.
+%     q      = quantization step — P5 of nonzero |Δη| between
+%              consecutive samples in eta_{pos}_interp [mm].
+%              Smallest non-zero output the probe ever reports.
+%              NaN when processed_dfs is not loaded at the time
+%              the cell runs (light tier in main_save_figures).
+%
+%   Group aggregation (mean over accepted stillwater runs):
+%     noise_rms_mm          = mean(σ)
+%     noise_99pct_amp_mm    = mean(amp99)            ← bar height
+%     noise_99pct_std_mm    = std(amp99)             ← errorbar
+%     quantization_step_mm  = q (first run with data)
+%     bias_vs_ref_mm        = mean(level) − cross-probe mean,
+%                             where level = `Stillwater Probe {pos}`.
+%
+%   Detection threshold (red dashed line per probe):
+%     threshold_mm = max(k_sigma · noise_rms_mm,
+%                        k_q     · quantization_step_mm)
+%                  = max(3·σ̄, 2·q).
+%     A signal below this line cannot be reliably distinguished
+%     from probe random noise (k_sigma·σ ≈ 99.7 % CI for Gaussian)
+%     AND probe quantization (k_q·q = k_q output-grid steps).
+%     The dotted grey line shows q/2.
+%
+%   Run filtering (visible only in the figure, not in stats):
+%     exclude_keywords    : ['nestenstille'] → dropped from
+%                           the aggregation entirely (treated as
+%                           not-settled).
+%     highlight_keyword   : None → marked with a
+%                           gold star, included in stats.
+%     show_excluded       : when False (caller's choice), the X
+%                           markers + legend entry for excluded
+%                           runs are hidden; runs are still
+%                           excluded from aggregation.
 %
 % — Summary stats cited in caption ────────────────────────────
 %   stat:n_groups     : 4
