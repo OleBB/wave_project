@@ -220,7 +220,7 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
     in_zx0,  in_zx1  = in_ws,  in_ws  + zoom_width
     out_zx0, out_zx1 = out_ws, out_ws + zoom_width
 
-    fig = plt.figure(figsize=(10, 13.0))
+    fig = plt.figure(figsize=(6.27, 8.15))
     gs = fig.add_gridspec(4, 1, height_ratios=[1, 2, 1, 2], hspace=0.42)
     ax_in_full  = fig.add_subplot(gs[0, 0])
     ax_in_zoom  = fig.add_subplot(gs[1, 0])
@@ -290,7 +290,7 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
     # No in-figure title: LaTeX \caption{} handles identification in the
     # thesis. ka_IN and ka_OUT are already in the immutable stub block
     # (extra_stats → stat:ka_in / stat:ka_out) and in the caption text.
-    fig.savefig(out_pdf, bbox_inches="tight")
+    fig.savefig(out_pdf)
     # fig.savefig(out_pdf.with_suffix(".png"), dpi=160, bbox_inches="tight")
     plt.close(fig)
     print(f"   → {out_pdf.relative_to(BASE)}  (+ .png)")
