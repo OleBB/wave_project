@@ -1,0 +1,93 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — synthesis table, hand-curated, do not auto-regenerate
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : (none — synthesis table from session 2026-05-05)
+%   plot_type         : dt_budget_canonical_table
+%   chapter           : 04
+%   generated_at      : 2026-05-05
+%   caption_label     : tab:ch04_dt_budget_canonical
+%   caption_short     : Δt-regnskap, kanonisk celle
+%
+% — Canonical cell ───────────────────────────────────────────
+%   filter            : 1.3 Hz, 0.2 V, full panel, ok quality
+%   data scope        : canon March-2026 lowrange (2 folders)
+%   n_runs            : 9 nowind + 10 fullwind (most-sampled cell)
+%   measured Δt       : -134 ± 24 ms  (mean ± std at IN, 9373/170)
+%
+% — Predicted contributions (per candidate mechanism) ────────
+%   Doppler:    Δt = -L · U / c_g²
+%               L = 9.373 m, U = 7 mm/s, c_g(1.3 Hz) = 0.604 m/s
+%               → -9.373 · 0.007 / 0.604² · 1000 = -180 ms
+%   Lee-side counter-current: rough estimate, would give +50…+90 ms
+%   if Doppler were active in the 9.373→12.4 m sheltered region.
+%   Detection bias (envelope amplitude): scales with envelope slope
+%   at probe; OUT envelope is ~5× smaller than IN, so OUT shift would
+%   be ~5× larger. Observed OUT shift = IN shift = -134 ms → bias ≤ ±50 ms.
+%   Hardware (paddle): paddle is hydraulic at 130 bar, mechanically
+%   independent of surface wind load. Flat-out ruled out.
+%   Snap detector on wind-wave upcrossings: would produce probe-specific
+%   bias (OUT has zero wind-wave content per pre-paddle plot, yet shifts
+%   the same as IN). Killed by uniform-shift observation.
+%   Highway/source priming: -100 to -150 ms uniform across probes,
+%   monotonic in wind speed (5/6 cells in lowestwind test).
+%
+% — Source files ─────────────────────────────────────────────
+%   analysis_scratch/wind_doppler_arrival_shift.py    (Δt vs r evidence)
+%   analysis_scratch/wind_highway_lowestwind_test.py  (wind-strength scan)
+%   analysis_scratch/per40_full_chirp.py               (overlay visuals)
+%   memory/methodology_wind_enhances_A_in.md           (A_in context)
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \small
+  \caption[$\Delta t$-regnskap, kanonisk celle]{
+    % TODO: write caption (edit FIGURE_CAPTIONS in main_save_figures.py)
+  }
+  \label{tab:ch04_dt_budget_canonical}
+  \begin{tabular}{p{0.42\linewidth} c p{0.35\linewidth}}
+    \toprule
+    Kandidatmekanisme &
+      Predikert $\Delta t$ &
+      Status \\
+    \midrule
+    Vind-drevet uniform overflate\-strøm Doppler
+      ($U = \qty{7}{\milli\metre\per\second}$) &
+      $-\qty{180}{\milli\second}$ (lineær i $r$) &
+      \textbf{forkastet} — $\Delta t(r)$ er flat i $r$, ikke lineær \\[0.4em]
+
+    Lekye-strøm bak panelet (ville delvis kompensere) &
+      $+\qty{50}{\milli\second}$ til $+\qty{90}{\milli\second}$ &
+      Ikke testbar her; bare relevant hvis Doppler var aktiv \\[0.4em]
+
+    Deteksjons\-bias fra konvolutt-amplitude (H3) &
+      $\leq \pm \qty{50}{\milli\second}$,
+        skalerer med konvolutt\-stigning &
+      \textbf{forkastet} — UT-skift = INN-skift til tross for
+        $5\times$ konvolutt-forskjell \\[0.4em]
+
+    Padle-hardware respons under vindlast (H7) &
+      $\sim \qty{100}{\milli\second}$ uniform &
+      \textbf{forkastet} — padlen er hydraulisk ved \qty{130}{bar},
+        mekanisk vind-uavhengig \\[0.4em]
+
+    Snap-detektor låser på vind-bølge oppkrysninger (H8) &
+      $+\qty{20}{\milli\second}$ til $+\qty{80}{\milli\second}$
+        (probe-avhengig) &
+      \textbf{forkastet} — UT har null vind-bølge innhold men
+        skifter likt med INN \\[0.4em]
+
+    \textbf{Highway / kilde-priming} (H4) &
+      $-\qty{100}{\milli\second}$ til $-\qty{150}{\milli\second}$
+        (uniform, kilde\-side) &
+      \textbf{overlever} — også støttet av lavestvind 5/6 celler
+        monoton \\
+    \midrule
+    \textbf{Sum av overlevende bidrag} &
+      $-\qty{100}{\milli\second}$ til $-\qty{150}{\milli\second}$ &
+      \textbf{Observert: $-\qty{134}{\milli\second}$ — stemmer} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

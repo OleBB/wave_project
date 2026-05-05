@@ -1,0 +1,65 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/wind_effects_data_tables.py
+%   plot_type         : wind_effects_data_table
+%   chapter           : 04
+%   generated_at      : 2026-05-05T17:40:24
+%   caption_label     : tab:ch04_wind_effects_data
+%   caption_short     : Vindeffekter, måletall per celle
+%
+% — Method ────────────────────────────────────────────────────
+%   Source CSVs:
+%     analysis_scratch/wind_doppler_arrival_shift.csv  (per-probe Δt)
+%     analysis_scratch/wind_highway_heatmap.csv         (A_in enhancement)
+%   Per-cell Δt = mean(snap_fw) − mean(snap_nw) in ms, per probe.
+%   Spread     = max − min Δt across non-aliased probes (period-alias
+%                filter |Δt·f| > 0.5 applied per-probe BEFORE max/min).
+%   A_enh      = (mean A_in_fw − mean A_in_nw) / mean A_in_nw · 100 %
+%   Italicized Δt entries are individual probes where |Δt·f| > 0.5
+%                (period-aliased, snap landed on a different upcrossing).
+%
+% — Headline ──────────────────────────────────────────────────
+%   median |Δt| at IN (clean cells)         : 144 ms
+%   median Δt spread across probes (clean)  : 68 ms
+%   uniformity ratio (spread / |Δt_in|)      : 0.47
+%       → Spread is small fraction of |Δt|; Δt is essentially uniform
+%         across probes regardless of distance (kills uniform Doppler).
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \small
+  \caption[Vindeffekter, måletall per celle]{
+    % TODO: write caption (edit FIGURE_CAPTIONS in main_save_figures.py)
+  }
+  \label{tab:ch04_wind_effects_data}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{cccccccccc}
+    \toprule
+    & & & \multicolumn{4}{c}{$\Delta t$ per probe [\unit{\milli\second}]} & & \\
+    \cmidrule(lr){4-7}
+    $f$ & $A$ & $n_{\text{fw}}$ &
+      8804 & 9373/170 & 9373/340 & 12400 &
+      $\Delta t_{\max}{-}\Delta t_{\min}$ &
+      $\Delta A_{\text{inn}}$ \\
+    {[\unit{\hertz}]} & {[\unit{\volt}]} & &
+      & & & & {[\unit{\milli\second}]} & {[\unit{\percent}]} \\
+    \midrule
+    \num{1.3} & \num{0.1} & \num{10} & \num{-120} & \num{-178} & \num{-156} & \num{-96} & \num{82} & \num{-0.8} \\
+    \num{1.3} & \num{0.2} & \num{3} & \num{-134} & \num{-133} & \num{-135} & \num{-134} & \num{2} & \num{+0.5} \\
+    \num{1.3} & \num{0.3} & \num{4} & \num{-71} & \num{-92} & \num{-97} & \num{-97} & \num{26} & \num{+3.5} \\
+    \num{1.4} & \num{0.1} & \num{3} & \num{-75} & \num{-131} & \num{-158} & \num{132} & \num{290} & \num{-2.9} \\
+    \num{1.4} & \num{0.2} & \num{3} & \num{-121} & \num{-155} & \num{-150} & \textit{554} & \num{33} & \num{+3.3} \\
+    \num{1.4} & \num{0.3} & \num{4} & \num{-115} & \num{-159} & \num{-137} & \num{-126} & \num{44} & \num{+2.9} \\
+    \num{1.5} & \num{0.1} & \num{3} & \num{201} & \num{83} & \num{109} & \num{-111} & \num{312} & \num{+4.3} \\
+    \num{1.5} & \num{0.2} & \num{3} & \num{-143} & \textit{498} & \textit{515} & \num{-199} & \num{57} & \num{+2.7} \\
+    \num{1.5} & \num{0.3} & \num{4} & \num{-90} & \num{-124} & \num{-104} & \num{-175} & \num{85} & \num{+9.5} \\
+    \num{1.6} & \num{0.1} & \num{3} & \num{-101} & \num{-162} & \num{-217} & \num{-179} & \num{116} & \num{+15.6} \\
+    \num{1.6} & \num{0.2} & \num{3} & \textit{511} & \textit{465} & \textit{445} & \num{212} & --- & \num{+6.3} \\
+    \num{1.6} & \num{0.3} & \num{5} & \num{-146} & \num{-195} & \num{-187} & \num{-199} & \num{53} & \num{+10.2} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

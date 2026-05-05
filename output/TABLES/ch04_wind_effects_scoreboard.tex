@@ -1,0 +1,74 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — synthesis table, hand-curated, do not auto-regenerate
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : (none — synthesis table from session 2026-05-05)
+%   plot_type         : wind_effects_scoreboard_table
+%   chapter           : 04
+%   generated_at      : 2026-05-05
+%   caption_label     : tab:ch04_wind_effects_scoreboard
+%   caption_short     : Vindeffekter på padlebølgen
+%
+% — Source findings ───────────────────────────────────────────
+%   Δt observation     : analysis_scratch/wind_doppler_arrival_shift.{py,md}
+%   Doppler rejection  : Δt(r) flat in r, ratio Δt(OUT)/Δt(IN) = 1.0 not 1.4
+%   A_in enhancement   : memory/methodology_wind_enhances_A_in.md
+%                        analysis_scratch/wind_highway_heatmap.{py,csv}
+%   Decay equality     : analysis_scratch/per40_full_chirp.{py,csv}
+%                        steady_periods fw vs nw, see overlay t=40-51 PDF
+%   Decoupling A↔Δt    : Pearson r = -0.085, p = 0.82  (n = 10 cells)
+%
+% — Notes ─────────────────────────────────────────────────────
+%   "uniform across all probes" : 4 probes × 12 cells, std of Δt across
+%                                 probes within a cell < 25 ms typical.
+%   "freq-dependent coupling"   : A_enh ranges -3 % at 1.3 Hz / 0.1 V
+%                                 to +16 % at 1.6 Hz / 0.1 V, monotonic
+%                                 in frequency at fixed amplitude.
+%   "decay similar or shorter"  : per40 steady-state in periods is equal
+%                                 or 2-9 fewer T under fullwind across
+%                                 clean cells (A ≥ 0.2 V).
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \small
+  \caption[Vindeffekter på padlebølgen — oppsummering]{
+    % TODO: write caption (edit FIGURE_CAPTIONS in main_save_figures.py)
+  }
+  \label{tab:ch04_wind_effects_scoreboard}
+  \begin{tabular}{p{0.32\linewidth} c p{0.27\linewidth} p{0.27\linewidth}}
+    \toprule
+    Effekt på padlebølgen &
+      Vind gjør? &
+      Størrelse &
+      Hvor effekten oppstår \\
+    \midrule
+    Tidsforskyver bølgen tidligere &
+      \textbf{JA} &
+      $\qty{100}{\milli\second}$ til $\qty{200}{\milli\second}$
+        ($\approx \num{0.15}$ til $\num{0.25}\,T$),
+        uniform over alle prober &
+      Kilde / pre-padle priming \\[0.5em]
+
+    Forsterker A$_{\text{inn}}$ ved padlefrekvensen &
+      av og til &
+      $-\qty{3}{\percent}$ til $+\qty{16}{\percent}$,
+        skalerer med frekvens, sterkest ved $\qty{1.6}{\hertz}$ &
+      Ved/nær INN-prober, frekvensavhengig kobling \\[0.5em]
+
+    Speeder opp bølgepropagering (Doppler) &
+      \textbf{NEI} &
+      $\Delta t(r)$ er flat i $r$;
+        $\Delta t_{\text{UT}}/\Delta t_{\text{INN}} = \num{1.0}$,
+        ikke $\num{1.4}$ &
+      (Krever overflate\-strøm i åpent vann; ikke observert) \\[0.5em]
+
+    Forlenger bølgetogets levetid etter padlestopp &
+      \textbf{NEI} &
+      Per40 demping like rask eller raskere under vind
+        ($-2$ til $-9$ perioder) &
+      (Ingen priming etter at padlen slutter å mate) \\
+    \bottomrule
+  \end{tabular}
+\end{table}

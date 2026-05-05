@@ -383,7 +383,9 @@ def plot_eta_overlay(meta: pd.DataFrame, out_path: Path,
 
 
 def plot_pre_paddle(meta: pd.DataFrame, out_path: Path,
-                    f_pick: float = 1.3, amp_pick: float = 0.2) -> None:
+                    f_pick: float = 1.3, amp_pick: float = 0.2,
+                    thesis_pdf: Path | None = None,
+                    thesis_name: str | None = None) -> None:
     """Show η in the FIRST 25 s — covers the pre-paddle stillwater +
     paddle ramp + first wave arrival. Compares fw vs nw at IN.
 
@@ -440,7 +442,52 @@ def plot_pre_paddle(meta: pd.DataFrame, out_path: Path,
                  fontsize=10)
     fig.tight_layout()
     fig.savefig(out_path, dpi=130)
+    if thesis_pdf is not None:
+        thesis_pdf.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(thesis_pdf)
     plt.close(fig)
+
+    if thesis_name is not None:
+        _write_pre_paddle_stub(fw_runs, nw_runs, f_pick, amp_pick, thesis_name)
+
+
+def _write_pre_paddle_stub(fw_runs, nw_runs, f_hz, amp, figure_name):
+    import wavescripts.plot_utils as pu
+    pu.TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
+    pu.FIGURES_DIR = BASE / "output" / "FIGURES"
+
+    fw_path = fw_runs["path"].iloc[0] if len(fw_runs) else None
+    nw_path = nw_runs["path"].iloc[0] if len(nw_runs) else None
+    _meta = pu.build_fig_meta(
+        {
+            "filters": {
+                "PanelCondition":            "full",
+                "WaveFrequencyInput [Hz]":   f_hz,
+                "WaveAmplitudeInput [Volt]": amp,
+                "WindCondition":             ["no", "full"],
+                "quality_flag":              "ok",
+                "probes":                    "8804/250+9373/170+12400/250",
+            },
+            "plotting": {"figure_name": figure_name},
+        },
+        chapter="04",
+        extra={"script": "analysis_scratch/wind_doppler_arrival_shift.py"},
+        computed_in=("analysis_scratch/wind_doppler_arrival_shift.py "
+                     "(pre-paddle window 0–25 s, eta vs t at all 3 probes; "
+                     "compares wind-wave background at upstream IN probes vs "
+                     "panel-shadowed OUT probe)"),
+        data_class="DELEG",
+        findings_doc="memory/methodology_wind_enhances_A_in.md",
+        extra_params=(
+            f"runs: nw={nw_path}, fw={fw_path}. "
+            f"plot covers t ∈ (0, 25 s) — entire pre-paddle + chirp + first arrival. "
+            f"vertical dotted line per panel = r/c_g(f) for that probe."
+        ),
+        max_run_paths=4,
+    )
+    pu.write_figure_stub(_meta, plot_type="pre_paddle_overlay",
+                         subfig_filenames=[figure_name], force=True)
+    print(f"   stub → output/TEXFIGU/{figure_name}.tex")
 
 
 def rank_linear_vs_flat(cells: pd.DataFrame) -> None:
@@ -546,8 +593,11 @@ def main() -> None:
 
     print("\nPlotting pre-paddle window (paddle-trigger sanity check)...")
     plot_pre_paddle(meta, OUT_DIR / "wind_doppler_arrival_shift_paddle_start.png",
-                    f_pick=1.3, amp_pick=0.2)
-    print(f"  → analysis_scratch/wind_doppler_arrival_shift_paddle_start.png")
+                    f_pick=1.3, amp_pick=0.2,
+                    thesis_pdf=BASE / "output/FIGURES/ch04_wind_pre_paddle_overlay.pdf",
+                    thesis_name="ch04_wind_pre_paddle_overlay")
+    print(f"  → analysis_scratch/wind_doppler_arrival_shift_paddle_start.png "
+          f"+ output/FIGURES/ch04_wind_pre_paddle_overlay.pdf")
 
     print("\nLinear vs flat fit ranking across all cells:")
     rank_linear_vs_flat(cells)

@@ -242,6 +242,9 @@ CHAPTER 04 — METHODOLOGY
         ch04_wind_setup_baseline_table   [CSV]   ~     └─ appendix: 3-nowind-vs-3-fullwind |Δη| at OUT per transition, all March datasets
   §5    ch04_inspirational_nowind        [DELEG] ~  Reading a time series — nowind canon (macro + 5-period zoom)
         ch04_inspirational_fullwind      [DELEG] ~     └─ same layout, fullwind canon (wind-wave clutter visible at IN)
+  §5b   ch04_wind_pre_paddle_overlay     [DELEG] ~  Pre-paddle overlay: wind-wave bg at upstream IN/8804 vs panel-shadowed OUT (1.3 Hz, 0.2 V)
+        ch04_per40_overlay_t10-21        [DELEG] ~  Per40 ramp-up + settle, fw vs nw overlay at IN (1.3 Hz, 0.2 V) — highway phase shift visible
+        ch04_per40_overlay_t40-51        [DELEG] ~  Per40 ramp-down + decay, fw vs nw overlay at IN (1.3 Hz, 0.2 V) — phase shift persists, decay similar
   §5b   ch04_timeseries_overview         [!disabled] ~  Full time-series with stable-window band  (below MEDIUM gate) (? redundant because of hg_per40_window_fitness)
   §6    ch04_first_arrival               [DFS-canon] ~  First wave arrival vs probe distance      (below MEDIUM gate)
   §7    ch04_wave_stability              [META]  ~  Wave stability and period_cv vs frequency
@@ -533,6 +536,11 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: \num{0.1287},   ka, ut:  \num{0.0878}",#todo: consider changing these numbers if the pipeline changes... if amplitude changes slightly..
     "ch04_inspirational_fullwind":     "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, med vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn:   \num{0.1531}, ka, ut: \num{0.0979}", #however these are illustrative plots...and i think the precision perhaps doesnt matter too much in plots. tables are more important.
 
+    # § 5b — Highway-effect visual evidence (per40 overlay + pre-paddle)
+    "ch04_wind_pre_paddle_overlay":    "",
+    "ch04_per40_overlay_t10-21":       "",
+    "ch04_per40_overlay_t40-51":       "",
+
     # § 6–9 — Wave-range detection, autocorrelation, lateral
     "ch04_first_arrival":              "",
     "ch04_timeseries_overview":        "",
@@ -644,6 +652,9 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_wind_setup_baseline_table":  "",
     "ch04_inspirational_nowind":       "Tidsserie uten vind",
     "ch04_inspirational_fullwind":     "Tidsserie med vind",
+    "ch04_wind_pre_paddle_overlay":    "Vindsignal før padlestart",
+    "ch04_per40_overlay_t10-21":       "Per40 oppstart, fasestart skifter",
+    "ch04_per40_overlay_t40-51":       "Per40 nedstart, fase fortsatt skiftet",
     "ch04_first_arrival":              "",
     "ch04_timeseries_overview":        "",
     "ch04_wave_stability":             "",
@@ -2076,6 +2087,76 @@ _run_delegated_if_missing(
      Path("output/TEXFIGU/ch04_inspirational_nowind.tex"),
      Path("output/TEXFIGU/ch04_inspirational_fullwind.tex")],
     label="ch04_inspirational_timeseries",
+)
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/wind_doppler_arrival_shift.py
+"""
+── CH04 § 5b — Pre-paddle wind background, per-probe overlay ────────────────
+Three-row stack of η(t) for the first 25 s of one canonical run pair
+(1.3 Hz, 0.2 V, full panel), fullwind vs nowind overlaid at each of:
+  - 8804/250 (upstream)
+  - 9373/170 (IN)
+  - 12400/250 (OUT, panel-shadowed)
+
+Shows that the wind-wave background is real and substantial at the upstream
+IN region (~5-10 mm RMS) but essentially absent at OUT (panel shadows wind
+fetch). Visual companion to the highway-effect investigation: confirms there
+IS a wind-wave field at the source for the paddle wave to "join", but no
+such field exists past the panel.
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/wind_doppler_arrival_shift.py",
+    [Path("output/FIGURES/ch04_wind_pre_paddle_overlay.pdf"),
+     Path("output/TEXFIGU/ch04_wind_pre_paddle_overlay.tex")],
+    label="ch04_wind_pre_paddle_overlay",
+)
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/per40_full_chirp.py
+"""
+── CH04 § 5b — Per40 ramp-up overlay (fullwind vs nowind, t = 10-21 s) ──────
+Single-axis overlay of η(t) at IN (9373/170) for one per40 canonical run
+pair (1.3 Hz, 0.2 V, full panel), zoomed to the wave-train arrival window.
+Raw + 25-sample-smoothed traces for both wind conditions; faint paddle-period
+grid anchored to the first detected upcrossing per condition.
+
+Reader takeaway: the fullwind paddle wave arrives with the SAME amplitude and
+shape as nowind, but its zero-upcrossings consistently sit ~100-150 ms earlier
+— direct visualization of the highway-effect phase shift.
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/per40_full_chirp.py",
+    [Path("output/FIGURES/ch04_per40_overlay_t10-21.pdf"),
+     Path("output/FIGURES/ch04_per40_overlay_t40-51.pdf"),
+     Path("output/TEXFIGU/ch04_per40_overlay_t10-21.tex"),
+     Path("output/TEXFIGU/ch04_per40_overlay_t40-51.tex")],
+    label="ch04_per40_overlay_t10-21",
+)
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/per40_full_chirp.py (same script as above)
+"""
+── CH04 § 5b — Per40 ramp-down overlay (fullwind vs nowind, t = 40-51 s) ────
+Companion to ch04_per40_overlay_t10-21. Same overlay axes, zoomed to the
+ramp-down + decay portion of the per40 wave train. Confirms that:
+  - The phase shift between fw and nw persists through the entire steady
+    portion (red still leads blue).
+  - The wave-train decay length is roughly the same in both conditions —
+    wind does NOT extend the wave's life past paddle stop.
+
+Both PDFs are produced by the same per40_full_chirp.py call; the cell above
+already triggers the build, this cell just declares the dependency for
+auditing.
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/per40_full_chirp.py",
+    [Path("output/FIGURES/ch04_per40_overlay_t40-51.pdf"),
+     Path("output/TEXFIGU/ch04_per40_overlay_t40-51.tex")],
+    label="ch04_per40_overlay_t40-51",
 )
 
 

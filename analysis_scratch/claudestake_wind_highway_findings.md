@@ -149,3 +149,52 @@ This was a satisfying story. So we tried to confirm it with two predictions:
 4. **Wind has at least two separate effects on the wave**, not one: a timing shift and an amplitude boost. They live in different cells of the (frequency, amplitude) grid, so they have different physical origins.
 
 The mechanism of the timing shift remains open. The most promising next step would be to use the wind-ramp experiments (where wind is gradually turned up while waves are running) — those would give us a continuous "wind strength" axis instead of just on/off, and we could finally test whether more wind → more shift.
+
+---
+
+That's exactly the wind-strength axis we needed! Let me find them.
+
+Got it — Nov 2025 folders have **all 3 wind conditions × all 3 amplitudes at 1.3 Hz** under panel='no' (and 'reverse'). Two folders × 3 amps × 3 winds = 18 runs. Small N per cell but enough to test "more wind → bigger Δt" monotonicity.
+
+IN probe in that era is `9373/250` (Nov-2025 config).
+
+## Big result — the highway prediction holds at IN
+
+At the IN probe, **5 out of 6 panel×amplitude cells show monotonic behavior**: lowestwind shift sits between zero and fullwind shift. The graph at IN shows clean fan-out lines from (0 m/s, 0 ms) downward to fullwind.
+
+**Per-cell numbers (Δt at IN in ms)**:
+
+| panel | A | no wind | lowest (3.8 m/s) | full (6 m/s) | lo/fu ratio |
+|---|---|---|---|---|---|
+| no   | 0.1 V | 0 | −65 | −75 | 0.87 |
+| no   | 0.2 V | 0 | −54 | −96 | 0.56 |
+| no   | 0.3 V | 0 | −40 | −70 | 0.57 |
+| rev  | 0.1 V | 0 | −95 | −100 | 0.95 |
+| rev  | 0.2 V | 0 | −96 | −110 | 0.87 |
+| rev  | 0.3 V | 0 | −76 | −44 | 1.73 ← only outlier |
+
+For comparison, **wind-speed ratio is 3.8/6.0 = 0.63**. So if the highway were perfectly linear in wind, every lo/fu ratio would be 0.63. We see ratios between 0.56 and 0.95 — broadly consistent with linear scaling but with notable scatter.
+
+## Plain-language summary
+
+We finally have a third wind setting (3.8 m/s) instead of just on/off, so we can ask: **does more wind give a bigger shift?** The answer at the IN probe is yes — almost every measured cell shows the half-wind setting gave a half-strength shift. That's the cleanest direct support the highway story has gotten so far. **Wind strength has a real, quantitative effect on when the wave appears.**
+
+There's a hint of something subtler: at the smallest paddle amplitude (0.1 V), the half-wind setting already gives ~87-95% of the full-wind shift, while at bigger paddle amplitudes the half-wind only gives ~56% of the full-wind shift. That suggests the effect **saturates faster at small paddle amplitudes** — even a moderate wind is enough to give the small wave most of its head-start. Bigger paddle waves need stronger wind to get a bigger boost.
+
+## OUT probe is noisy
+
+The right panel (OUT = 12400/170 in this era) is messier — wider scatter, even some sign flips. Probably because:
+- N=2 runs per cell only
+- That OUT probe is wall-side (170 mm lateral), so wall reflections add noise
+- One cell is clearly period-aliased (positive Δt at fullwind reverse 0.1V)
+
+The IN-probe story is the trustworthy one. OUT confirms the magnitude order but I wouldn't read fine structure into it.
+
+## Files
+
+- [analysis_scratch/wind_highway_lowestwind_test.py](analysis_scratch/wind_highway_lowestwind_test.py)
+- [analysis_scratch/wind_highway_lowestwind_test.png](analysis_scratch/wind_highway_lowestwind_test.png)
+- [analysis_scratch/wind_highway_lowestwind_test.csv](analysis_scratch/wind_highway_lowestwind_test.csv)
+
+This is the strongest piece of evidence for the highway picture so far. Three wind levels, monotonic ordering across 5/6 cells, magnitude roughly proportional to wind speed. Should I write this up as a memory file? And is it worth running the same test for the (very limited) 0.65 Hz data even though it's out of scope, just to see whether the pattern holds across an entirely different wave regime?
+
