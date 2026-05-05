@@ -22,7 +22,9 @@
 
 **Known physical complication**: at full wind + low amplitude (0.1 V), the IN probe signal is ~2/3 wind-wave energy — time-domain OUT/IN is meaningless for damping. FFT amplitude at the paddle frequency is the only trustworthy metric.
 
-> **⚠ TOP-PRIORITY OPEN FINDING (2026-05-04)** — three CH05 tables (`ch05_wind_effect_table`, `ch05_wind_effect_table_by_amp`, `ch05_damping_freq_table`) silently pick ONE mooring per (freq, amp, wind) cell via `pivot_table(aggfunc="first")`. At (1.4 Hz, A₂) the published Δτ = +0.135 vs +0.038 from a verified single canon pair — factor ~3.5× discrepancy from aggregation choice alone. Don't cite specific Δτ from these tables until fixed. Memo: `memory/finding_wind_effect_table_aggregation_bias.md`. Source data: `analysis_scratch/mean_level_check-{user,gpt}.md`.
+> **⚠ TOP-PRIORITY OPEN FINDING (2026-05-04, RESOLVED 2026-05-05)** — three CH05 tables (`ch05_wind_effect_table`, `ch05_wind_effect_table_by_amp`, `ch05_damping_freq_table`) previously picked ONE mooring per (freq, amp, wind) cell via `pivot_table(aggfunc="first")`. **Fix**: drop the `Mooring` column from filtered input before `damping_all_amplitude_grouper` so each cell pools across moorings (n-weighted mean / true std / total n_runs). At (1.4 Hz, A₂) ΔK_t went from +0.135 (first) to +0.072 (pooled). Memo: `memory/finding_wind_effect_table_aggregation_bias.md`.
+>
+> **2026-05-05 follow-up**: the same Mooring-keyed grouping was still active in the `ch05_damping_freq` figure (`main_save_figures.py` ch05_damping_freq cell → `damping_all_amplitude_grouper`). The figure's per-point `n_runs` tokens written into the TEXFIGU stub split n by mooring (e.g. `no-1.40Hz:n=2; no-1.40Hz:n=3` instead of pooled `n=5`), so they disagreed with the §1b table totals. **Fix applied**: same `_damping_meta.drop(columns=["Mooring"], errors="ignore")` pattern as the tables; inline note added in the cell and at `wavescripts/plotter.py::_make_damping_freq_fig`'s per-point provenance section.
 
 ---
 
