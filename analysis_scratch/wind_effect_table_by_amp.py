@@ -10,11 +10,12 @@ filters, formulas, and column set — only the row order is changed:
 
 So one row-block per amplitude tier (A1 / A2 / A3), four rows each
 (1.3 / 1.4 / 1.5 / 1.6 Hz), midrule between amp blocks. Useful when
-the thesis paragraph reads "for A1, wind shifts τ from … to …" rather
+the thesis paragraph reads "for A1, wind shifts K_t from … to …" rather
 than "at 1.3 Hz, the three amplitudes …".
 
-See wind_effect_table.py for the column definitions; the immutable
-provenance block at the bottom of the .tex output also lists them.
+See wind_effect_table.py for the column definitions, the mooring-pooling
+note (2026-05-05), and the immutable provenance block at the bottom of
+the .tex output.
 
 Outputs:
     output/TABLES/ch05_wind_effect_table_by_amp.tex   (thesis include)
@@ -77,37 +78,47 @@ _pv = {
 filt = apply_experimental_filters(meta, _pv)
 print(f"   {len(filt)} rows after thesis-scope filter")
 
+# Pool across moorings: see wind_effect_table.py for the rationale. Dropping
+# the Mooring column makes damping_all_amplitude_grouper skip Mooring as a
+# grouping key, so each (freq, amp, panel, wind) cell pools across all canon
+# moorings (n-weighted mean / true std / total n_runs). Replaces the older
+# pivot_table(aggfunc="first") pattern — see
+# memory/finding_wind_effect_table_aggregation_bias.md.
+filt = filt.drop(columns=["Mooring"], errors="ignore")
+
 stats = damping_all_amplitude_grouper(filt)
 print(f"   {len(stats)} grouped rows from damping_all_amplitude_grouper")
 
 # ── 2. Pivot per (freq, amp) → wind columns ────────────────────────────────
+# After the Mooring drop above, each (freq, amp, wind) cell has at most one
+# row in `stats`, so the pivot's aggfunc is a no-op.
 pivot = stats.pivot_table(
     index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
     columns="WindCondition",
     values="mean_out_in",
-    aggfunc="first",
+    aggfunc="mean",
 ).reset_index()
 
 pivot_std = stats.pivot_table(
     index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
     columns="WindCondition",
     values="std_out_in",
-    aggfunc="first",
+    aggfunc="mean",
 ).reset_index()
 
 pivot_n = stats.pivot_table(
     index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
     columns="WindCondition",
     values="n_runs",
-    aggfunc="first",
+    aggfunc="sum",
 ).reset_index()
 
 # Compute the four wind-effect metrics.
-table = pivot.rename(columns={"no": "tau_nw", "full": "tau_fw"})
-table["Delta_tau"]   = table["tau_fw"] - table["tau_nw"]
-table["pct_T_gain"]  = (table["tau_fw"] - table["tau_nw"]) / table["tau_nw"] * 100.0
-_D_nw = 1.0 - table["tau_nw"]
-_D_fw = 1.0 - table["tau_fw"]
+table = pivot.rename(columns={"no": "Kt_nw", "full": "Kt_fw"})
+table["Delta_Kt"]    = table["Kt_fw"] - table["Kt_nw"]
+table["pct_T_gain"]  = (table["Kt_fw"] - table["Kt_nw"]) / table["Kt_nw"] * 100.0
+_D_nw = 1.0 - table["Kt_nw"]
+_D_fw = 1.0 - table["Kt_fw"]
 table["pct_D_red"]   = (_D_nw - _D_fw) / _D_nw * 100.0
 table["std_nw"]      = pivot_std["no"]
 table["std_fw"]      = pivot_std["full"]
@@ -124,7 +135,7 @@ table = table.sort_values(["WaveAmplitudeInput [Volt]",
 
 # Drop cells where either wind condition is missing (no Δ to compute).
 n_before = len(table)
-table = table.dropna(subset=["tau_nw", "tau_fw"]).reset_index(drop=True)
+table = table.dropna(subset=["Kt_nw", "Kt_fw"]).reset_index(drop=True)
 n_dropped = n_before - len(table)
 if n_dropped:
     print(f"   {n_dropped} (freq, amp) cell(s) dropped — at least one wind missing")
@@ -162,8 +173,8 @@ for _, r in table.iterrows():
         body_rows.append(r"\midrule")
     body_rows.append(
         f"  {amp_to_label(a)} & {f:.1f} & "
-        f"{_fmt_unsigned(r['tau_nw'], 3)} & {_fmt_unsigned(r['tau_fw'], 3)} & "
-        f"{_fmt_signed(r['Delta_tau'] * 100, 1)} & "  # Δτ in pp
+        f"{_fmt_unsigned(r['Kt_nw'], 3)} & {_fmt_unsigned(r['Kt_fw'], 3)} & "
+        f"{_fmt_signed(r['Delta_Kt'] * 100, 1)} & "  # ΔK_t in pp
         f"{_fmt_signed(r['pct_T_gain'], 1)} & "
         f"{_fmt_signed(r['pct_D_red'], 1)} \\\\"
     )
@@ -224,11 +235,14 @@ immutable = "\n".join([
     "% — Method ────────────────────────────────────────────────────",
     "%   grouper           : damping_all_amplitude_grouper",
     "%   sort_order        : amplitude outer, frequency inner",
+    "%   mooring pooling   : Mooring column dropped pre-grouper, so each",
+    "%                       (freq, amp, wind) cell pools across all canon",
+    "%                       moorings (n-weighted mean / true std / total n).",
     "%   metric_definitions:",
-    "%     tau_nw / tau_fw    : mean OUT/IN(FFT) at no- / full-wind",
-    "%     Delta_tau (pp)     : (tau_fw - tau_nw) * 100",
-    "%     pct_T_gain (%)     : (tau_fw - tau_nw) / tau_nw * 100",
-    "%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - tau",
+    "%     Kt_nw / Kt_fw      : mean OUT/IN(FFT) at no- / full-wind",
+    "%     Delta_Kt (pp)      : (Kt_fw - Kt_nw) * 100",
+    "%     pct_T_gain (%)     : (Kt_fw - Kt_nw) / Kt_nw * 100",
+    "%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - K_t",
     "%",
     "% ── end immutable block ─────────────────────────────────────────",
 ])

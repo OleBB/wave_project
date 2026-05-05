@@ -6,7 +6,7 @@
 %   script            : analysis_scratch/wind_effect_table.py
 %   plot_type         : wind_effect_table
 %   chapter           : 05
-%   generated_at      : 2026-05-04T12:12:09
+%   generated_at      : 2026-05-05T08:12:46
 %   caption_label     : tab:ch05_wind_effect_table
 %   caption_short     : 
 %
@@ -19,18 +19,21 @@
 %
 % — Data provenance ────────────────────────────────────────────
 %   n_cells           : 12
-%   n_runs (nw + fw)  : 41
+%   n_runs (nw + fw)  : 80
 %   datasets        :
 %     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
 %     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
 %
 % — Method ────────────────────────────────────────────────────
 %   grouper           : damping_all_amplitude_grouper
+%   mooring pooling   : Mooring column dropped pre-grouper, so each
+%                       (freq, amp, wind) cell pools across all canon
+%                       moorings (n-weighted mean / true std / total n).
 %   metric_definitions:
-%     tau_nw / tau_fw    : mean OUT/IN(FFT) at no- / full-wind
-%     Delta_tau (pp)     : (tau_fw - tau_nw) * 100
-%     pct_T_gain (%)     : (tau_fw - tau_nw) / tau_nw * 100
-%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - tau
+%     Kt_nw / Kt_fw      : mean OUT/IN(FFT) at no- / full-wind
+%     Delta_Kt (pp)      : (Kt_fw - Kt_nw) * 100
+%     pct_T_gain (%)     : (Kt_fw - Kt_nw) / Kt_nw * 100
+%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - K_t
 %
 % ── end immutable block ─────────────────────────────────────────
 \begin{table}[htbp]
@@ -38,23 +41,23 @@
   \small
   \begin{tabular}{cc cc r r r}
     \toprule
-      $f$ [Hz] & Amp & $\tau_\text{uten}$ & $\tau_\text{vind}$ & $\Delta\tau$ [pp] & T-økn. [\%] & D-red. [\%] \\
+      $f$ [Hz] & Amp & $K_{t,\text{uten}}$ & $K_{t,\text{vind}}$ & $\Delta K_t$ [pp] & $K_t$-økn. [\%] & D-red. [\%] \\
     \midrule
-  1.3 & $A_1$ & 0.646 & 0.830 & +18.4 & +28.5 & +51.9 \\
-  1.3 & $A_2$ & 0.811 & 0.882 & +7.1 & +8.8 & +37.6 \\
-  1.3 & $A_3$ & 0.830 & 0.819 & -1.1 & -1.3 & -6.4 \\
+  1.3 & $A_1$ & 0.660 & 0.786 & +12.6 & +19.0 & +37.0 \\
+  1.3 & $A_2$ & 0.811 & 0.858 & +4.7 & +5.8 & +24.9 \\
+  1.3 & $A_3$ & 0.830 & 0.833 & +0.3 & +0.4 & +1.8 \\
 \midrule
-  1.4 & $A_1$ & 0.502 & 0.812 & +31.0 & +61.7 & +62.3 \\
-  1.4 & $A_2$ & 0.687 & 0.822 & +13.5 & +19.7 & +43.2 \\
-  1.4 & $A_3$ & 0.672 & 0.757 & +8.5 & +12.7 & +26.0 \\
+  1.4 & $A_1$ & 0.502 & 0.721 & +21.9 & +43.6 & +44.0 \\
+  1.4 & $A_2$ & 0.687 & 0.759 & +7.2 & +10.5 & +23.1 \\
+  1.4 & $A_3$ & 0.672 & 0.766 & +9.5 & +14.1 & +28.8 \\
 \midrule
-  1.5 & $A_1$ & 0.453 & 0.764 & +31.1 & +68.8 & +56.9 \\
-  1.5 & $A_2$ & 0.594 & 0.789 & +19.5 & +32.8 & +48.0 \\
-  1.5 & $A_3$ & 0.612 & 0.727 & +11.6 & +18.9 & +29.8 \\
+  1.5 & $A_1$ & 0.453 & 0.695 & +24.3 & +53.6 & +44.3 \\
+  1.5 & $A_2$ & 0.594 & 0.733 & +13.8 & +23.3 & +34.1 \\
+  1.5 & $A_3$ & 0.612 & 0.729 & +11.8 & +19.2 & +30.3 \\
 \midrule
-  1.6 & $A_1$ & 0.367 & 0.647 & +28.0 & +76.3 & +44.2 \\
-  1.6 & $A_2$ & 0.486 & 0.687 & +20.1 & +41.3 & +39.0 \\
-  1.6 & $A_3$ & 0.522 & 0.699 & +17.7 & +33.9 & +37.0 \\
+  1.6 & $A_1$ & 0.367 & 0.613 & +24.6 & +67.2 & +38.9 \\
+  1.6 & $A_2$ & 0.486 & 0.684 & +19.9 & +40.9 & +38.6 \\
+  1.6 & $A_3$ & 0.522 & 0.706 & +18.4 & +35.2 & +38.5 \\
     \bottomrule
   \end{tabular}
   \caption{

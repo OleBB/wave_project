@@ -8,14 +8,21 @@ lowrange folders, full panel, 1.3–1.6 Hz, quality_flag=ok.
 
 Layout (per amplitude tier A1 / A2 / A3):
 
-                  1.3 Hz  1.4 Hz  1.5 Hz  1.6 Hz
-    τ (uten vind)   ...     ...     ...     ...
-    τ (full vind)   ...     ...     ...     ...
-    Δτ              ...     ...     ...     ...
+                       1.3 Hz  1.4 Hz  1.5 Hz  1.6 Hz
+    K_t (uten vind)   ...     ...     ...     ...
+    K_t (full vind)   ...     ...     ...     ...
+    ΔK_t              ...     ...     ...     ...
 
 Three blocks are stacked into one tabular, separated by \\midrule, so the
 reader's eye maps row-by-row onto the three stacked subfigures of
 ch05_damping_freq.
+
+Aggregation note (2026-05-05): the input filt is stripped of its `Mooring`
+column before being passed to `damping_all_amplitude_grouper`, so each
+(freq, amp, wind) cell pools across ALL canon moorings — true n-weighted
+mean / true across-canon std / true total n_runs. Earlier versions used
+pivot_table(aggfunc="first"), which silently kept exactly one mooring per
+cell. See memory/finding_wind_effect_table_aggregation_bias.md.
 
 Outputs:
     output/TABLES/ch05_damping_freq_table.tex   (thesis include)
@@ -78,27 +85,39 @@ _pv = {
 filt = apply_experimental_filters(meta, _pv)
 print(f"   {len(filt)} rows after thesis-scope filter")
 
+# Pool across moorings: see wind_effect_table.py for the rationale. Dropping
+# the Mooring column makes damping_all_amplitude_grouper skip Mooring as a
+# grouping key, so each (freq, amp, panel, wind) cell pools across all canon
+# moorings (n-weighted mean / true std / total n_runs). Replaces the older
+# pivot_table(aggfunc="first") pattern that silently kept one mooring per
+# cell. See memory/finding_wind_effect_table_aggregation_bias.md.
+filt = filt.drop(columns=["Mooring"], errors="ignore")
+
 stats = damping_all_amplitude_grouper(filt)
 print(f"   {len(stats)} grouped rows from damping_all_amplitude_grouper")
 
 
 # ── 2. Pivot → (freq × amp) cells with one column per wind ─────────────────
-def _pivot(values: str) -> pd.DataFrame:
+# After the Mooring drop above, each (freq, amp, wind) cell has at most one
+# row in `stats`, so the pivot's aggfunc is a no-op for the K_t pivot;
+# n_runs uses sum so the count remains correct if a future input ever
+# reintroduces multiple rows per cell.
+def _pivot(values: str, aggfunc: str = "mean") -> pd.DataFrame:
     return stats.pivot_table(
         index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
         columns="WindCondition",
         values=values,
-        aggfunc="first",
+        aggfunc=aggfunc,
     ).reset_index()
 
 
-pivot   = _pivot("mean_out_in").rename(columns={"no": "tau_nw", "full": "tau_fw"})
-pivot_n = _pivot("n_runs")
+pivot   = _pivot("mean_out_in").rename(columns={"no": "Kt_nw", "full": "Kt_fw"})
+pivot_n = _pivot("n_runs", aggfunc="sum")
 
 table = pivot.copy()
-table["Delta_tau"] = table["tau_fw"] - table["tau_nw"]
-table["n_nw"]      = pivot_n["no"].astype("Int64")
-table["n_fw"]      = pivot_n["full"].astype("Int64")
+table["Delta_Kt"] = table["Kt_fw"] - table["Kt_nw"]
+table["n_nw"]     = pivot_n["no"].astype("Int64")
+table["n_fw"]     = pivot_n["full"].astype("Int64")
 
 table = table[
     table["WaveFrequencyInput [Hz]"].isin(THESIS_FREQS)
@@ -109,7 +128,7 @@ table = table.sort_values(
 ).reset_index(drop=True)
 
 n_before = len(table)
-table = table.dropna(subset=["tau_nw", "tau_fw"]).reset_index(drop=True)
+table = table.dropna(subset=["Kt_nw", "Kt_fw"]).reset_index(drop=True)
 n_dropped = n_before - len(table)
 if n_dropped:
     print(f"   {n_dropped} (freq, amp) cell(s) dropped — at least one wind missing")
@@ -148,11 +167,11 @@ def _row_for(amp: float, kind: str) -> str:
             continue
         r = row.iloc[0]
         if kind == "nw":
-            cells.append(_fmt_unsigned(r["tau_nw"], 3))
+            cells.append(_fmt_unsigned(r["Kt_nw"], 3))
         elif kind == "fw":
-            cells.append(_fmt_unsigned(r["tau_fw"], 3))
+            cells.append(_fmt_unsigned(r["Kt_fw"], 3))
         elif kind == "delta":
-            cells.append(_fmt_signed(r["Delta_tau"], 3))
+            cells.append(_fmt_signed(r["Delta_Kt"], 3))
         else:
             cells.append("—")
     return " & ".join(cells)
@@ -232,10 +251,13 @@ immutable = "\n".join([
     "%",
     "% — Method ────────────────────────────────────────────────────",
     "%   grouper           : damping_all_amplitude_grouper",
+    "%   mooring pooling   : Mooring column dropped pre-grouper, so each",
+    "%                       (freq, amp, wind) cell pools across all canon",
+    "%                       moorings (n-weighted mean / true std / total n).",
     "%   metric_definitions:",
-    "%     tau (uten vind)   : mean OUT/IN(FFT) at no-wind",
-    "%     tau (full vind)   : mean OUT/IN(FFT) at full-wind",
-    "%     Delta tau         : tau_fw - tau_nw  (signed, raw ratio units)",
+    "%     K_t (uten vind)   : mean OUT/IN(FFT) at no-wind",
+    "%     K_t (full vind)   : mean OUT/IN(FFT) at full-wind",
+    "%     Delta K_t         : Kt_fw - Kt_nw  (signed, raw ratio units)",
     "%",
     "% ── end immutable block ─────────────────────────────────────────",
 ])

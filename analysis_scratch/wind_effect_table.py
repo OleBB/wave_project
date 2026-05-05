@@ -9,16 +9,23 @@ quality_flag=ok, both wind conditions.
 
 Per (freq, amp) cell, computes:
 
-    τ_nw     = mean OUT/IN(FFT) at no-wind
-    τ_fw     = mean OUT/IN(FFT) at full-wind
-    Δτ       = τ_fw − τ_nw                     (signed transmission change, pp)
-    % T-gain = Δτ / τ_nw · 100                 (relative transmission change)
-    % D-red  = (D_nw − D_fw) / D_nw · 100      where D = 1 − τ
+    K_t,uten = mean OUT/IN(FFT) at no-wind
+    K_t,vind = mean OUT/IN(FFT) at full-wind
+    ΔK_t     = K_t,vind − K_t,uten             (signed transmission change, pp)
+    % T-gain = ΔK_t / K_t,uten · 100           (relative transmission change)
+    % D-red  = (D_nw − D_fw) / D_nw · 100      where D = 1 − K_t
                                                (relative damping reduction)
 
-All three percentage columns share a sign convention: positive Δτ ↔
+All three percentage columns share a sign convention: positive ΔK_t ↔
 positive % T-gain ↔ positive % D-red ↔ "wind makes more wave get through
 the panel" (i.e. the panel damps less).
+
+Aggregation note (2026-05-05): the input filt is stripped of its `Mooring`
+column before being passed to `damping_all_amplitude_grouper`, so each
+(freq, amp, panel, wind) cell pools across ALL canon moorings at once —
+true n-weighted mean / true across-canon std / true total n_runs. Earlier
+versions used pivot_table(aggfunc="first") which silently kept exactly one
+mooring per cell; see memory/finding_wind_effect_table_aggregation_bias.md.
 
 Outputs:
     output/TABLES/ch05_wind_effect_table.tex   (thesis include)
@@ -82,15 +89,27 @@ _pv = {
 filt = apply_experimental_filters(meta, _pv)
 print(f"   {len(filt)} rows after thesis-scope filter")
 
+# Pool across moorings: dropping the Mooring column makes
+# damping_all_amplitude_grouper skip Mooring as a grouping key (filters.py:984
+# tests `if "Mooring" in rmdf.columns and rmdf["Mooring"].notna().any():`),
+# so each (amp, freq, panel, wind) cell collapses to ONE row across all canon
+# moorings. mean_out_in / std_out_in / n_runs are then computed honestly over
+# every contributing CSV. Replaces the older pivot_table(aggfunc="first")
+# pattern that silently kept one mooring per cell — see
+# memory/finding_wind_effect_table_aggregation_bias.md.
+filt = filt.drop(columns=["Mooring"], errors="ignore")
+
 stats = damping_all_amplitude_grouper(filt)
 print(f"   {len(stats)} grouped rows from damping_all_amplitude_grouper")
 
 # ── 2. Pivot per (freq, amp) → wind columns ────────────────────────────────
+# After the Mooring drop above, each (freq, amp, wind) cell has at most one
+# row in `stats`, so the pivot's aggfunc is a no-op (any choice would do).
 pivot = stats.pivot_table(
     index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
     columns="WindCondition",
     values="mean_out_in",
-    aggfunc="first",
+    aggfunc="mean",
 ).reset_index()
 
 # Same pivot for std + n.
@@ -98,22 +117,22 @@ pivot_std = stats.pivot_table(
     index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
     columns="WindCondition",
     values="std_out_in",
-    aggfunc="first",
+    aggfunc="mean",
 ).reset_index()
 
 pivot_n = stats.pivot_table(
     index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
     columns="WindCondition",
     values="n_runs",
-    aggfunc="first",
+    aggfunc="sum",
 ).reset_index()
 
 # Compute the four wind-effect metrics.
-table = pivot.rename(columns={"no": "tau_nw", "full": "tau_fw"})
-table["Delta_tau"]   = table["tau_fw"] - table["tau_nw"]
-table["pct_T_gain"]  = (table["tau_fw"] - table["tau_nw"]) / table["tau_nw"] * 100.0
-_D_nw = 1.0 - table["tau_nw"]
-_D_fw = 1.0 - table["tau_fw"]
+table = pivot.rename(columns={"no": "Kt_nw", "full": "Kt_fw"})
+table["Delta_Kt"]    = table["Kt_fw"] - table["Kt_nw"]
+table["pct_T_gain"]  = (table["Kt_fw"] - table["Kt_nw"]) / table["Kt_nw"] * 100.0
+_D_nw = 1.0 - table["Kt_nw"]
+_D_fw = 1.0 - table["Kt_fw"]
 table["pct_D_red"]   = (_D_nw - _D_fw) / _D_nw * 100.0
 table["std_nw"]      = pivot_std["no"]
 table["std_fw"]      = pivot_std["full"]
@@ -128,7 +147,7 @@ table = table.sort_values(["WaveFrequencyInput [Hz]",
 
 # Drop cells where either wind condition is missing (no Δ to compute).
 n_before = len(table)
-table = table.dropna(subset=["tau_nw", "tau_fw"]).reset_index(drop=True)
+table = table.dropna(subset=["Kt_nw", "Kt_fw"]).reset_index(drop=True)
 n_dropped = n_before - len(table)
 if n_dropped:
     print(f"   {n_dropped} (freq, amp) cell(s) dropped — at least one wind missing")
@@ -164,8 +183,8 @@ for _, r in table.iterrows():
         body_rows.append(r"\midrule")
     body_rows.append(
         f"  {f:.1f} & {amp_to_label(a)} & "
-        f"{_fmt_unsigned(r['tau_nw'], 3)} & {_fmt_unsigned(r['tau_fw'], 3)} & "
-        f"{_fmt_signed(r['Delta_tau'] * 100, 1)} & "  # Δτ in pp
+        f"{_fmt_unsigned(r['Kt_nw'], 3)} & {_fmt_unsigned(r['Kt_fw'], 3)} & "
+        f"{_fmt_signed(r['Delta_Kt'] * 100, 1)} & "  # ΔK_t in pp
         f"{_fmt_signed(r['pct_T_gain'], 1)} & "
         f"{_fmt_signed(r['pct_D_red'], 1)} \\\\"
     )
@@ -226,11 +245,14 @@ immutable = "\n".join([
     "%",
     "% — Method ────────────────────────────────────────────────────",
     "%   grouper           : damping_all_amplitude_grouper",
+    "%   mooring pooling   : Mooring column dropped pre-grouper, so each",
+    "%                       (freq, amp, wind) cell pools across all canon",
+    "%                       moorings (n-weighted mean / true std / total n).",
     "%   metric_definitions:",
-    "%     tau_nw / tau_fw    : mean OUT/IN(FFT) at no- / full-wind",
-    "%     Delta_tau (pp)     : (tau_fw - tau_nw) * 100",
-    "%     pct_T_gain (%)     : (tau_fw - tau_nw) / tau_nw * 100",
-    "%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - tau",
+    "%     Kt_nw / Kt_fw      : mean OUT/IN(FFT) at no- / full-wind",
+    "%     Delta_Kt (pp)      : (Kt_fw - Kt_nw) * 100",
+    "%     pct_T_gain (%)     : (Kt_fw - Kt_nw) / Kt_nw * 100",
+    "%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - K_t",
     "%",
     "% ── end immutable block ─────────────────────────────────────────",
 ])
