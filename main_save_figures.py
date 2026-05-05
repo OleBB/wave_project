@@ -512,7 +512,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_plateau_overview_A1":        "Glidende gjennomsnitt av amplitude. $A_1$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
     "ch04_plateau_overview_A2":        "Glidende gjennomsnitt av amplitude. $A_2$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
     "ch04_plateau_overview_A3":        "Glidende gjennomsnitt av amplitude. $A_3$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
-    "ch04_plateau_values":             "",
+    "ch04_plateau_values":             "Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.",
     "ch04_tidsvindu":                  "Frekvensenes tidsvinduer",
 
     # § 4p — Wind transition overview (parent + 4 subfigs: ramp-up + decay × full + zoom)
@@ -2127,6 +2127,16 @@ _pv_damping_freq = {
 }
 
 _damping_meta   = _aef(meta_results, _pv_damping_freq)
+# Pool across moorings (2026-05-05): drop the Mooring column so
+# damping_all_amplitude_grouper skips it as a grouping key. Each
+# (freq, amp, panel, wind) cell then pools all canon moorings into a
+# single row (n-weighted mean / true std / total n_runs), matching the
+# CH05 §1b/§3/§3b tables that were fixed on 2026-05-05. Without this drop,
+# the per-point n_runs tokens written into the figure stub would be
+# per-mooring (e.g. "no-1.40Hz:n=2; no-1.40Hz:n=3") and disagree with the
+# pooled table totals. See memory/finding_wind_effect_table_aggregation_bias.md
+# and analysis_scratch/damping_freq_table.py for the same pattern.
+_damping_meta = _damping_meta.drop(columns=["Mooring"], errors="ignore")
 _damping_grouped = damping_all_amplitude_grouper(_damping_meta)
 plot_damping_freq(_damping_grouped, _pv_damping_freq)
 

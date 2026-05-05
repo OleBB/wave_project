@@ -352,11 +352,19 @@ def plot_damping_freq(
         _extra_stats["n_amplitudes"] = len(amplitudes)
 
         # ─── Per-data-point n_runs provenance ──────────────────────────
-        # stats_df carries one row per (panel, amp, wind, freq, mooring,
-        # ...) group with an "n_runs" column. We surface the grid into
-        # the stub so the reader can see exactly how many runs back each
-        # errorbar (n=1 → std=NaN → no whisker drawn).
+        # stats_df carries one row per (panel, amp, wind, freq, ...) group
+        # with an "n_runs" column. We surface the grid into the stub so
+        # the reader can see exactly how many runs back each errorbar
+        # (n=1 → std=NaN → no whisker drawn).
         # Token format: "<wind>-<freq>Hz:n=<k>", semicolon-separated.
+        # NOTE (2026-05-05): the token format does NOT include Mooring,
+        # so callers must drop the Mooring column from the input before
+        # the grouper if they want each (wind, freq) cell pooled across
+        # moorings. Otherwise duplicate tokens appear for the same
+        # (wind, freq) (one per mooring) and the per-point n disagrees
+        # with the pooled table totals in CH05 §1b/§3/§3b. See
+        # main_save_figures.py at the ch05_damping_freq cell and
+        # memory/finding_wind_effect_table_aggregation_bias.md.
         _extra_stats["n_total_points"] = int(len(stats_df))
         _extra_stats["n_runs_total"]   = int(stats_df["n_runs"].sum())
         _extra_stats["points_with_n1"] = int((stats_df["n_runs"] == 1).sum())

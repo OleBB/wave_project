@@ -104,6 +104,11 @@ def report_transition(m: pd.DataFrame, idx_after: int, n: int = 3) -> dict | Non
     if len(pre_vals) < 1 or len(post_vals) < 1:
         return None
 
+    # Timing per transition. mtime is the file-write time of the CSV (close
+    # to end-of-recording for fresh files). The "sample" used in OUT_COL is
+    # the first 1 s of each recording (per-run stillwater anchor) so the
+    # mtime is a slight upper bound on when each sample was taken — for
+    # ordering and inter-run intervals on the minute scale this is fine.
     return {
         "before_state": before_state,
         "after_state":  after_state,
@@ -118,6 +123,18 @@ def report_transition(m: pd.DataFrame, idx_after: int, n: int = 3) -> dict | Non
         # Wind setup as water rise (mm). ULS reads distance DOWN to water, so
         # water rise = pre_mean − post_mean.
         "delta_water_rise_mm": float(pre_vals.mean() - post_vals.mean()),
+        # mtime of the first run in the pre-block (= start of the 3 same-state
+        # runs preceding the transition).
+        "first_pre_mtime":   float(pre["mtime"].iloc[0]),
+        # mtime of the last run in the pre-block (= the most-recent same-state
+        # reading right before the wind state flipped).
+        "last_pre_mtime":    float(pre["mtime"].iloc[-1]),
+        # mtime of the first run in the post-block (= the first run AFTER the
+        # wind flipped state — the "transition moment" in our data).
+        "first_post_mtime":  float(post["mtime"].iloc[0]),
+        # mtime of the last run in the post-block (= the last reading we
+        # average into the post-side baseline).
+        "last_post_mtime":   float(post["mtime"].iloc[-1]),
     }
 
 
@@ -158,6 +175,18 @@ for ds in DATASETS:
                     "water DROPS" if water_rise < 0 else "no change")
             print(f"    Δ (pre − post) = {water_rise:+.3f} mm  →  "
                   f"{sign} at OUT going {before} → {after}")
+
+            # Timing line — three key timestamps + intervals.
+            from datetime import datetime as _dt_fmt
+            t1 = _dt_fmt.fromtimestamp(r["first_pre_mtime"]).strftime("%H:%M:%S")
+            t2 = _dt_fmt.fromtimestamp(r["first_post_mtime"]).strftime("%H:%M:%S")
+            t3 = _dt_fmt.fromtimestamp(r["last_post_mtime"]).strftime("%H:%M:%S")
+            pre_span_s  = int(r["last_pre_mtime"]   - r["first_pre_mtime"])
+            gap_s       = int(r["first_post_mtime"] - r["last_pre_mtime"])
+            post_span_s = int(r["last_post_mtime"]  - r["first_post_mtime"])
+            print(f"    timing: first pre={t1}, first post={t2}, last post={t3}  "
+                  f"(pre span {pre_span_s}s, gap {gap_s}s, post span {post_span_s}s)")
+
             all_results.append({
                 "dataset": ds, "label": label,
                 "before": before, "after": after,
@@ -170,6 +199,11 @@ for ds in DATASETS:
                 "pre_mean": r["pre_mean"], "post_mean": r["post_mean"],
                 "water_rise_mm": water_rise,
                 "magnitude_mm": abs(water_rise),
+                # Timing — file mtimes (≈ end-of-recording timestamps).
+                "first_pre_mtime":  r["first_pre_mtime"],
+                "last_pre_mtime":   r["last_pre_mtime"],
+                "first_post_mtime": r["first_post_mtime"],
+                "last_post_mtime":  r["last_post_mtime"],
             })
 
 

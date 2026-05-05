@@ -170,16 +170,7 @@ for date, sub in df.groupby("date", sort=True):
 
     # Per-dataset summary row (mean of |Δη| across all transitions in the block).
     mean_mag = sub_sorted["magnitude_mm"].mean()
-    mean_strict = sub_sorted.loc[sub_sorted["strict_3v3"], "magnitude_mm"].mean()
-    n_strict = int(sub_sorted["strict_3v3"].sum())
-    summary_label = (
-        rf"\textit{{snitt (n=}}{len(sub_sorted)}\textit{{)}}"
-    )
-    summary_strict_label = (
-        rf"\textit{{snitt strict 3+3 (n=}}{n_strict}\textit{{)}}"
-        if n_strict > 0 else
-        r"\textit{snitt strict 3+3 (n=0)}"
-    )
+    summary_label = rf"\textit{{snitt (n=}}{len(sub_sorted)}\textit{{)}}"
     body_lines.append(r"    \cmidrule(l){2-6}")
     body_lines.append(
         "    & "
@@ -188,14 +179,6 @@ for date, sub in df.groupby("date", sort=True):
         + fmt_mm(mean_mag, 3)
         + r" & — \\"
     )
-    if n_strict > 0:
-        body_lines.append(
-            "    & "
-            + summary_strict_label
-            + " & — & — & "
-            + fmt_mm(mean_strict, 3)
-            + r" & — \\"
-        )
     last_date = date
 
 
@@ -264,8 +247,19 @@ immutable = "\n".join([
     "%   (2) Small-sample artefact: 20260326 had high transition density,",
     "%       leaving 0 strict 3+3 transitions on that day. Its lower mean",
     "%       (0.88 mm vs ~1.30 mm elsewhere) is a sampling artefact, not",
-    "%       a real day-to-day setup difference.",
-    "%   (3) Pipeline `Stillwater Probe 12400/250` for fullwind runs uses a",
+    "%       a real day-to-day setup difference. Last transition of that",
+    "%       day (1.330 mm) lands on par with other datasets.",
+    "%   (3) Seiche-bias on short-gap ON transitions. The OUT probe shows",
+    "%       a clean 8.2 s seiche under wind (amplitude ~1 mm right after",
+    "%       wind-on, decaying to ~0.5 mm by ~5 min — see ch04_wind_rampup).",
+    "%       The pipeline anchor is the first ~1 s of each run, capturing",
+    "%       1/8 of one seiche period → each individual fullwind reading is",
+    "%       phase-biased by ±A. Mean of 3 random-phase samples reduces this",
+    "%       to ≈ A/√6 ≈ 0.4·A → up to 0.4 mm bias if seiche still at 1 mm.",
+    "%       Worst-case transition: 20260326 av→på #2 (6 min gap, post-block",
+    "%       reads spread 0.44 mm). Long-gap ON transitions (≥ 15 min) and",
+    "%       all OFF transitions are below the 0.2 mm bias threshold.",
+    "%   (4) Pipeline `Stillwater Probe 12400/250` for fullwind runs uses a",
     "%       per-run anchor that may BE wind-on (first 1 s of THAT run); the",
     "%       absolute baseline reported here is the raw ULS reading, NOT a",
     "%       deviation from a settled-tank reference. Setup magnitude is",

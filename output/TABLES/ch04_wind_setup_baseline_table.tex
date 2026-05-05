@@ -6,7 +6,7 @@
 %   script            : analysis_scratch/wind_setup_baseline_3v3_table.py
 %   plot_type         : wind_setup_baseline_table
 %   chapter           : 04
-%   generated_at      : 2026-05-05T09:41:12
+%   generated_at      : 2026-05-05T10:37:29
 %   caption_label     : tab:ch04_wind_setup_baseline_table
 %   caption_short     : 
 %
@@ -45,8 +45,19 @@
 %   (2) Small-sample artefact: 20260326 had high transition density,
 %       leaving 0 strict 3+3 transitions on that day. Its lower mean
 %       (0.88 mm vs ~1.30 mm elsewhere) is a sampling artefact, not
-%       a real day-to-day setup difference.
-%   (3) Pipeline `Stillwater Probe 12400/250` for fullwind runs uses a
+%       a real day-to-day setup difference. Last transition of that
+%       day (1.330 mm) lands on par with other datasets.
+%   (3) Seiche-bias on short-gap ON transitions. The OUT probe shows
+%       a clean 8.2 s seiche under wind (amplitude ~1 mm right after
+%       wind-on, decaying to ~0.5 mm by ~5 min — see ch04_wind_rampup).
+%       The pipeline anchor is the first ~1 s of each run, capturing
+%       1/8 of one seiche period → each individual fullwind reading is
+%       phase-biased by ±A. Mean of 3 random-phase samples reduces this
+%       to ≈ A/√6 ≈ 0.4·A → up to 0.4 mm bias if seiche still at 1 mm.
+%       Worst-case transition: 20260326 av→på #2 (6 min gap, post-block
+%       reads spread 0.44 mm). Long-gap ON transitions (≥ 15 min) and
+%       all OFF transitions are below the 0.2 mm bias threshold.
+%   (4) Pipeline `Stillwater Probe 12400/250` for fullwind runs uses a
 %       per-run anchor that may BE wind-on (first 1 s of THAT run); the
 %       absolute baseline reported here is the raw ULS reading, NOT a
 %       deviation from a settled-tank reference. Setup magnitude is
@@ -69,24 +80,22 @@
       $|\Delta\eta_\text{OUT}|$ [\unit{\milli\metre}] &
       $n_\text{uten}/n_\text{full}$ \\
     \midrule
-    \multicolumn{6}{l}{\itshape 20260323  (M9 / fullrange)} \\
+    \multicolumn{6}{l}{\itshape 20260323  (Moring 9-23 / highrange)} \\
      & av $\rightarrow$ på & \num{100.263} & \num{99.063} & \num{1.200} & 3/3 \\
      & på $\rightarrow$ av & \num{100.617} & \num{99.047} & \num{1.570} & 3/3 \\
      & av $\rightarrow$ på & \num{100.657} & \num{99.523} & \num{1.133} & 3/3 \\
      & på $\rightarrow$ av & \num{101.615} & \num{100.180} & \num{1.435}\,\textsuperscript{*} & 2/3 \\
     \cmidrule(l){2-6}
     & \textit{snitt (n=}4\textit{)} & — & — & \num{1.335} & — \\
-    & \textit{snitt strict 3+3 (n=}3\textit{)} & — & — & \num{1.301} & — \\
     \midrule
-    \multicolumn{6}{l}{\itshape 20260324  (M9 / fullrange)} \\
+    \multicolumn{6}{l}{\itshape 20260324  (Moring 9-23 / highrange)} \\
      & på $\rightarrow$ av & \num{101.173} & \num{99.635} & \num{1.538}\,\textsuperscript{*} & 3/2 \\
      & av $\rightarrow$ på & \num{101.200} & \num{99.907} & \num{1.293} & 3/3 \\
      & på $\rightarrow$ av & \num{101.300} & \num{99.983} & \num{1.317}\,\textsuperscript{*} & 1/3 \\
     \cmidrule(l){2-6}
     & \textit{snitt (n=}3\textit{)} & — & — & \num{1.383} & — \\
-    & \textit{snitt strict 3+3 (n=}1\textit{)} & — & — & \num{1.293} & — \\
     \midrule
-    \multicolumn{6}{l}{\itshape 20260326  (M9 / lowrange)} \\
+    \multicolumn{6}{l}{\itshape 20260326  (Moring 9-23 / lowrange)} \\
      & av $\rightarrow$ på & \num{100.300} & \num{99.855} & \num{0.445}\,\textsuperscript{*} & 2/2 \\
      & på $\rightarrow$ av & \num{100.715} & \num{99.855} & \num{0.860}\,\textsuperscript{*} & 2/2 \\
      & av $\rightarrow$ på & \num{100.715} & \num{99.813} & \num{0.902}\,\textsuperscript{*} & 2/3 \\
@@ -94,14 +103,13 @@
     \cmidrule(l){2-6}
     & \textit{snitt (n=}4\textit{)} & — & — & \num{0.884} & — \\
     \midrule
-    \multicolumn{6}{l}{\itshape 20260327  (M9-30 / lowrange)} \\
+    \multicolumn{6}{l}{\itshape 20260327  (Moring 9-30 / lowrange)} \\
      & av $\rightarrow$ på & \num{100.713} & \num{99.500} & \num{1.213} & 3/3 \\
      & på $\rightarrow$ av & \num{101.200} & \num{99.937} & \num{1.263} & 3/3 \\
      & av $\rightarrow$ på & \num{101.383} & \num{99.977} & \num{1.407} & 3/3 \\
      & på $\rightarrow$ av & \num{101.780} & \num{100.480} & \num{1.300}\,\textsuperscript{*} & 1/3 \\
     \cmidrule(l){2-6}
     & \textit{snitt (n=}4\textit{)} & — & — & \num{1.296} & — \\
-    & \textit{snitt strict 3+3 (n=}3\textit{)} & — & — & \num{1.294} & — \\
     \bottomrule
   \end{tabular}
 \end{table}
