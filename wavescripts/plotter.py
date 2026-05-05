@@ -2277,6 +2277,23 @@ def plot_probe_noise_floor(
     _has_hl   = bool(is_hl_acc.any())
     _has_quant_any = bool(quant_steps)
 
+    # Plot-shape overrides (2026-05-05): the noise-floor groups are typically
+    # placed two-up at LaTeX 1-inch margin, so the default auto-figsize was
+    # too wide. Caller can pass `figsize`, `ylim`, `xtick_fontsize`,
+    # `show_excluded` via the `plotting` dict to control narrow side-by-side
+    # rendering. `show_excluded=False` hides the X-marker scatter and the
+    # legend entry but keeps the run excluded from the statistics — i.e.
+    # excluded runs still don't pollute the mean/std bars; the reader just
+    # doesn't see them.
+    _default_figsize = (max(4, n_probes * 1.3 + 1.5), 4.2)
+    _figsize         = plotting.get("figsize", _default_figsize)
+    _ylim            = plotting.get("ylim", None)
+    _xtick_fontsize  = plotting.get("xtick_fontsize", 9)
+    _show_excluded   = plotting.get("show_excluded", True)
+    if not _show_excluded:
+        _has_excl = False
+        sw_excl   = sw_all.iloc[0:0]    # empty frame, same columns
+
     _leg_handles = [
         Patch(facecolor="steelblue", alpha=0.75),
         Line2D([0], [0], marker="o", color="w", markerfacecolor="white",
@@ -2311,7 +2328,7 @@ def plot_probe_noise_floor(
         sub_norm = sub[~is_hl_acc[sub.index].values]
         grp_sum  = summary[summary["group"] == grp].set_index("probe")
 
-        fig, ax = plt.subplots(1, 1, figsize=(max(4, n_probes * 1.3 + 1.5), 4.2))
+        fig, ax = plt.subplots(1, 1, figsize=_figsize)
 
         means_bar = np.array([grp_sum.loc[p, "noise_95pct_amp_mm"]  if p in grp_sum.index else np.nan
                                for p in probe_cols_present], dtype=float)
@@ -2357,7 +2374,7 @@ def plot_probe_noise_floor(
                        for p in probe_cols_present]
         else:
             xlabels = probe_cols_present
-        ax.set_xticklabels(xlabels, rotation=0, ha="center", fontsize=9)
+        ax.set_xticklabels(xlabels, rotation=0, ha="center", fontsize=_xtick_fontsize)
         n_grp = len(sub)
         _default_title = ""
         ax.set_title(
@@ -2368,6 +2385,9 @@ def plot_probe_noise_floor(
         ax.set_ylabel(T("ylabel", default="Stillwater 95% noise amplitude  [mm]"))
         ax.grid(True, axis="y", alpha=0.3)
         ax.legend(_leg_handles, _leg_labels, fontsize=8, loc="upper right", framealpha=0.9)
+
+        if _ylim is not None:
+            ax.set_ylim(*_ylim)
 
         plt.tight_layout()
         if show_plot:

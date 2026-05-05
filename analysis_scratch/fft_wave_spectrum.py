@@ -236,7 +236,7 @@ fig.tight_layout()
 out_pdf = FIGURES_DIR / "ch04_fft_wave.pdf"
 # out_pgf = FIGURES_DIR / "ch04_fft_wave.pgf"
 fig.savefig(out_pdf, bbox_inches="tight")
-fig.savefig(out_pgf, bbox_inches="tight")
+# fig.savefig(out_pgf, bbox_inches="tight")
 plt.close(fig)
 print(f"   → {out_pdf.relative_to(BASE)} ")
 

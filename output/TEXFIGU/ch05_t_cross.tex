@@ -7,7 +7,7 @@
 %   computed_in       : analysis_scratch/t_cross_figure.py (groupby freq+amp+wind → mean/std of IN/OUT Amplitude (FFT); T_cross = A_out^fw / mean(A_in^nw))
 %   plot_type         : t_cross
 %   data_class        : DELEG
-%   generated_at      : 2026-05-03T16:55:12
+%   generated_at      : 2026-05-05T12:35:05
 %   findings_doc      : analysis_scratch/t_cross_figure_findings.md
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -77,7 +77,7 @@
     \label{fig:ch05_t_cross_A3}
   \end{subfigure}
   \caption{
-    Wind effect on transmission measured three ways: $(OUT/IN)_{nw}$ (blue, nowind baseline); $T_{\mathrm{cross}} = A_{out}^{fw}/A_{in}^{nw}$ (green, fullwind OUT referenced to the clean nowind IN); and $(OUT/IN)_{fw}$ (red, standard fullwind metric). The green--blue gap is the wind effect measured with the clean incident reference. The red--blue gap is the same effect as reported by the standard ratio; the two disagree where the IN probe is contaminated by wind noise at the paddle frequency (CLAUDE.md \S 16). Worst-case divergence between the two metrics: 0.708 vs 0.613 at $f = 1.6$\,Hz, $0.10$\,V. Each subfigure is one input amplitude; $n$ per point in \texttt{analysis\_scratch/t\_cross\_figure\_summary.csv}.
+    Wind effect on transmission measured three ways: $K_{t,\mathrm{nw}}$ (blue, nowind baseline); $K_{t,\mathrm{cross}} = A_{out}^{fw}/A_{in}^{nw}$ (green, fullwind OUT referenced to the clean nowind IN); and $K_{t,\mathrm{fw}}$ (red, standard fullwind metric). The green--blue gap is the wind effect measured with the clean incident reference. The red--blue gap is the same effect as reported by the standard ratio; the two disagree where the IN probe is contaminated by wind noise at the paddle frequency (CLAUDE.md \S 16). Worst-case divergence between the two metrics: 0.708 vs 0.613 at $f = 1.6$\,Hz, $0.10$\,V. Each subfigure is one input amplitude; $n$ per point in \texttt{analysis\_scratch/t\_cross\_figure\_summary.csv}.
   }
   \label{fig:ch05_t_cross}
 \end{figure}

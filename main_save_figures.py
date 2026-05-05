@@ -700,7 +700,12 @@ ALL_PROCESSED_DIRS = [
     # ── Nov 2025: probe 1 at 18000 mm, roof not fully sealed ──────────────────
     Path("waveprocessed/PROCESSED-20251005-sixttry6roof-highMooring"),
     # ── Nov 2025: probe 1 moved to 8804 mm, lowMooring ────────────────────────
-    Path("waveprocessed/PROCESSED-20251110-tett6roof-lowM-ekte580"),
+    # NOTE (2026-05-05): the `lowM-ekte580` folder is intentionally absent.
+    # That source dataset (wavedata/20251110-tett6roof-lowM-ekte580) contains
+    # only per15 runs, which improved_data_loader filters out at discovery
+    # (too short for the analysis window). main.py skips it → no PROCESSED-*
+    # folder is produced. Old caches that contained it predate the per15/per30
+    # discovery filter.
     Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring"),
     Path("waveprocessed/PROCESSED-20251110-tett6roof-lowMooring-2"),
     Path("waveprocessed/PROCESSED-20251112-tett6roof"),
@@ -852,14 +857,20 @@ _pv_noise_floor = {
         "draft":     False,
         "figure_name": "ch04_probe_noise_floor",
         "force_stub": True,
+        # Side-by-side LaTeX layout at 1-inch margin (2026-05-05): groups 0
+        # and 3 are placed as two subfigures on one row at ~0.48\linewidth
+        # each, so the source PDF must be narrow. Y-axis fixed across all
+        # groups so the bars are directly comparable.
+        "figsize":        (3.4, 3.0),
+        "ylim":           (0, 0.5),
+        "xtick_fontsize": 7,
+        "show_excluded":  False,   # 2026-05-05: hide X markers + legend entry; run still dropped from stats
             "text": {
                 "ylabel": "Støyamplitude (95 %)  [mm]",
                 "legend_mean_amp":    "Gjennomsnittlig støyamplitude  (±1σ)",
                 "legend_per_run":     "Per kjøring",
                 "legend_threshold":   "Terskel  max({k_sigma:.0f}σ, {k_q:.0f}q)  [mm]",
                 "legend_quantization":"Halvt kvantiseringssteg  q/2  [mm]",
-                # "legend_highlight":   "Uthevet kjøring",
-                "legend_excluded":    "Ekskludert (ikke satt seg)",
                 "title": {
                     "h272 / high": "h=272 mm — innledende eoppsett",
                     "h100 / low":  "h=100 mm - endelig oppsett ",
@@ -874,7 +885,7 @@ _figs_nf, _noise_summary = plot_probe_noise_floor(
     combined_meta, ANALYSIS_PROBES, _pv_noise_floor,
     group_by=["probe_height_mm", "probe_range_mode"],
     processed_dfs = processed_dfs,
-    highlight_keyword="wavemakeroff-1hour",  # visual star only, no effect on metrics
+    highlight_keyword=None,    # 2026-05-05: highlighted-run star + legend dropped
     probe_number_map=_PROBE_NUM_MAP,
 )
 print("\n=== Probe noise floor summary [mm] ===")

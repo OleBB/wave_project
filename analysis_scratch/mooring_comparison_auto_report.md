@@ -1,6 +1,6 @@
 # Mooring comparison: loose230 vs loose300
 
-**Date**: 2026-05-03
+**Date**: 2026-05-05
 **Script**: `analysis_scratch/mooring_comparison.py`
 **Figure**: `analysis_scratch/mooring_comparison.png`
 
@@ -23,7 +23,7 @@ Below 1.0 Hz: zero or one loose300 run — no meaningful comparison possible.
 
 ```
 Mooring comparison: below_90_loose230 vs below_90_loose300
-Generated: 2026-05-03 16:42
+Generated: 2026-05-05 12:17
 Runs analysed: 214 (fullpanel, quality_flag==ok, wave runs)
 
 Overlap summary by frequency:

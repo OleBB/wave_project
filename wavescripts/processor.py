@@ -985,6 +985,19 @@ def run_find_wave_ranges(
                     sig_col = probe_col
                 sig = df[sig_col].values[start:end]
 
+                # Window-mean baseline (2026-05-05): same rule as the FFT in
+                # signal_processing.py. The pre-wave Stillwater anchor and the
+                # actual mean of the analysis window disagree (wind setup,
+                # Stokes-2 lift, anchor drift). Demean the slice so every
+                # downstream metric in this block uses the slice's own zero.
+                # Functionally only Amplitude (phase) cares (it reads signed
+                # values at T/4, 3T/4); the rest (wave_stability, Hm0, Hs,
+                # cycles, period_amplitude_cv) are DC-invariant by their own
+                # math but stay correct under demeaning. The existing local
+                # `sig_centered = sig - sig.mean()` lines below become no-ops
+                # on already-centered data — kept as defence-in-depth.
+                sig = sig - np.nanmean(sig)
+
                 # 1. wave_stability: autocorrelation at lag = 1 period (FFT-based, O(n log n))
                 # Use nanmean so any residual NaN (e.g. cut samples beyond max_interp_gap)
                 # do not corrupt the autocorrelation.

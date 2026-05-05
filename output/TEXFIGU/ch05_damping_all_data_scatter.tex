@@ -3,33 +3,33 @@
 % IMMUTABLE — generated automatically, do not edit this block
 %
 % — Provenance ───────────────────────────────────────────────────
-%   script            : analysis_scratch/mooring_comparison.py
-%   computed_in       : analysis_scratch/mooring_comparison.py (groupby freq+amp+wind+Mooring → mean/std of OUT/IN_computed)
-%   plot_type         : mooring_comparison
+%   script            : analysis_scratch/all_data_damping_scatter.py
+%   computed_in       : analysis_scratch/all_data_damping_scatter.py (cross-condition supplementary scatter)
+%   plot_type         : damping_all_data_scatter
 %   data_class        : DELEG
-%   generated_at      : 2026-05-05T12:17:04
-%   findings_doc      : analysis_scratch/mooring_comparison_findings.md
+%   generated_at      : 2026-05-05T12:35:18
+%   findings_doc      : 
 %
 % — Thesis context ──────────────────────────────────────────────
-%   chapter           : 04
-%   caption_label     : fig:ch04_mooring_comparison
+%   chapter           : 05
+%   caption_label     : fig:ch05_damping_all_data_scatter
 %   caption_short     : 
 %
 % — Filters ────────────────────────────────────────────────────
 %   panel             : full
 %   wind              : no, full
-%   amplitude [V]     : 0.2, 0.3
-%   frequency [Hz]    : 1.25, 1.65
+%   amplitude [V]     : 
+%   frequency [Hz]    : 
 %   probes            : 
 %   run_category      : 
 %   quality_flag      : ok
-%   mooring           : below_90_loose230, below_90_loose300
+%   mooring           : 
 %
 % — Data provenance ────────────────────────────────────────────
-%   n_runs            : 214
-%   in_probes_used    : 9373/170+9373/340
-%   out_probes_used   : 12400/250
-%   probe_configs     : march2026_better_rearranging
+%   n_runs            : 
+%   in_probes_used    : 
+%   out_probes_used   : 
+%   probe_configs     : 
 %   non_final_config_n: 
 %   datasets        :
 %     PROCESSED-20251005-sixttry6roof-highMooring
@@ -60,24 +60,31 @@
 %     (omitted — aggregate over > threshold runs, see datasets)
 %
 % — Method / numerical parameters ─────────────────────────────
-%   grouper           : manual (groupby freq, amp, wind, Mooring)
-%   collapse_panels   : False
+%   grouper           : 
+%   collapse_panels   : 
 %   fft_window_hz     : 0.1
-%   extra_params      : freq_range_hz=1.25-1.65, amplitudes_V=[0.2, 0.3], winds=['no','full'], moorings=['below_90_loose230','below_90_loose300']
+%   extra_params      : all PROCESSED-* folders (24). Filter: wave runs (WaveFrequencyInput > 0), full panel, quality_flag=ok, OUT/IN(FFT) ∈ [0.1, 2.0], wind ∈ {no, full}, freq < 2.0 Hz. Encoding: wind → colour (WIND_COLOR_MAP), amplitude → marker shape (○=A1, □=A2, △=A3), hardware → fill (filled = cond4 final, hollow = earlier). Y-axis capped at 1.18 — points above are wind-contamination / low-SNR artefacts (CLAUDE.md §16). Top axis: every used frequency (15 ticks, 0.5–1.9 Hz). Body font: NewComputerModern10 via apply_thesis_style().
 %
 % — Summary stats cited in caption ────────────────────────────
-%   stat:n_conditions_all : 16   (incl. 1.3 Hz)
-%   stat:n_conditions_clean : 12   (1.4-1.6 Hz)
-%   stat:max_abs_delta_clean : 8.10 %
+%   stat:n_total      : 359
+%   stat:n_final_cond4 : 102
+%   stat:n_earlier_hw : 257
+%   stat:n_extreme_clipped : 0
+%   stat:n_drop_2hz   : 1
+%   stat:freq_min     : 0.5
+%   stat:freq_max     : 1.9
+%   stat:k_min        : 1.4599155863466775
+%   stat:k_max        : 14.532699867267207
 %
 % — Subfigures available ───────────────────────────────────────
-%     FIGURES/ch04_mooring_comparison.pdf
+%     FIGURES/ch05_damping_all_data_scatter.pdf
 % ── end immutable block ─────────────────────────────────────────
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{FIGURES/ch04_mooring_comparison.pdf}
+  \thispagestyle{empty}
+  \includegraphics[width=\linewidth]{FIGURES/ch05_damping_all_data_scatter.pdf}
   \caption{
-    OUT/IN(FFT) damping ratio at 0.2\,V (left) and 0.3\,V (right) paddle drive for two below-water mooring rubber band lengths: 230\,mm (blue) and 300\,mm (orange), both attached 90\,mm below the still-water surface. Solid markers: no-wind runs; dashed connectors: full-wind runs. Error bars are run-to-run standard deviation when $n\geq 2$. Across the clean thesis range ($f \in [1.40, 1.60]$\,Hz, $n=12$ matched (frequency, amplitude, wind) conditions), the two mooring types agree to within $|\Delta| \leq 8.1\,\%$. The 1.3\,Hz column is retained in the figure for completeness; the loose230 no-wind point at $\textrm{OUT}/\textrm{IN}>0.9$ is a known mooring-independent standing-wave artefact (IN probe near a pressure node) and is discussed separately in the methodology. Panel geometry dominates wave transmission; rubber band length does not produce a detectable systematic effect. Datasets may therefore be merged as \texttt{below\_90\_loose} for the CH05 main results. See \texttt{analysis\_scratch/mooring\_comparison\_findings.md} for the full per-condition comparison and 0.1\,V low-SNR caveats.
+    Alle kjøringer. Vi skiller primært mellom det endelige oppsettet og alle andre oppsett.
   }
-  \label{fig:ch04_mooring_comparison}
+  \label{fig:ch05_damping_all_data_scatter}
 \end{figure}

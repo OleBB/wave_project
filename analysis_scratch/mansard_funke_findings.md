@@ -1,6 +1,6 @@
 # Mansard-Funke reflection analysis
 
-**Date**: 2026-05-03
+**Date**: 2026-05-05
 **Script**: `analysis_scratch/mansard_funke.py`
 **Figure**: `analysis_scratch/mansard_funke.png`
 

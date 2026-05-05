@@ -404,6 +404,16 @@ def compute_fft_with_amplitudes(processed_dfs: dict, meta_row: pd.DataFrame, cfg
 
                 N = len(signal)
 
+                # Window-mean baseline (2026-05-05): the windowed slice has its
+                # own mean that disagrees with the pre-wave Stillwater anchor
+                # (wind setup at IN/OUT, Stokes-2 broad-trough lift, anchor
+                # drift). FFT is DC-sensitive at f=0, and any non-perfect
+                # integer-cycle alignment leaks DC across bins. Demean the
+                # slice so the FFT operates about its own zero. See CLAUDE.md
+                # §6 "windowed-slice mean is the baseline" and
+                # analysis_scratch/mean_level_check.py.
+                signal = signal - signal.mean()
+
                 fft_vals = np.fft.fft(signal)
                 fft_freqs = np.fft.fftfreq(N, d=1/fs)
                 amplitudes = np.abs(fft_vals) / N

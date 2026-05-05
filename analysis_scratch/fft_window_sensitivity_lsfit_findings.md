@@ -1,6 +1,6 @@
 # FFT window-length sensitivity — LS fit at varying N_periods
 
-Generated: 2026-05-02T14:57:24Z
+Generated: 2026-05-05T10:23:12Z
 
 **Dataset**: fullpanel per240 wave runs, quality_flag=ok, from the two canonical
 March-2026 lowrange folders. n_runs = 51 total; complete-sweep runs = 51.

@@ -206,6 +206,8 @@ Every probe position is always written as `"longitudinal/lateral"` — even for 
 
 **Canonical suffix pattern going forward**: `(method_tag) [stat]` with method_tag in parentheses. Legacy `Amplitude` with no suffix remains in downstream plotter code (`plot_all_probes`, `damping_grouper`) until the rename is carried out.
 
+**Baseline for these metrics (2026-05-05)**: every metric above that is computed inside the analysis window uses the **windowed-slice mean** as its zero, not the pre-wave `Stillwater Probe {pos}` anchor. The pre-wave anchor disagrees with the slice mean by up to ~1 mm under wind setup (windward IN below, leeward OUT above) and by a fraction of a mm under no-wind (Stokes-2 broad-trough lift). Functionally only `Amplitude (FFT)` and `Amplitude (phase)` change with this rule — `Amplitude (LS)` (free DC term), `Amplitude (PSD)` (welch detrend), percentile, cycles, Hm0, Hs are DC-invariant by their own math. See §6 "Window-mean baseline" and `memory/methodology_window_mean_baseline.md`.
+
 **Do not** reintroduce probe numbers (1–4) in user-facing code.
 
 ### `in_position` / `out_position` in combined_meta
@@ -278,6 +280,18 @@ Historical note: pre-2026-04-18 `meta.json` files contained `OUT/IN (FFT)` compu
 ### FFT amplitude window
 
 `compute_amplitudes_from_fft` uses `window=0.1` Hz and `argmin(abs(masked_freqs - target_freq))` (nearest bin). Old code used `window=0.5` Hz + `argmax`, which picked up wind-wave peaks for low-amplitude runs.
+
+### Window-mean baseline for FFT/phase metrics (2026-05-05)
+
+Before any pipeline metric is computed on the analysis window, the windowed slice is **demeaned in place** — the slice's own mean is the zero, not the pre-wave `Stillwater Probe {pos}` anchor. The pre-wave anchor disagrees with the slice mean by up to ~1 mm under wind setup (windward IN below, leeward OUT above) and by a fraction of a mm under no-wind (Stokes-2 broad-trough lift). Diagnostic: `analysis_scratch/mean_level_check.py` prints the per-(run, probe) offset.
+
+Two surgical demean lines do all the work:
+- [`signal_processing.py::compute_fft_with_amplitudes`](wavescripts/signal_processing.py) — `signal = signal - signal.mean()` before the FFT.
+- [`processor.py`](wavescripts/processor.py) (the per-probe quality-metrics block, after `sig = df[sig_col].values[start:end]`) — `sig = sig - np.nanmean(sig)`.
+
+Functionally only `Amplitude (FFT)` and `Amplitude (phase) mean/std/list` change with this rule. `Amplitude (LS)` (free DC term in the model), `Amplitude (PSD)` (welch internal `detrend="constant"`), percentile, cycles, Hm0, Hs are DC-invariant by their own math and are unaffected. The change preserves `Stillwater Probe {pos}` and `eta_{pos}` / `eta_{pos}_interp` columns intact — those remain pre-wave-anchored for time-series visualisation, wind-setup studies, and decay analyses.
+
+Frozen pre-change cache: `pre_pipline_eta_change_waveprocessed_folder/` (gitignored) — the full 25-folder snapshot from before the change is preserved on disk for any future before/after comparison. Full memo: `memory/methodology_window_mean_baseline.md`.
 
 ### Snap fires on raw ULS, FFT runs on η — sign-flipped (KNOWN, 2026-04-29)
 

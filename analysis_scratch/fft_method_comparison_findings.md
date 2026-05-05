@@ -1,6 +1,6 @@
 # FFT amplitude extraction — method comparison
 
-Generated: 2026-05-02T14:56:35Z
+Generated: 2026-05-05T10:22:21Z
 
 **Methods**: `nearest_bin` (pipeline), `parabolic` (3-bin quadratic interp), `goertzel` (single-frequency DFT at exactly f_paddle), `ls_fit` (LS with DC + fundamental + Stokes 2f basis).
 
