@@ -239,6 +239,7 @@ CHAPTER 04 — METHODOLOGY
         ch04_wind_pre_paddle_table       [CSV]   ~     └─ companion summary table (4 probes × {long σ, 3 s σ, Δ%, 3 s scatter})
         ch04_wind_qc_control_chart       [DELEG] ~     └─ appendix QC: σ_η per ok run, chronological, full+no+lowest
         ch04_wind_qc_boxplot             [DELEG] ~     └─ appendix QC: σ_η distribution by (wind × date)
+        ch04_wind_setup_baseline_table   [CSV]   ~     └─ appendix: 3-nowind-vs-3-fullwind |Δη| at OUT per transition, all March datasets
   §5    ch04_inspirational_nowind        [DELEG] ~  Reading a time series — nowind canon (macro + 5-period zoom)
         ch04_inspirational_fullwind      [DELEG] ~     └─ same layout, fullwind canon (wind-wave clutter visible at IN)
   §5b   ch04_timeseries_overview         [!disabled] ~  Full time-series with stable-window band  (below MEDIUM gate) (? redundant because of hg_per40_window_fitness)
@@ -526,6 +527,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_wind_pre_paddle_table":      "",
     "ch04_wind_qc_control_chart":      "",
     "ch04_wind_qc_boxplot":            "",
+    "ch04_wind_setup_baseline_table":  "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
 
     # § 5 — Reading a time series (inspirational opener)
     "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: \num{0.1287},   ka, ut:  \num{0.0878}",#todo: consider changing these numbers if the pipeline changes... if amplitude changes slightly..
@@ -639,6 +641,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_wind_pre_paddle_table":      "",
     "ch04_wind_qc_control_chart":      "",
     "ch04_wind_qc_boxplot":            "",
+    "ch04_wind_setup_baseline_table":  "",
     "ch04_inspirational_nowind":       "Tidsserie uten vind",
     "ch04_inspirational_fullwind":     "Tidsserie med vind",
     "ch04_first_arrival":              "",
@@ -1982,6 +1985,58 @@ _run_delegated_if_missing(
      Path("output/TEXFIGU/ch04_wind_qc_control_chart.tex"),
      Path("output/TEXFIGU/ch04_wind_qc_boxplot.tex")],
     label="ch04_wind_qc_thesis",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/wind_setup_baseline_3v3.py (precondition CSV)
+"""
+── CH04 appendix — 3v3 wind-setup at OUT (data prep) ──────────────────────
+Sweeps all March 2026 PROCESSED dirs that have both nowind and fullwind
+runs. For each detected nowind↔fullwind transition, reads the absolute
+`Stillwater Probe 12400/250` baseline (mm; ULS reads distance DOWN to
+water — lower number = higher water level), takes the last n_pre ≤ 3
+nowind runs vs the first n_post ≤ 3 fullwind runs, and reports the
+absolute water rise at OUT under wind.
+
+Per-transition CSV is the precondition for the appendix table cell below.
+Side products (per-transition stdout block) are useful for scratch
+inspection.
+
+See analysis_scratch/wind_setup_baseline_3v3_investigation.md for the
+narrative + key observations (cross-dataset reproducibility ~0.01 mm
+under strict 3+3 sampling at ~1.30 mm; OFF > ON direction asymmetry of
+0.1–0.4 mm in 3 of 4 datasets).
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/wind_setup_baseline_3v3.py",
+    [Path("analysis_scratch/wind_setup_baseline_3v3_results.csv")],
+    label="ch04_wind_setup_baseline_inputs",
+)
+
+# %%
+# [DATA: CSV]  — analysis_scratch/wind_setup_baseline_3v3_table.py
+"""
+── CH04 appendix — 3v3 wind-setup baseline table ──────────────────────────
+Reads analysis_scratch/wind_setup_baseline_3v3_results.csv (cell above) and
+renders the per-transition appendix table to output/TABLES/. One row per
+detected nowind↔fullwind transition, midrule between datasets, per-dataset
+mean magnitude shown at the bottom of each block.
+
+Caption is blank in FIGURE_CAPTIONS — user populates later. The immutable
+block records:
+  (1) The OFF > ON direction asymmetry caveat (0.1–0.4 mm in 3 of 4
+      datasets) and the two untested candidate explanations.
+  (2) The 20260326 small-sample artefact (0 strict 3+3 transitions on
+      that day; its lower 0.88 mm mean is a sampling artefact, not a real
+      day-to-day difference).
+  (3) The pipeline anchor convention for `Stillwater Probe 12400/250`.
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/wind_setup_baseline_3v3_table.py",
+    [Path("output/TABLES/ch04_wind_setup_baseline_table.tex")],
+    label="ch04_wind_setup_baseline_table",
 )
 
 # %%

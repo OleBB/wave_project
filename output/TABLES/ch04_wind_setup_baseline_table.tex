@@ -1,0 +1,107 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/wind_setup_baseline_3v3_table.py
+%   plot_type         : wind_setup_baseline_table
+%   chapter           : 04
+%   generated_at      : 2026-05-05T09:41:12
+%   caption_label     : tab:ch04_wind_setup_baseline_table
+%   caption_short     : 
+%
+% — Inputs ────────────────────────────────────────────────────
+%   per-transition CSV: analysis_scratch/wind_setup_baseline_3v3_results.csv
+%   datasets contributing :
+%     PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%
+% — Method ────────────────────────────────────────────────────
+%   Each row = one nowind↔fullwind transition detected by chronological
+%   sorting of canon WindCondition ∈ {no, full} runs. For each transition,
+%   take last n_pre ≤ 3 nowind runs and first n_post ≤ 3 fullwind runs.
+%   Means computed on `Stillwater Probe 12400/250` (absolute ULS baseline
+%   at OUT, in mm). |Δη_OUT| = water rise at OUT under wind =
+%   mean(nowind) − mean(fullwind). ULS reads distance DOWN to water:
+%   lower ULS number = higher water level.
+%
+%   * superscript on |Δη| flags transitions where n_pre < 3 OR n_post < 3
+%     (small-sample). 8 of 15 transitions are flagged.
+%
+% — Headline ────────────────────────────────────────────────
+%   Strict 3+3 mean across all datasets: 1.297 mm (n=7 transitions).
+%   Cross-dataset spread under strict 3+3 sampling is sub-millimetre
+%   (~0.01 mm between dataset means in current data).
+%
+% — Caveats ───────────────────────────────────────────────────
+%   (1) Direction asymmetry: |OFF| magnitude exceeds |ON| magnitude by
+%       0.1–0.4 mm in 3 of 4 datasets (20260327 is tied). Candidate
+%       explanations (untested):
+%         • wind-on stress build-up biases ON measurement low
+%         • residual relaxation biases OFF measurement high
+%       See analysis_scratch/wind_setup_baseline_3v3_investigation.md.
+%   (2) Small-sample artefact: 20260326 had high transition density,
+%       leaving 0 strict 3+3 transitions on that day. Its lower mean
+%       (0.88 mm vs ~1.30 mm elsewhere) is a sampling artefact, not
+%       a real day-to-day setup difference.
+%   (3) Pipeline `Stillwater Probe 12400/250` for fullwind runs uses a
+%       per-run anchor that may BE wind-on (first 1 s of THAT run); the
+%       absolute baseline reported here is the raw ULS reading, NOT a
+%       deviation from a settled-tank reference. Setup magnitude is
+%       still recovered correctly because both nowind and fullwind
+%       sides report raw ULS values from the same probe.
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch04_wind_setup_baseline_table}
+  \small
+  \begin{tabular}{l l c c c c}
+    \toprule
+    Dato & Retning &
+      $\mu_\text{uten vind}$ [\unit{\milli\metre}] &
+      $\mu_\text{full vind}$ [\unit{\milli\metre}] &
+      $|\Delta\eta_\text{OUT}|$ [\unit{\milli\metre}] &
+      $n_\text{uten}/n_\text{full}$ \\
+    \midrule
+    \multicolumn{6}{l}{\itshape 20260323  (M9 / fullrange)} \\
+     & av $\rightarrow$ på & \num{100.263} & \num{99.063} & \num{1.200} & 3/3 \\
+     & på $\rightarrow$ av & \num{100.617} & \num{99.047} & \num{1.570} & 3/3 \\
+     & av $\rightarrow$ på & \num{100.657} & \num{99.523} & \num{1.133} & 3/3 \\
+     & på $\rightarrow$ av & \num{101.615} & \num{100.180} & \num{1.435}\,\textsuperscript{*} & 2/3 \\
+    \cmidrule(l){2-6}
+    & \textit{snitt (n=}4\textit{)} & — & — & \num{1.335} & — \\
+    & \textit{snitt strict 3+3 (n=}3\textit{)} & — & — & \num{1.301} & — \\
+    \midrule
+    \multicolumn{6}{l}{\itshape 20260324  (M9 / fullrange)} \\
+     & på $\rightarrow$ av & \num{101.173} & \num{99.635} & \num{1.538}\,\textsuperscript{*} & 3/2 \\
+     & av $\rightarrow$ på & \num{101.200} & \num{99.907} & \num{1.293} & 3/3 \\
+     & på $\rightarrow$ av & \num{101.300} & \num{99.983} & \num{1.317}\,\textsuperscript{*} & 1/3 \\
+    \cmidrule(l){2-6}
+    & \textit{snitt (n=}3\textit{)} & — & — & \num{1.383} & — \\
+    & \textit{snitt strict 3+3 (n=}1\textit{)} & — & — & \num{1.293} & — \\
+    \midrule
+    \multicolumn{6}{l}{\itshape 20260326  (M9 / lowrange)} \\
+     & av $\rightarrow$ på & \num{100.300} & \num{99.855} & \num{0.445}\,\textsuperscript{*} & 2/2 \\
+     & på $\rightarrow$ av & \num{100.715} & \num{99.855} & \num{0.860}\,\textsuperscript{*} & 2/2 \\
+     & av $\rightarrow$ på & \num{100.715} & \num{99.813} & \num{0.902}\,\textsuperscript{*} & 2/3 \\
+     & på $\rightarrow$ av & \num{101.630} & \num{100.300} & \num{1.330}\,\textsuperscript{*} & 1/3 \\
+    \cmidrule(l){2-6}
+    & \textit{snitt (n=}4\textit{)} & — & — & \num{0.884} & — \\
+    \midrule
+    \multicolumn{6}{l}{\itshape 20260327  (M9-30 / lowrange)} \\
+     & av $\rightarrow$ på & \num{100.713} & \num{99.500} & \num{1.213} & 3/3 \\
+     & på $\rightarrow$ av & \num{101.200} & \num{99.937} & \num{1.263} & 3/3 \\
+     & av $\rightarrow$ på & \num{101.383} & \num{99.977} & \num{1.407} & 3/3 \\
+     & på $\rightarrow$ av & \num{101.780} & \num{100.480} & \num{1.300}\,\textsuperscript{*} & 1/3 \\
+    \cmidrule(l){2-6}
+    & \textit{snitt (n=}4\textit{)} & — & — & \num{1.296} & — \\
+    & \textit{snitt strict 3+3 (n=}3\textit{)} & — & — & \num{1.294} & — \\
+    \bottomrule
+  \end{tabular}
+\end{table}
