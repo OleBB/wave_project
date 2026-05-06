@@ -193,13 +193,18 @@ for amp_v, amp_tag, amp_v_lbl in AMP_TIERS:
 
     # Two-block legend.
     moor_wind_handles = [
-        mlines.Line2D([], [], color=COLOR[(m, w)], marker="o",
-                      ms=10, lw=0, mfc="none",
-                      mec=COLOR[(m, w)], mew=EDGE_LW,
-                      label=f"{MOORING_LABEL[m]} · {WIND_LABEL[w]}")
+        mlines.Line2D(
+            [], [],
+            color=COLOR[(m, w)],
+            linestyle="-",      # line visible
+            linewidth=2.0,
+            marker=None,        # no marker
+            label=f"{MOORING_LABEL[m]} · {WIND_LABEL[w]}",
+        )
         for m in ["below_90", "above_50"]
         for w in ["no", "full"]
     ]
+
     panel_handles = [
         mlines.Line2D([], [], color="black",
                       marker=PANEL_AMP_MARKER[(p, amp_v)],
@@ -209,8 +214,7 @@ for amp_v, amp_tag, amp_v_lbl in AMP_TIERS:
     ]
     leg1 = ax.legend(handles=moor_wind_handles, loc="upper right",
                       fontsize=8, framealpha=0.92,
-                      title="Moring · vind", title_fontsize=8,
-                      bbox_to_anchor=(0.005, 0.995))
+                      title="Moring · vind", title_fontsize=8)
     ax.add_artist(leg1)
     ax.legend(handles=panel_handles, loc="lower right",
                fontsize=8.5, framealpha=0.92,

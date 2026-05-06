@@ -193,7 +193,8 @@ Figure-stub invariants (2026-04-24 durable rule):
   See memory/feedback_figure_stub_invariants.md.
 
 CHAPTER 04 — METHODOLOGY
-  §1    ch04_probe_noise_floor           [META]  ~  Stillwater noise floor per probe / hw config
+  §1    ch04_probe_noise_floor           [OUTDATED]  replaced by ch04_probe_noise_floor_table  (4-panel bar plot superseded 2026-05-06)
+        ch04_probe_noise_floor_table     [DELEG] ✓  Reader-facing table: stillwater noise per probe, h272/high (innledende) vs h100/low (endelig)
   # §2    ch04_stillwater_timing           [META]  ✗  Swell decay time vs wait time  [TODO]
   §3    ch04_parallel_ratio              [META]  ~  Wall/far-side amplitude ratio vs frequency
         ch04_parallel_ratio_scatter      [META]  ~     └─ per-run scatter sibling
@@ -471,12 +472,14 @@ FIGURE_CAPTIONS: dict[str, str] = {
 
     # ── CHAPTER 04 — METHODOLOGY ─────────────────────────────────────────────
 
-    # § 1 — Probe noise floor (parent + 4 subfigs)
+    # § 1 — Probe noise floor (parent + 4 subfigs) — OUTDATED, kept for backwards refs
     "ch04_probe_noise_floor":          "Hver enkelt probes støygulv",
     "ch04_probe_noise_floor_group0":   "Prober hengende høyt over vannet.",
     "ch04_probe_noise_floor_group1":   "",
     "ch04_probe_noise_floor_group2":   "",
     "ch04_probe_noise_floor_group3":   "Prober hengende lavt over vannet.",
+    # § 1 (replacement) — reader-facing noise-floor table
+    "ch04_probe_noise_floor_table":    "",   # TODO: write caption
 
     # § 2 — Stillwater timing (placeholder)
     # "ch04_stillwater_timing":          "", !archived
@@ -537,9 +540,9 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_wind_qc_boxplot":            "",
     "ch04_wind_setup_baseline_table":  "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
 
-    # § 5 — Reading a time series (inspirational opener)
-    "ch04_inspirational_nowind":       "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: \num{0.1287},   ka, ut:  \num{0.0878}",#todo: consider changing these numbers if the pipeline changes... if amplitude changes slightly..
-    "ch04_inspirational_fullwind":     "Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, med vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn:   \num{0.1531}, ka, ut: \num{0.0979}", #however these are illustrative plots...and i think the precision perhaps doesnt matter too much in plots. tables are more important.
+    # § 5 — Reading a time series (inspirational opener) #NOTE: used raw string r"" because of python newline break.
+    "ch04_inspirational_nowind":       r"Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: \\num{0.1287},   ka, ut:  \num{0.0878}",#todo: consider changing these numbers if the pipeline changes... if amplitude changes slightly..
+    "ch04_inspirational_fullwind":     r"Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, med vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn:   \\num{0.1531}, ka, ut: \num{0.0979}", #however these are illustrative plots...and i think the precision perhaps doesnt matter too much in plots. tables are more important.
 
     # § 5b — Highway-effect visual evidence (per40 overlay + pre-paddle)
     "ch04_wind_pre_paddle_overlay":    "",
@@ -581,7 +584,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_t_cross_A3":                 "",
 
     # § 4 — Damping vs ka
-    "ch05_damping_ka":                 "Transmisjonskoeffisient per bølgesteilhet $ka$. ",
+    "ch05_damping_ka":                 "Transmisjonskoeffisient per bølgesteilhet $ka$. Alle tre amplitudevalg. ",
     "ch05_damping_ka_A1":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_1$.",
     "ch05_damping_ka_A2":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_2$.",
     "ch05_damping_ka_A3":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_3$.",
@@ -598,12 +601,14 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_mooring_focus_at_1_3hz_ka_A2": "TODO: undertekst $A_2$.",
     "ch05_mooring_focus_at_1_3hz_ka_A3": "TODO: undertekst $A_3$.",
     # § 4b — Companion table for the figure above.
-    "ch05_mooring_focus_at_1_3hz_table": "TODO: skriv hovedteksten. Hardtall til figur \\ref{fig:ch05_mooring_focus_at_1_3hz_ka}: transmisjon $K_t$ ved 1.30 Hz per (amplitude, panelretning, mooring). Per celle: $K_t$ med antall kjøringer $(n)$ for hver vindkondisjon, absolutt endring $\\Delta K_t$, transmisjonsforhold $K_{t,\\text{vind}}/K_{t,\\text{uten}}$ ($>1$ = vind slipper mer bølge gjennom), og dempningsforhold $D_{\\text{vind}}/D_{\\text{uten}}$ med $D = 1 - K_t$ ($<1$ = vind reduserer panelets demping). Tomt felt for revers $\\cdot$ below\\_90 — denne kombinasjonen ble ikke kjørt.",
+    "ch05_mooring_focus_at_1_3hz_table": "Tall til figur \ref{fig:ch05_mooring_focus_at_1_3hz_ka}. Transmisjon for panelrekken fortøyd på ulike måter. Merk: kun for \qty{1.3}{\hertz}. Antall (n) kjøringer.",
+    # claude kladd). Per $\\Delta K_t$, transmisjonsforhold $K_{t,\\text{vind}}/K_{t,\\text{uten}}$ ($>1$ = vind slipper mer bølge gjennom), og dempningsforhold $D_{\\text{vind}}/D_{\\text{uten}}$ med $D = 1 - K_t$ ($<1$ = vind reduserer panelets demping). Tomt felt for revers $\\cdot$ below\\_90 — denne kombinasjonen ble ikke kjørt.",
 
     # § 6 — moved to CH04 §4-3b as ch04_reconstructed (paired with ch04_fft_wave)
 
     # § 7 — All-data scatter (supplementary)
     "ch05_damping_all_data_scatter":   "Alle kjøringer. Vi skiller primært mellom det endelige oppsettet og alle andre oppsett.",
+
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
     "diag_13hz_consistency":           "",
@@ -624,6 +629,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
 
     # ── CHAPTER 04 ───────────────────────────────────────────────────────────
     "ch04_probe_noise_floor":          "Probes støygulv",
+    "ch04_probe_noise_floor_table":    "",   # TODO: short caption
     # "ch04_stillwater_timing":          "", !archived
     # "ch04_parallel_ratio":             "", !disabled
     # "ch04_parallel_ratio_scatter":     "", !disabled
@@ -852,85 +858,121 @@ def _save_placeholder(figure_name: str, section_label: str, chapter: str) -> Non
 # =============================================================================
 # CHAPTER 04 — METHODOLOGY
 # =============================================================================
-# %% TODO: simplify the plot - i need to remove the exluded from the plot(and verify its not affecting the results)
-# [DATA: META]
+# %% !disabled  (replaced by ch04_probe_noise_floor_table — sibling below)
+# [DATA: OUTDATED]  — replaced by analysis_scratch/probe_noise_floor_table.py
+# Original cell: 4-panel bar plot of stillwater noise per (probe, hw config)
+# generated by plot_probe_noise_floor in plotter.py. Superseded 2026-05-06
+# by the simpler reader-facing table that compares only the two endpoint
+# configs (h272/high → h100/low). The 4-panel form had two intermediate
+# configs (h136/high, n=1; h100/high, transitional) that didn't carry the
+# methodology message — the reader-facing question is "innledende vs endelig"
+# (initial vs final), and a 4-row × 3-column table answers it cleanly.
+#
+# Agent: do NOT cite, regen, or re-enable this cell without an explicit
+# user request. Output PDFs (ch04_probe_noise_floor_group{0..3}.pdf) and
+# stub on disk are intentionally left in place (project convention: never
+# rm artefacts; remove via `git rm` if the user decides they should go).
+# The plot_probe_noise_floor function itself stays in plotter.py — it's
+# called by analysis_scratch/probe_noise_floor_table.py to compute the
+# summary numbers that feed the new table.
+#
+# To re-enable: uncomment the docstring + plot_probe_noise_floor call,
+# flip the FIGURE INDEX tag from "[OUTDATED]" back to "[META]", and change
+# this header back to "# [DATA: META]".
+#
+# """
+# ── CH04 § 1 — Probe uncertainty / noise floor ───────────────────────────────
+# Goal: show the stillwater noise amplitude per probe and hardware configuration,
+# and derive the minimum detectable wave amplitude (detection threshold).
+#
+# Three questions answered per (probe, config):
+#   1. Precision  — how much does the reading fluctuate in still water?
+#   2. Bias       — do probes agree on the mean water level within a config?
+#   3. Threshold  — what is the smallest detectable wave amplitude?
+#
+# Data: combined_meta stillwater rows (WindCondition=="no", WaveFrequencyInput NaN).
+#       processed_dfs needed for quantization_step_mm (optional but recommended).
+#
+# Groups: probe_height_mm × probe_range_mode — 4 hardware configurations:
+#   h272/high  (default pre-2026-03-23)
+#   h136/high
+#   h100/high
+#   h100/low
+#
+# Metrics (all from combined_meta, shift-invariant — valid at any probe height):
+#   noise_95pct_amp_mm   (P99.5−P0.5)/2   mean across accepted runs in group  [legacy col name; values are 99 % half-range]
+#   noise_rms_mm         std(raw signal)   mean across accepted runs in group
+#   mean_level_mm        median level      mean across accepted runs in group
+#   bias_vs_ref_mm       mean_level − cross-probe mean (within group)
+#   quantization_step_mm P5 of nonzero |diff(η)|  from processed_dfs
+#   detection_threshold_mm  max(k_sigma·σ,  k_q·q)   default max(3σ, 2q)
+# """
+#
+# from datetime import datetime as _dt
+# from wavescripts.improved_data_loader import get_configuration_for_date
+# # Probe numbers derived from current config (hardware IDs, fixed across configs):
+# _active_cfg = get_configuration_for_date(_dt(2026, 3, 15))
+# _PROBE_NUM_MAP = {pos: num for num, pos in _active_cfg.probe_col_names().items()}
+#
+# _pv_noise_floor = {
+#     "filters": {},
+#     "plotting": {
+#         "show_plot": True,
+#         "save_plot": True,
+#         "draft":     False,
+#         "figure_name": "ch04_probe_noise_floor",
+#         "force_stub": True,
+#         "figsize":        (3.4, 3.0),
+#         "ylim":           (0, 0.5),
+#         "xtick_fontsize": 7,
+#         "show_excluded":  False,
+#             "text": {
+#                 "ylabel": "Støyamplitude (99 %)  [mm]",
+#                 "legend_mean_amp":    "Gjennomsnittlig støyamplitude  (±1σ)",
+#                 "legend_per_run":     "Per kjøring",
+#                 "legend_threshold":   "Terskel  max({k_sigma:.0f}σ, {k_q:.0f}q)  [mm]",
+#                 "legend_quantization":"Halvt kvantiseringssteg  q/2  [mm]",
+#             },
+#     },
+# }
+#
+# _figs_nf, _noise_summary = plot_probe_noise_floor(
+#     combined_meta, ANALYSIS_PROBES, _pv_noise_floor,
+#     group_by=["probe_height_mm", "probe_range_mode"],
+#     processed_dfs = processed_dfs,
+#     highlight_keyword=None,
+#     probe_number_map=_PROBE_NUM_MAP,
+# )
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/probe_noise_floor_table.py
 """
-── CH04 § 1 — Probe uncertainty / noise floor ───────────────────────────────
-Goal: show the stillwater noise amplitude per probe and hardware configuration,
-and derive the minimum detectable wave amplitude (detection threshold).
+── CH04 § 1 — Probe noise floor table (innledende vs endelig) ───────────────
+Replaces the 4-panel bar plot with a simple reader-facing table that
+compares the initial setup (h272/high) to the final canon setup (h100/low).
+Four rows (one per probe position), three columns:
+    - Støyamplitude (99 %), innledende [mm]
+    - Støyamplitude (99 %), endelig [mm]
+    - Forbedring (innledende / endelig)
 
-Three questions answered per (probe, config):
-  1. Precision  — how much does the reading fluctuate in still water?
-  2. Bias       — do probes agree on the mean water level within a config?
-  3. Threshold  — what is the smallest detectable wave amplitude?
+Method note: "Støyamplitude (99 %)" = (P99.5 − P0.5) / 2 of stillwater
+signal, mean across accepted stillwater runs in each config. Same metric
+as the y-axis of the (now outdated) 4-panel figure, so numbers are
+directly comparable.
 
-Data: combined_meta stillwater rows (WindCondition=="no", WaveFrequencyInput NaN).
-      processed_dfs needed for quantization_step_mm (optional but recommended).
-
-Groups: probe_height_mm × probe_range_mode — 4 hardware configurations:
-  h272/high  (default pre-2026-03-23)
-  h136/high
-  h100/high
-  h100/low
-
-Metrics (all from combined_meta, shift-invariant — valid at any probe height):
-  noise_95pct_amp_mm   (P99.5−P0.5)/2   mean across accepted runs in group  [legacy col name; values are 99 % half-range]
-  noise_rms_mm         std(raw signal)   mean across accepted runs in group
-  mean_level_mm        median level      mean across accepted runs in group
-  bias_vs_ref_mm       mean_level − cross-probe mean (within group)
-  quantization_step_mm P5 of nonzero |diff(η)|  from processed_dfs
-  detection_threshold_mm  max(k_sigma·σ,  k_q·q)   default max(3σ, 2q)
+Generated by analysis_scratch/probe_noise_floor_table.py. Calls
+plot_probe_noise_floor under the hood (no re-implementation), then
+filters to the two endpoint configs and pivots into a side-by-side
+table. Writes:
+    output/TABLES/ch04_probe_noise_floor_table.tex   (thesis include)
+    analysis_scratch/ch04_probe_noise_floor_table.csv (companion)
 """
 
-from datetime import datetime as _dt
-from wavescripts.improved_data_loader import get_configuration_for_date
-# Probe numbers derived from current config (hardware IDs, fixed across configs):
-_active_cfg = get_configuration_for_date(_dt(2026, 3, 15))
-_PROBE_NUM_MAP = {pos: num for num, pos in _active_cfg.probe_col_names().items()}
-
-_pv_noise_floor = {
-    "filters": {},
-    "plotting": {
-        "show_plot": True,
-        "save_plot": True,
-        "draft":     False,
-        "figure_name": "ch04_probe_noise_floor",
-        "force_stub": True,
-        # Side-by-side LaTeX layout at 1-inch margin (2026-05-05): groups 0
-        # and 3 are placed as two subfigures on one row at ~0.48\linewidth
-        # each, so the source PDF must be narrow. Y-axis fixed across all
-        # groups so the bars are directly comparable.
-        "figsize":        (3.4, 3.0),
-        "ylim":           (0, 0.5),
-        "xtick_fontsize": 7,
-        "show_excluded":  False,   # 2026-05-05: hide X markers + legend entry; run still dropped from stats
-            "text": {
-                "ylabel": "Støyamplitude (99 %)  [mm]",
-                "legend_mean_amp":    "Gjennomsnittlig støyamplitude  (±1σ)",
-                "legend_per_run":     "Per kjøring",
-                "legend_threshold":   "Terskel  max({k_sigma:.0f}σ, {k_q:.0f}q)  [mm]",
-                "legend_quantization":"Halvt kvantiseringssteg  q/2  [mm]",
-                # "title": {
-                #     "h272 / high": "h=272 mm — innledende eoppsett",
-                #     "h100 / low":  "h=100 mm - endelig oppsett ",
-                    # groups not listed here keep their default title
-                # },
-            },
-    },
-}
-
-start = time.perf_counter()
-_figs_nf, _noise_summary = plot_probe_noise_floor(
-    combined_meta, ANALYSIS_PROBES, _pv_noise_floor,
-    group_by=["probe_height_mm", "probe_range_mode"],
-    processed_dfs = processed_dfs,
-    highlight_keyword=None,    # 2026-05-05: highlighted-run star + legend dropped
-    probe_number_map=_PROBE_NUM_MAP,
+_run_delegated_if_missing(
+    "analysis_scratch/probe_noise_floor_table.py",
+    [Path("output/TABLES/ch04_probe_noise_floor_table.tex")],
+    label="ch04_probe_noise_floor_table",
 )
-print("\n=== Probe noise floor summary [mm] ===")
-print(_noise_summary.round(4).to_string())
-end = time.perf_counter()
-print(f"probe uncertainty-plot took {end - start:.4f} s")
 
 
 
