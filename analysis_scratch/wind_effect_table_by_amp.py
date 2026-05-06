@@ -115,11 +115,11 @@ pivot_n = stats.pivot_table(
 
 # Compute the four wind-effect metrics.
 table = pivot.rename(columns={"no": "Kt_nw", "full": "Kt_fw"})
-table["Delta_Kt"]    = table["Kt_fw"] - table["Kt_nw"]
-table["pct_T_gain"]  = (table["Kt_fw"] - table["Kt_nw"]) / table["Kt_nw"] * 100.0
+table["Delta_Kt"]    = table["Kt_fw"] - table["Kt_nw"]   # absolute change in K_t
+table["ratio_Kt"]    = table["Kt_fw"] / table["Kt_nw"]   # K_t,vind / K_t,uten
 _D_nw = 1.0 - table["Kt_nw"]
 _D_fw = 1.0 - table["Kt_fw"]
-table["pct_D_red"]   = (_D_nw - _D_fw) / _D_nw * 100.0
+table["ratio_D"]     = _D_fw / _D_nw                      # D_vind / D_uten,  D = 1 - K_t
 table["std_nw"]      = pivot_std["no"]
 table["std_fw"]      = pivot_std["full"]
 table["n_nw"]        = pivot_n["no"].astype("Int64")
@@ -161,6 +161,12 @@ def _fmt_unsigned(x: float, decimals: int = 3) -> str:
         return "—"
     return f"{x:.{decimals}f}"
 
+def _fmt_ratio(x: float, decimals: int = 3) -> str:
+    """Unsigned ratio (e.g. 1.181, 0.653). NaN → em-dash."""
+    if pd.isna(x):
+        return "—"
+    return f"{x:.{decimals}f}"
+
 
 # Body rows. Insert \midrule between AMPLITUDE blocks for visual grouping.
 # Column order: Amp, f, τ_nw, τ_fw, Δτ, T-økn., D-red.
@@ -174,9 +180,9 @@ for _, r in table.iterrows():
     body_rows.append(
         f"  {amp_to_label(a)} & {f:.1f} & "
         f"{_fmt_unsigned(r['Kt_nw'], 3)} & {_fmt_unsigned(r['Kt_fw'], 3)} & "
-        f"{_fmt_signed(r['Delta_Kt'] * 100, 1)} & "  # ΔK_t in pp
-        f"{_fmt_signed(r['pct_T_gain'], 1)} & "
-        f"{_fmt_signed(r['pct_D_red'], 1)} \\\\"
+        f"{_fmt_signed(r['Delta_Kt'], 3)} & "        # ΔK_t as decimal fraction
+        f"{_fmt_ratio(r['ratio_Kt'], 3)} & "         # K_t,vind / K_t,uten
+        f"{_fmt_ratio(r['ratio_D'],  3)} \\\\"        # D_vind / D_uten
     )
     last_amp = a
 
@@ -256,7 +262,9 @@ table_body = (
     "  \\begin{tabular}{cc cc r r r}\n"
     "    \\toprule\n"
     "      Amp & $f$ [Hz] & $K_{t,\\text{uten}}$ & $K_{t,\\text{vind}}$ "
-    "& $\\Delta K_t$ [pp] & $K_t$-økn. [\\%] & D-red. [\\%] \\\\\n"
+    "& $\\Delta K_t$ & "
+    "$K_{t,\\text{vind}}/K_{t,\\text{uten}}$ & "
+    "$D_{\\text{vind}}/D_{\\text{uten}}$ \\\\\n"
     "    \\midrule\n"
     + "\n".join(body_rows) + "\n"
     "    \\bottomrule\n"

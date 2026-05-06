@@ -117,7 +117,7 @@ PANEL_AMP_MARKER = {
     ("reverse", 0.20): (5, 1, 0),   # 5-point star
     ("reverse", 0.30): (4, 1, 0),   # 4-point star
 }
-PANEL_LABEL = {"full": "normal", "reverse": "revers panelretning"}
+PANEL_LABEL = {"full": "normal", "reverse": "revers"}
 WIND_LABEL   = {"no": "uten vind", "full": "med vind"}
 MOORING_LABEL = {"below_90": "Under",
                  "above_50": "Over"}

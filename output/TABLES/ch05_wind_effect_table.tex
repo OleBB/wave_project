@@ -6,7 +6,7 @@
 %   script            : analysis_scratch/wind_effect_table.py
 %   plot_type         : wind_effect_table
 %   chapter           : 05
-%   generated_at      : 2026-05-05T12:34:03
+%   generated_at      : 2026-05-06T12:46:31
 %   caption_label     : tab:ch05_wind_effect_table
 %   caption_short     : 
 %
@@ -31,9 +31,10 @@
 %                       moorings (n-weighted mean / true std / total n).
 %   metric_definitions:
 %     Kt_nw / Kt_fw      : mean OUT/IN(FFT) at no- / full-wind
-%     Delta_Kt (pp)      : (Kt_fw - Kt_nw) * 100
-%     pct_T_gain (%)     : (Kt_fw - Kt_nw) / Kt_nw * 100
-%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - K_t
+%     Delta_Kt           : Kt_fw - Kt_nw  (signed decimal fraction)
+%     ratio_Kt           : Kt_fw / Kt_nw  (>1 = wind passes more wave)
+%     ratio_D            : D_fw / D_nw    (D = 1 - K_t)
+%                          <1 = wind erodes panel damping
 %
 % ── end immutable block ─────────────────────────────────────────
 \begin{table}[htbp]
@@ -41,23 +42,23 @@
   \small
   \begin{tabular}{cc cc r r r}
     \toprule
-      $f$ [Hz] & Amp & $K_{t,\text{uten}}$ & $K_{t,\text{vind}}$ & $\Delta K_t$ [pp] & $K_t$-økn. [\%] & D-red. [\%] \\
+      $f$ [Hz] & Amp & $K_{t,\text{uten}}$ & $K_{t,\text{vind}}$ & $\Delta K_t$ & $K_{t,\text{vind}}/K_{t,\text{uten}}$ & $D_{\text{vind}}/D_{\text{uten}}$ \\
     \midrule
-  1.3 & $A_1$ & 0.660 & 0.786 & +12.6 & +19.0 & +37.0 \\
-  1.3 & $A_2$ & 0.811 & 0.858 & +4.7 & +5.8 & +24.9 \\
-  1.3 & $A_3$ & 0.830 & 0.833 & +0.3 & +0.4 & +1.8 \\
+  1.3 & $A_1$ & 0.660 & 0.786 & +0.126 & 1.190 & 0.630 \\
+  1.3 & $A_2$ & 0.811 & 0.858 & +0.047 & 1.058 & 0.751 \\
+  1.3 & $A_3$ & 0.830 & 0.833 & +0.003 & 1.004 & 0.982 \\
 \midrule
-  1.4 & $A_1$ & 0.502 & 0.721 & +21.9 & +43.6 & +44.0 \\
-  1.4 & $A_2$ & 0.687 & 0.759 & +7.2 & +10.5 & +23.1 \\
-  1.4 & $A_3$ & 0.672 & 0.766 & +9.5 & +14.1 & +28.8 \\
+  1.4 & $A_1$ & 0.502 & 0.721 & +0.219 & 1.436 & 0.560 \\
+  1.4 & $A_2$ & 0.687 & 0.759 & +0.072 & 1.105 & 0.769 \\
+  1.4 & $A_3$ & 0.672 & 0.766 & +0.095 & 1.141 & 0.712 \\
 \midrule
-  1.5 & $A_1$ & 0.453 & 0.695 & +24.3 & +53.6 & +44.3 \\
-  1.5 & $A_2$ & 0.594 & 0.733 & +13.8 & +23.3 & +34.1 \\
-  1.5 & $A_3$ & 0.612 & 0.729 & +11.8 & +19.2 & +30.3 \\
+  1.5 & $A_1$ & 0.453 & 0.695 & +0.243 & 1.536 & 0.557 \\
+  1.5 & $A_2$ & 0.594 & 0.733 & +0.138 & 1.233 & 0.659 \\
+  1.5 & $A_3$ & 0.612 & 0.729 & +0.118 & 1.192 & 0.697 \\
 \midrule
-  1.6 & $A_1$ & 0.367 & 0.613 & +24.6 & +67.2 & +38.9 \\
-  1.6 & $A_2$ & 0.486 & 0.684 & +19.9 & +40.9 & +38.6 \\
-  1.6 & $A_3$ & 0.522 & 0.706 & +18.4 & +35.2 & +38.5 \\
+  1.6 & $A_1$ & 0.367 & 0.613 & +0.246 & 1.672 & 0.611 \\
+  1.6 & $A_2$ & 0.486 & 0.684 & +0.199 & 1.409 & 0.614 \\
+  1.6 & $A_3$ & 0.522 & 0.706 & +0.184 & 1.352 & 0.615 \\
     \bottomrule
   \end{tabular}
   \caption{

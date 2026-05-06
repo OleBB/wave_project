@@ -1,0 +1,85 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/loose230_vs_loose300_table.py
+%   plot_type         : loose230_vs_loose300_table
+%   chapter           : 05
+%   generated_at      : 2026-05-06T14:10:25
+%   caption_label     : tab:ch05_loose230_vs_loose300_table
+%   caption_short     : 
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : full
+%   wind              : no, full
+%   mooring           : below_90_loose230 (Mar 26 only)
+%                       below_90_loose300 (Mar 27 only)
+%   amplitude [V]     : 0.1, 0.2, 0.3
+%   frequency [Hz]    : 1.3, 1.4, 1.5, 1.6
+%   quality_flag      : ok
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_cells           : 24
+%   n_cells_both_moor : 13
+%   n_runs (230 + 300): 80
+%   datasets        :
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%
+% — Method ────────────────────────────────────────────────────
+%   grouper           : groupby(amp, freq, wind, mooring) → mean K_t
+%   sort_order        : amplitude outer, frequency middle, wind inner.
+%   metric_definitions:
+%     K_t                : OUT/IN(FFT), narrow 0.1 Hz window at f_paddle
+%     Kt_230 / Kt_300    : mean K_t per mooring
+%     n_230  / n_300     : run count per mooring
+%     Delta              : Kt_230 - Kt_300  (signed decimal fraction)
+%     ratio              : Kt_230 / Kt_300  (>1 = loose230 transmits more)
+%
+% — Caveats ───────────────────────────────────────────────────
+%   * Mooring aliased with date (loose230=Mar 26, loose300=Mar 27).
+%   * loose230 nowind data exists only at A1 1.3 Hz.
+%   * Per-cell n is small (often n=1 for loose230 fullwind).
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{cccc rr r r}
+    \toprule
+      Amp & $f$ [Hz] & vind & $K_t$ loose230 $(n)$ & $K_t$ loose300 $(n)$ & $\Delta = 230-300$ & $K_{t,230}/K_{t,300}$ \\
+    \midrule
+  $A_1$ & 1.3 & uten & 0.646\,(2) & 0.665\,(7) & -0.019 & 0.971 \\
+  $A_1$ & 1.3 & med & 0.830\,(4) & 0.757\,(6) & +0.073 & 1.096 \\
+  $A_1$ & 1.4 & uten & — & 0.502\,(2) & — & — \\
+  $A_1$ & 1.4 & med & 0.812\,(1) & 0.675\,(2) & +0.137 & 1.203 \\
+  $A_1$ & 1.5 & uten & — & 0.453\,(2) & — & — \\
+  $A_1$ & 1.5 & med & 0.764\,(1) & 0.661\,(2) & +0.103 & 1.157 \\
+  $A_1$ & 1.6 & uten & — & 0.367\,(2) & — & — \\
+  $A_1$ & 1.6 & med & 0.647\,(1) & 0.597\,(2) & +0.050 & 1.084 \\
+\midrule
+  $A_2$ & 1.3 & uten & — & 0.811\,(2) & — & — \\
+  $A_2$ & 1.3 & med & 0.882\,(1) & 0.846\,(2) & +0.036 & 1.043 \\
+  $A_2$ & 1.4 & uten & — & 0.687\,(2) & — & — \\
+  $A_2$ & 1.4 & med & 0.822\,(1) & 0.728\,(2) & +0.094 & 1.130 \\
+  $A_2$ & 1.5 & uten & — & 0.594\,(2) & — & — \\
+  $A_2$ & 1.5 & med & 0.789\,(1) & 0.705\,(2) & +0.084 & 1.120 \\
+  $A_2$ & 1.6 & uten & — & 0.486\,(2) & — & — \\
+  $A_2$ & 1.6 & med & 0.687\,(1) & 0.683\,(2) & +0.003 & 1.005 \\
+\midrule
+  $A_3$ & 1.3 & uten & — & 0.830\,(2) & — & — \\
+  $A_3$ & 1.3 & med & 0.819\,(1) & 0.837\,(3) & -0.018 & 0.978 \\
+  $A_3$ & 1.4 & uten & — & 0.672\,(2) & — & — \\
+  $A_3$ & 1.4 & med & 0.757\,(1) & 0.769\,(3) & -0.012 & 0.984 \\
+  $A_3$ & 1.5 & uten & — & 0.612\,(2) & — & — \\
+  $A_3$ & 1.5 & med & 0.727\,(1) & 0.730\,(3) & -0.003 & 0.996 \\
+  $A_3$ & 1.6 & uten & — & 0.522\,(3) & — & — \\
+  $A_3$ & 1.6 & med & 0.699\,(2) & 0.711\,(3) & -0.011 & 0.984 \\
+    \bottomrule
+  \end{tabular}
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch05_loose230_vs_loose300_table}
+\end{table}

@@ -9,16 +9,16 @@ quality_flag=ok, both wind conditions.
 
 Per (freq, amp) cell, computes:
 
-    K_t,uten = mean OUT/IN(FFT) at no-wind
-    K_t,vind = mean OUT/IN(FFT) at full-wind
-    ΔK_t     = K_t,vind − K_t,uten             (signed transmission change, pp)
-    % T-gain = ΔK_t / K_t,uten · 100           (relative transmission change)
-    % D-red  = (D_nw − D_fw) / D_nw · 100      where D = 1 − K_t
-                                               (relative damping reduction)
+    K_t,uten          = mean OUT/IN(FFT) at no-wind
+    K_t,vind          = mean OUT/IN(FFT) at full-wind
+    ΔK_t              = K_t,vind − K_t,uten             (signed decimal fraction)
+    K_t,vind / K_t,uten = transmission ratio   (>1 ↔ wind passes more wave)
+    D_vind / D_uten   = damping ratio,  D = 1 − K_t
+                        (<1 ↔ wind erodes the panel's damping)
 
-All three percentage columns share a sign convention: positive ΔK_t ↔
-positive % T-gain ↔ positive % D-red ↔ "wind makes more wave get through
-the panel" (i.e. the panel damps less).
+Reading convention: the K_t-ratio and D-ratio cross 1.00 in opposite
+directions for the same physical effect — wind making the panel "leak"
+more drives K_t-ratio above 1 and D-ratio below 1.
 
 Aggregation note (2026-05-05): the input filt is stripped of its `Mooring`
 column before being passed to `damping_all_amplitude_grouper`, so each
@@ -129,11 +129,11 @@ pivot_n = stats.pivot_table(
 
 # Compute the four wind-effect metrics.
 table = pivot.rename(columns={"no": "Kt_nw", "full": "Kt_fw"})
-table["Delta_Kt"]    = table["Kt_fw"] - table["Kt_nw"]
-table["pct_T_gain"]  = (table["Kt_fw"] - table["Kt_nw"]) / table["Kt_nw"] * 100.0
+table["Delta_Kt"]    = table["Kt_fw"] - table["Kt_nw"]   # absolute change in K_t
+table["ratio_Kt"]    = table["Kt_fw"] / table["Kt_nw"]   # K_t,vind / K_t,uten
 _D_nw = 1.0 - table["Kt_nw"]
 _D_fw = 1.0 - table["Kt_fw"]
-table["pct_D_red"]   = (_D_nw - _D_fw) / _D_nw * 100.0
+table["ratio_D"]     = _D_fw / _D_nw                      # D_vind / D_uten,  D = 1 - K_t
 table["std_nw"]      = pivot_std["no"]
 table["std_fw"]      = pivot_std["full"]
 table["n_nw"]        = pivot_n["no"].astype("Int64")
@@ -173,6 +173,13 @@ def _fmt_unsigned(x: float, decimals: int = 3) -> str:
     return f"{x:.{decimals}f}"
 
 
+def _fmt_ratio(x: float, decimals: int = 3) -> str:
+    """Unsigned ratio (e.g. 1.181, 0.653). NaN → em-dash."""
+    if pd.isna(x):
+        return "—"
+    return f"{x:.{decimals}f}"
+
+
 # Body rows. Insert \midrule between frequency blocks for visual grouping.
 body_rows = []
 last_freq = None
@@ -184,9 +191,9 @@ for _, r in table.iterrows():
     body_rows.append(
         f"  {f:.1f} & {amp_to_label(a)} & "
         f"{_fmt_unsigned(r['Kt_nw'], 3)} & {_fmt_unsigned(r['Kt_fw'], 3)} & "
-        f"{_fmt_signed(r['Delta_Kt'] * 100, 1)} & "  # ΔK_t in pp
-        f"{_fmt_signed(r['pct_T_gain'], 1)} & "
-        f"{_fmt_signed(r['pct_D_red'], 1)} \\\\"
+        f"{_fmt_signed(r['Delta_Kt'], 3)} & "        # ΔK_t as decimal fraction
+        f"{_fmt_ratio(r['ratio_Kt'], 3)} & "         # K_t,vind / K_t,uten
+        f"{_fmt_ratio(r['ratio_D'],  3)} \\\\"        # D_vind / D_uten
     )
     last_freq = f
 
@@ -250,9 +257,10 @@ immutable = "\n".join([
     "%                       moorings (n-weighted mean / true std / total n).",
     "%   metric_definitions:",
     "%     Kt_nw / Kt_fw      : mean OUT/IN(FFT) at no- / full-wind",
-    "%     Delta_Kt (pp)      : (Kt_fw - Kt_nw) * 100",
-    "%     pct_T_gain (%)     : (Kt_fw - Kt_nw) / Kt_nw * 100",
-    "%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - K_t",
+    "%     Delta_Kt           : Kt_fw - Kt_nw  (signed decimal fraction)",
+    "%     ratio_Kt           : Kt_fw / Kt_nw  (>1 = wind passes more wave)",
+    "%     ratio_D            : D_fw / D_nw    (D = 1 - K_t)",
+    "%                          <1 = wind erodes panel damping",
     "%",
     "% ── end immutable block ─────────────────────────────────────────",
 ])
@@ -267,7 +275,9 @@ table_body = (
     "  \\begin{tabular}{cc cc r r r}\n"
     "    \\toprule\n"
     "      $f$ [Hz] & Amp & $K_{t,\\text{uten}}$ & $K_{t,\\text{vind}}$ "
-    "& $\\Delta K_t$ [pp] & $K_t$-økn. [\\%] & D-red. [\\%] \\\\\n"
+    "& $\\Delta K_t$ & "
+    "$K_{t,\\text{vind}}/K_{t,\\text{uten}}$ & "
+    "$D_{\\text{vind}}/D_{\\text{uten}}$ \\\\\n"
     "    \\midrule\n"
     + "\n".join(body_rows) + "\n"
     "    \\bottomrule\n"

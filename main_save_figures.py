@@ -263,8 +263,11 @@ CHAPTER 05 — RESULTS
   §3b   ch05_t_cross                     [DELEG] ✓  T_cross: honest wind effect via clean nowind ref
   §4    ch05_damping_ka                  [META]  ~  Damping vs ka (wavenumber × amplitude)
         ch05_damping_ka_{A1,A2,A3}       [DELEG] ✓     └─ standalone per-amplitude-tier (per240+per40, magenta palette)
+  §4a   ch05_damping_ka_fit              [DELEG] ~  Damping vs ka — same data as §4, with per-wind poly-2 fit overlay
+        ch05_damping_ka_fit_{A1,A2,A3}   [DELEG] ~     └─ per-amp subfigs with R² annotation
   §4b   ch05_mooring_focus_at_1_3hz_ka   [DELEG] ~  Mooring + panelretning at 1.30 Hz — single A4 page, 3 stacked subfigs
         ch05_mooring_focus_at_1_3hz_ka_{A1,A2,A3}  [DELEG] ~     └─ per-amp subfigs (loaded from above)
+        ch05_mooring_focus_at_1_3hz_table  [DELEG] ~     └─ companion table: K_t per wind, ΔK_t pp, T-økn %, D-red % per (amp, panel, mooring)
   §5    (removed — was Swell/Wind/Total band scatter; PSD-band columns dropped 2026-05-02)
   §6    (moved → CH04 §4-3b as ch04_reconstructed)
   §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions
@@ -583,11 +586,19 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_damping_ka_A2":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_2$.",
     "ch05_damping_ka_A3":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_3$.",
 
+    # § 4a — Damping vs ka with per-wind poly-2 fits
+    "ch05_damping_ka_fit":             "TODO: skriv hovedteksten. Samme data som figur \\ref{fig:ch05_damping_ka}, uten overlagt kurvetilpasning (kombinert kombinert visning blir for trang for tilpasningskurver).",
+    "ch05_damping_ka_fit_A1":          "TODO: skriv hovedteksten. Samme data som figur \\ref{fig:ch05_damping_ka_A1}, med en grad-2-polynom-tilpasning per vindkondisjon (per240 + per40 slått sammen). Kurvetilpasning + $R^2$-verdier i figuren viser at uten-vind-data følger en tydelig kurve mens med-vind-data har større spredning på samme amplitude.",
+    "ch05_damping_ka_fit_A2":          "TODO: skriv hovedteksten. Som figur \\ref{fig:ch05_damping_ka_fit_A1}, men for $A_2$.",
+    "ch05_damping_ka_fit_A3":          "TODO: skriv hovedteksten. Som figur \\ref{fig:ch05_damping_ka_fit_A1}, men for $A_3$.",
+
     # § 4b — Mooring + panelretning at 1.30 Hz (single-page A4, 3 subfigs)
     "ch05_mooring_focus_at_1_3hz_ka":   "TODO: skriv hovedteksten. Sammenligning av transmisjon $K_t$ ved 1.30 Hz på tvers av mooring (below\\_90 vs above\\_50) og panelretning (normal vs revers), for hver av amplitudevalgene $A_1$, $A_2$, $A_3$. Fyrer (hule) markører for å se overlappende punkter.",
     "ch05_mooring_focus_at_1_3hz_ka_A1": "TODO: undertekst $A_1$.",
     "ch05_mooring_focus_at_1_3hz_ka_A2": "TODO: undertekst $A_2$.",
     "ch05_mooring_focus_at_1_3hz_ka_A3": "TODO: undertekst $A_3$.",
+    # § 4b — Companion table for the figure above.
+    "ch05_mooring_focus_at_1_3hz_table": "TODO: skriv hovedteksten. Hardtall til figur \\ref{fig:ch05_mooring_focus_at_1_3hz_ka}: transmisjon $K_t$ ved 1.30 Hz per (amplitude, panelretning, mooring). Per celle: $K_t$ med antall kjøringer $(n)$ for hver vindkondisjon, absolutt endring $\\Delta K_t$, transmisjonsforhold $K_{t,\\text{vind}}/K_{t,\\text{uten}}$ ($>1$ = vind slipper mer bølge gjennom), og dempningsforhold $D_{\\text{vind}}/D_{\\text{uten}}$ med $D = 1 - K_t$ ($<1$ = vind reduserer panelets demping). Tomt felt for revers $\\cdot$ below\\_90 — denne kombinasjonen ble ikke kjørt.",
 
     # § 6 — moved to CH04 §4-3b as ch04_reconstructed (paired with ch04_fft_wave)
 
@@ -682,10 +693,15 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_damping_ka_A1":              "Transmisjon per ka. A1",
     "ch05_damping_ka_A2":              "Transmisjon per ka. A2",
     "ch05_damping_ka_A3":              "Transmisjon per ka. A3",
+    "ch05_damping_ka_fit":             "Transmisjon per ka, samlet (uten kurvetilpasning).",
+    "ch05_damping_ka_fit_A1":          "Transmisjon per ka, $A_1$ — med kurvetilpasning per vind.",
+    "ch05_damping_ka_fit_A2":          "Transmisjon per ka, $A_2$ — med kurvetilpasning per vind.",
+    "ch05_damping_ka_fit_A3":          "Transmisjon per ka, $A_3$ — med kurvetilpasning per vind.",
     "ch05_mooring_focus_at_1_3hz_ka":   "Mooring + panelretning ved 1.30 Hz.",
     "ch05_mooring_focus_at_1_3hz_ka_A1": "Mooring + panelretning, $A_1$.",
     "ch05_mooring_focus_at_1_3hz_ka_A2": "Mooring + panelretning, $A_2$.",
     "ch05_mooring_focus_at_1_3hz_ka_A3": "Mooring + panelretning, $A_3$.",
+    "ch05_mooring_focus_at_1_3hz_table": "Mooring + panelretning ved 1.30 Hz — hardtall.",
     "ch05_damping_all_data_scatter":   "",
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
@@ -2473,6 +2489,37 @@ _run_delegated_if_missing(
 )
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/damping_ka_per_volt_with_fit.py
+"""
+── CH05 § 4a — Damping vs ka with poly-2 fit per wind condition ─────────────
+Same data and visual encoding as ch05_damping_ka_* above, with a degree-2
+polynomial fit overlaid per (amplitude, wind), pooled across per_tag
+(per240 + per40). Each per-amp subfigure carries an in-axis annotation with
+n and R² per wind condition.
+
+Reader observation that motivates this view: at A1, no-wind data tracks a
+clean curve (R² ≈ 0.98) while with-wind data scatters more (R² ≈ 0.65)
+even with more datapoints. The fits make that visible directly. The wind
+× ka interaction tightens at A2 and A3 (R² > 0.86 either wind).
+
+Combined view (`ch05_damping_ka_fit.pdf`) skips the fit overlay — 6
+overlapping curves at all 3 amps would be too dense to add information.
+
+Generated by analysis_scratch/damping_ka_per_volt_with_fit.py.
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/damping_ka_per_volt_with_fit.py",
+    [Path("output/TEXFIGU/ch05_damping_ka_fit.tex"),
+     Path("output/TEXFIGU/ch05_damping_ka_fit_A1.tex"),
+     Path("output/TEXFIGU/ch05_damping_ka_fit_A2.tex"),
+     Path("output/TEXFIGU/ch05_damping_ka_fit_A3.tex"),
+     Path("output/FIGURES/ch05_damping_ka_fit.pdf"),
+     *(Path(f"output/FIGURES/ch05_damping_ka_fit_{t}.pdf")
+       for t in ("A1", "A2", "A3"))],
+    label="ch05_damping_ka_per_volt_with_fit",
+)
+
+# %%
 # [DATA: DELEG]  — analysis_scratch/mooring_focus_at_1_3hz_ka.py
 """
 ── CH05 § 4b — Mooring + panelretning at 1.30 Hz (single-page A4) ───────────
@@ -2501,6 +2548,27 @@ _run_delegated_if_missing(
      *(Path(f"output/FIGURES/ch05_mooring_focus_at_1_3hz_ka_{t}.pdf")
        for t in ("A1", "A2", "A3"))],
     label="ch05_mooring_focus_at_1_3hz_ka",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/mooring_focus_at_1_3hz_table.py
+"""
+── CH05 § 4b — Mooring + panelretning at 1.30 Hz: companion table ───────────
+Hard numbers for the figure above. Same data, same scope (1.30 Hz only,
+panels ∈ {full, reverse}, moorings ∈ {below_90, above_50}). One row per
+(amp, panel, mooring) cell with K_t per wind, ΔK_t in pp, K_t-økn %, D-red %.
+
+The reverse · below_90 cell is honestly absent — reverse panel was never
+run on the below_90 mooring.
+
+Generated by analysis_scratch/mooring_focus_at_1_3hz_table.py. Writes:
+    output/TABLES/ch05_mooring_focus_at_1_3hz_table.tex   (thesis include)
+    analysis_scratch/mooring_focus_at_1_3hz_table.csv     (companion CSV)
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/mooring_focus_at_1_3hz_table.py",
+    [Path("output/TABLES/ch05_mooring_focus_at_1_3hz_table.tex")],
+    label="ch05_mooring_focus_at_1_3hz_table",
 )
 
 # %%

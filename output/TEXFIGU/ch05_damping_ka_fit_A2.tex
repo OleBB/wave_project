@@ -1,0 +1,86 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/damping_ka_per_volt.py
+%   computed_in       : analysis_scratch/damping_ka_per_volt.py (single-voltage scatter, A2)
+%   plot_type         : damping_ka
+%   data_class        : DELEG
+%   generated_at      : 2026-05-06T13:53:48
+%   findings_doc      : memory/methodology_wind_enhances_A_in.md
+%
+% — Thesis context ──────────────────────────────────────────────
+%   chapter           : 05
+%   caption_label     : fig:ch05_damping_ka_fit_A2
+%   caption_short     : Transmisjon per ka, $A_2$ — med kurvetilpasning per vind.
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : full
+%   wind              : no + full
+%   amplitude [V]     : 0.2
+%   frequency [Hz]    : 1.3–1.6
+%   probes            : 
+%   run_category      : 
+%   quality_flag      : ok
+%   mooring           : 
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_runs            : 
+%   in_probes_used    : 
+%   out_probes_used   : 
+%   probe_configs     : 
+%   non_final_config_n: 
+%   datasets        :
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%   run_paths       :
+%     (omitted — aggregate over > threshold runs, see datasets)
+%
+% — Method / numerical parameters ─────────────────────────────
+%   grouper           : 
+%   collapse_panels   : 
+%   fft_window_hz     : 0.1
+%   extra_params      : amplitude tier A2 (paddle V = 0.20 V → nominal measured amplitude at IN ≈ 15.0 mm). frequency range = 1.3–1.6 Hz (thesis scope). panel condition = full. quality_flag ∈ {ok, NaN}. per-tags included: per240 + per40 (per15 excluded — window too short for H&G [50T, 60T]). datasets: PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange, PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange. x-axis = IN ka (FFT) computed per run from measured IN-side wavenumber and amplitude (not derived from dispersion). y-axis = OUT/IN (FFT) from meta.json (canonical IN/OUT mean of same-distance probes; see CLAUDE.md §5). Dashed reference: ratio = 1 (no damping). Colour convention: per240 (long runs) uses thesis-wide RED = fullwind, BLUE = nowind (feedback_wind_color_convention.md). per40 (short runs) uses magenta (#D946EF) for fullwind and turquoise (#00D4BC) for nowind — chosen for hue-distance from red/blue without crossing into green/orange. Typeset in NewComputerModern10 (OTFs from TeXLive's newcomputermodern package, registered via font_manager).
+%
+% — Summary stats cited in caption ────────────────────────────
+%   stat:n_per240_full : 8
+%   stat:mean_ratio_per240_full : 0.7663
+%   stat:std_ratio_per240_full : 0.0823
+%   stat:ka_lo_per240_full : 0.1306
+%   stat:ka_hi_per240_full : 0.2110
+%   stat:n_per240_no  : 4
+%   stat:mean_ratio_per240_no : 0.6498
+%   stat:std_ratio_per240_no : 0.1387
+%   stat:ka_lo_per240_no : 0.1042
+%   stat:ka_hi_per240_no : 0.1711
+%   stat:n_per40_full : 4
+%   stat:mean_ratio_per40_full : 0.7430
+%   stat:std_ratio_per40_full : 0.0646
+%   stat:ka_lo_per40_full : 0.1389
+%   stat:ka_hi_per40_full : 0.2092
+%   stat:n_per40_no   : 4
+%   stat:mean_ratio_per40_no : 0.6391
+%   stat:std_ratio_per40_no : 0.1373
+%   stat:ka_lo_per40_no : 0.1055
+%   stat:ka_hi_per40_no : 0.1681
+%   stat:n_freq_1p30Hz : 5
+%   stat:n_freq_1p40Hz : 5
+%   stat:n_freq_1p50Hz : 5
+%   stat:n_freq_1p60Hz : 5
+%   stat:mean_ratio_full_all : 0.7585
+%   stat:n_full_all   : 12
+%   stat:mean_ratio_no_all : 0.6444
+%   stat:n_no_all     : 8
+%
+% — Subfigures available ───────────────────────────────────────
+%     FIGURES/ch05_damping_ka_fit_A2.pdf
+% ── end immutable block ─────────────────────────────────────────
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{FIGURES/ch05_damping_ka_fit_A2.pdf}
+  \caption[Transmisjon per ka, $A_2$ — med kurvetilpasning per vind.]{
+    TODO: skriv hovedteksten. Som figur \ref{fig:ch05_damping_ka_fit_A1}, men for $A_2$.
+  }
+  \label{fig:ch05_damping_ka_fit_A2}
+\end{figure}

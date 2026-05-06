@@ -1,0 +1,499 @@
+"""
+CH05 §4 — OUT/IN vs ka with curve fits per wind condition (standalone).
+
+Iteration on `damping_ka_per_volt.py`: same scatter, plus a degree-2 polynomial
+fit per (amplitude, wind condition), pooled across per_tag (per240 + per40).
+Reader observation that motivated this: at A1 the no-wind data tracks a clean
+curve while the wind data scatters more even with more datapoints. Fitting
+per wind makes that visible directly — the no-wind curve passes through its
+points tightly (high R²); the wind curve has wider residuals (lower R²).
+
+Same data scope, same colour / shape encoding as the parent. Only addition
+is the smooth fit overlay. Each line is tagged with R² in the legend.
+
+Data scope — same as `_pv_damping_ka`:
+  - two canon lowrange folders (2026-03-26 / 2026-03-27)
+  - PanelCondition = full
+  - 1.3–1.6 Hz
+  - quality_flag ∈ {ok, NaN}
+  - per240 and per40 only (per15 excluded — window too short for H&G)
+
+Outputs (per amplitude tier):
+    output/FIGURES/ch05_damping_ka_fit_A1.pdf
+    output/FIGURES/ch05_damping_ka_fit_A2.pdf
+    output/FIGURES/ch05_damping_ka_fit_A3.pdf
+    output/FIGURES/ch05_damping_ka_fit.pdf            (combined all-amps)
+    output/TEXFIGU/ch05_damping_ka_fit_{A1,A2,A3}.tex
+    output/TEXFIGU/ch05_damping_ka_fit.tex
+"""
+
+import re
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+from matplotlib import font_manager as _fm
+from matplotlib.ticker import MultipleLocator
+
+from wavescripts.improved_data_loader import load_analysis_data
+from wavescripts.plot_utils import (apply_thesis_style, apply_horizontal_ylabel,
+                                    WIND_COLOR_MAP, amp_to_label, amp_to_tag)
+from wavescripts.plotter import _freq_marker
+import wavescripts.plot_utils as pu
+
+
+BASE        = Path("/Users/ole/Kodevik/wave_project")
+FIGURES_DIR = BASE / "output" / "FIGURES"
+TEXFIGU_DIR = BASE / "output" / "TEXFIGU"
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+TEXFIGU_DIR.mkdir(parents=True, exist_ok=True)
+
+RESULTS_DIRS = [
+    BASE / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
+    BASE / "waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange",
+]
+
+KA_COL    = "IN ka (FFT)"
+RATIO_COL = "OUT/IN (FFT)"
+
+# Captions live centrally in main_save_figures.py (FIGURE_CAPTIONS /
+# FIGURE_CAPTIONS_SHORT). pu.write_figure_stub looks them up by figure_name
+# via output/.figure_captions.json. Nothing to edit here.
+
+# Wind colour palette: per240 uses the canonical thesis WIND_COLOR_MAP
+# (blue / red, identical to ch05_damping_freq); per40 uses lighter tints
+# of the same hues so the wind→colour convention reads consistently across
+# all CH05 figures and the per-tag distinction is a brightness step rather
+# than a hue jump.
+import matplotlib.colors as _mcolors
+
+
+def _lighten(c: str, mix: float = 0.55) -> tuple:
+    """Blend colour ``c`` with white. mix=0 → unchanged, mix=1 → white."""
+    r, g, b = _mcolors.to_rgb(c)
+    return (r + (1.0 - r) * mix,
+            g + (1.0 - g) * mix,
+            b + (1.0 - b) * mix)
+
+
+PER_WIND_COLOR = {
+    ("per240", "no"):   WIND_COLOR_MAP["no"],            # canonical blue
+    ("per240", "full"): WIND_COLOR_MAP["full"],          # canonical red
+    ("per40",  "no"):   _lighten(WIND_COLOR_MAP["no"]),   # light blue
+    ("per40",  "full"): _lighten(WIND_COLOR_MAP["full"]), # light red / pink
+}
+
+WIND_LABEL = {"no": "uten vind", "full": "full vind"}
+
+# Curve fit settings.
+# degree 2 = quadratic (3 free params); allows mild curvature without
+# overfitting at the typical n ≈ 20-50 per (amp, wind) cell. Bumping to 1
+# would force a straight line — likely too restrictive given the visible
+# bend in the no-wind data. Bumping to 3 starts overfitting at the smaller
+# per-cell sizes.
+FIT_DEGREE     = 2
+FIT_MIN_POINTS = FIT_DEGREE + 2          # need ≥4 points to fit a quadratic
+FIT_LINE_KW    = dict(lw=2.0, ls="-", alpha=0.85, zorder=4)
+
+
+# ─── NCM font (thesis body) ───────────────────────────────────────────────
+apply_thesis_style()
+_NCM_DIR = "/usr/local/texlive/2025/texmf-dist/fonts/opentype/public/newcomputermodern"
+for _fname in ("NewCM10-Regular.otf", "NewCM10-Bold.otf",
+               "NewCM10-Italic.otf", "NewCM10-BoldItalic.otf",
+               "NewCMMath-Regular.otf"):
+    try:
+        _fm.fontManager.addfont(f"{_NCM_DIR}/{_fname}")
+    except Exception as _e:
+        print(f"   warn: could not register {_fname}: {_e}")
+plt.rcParams.update({
+    "font.family":      "serif",
+    "font.serif":       ["NewComputerModern10", "DejaVu Serif"],
+    "mathtext.fontset": "cm",
+})
+
+pu.ACTIVE_DATASETS = [p.name for p in RESULTS_DIRS]
+pu.TEXFIGU_DIR = TEXFIGU_DIR
+pu.FIGURES_DIR = FIGURES_DIR
+
+
+# ─── Load & filter ────────────────────────────────────────────────────────
+print("Loading …")
+meta, _, _, _ = load_analysis_data(*[str(p) for p in RESULTS_DIRS],
+                                   load_processed=False)
+
+m = meta.copy()
+m = m[m["PanelCondition"] == "full"]
+m = m[m["WaveFrequencyInput [Hz]"].between(1.3, 1.6, inclusive="both")]
+if "quality_flag" in m.columns:
+    m = m[m["quality_flag"].isna() | (m["quality_flag"] == "ok")]
+m = m.dropna(subset=[KA_COL, RATIO_COL, "WindCondition",
+                     "WaveAmplitudeInput [Volt]",
+                     "WaveFrequencyInput [Hz]"])
+
+# Tag per-run length
+_per40  = re.compile(r"per40(?!\d)")
+_per240 = re.compile(r"per240")
+m["per_tag"] = np.where(m["path"].str.contains(_per40,  na=False), "per40",
+                 np.where(m["path"].str.contains(_per240, na=False), "per240",
+                          "other"))
+m = m[m["per_tag"].isin(("per240", "per40"))].copy()
+
+print(f"  {len(m)} runs (per240={int((m['per_tag']=='per240').sum())}, "
+      f"per40={int((m['per_tag']=='per40').sum())})")
+
+ALL_WINDS = sorted(m["WindCondition"].unique())
+ALL_FREQS = sorted(m["WaveFrequencyInput [Hz]"].unique())
+ALL_VOLTS = sorted(m["WaveAmplitudeInput [Volt]"].unique())
+
+
+# ─── Axis envelope — shared across the three voltages for direct comparison
+_pad_x = 0.05 * (m[KA_COL].max() - m[KA_COL].min())
+_pad_y = 0.05 * (m[RATIO_COL].max() - m[RATIO_COL].min())
+XLIM = (max(0.0, m[KA_COL].min()    - _pad_x), m[KA_COL].max()    + _pad_x)
+YLIM = (max(0.0, m[RATIO_COL].min() - _pad_y), m[RATIO_COL].max() + _pad_y)
+
+
+# Per-(amplitude, frequency) marker encoding via plotter._freq_marker:
+#   A1 (0.10 V): circle family — full / 3/4 / right-half / upper-quarter
+#   A2 (0.20 V): tall rectangle rotated 0° / 45° / 90° / 135°
+#   A3 (0.30 V): triangle pointing up / left / down / right
+# The four orientations within each amp family map to f = 1.3 / 1.4 / 1.5 / 1.6 Hz
+# (sorted ascending). This gives 12 visually-distinct markers for the
+# (amp × freq) combinations on top of the per-tag × wind colour encoding.
+THESIS_FREQS = [1.3, 1.4, 1.5, 1.6]
+FREQ_IDX = {f: i for i, f in enumerate(THESIS_FREQS)}
+
+
+def _make_figure(sub: pd.DataFrame,
+                 volt: "float | None" = None) -> plt.Figure:
+    """One scatter axis with shared style across per-volt and combined views.
+
+    volt=None        → combined (all 3 amps overlaid)
+    volt=<float>     → single-amplitude view (single shape family)
+
+    Marker family encodes amplitude (A1=circle, A2=rectangle, A3=triangle);
+    orientation/fill within each family encodes frequency (1.3 → 1.6 Hz).
+    Colour always encodes (per_tag × wind) per PER_WIND_COLOR. Ticks, grid,
+    xlim/ylim, and legend layout are identical between modes.
+    """
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+
+    combined = volt is None
+    amp_iter = ALL_VOLTS if combined else [volt]
+
+    for amp_val in amp_iter:
+        sub_amp = sub[np.isclose(sub["WaveAmplitudeInput [Volt]"], amp_val)]
+        for per_tag in ("per240", "per40"):
+            for wind in ALL_WINDS:
+                for freq, fi in FREQ_IDX.items():
+                    sel = sub_amp[(sub_amp["per_tag"] == per_tag) &
+                                  (sub_amp["WindCondition"] == wind) &
+                                  np.isclose(sub_amp["WaveFrequencyInput [Hz]"], freq)]
+                    if sel.empty:
+                        continue
+                    ax.scatter(sel[KA_COL], sel[RATIO_COL],
+                               marker=_freq_marker(amp_val, fi),
+                               color=PER_WIND_COLOR[(per_tag, wind)],
+                               s=55, alpha=0.85,
+                               edgecolors="black", linewidths=0.35,
+                               zorder=3)
+
+    # ── Curve fits per (amp, wind), pooled across per_tag ────────────────
+    # Single-volt mode only: in combined mode (3 amps × 2 winds = 6 lines)
+    # the overlay is too dense to add information.
+    fit_summary = []
+    if not combined:
+        for amp_val in amp_iter:
+            for wind in ALL_WINDS:
+                cell = sub[
+                    np.isclose(sub["WaveAmplitudeInput [Volt]"], amp_val)
+                    & (sub["WindCondition"] == wind)
+                ]
+                n_cell = len(cell)
+                if n_cell < FIT_MIN_POINTS:
+                    fit_summary.append((wind, n_cell, None))
+                    continue
+                x = cell[KA_COL].values
+                y = cell[RATIO_COL].values
+                coeffs = np.polyfit(x, y, FIT_DEGREE)
+                poly   = np.poly1d(coeffs)
+                yhat   = poly(x)
+                ss_res = float(np.sum((y - yhat) ** 2))
+                ss_tot = float(np.sum((y - y.mean()) ** 2))
+                r2     = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+                x_smooth = np.linspace(x.min(), x.max(), 100)
+                ax.plot(x_smooth, poly(x_smooth),
+                        color=WIND_COLOR_MAP[wind], **FIT_LINE_KW)
+                fit_summary.append((wind, n_cell, r2))
+
+        # R² annotation box, lower-left.
+        if fit_summary:
+            txt_lines = [f"poly-{FIT_DEGREE} fit (per240+per40 pooled)"]
+            for wind, n, r2 in fit_summary:
+                if r2 is None:
+                    txt_lines.append(f"  {WIND_LABEL[wind]}: n={n} (for få)")
+                else:
+                    txt_lines.append(
+                        f"  {WIND_LABEL[wind]}: n={n}, $R^2$ = {r2:.3f}"
+                    )
+            ax.text(0.02, 0.02, "\n".join(txt_lines),
+                    transform=ax.transAxes, fontsize=8,
+                    va="bottom", ha="left", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.3", fc="white",
+                              ec="#bbb", alpha=0.92))
+
+    ax.axhline(1.0, color="black", linestyle="--", linewidth=0.7, alpha=0.55)
+    ax.set_xlim(XLIM); ax.set_ylim(YLIM)
+    ax.set_xlabel(r"$ka$  (Inn, målt)", fontsize=10)
+    ax.xaxis.set_major_locator(MultipleLocator(0.05))
+    ax.xaxis.set_minor_locator(MultipleLocator(0.01))
+    ax.yaxis.set_major_locator(MultipleLocator(0.1))
+    ax.yaxis.set_minor_locator(MultipleLocator(0.02))
+    ax.grid(True, which="major", alpha=0.30)
+    ax.grid(True, which="minor", alpha=0.10)
+
+    # Kjøringstype × vind legend — colour-coded, same in both modes.
+    wind_handles = [
+        mlines.Line2D([], [], color=PER_WIND_COLOR[("per240", "no")],
+                      marker="o", ls="None", ms=6, mec="black", mew=0.3,
+                      label=f"Lang tidsserie · {WIND_LABEL['no']}"),
+        mlines.Line2D([], [], color=PER_WIND_COLOR[("per240", "full")],
+                      marker="o", ls="None", ms=6, mec="black", mew=0.3,
+                      label=f"Lang tidsserie · {WIND_LABEL['full']}"),
+        mlines.Line2D([], [], color=PER_WIND_COLOR[("per40",  "no")],
+                      marker="o", ls="None", ms=6, mec="black", mew=0.3,
+                      label=f"Kort tidsserie · {WIND_LABEL['no']}"),
+        mlines.Line2D([], [], color=PER_WIND_COLOR[("per40",  "full")],
+                      marker="o", ls="None", ms=6, mec="black", mew=0.3,
+                      label=f"Kort tidsserie · {WIND_LABEL['full']}"),
+    ]
+    leg_w = ax.legend(handles=wind_handles, title="Kjøringstype · vind",
+                      title_fontsize=8, fontsize=8,
+                      loc="lower right", framealpha=0.92)
+    ax.add_artist(leg_w)
+
+    # Frequency legend — shows the orientation/fill cycle within each amp
+    # family. In per-volt mode this uses the single relevant amp family
+    # (so the markers in the legend match the data exactly); in combined
+    # mode it uses A2 (rectangles, the visually clearest rotation cycle)
+    # as a representative sample — the reader generalises shape→amp from
+    # the Amplitude legend on the right.
+    freq_legend_amp = volt if not combined else 0.20
+    freq_handles = [
+        mlines.Line2D([], [], color="gray",
+                      marker=_freq_marker(freq_legend_amp, fi),
+                      ls="None", ms=7, mec="black", mew=0.35,
+                      label=f"{f:.1f} Hz")
+        for f, fi in FREQ_IDX.items()
+    ]
+    leg_f = ax.legend(handles=freq_handles, title="Frekvens",
+                      title_fontsize=8, fontsize=8,
+                      loc="upper left", framealpha=0.92)
+
+    # Amplitude legend — only in combined mode. Shows one marker per amp
+    # family (using f=1.3 Hz orientation = "full" / 0° / up).
+    if combined:
+        ax.add_artist(leg_f)
+        amp_handles = [
+            mlines.Line2D([], [], color="gray",
+                          marker=_freq_marker(v, 0),
+                          ls="None", ms=7, mec="black", mew=0.35,
+                          label=amp_to_label(v))
+            for v in (0.10, 0.20, 0.30)
+        ]
+        ax.legend(handles=amp_handles, title="Amplitude",
+                  title_fontsize=8, fontsize=8,
+                  loc="upper right", framealpha=0.92)
+
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.88, bottom=0.13)
+    apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
+    return fig
+
+
+def _f(x, n=4):
+    try:
+        return f"{float(x):.{n}f}"
+    except (TypeError, ValueError):
+        return "NA"
+
+
+def _per_volt_stats(sub: pd.DataFrame) -> dict:
+    out = {}
+    for per_tag in ("per240", "per40"):
+        for wind in ALL_WINDS:
+            key_tag = f"{per_tag}_{wind}"
+            sel = sub[(sub["per_tag"] == per_tag) &
+                      (sub["WindCondition"] == wind)]
+            out[f"n_{key_tag}"] = f"{len(sel)}"
+            if len(sel):
+                out[f"mean_ratio_{key_tag}"] = _f(sel[RATIO_COL].mean(), 4)
+                out[f"std_ratio_{key_tag}"]  = _f(sel[RATIO_COL].std(),  4)
+                out[f"ka_lo_{key_tag}"]      = _f(sel[KA_COL].min(),     4)
+                out[f"ka_hi_{key_tag}"]      = _f(sel[KA_COL].max(),     4)
+    # Per-frequency cluster counts
+    for freq in ALL_FREQS:
+        out[f"n_freq_{freq:.2f}Hz".replace(".", "p")] = f"{int((np.isclose(sub['WaveFrequencyInput [Hz]'], freq)).sum())}"
+    # Per-wind means across per-tags (the headline wind effect)
+    for wind in ALL_WINDS:
+        sel_w = sub[sub["WindCondition"] == wind]
+        out[f"mean_ratio_{wind}_all"] = _f(sel_w[RATIO_COL].mean(), 4) if len(sel_w) else "NA"
+        out[f"n_{wind}_all"]          = f"{len(sel_w)}"
+    return out
+
+
+def _combined_stats(sub: pd.DataFrame) -> dict:
+    """Stats for the all-amplitudes combined figure."""
+    out = _per_volt_stats(sub)
+    # Per-amp counts so the immutable block records the marker-shape mapping.
+    for v in ALL_VOLTS:
+        out[f"n_{amp_to_tag(v)}"] = f"{int((np.isclose(sub['WaveAmplitudeInput [Volt]'], v)).sum())}"
+    return out
+
+
+def _write_stub(sub: pd.DataFrame, volt: float, figure_name: str) -> None:
+    volt_tag = amp_to_tag(volt)
+    stats = _per_volt_stats(sub)
+
+    # Caption text is looked up centrally from FIGURE_CAPTIONS in
+    # main_save_figures.py via output/.figure_captions.json — no caption
+    # is passed in meta here.
+    _meta = pu.build_fig_meta(
+        {
+            "filters": {
+                "PanelCondition":            "full",
+                "WaveFrequencyInput [Hz]":   "1.3–1.6",
+                "WaveAmplitudeInput [Volt]": volt,
+                "WindCondition":             "no + full",
+                "quality_flag":              "ok",
+            },
+            "plotting": {
+                "figure_name": figure_name,
+            },
+        },
+        chapter="05",
+        extra={"script": "analysis_scratch/damping_ka_per_volt.py"},
+        computed_in=("analysis_scratch/damping_ka_per_volt.py "
+                     f"(single-voltage scatter, {volt_tag})"),
+        data_class="DELEG",
+        findings_doc="memory/methodology_wind_enhances_A_in.md",
+        fft_window_hz=0.1,
+        extra_params=(
+            # Data slicing
+            f"amplitude tier {volt_tag} (paddle V = {volt:.2f} V → "
+            f"nominal measured amplitude at IN ≈ "
+            f"{ {0.10: 7.5, 0.20: 15.0, 0.30: 21.5}.get(round(volt, 2), 0.0):.1f} mm). "
+            f"frequency range = 1.3–1.6 Hz (thesis scope). "
+            f"panel condition = full. quality_flag ∈ {{ok, NaN}}. "
+            f"per-tags included: per240 + per40 "
+            f"(per15 excluded — window too short for H&G [50T, 60T]). "
+            f"datasets: {', '.join(p.name for p in RESULTS_DIRS)}. "
+            # Axis + visual
+            f"x-axis = IN ka (FFT) computed per run from measured IN-side "
+            f"wavenumber and amplitude (not derived from dispersion). "
+            f"y-axis = OUT/IN (FFT) from meta.json (canonical IN/OUT mean "
+            f"of same-distance probes; see CLAUDE.md §5). "
+            f"Dashed reference: ratio = 1 (no damping). "
+            # Colour convention
+            f"Colour convention: per240 (long runs) uses thesis-wide "
+            f"RED = fullwind, BLUE = nowind (feedback_wind_color_convention.md). "
+            f"per40 (short runs) uses magenta (#D946EF) for fullwind and "
+            f"turquoise (#00D4BC) for nowind — chosen for hue-distance from "
+            f"red/blue without crossing into green/orange. "
+            # Typeset
+            f"Typeset in NewComputerModern10 (OTFs from TeXLive's "
+            f"newcomputermodern package, registered via font_manager)."
+        ),
+        extra_stats=stats,
+    )
+
+    # force=True — always rewrite the stub (immutable block + body) so
+    # the latest central-dict caption text lands. Hand edits to the .tex
+    # body do not survive a re-run.
+    pu.write_figure_stub(_meta, plot_type="damping_ka",
+                         subfig_filenames=[figure_name],
+                         force=True)
+    print(f"   stub → output/TEXFIGU/{figure_name}.tex")
+
+
+def _write_combined_stub(sub: pd.DataFrame, figure_name: str) -> None:
+    """Stub for the all-amplitudes combined ka figure."""
+    _meta = pu.build_fig_meta(
+        {
+            "filters": {
+                "PanelCondition":            "full",
+                "WaveFrequencyInput [Hz]":   "1.3–1.6",
+                "WaveAmplitudeInput [Volt]": "0.10, 0.20, 0.30",
+                "WindCondition":             "no + full",
+                "quality_flag":              "ok",
+            },
+            "plotting": {
+                "figure_name": figure_name,
+            },
+        },
+        chapter="05",
+        extra={"script": "analysis_scratch/damping_ka_per_volt.py"},
+        computed_in=("analysis_scratch/damping_ka_per_volt.py "
+                     "(combined all-amplitudes overview)"),
+        data_class="DELEG",
+        findings_doc="memory/methodology_wind_enhances_A_in.md",
+        fft_window_hz=0.1,
+        extra_params=(
+            f"all three amplitude tiers (A1/A2/A3) overlaid on one panel. "
+            f"frequency range = 1.3–1.6 Hz (thesis scope). "
+            f"panel condition = full. quality_flag ∈ {{ok, NaN}}. "
+            f"per-tags included: per240 + per40 "
+            f"(per15 excluded — window too short for H&G [50T, 60T]). "
+            f"datasets: {', '.join(p.name for p in RESULTS_DIRS)}. "
+            f"x-axis = IN ka (FFT) computed per run from measured IN-side "
+            f"wavenumber and amplitude (not derived from dispersion). "
+            f"y-axis = OUT/IN (FFT) from meta.json (canonical IN/OUT mean "
+            f"of same-distance probes; see CLAUDE.md §5). "
+            f"Dashed reference: ratio = 1 (no damping). "
+            f"Encoding: marker shape → amplitude tier "
+            f"(○ A1, □ A2, △ A3); colour → per-tag × wind "
+            f"(blue per240·nowind, red per240·fullwind, "
+            f"turquoise per40·nowind, magenta per40·fullwind). "
+            f"Axes / ticks / grid identical to ch05_damping_ka_A1/A2/A3 for "
+            f"direct visual comparison. "
+            f"Typeset in NewComputerModern10."
+        ),
+        extra_stats=_combined_stats(sub),
+    )
+    pu.write_figure_stub(_meta, plot_type="damping_ka",
+                         subfig_filenames=[figure_name],
+                         force=True)
+    print(f"   stub → output/TEXFIGU/{figure_name}.tex")
+
+
+# ─── Build three standalone figures (with curve fits) ─────────────────────
+for volt in ALL_VOLTS:
+    volt_tag = amp_to_tag(volt)
+    figure_name = f"ch05_damping_ka_fit_{volt_tag}"
+    sub = m[np.isclose(m["WaveAmplitudeInput [Volt]"], volt)]
+
+    print(f"\n{volt_tag}: {len(sub)} runs")
+    fig = _make_figure(sub, volt=volt)
+    out_pdf = FIGURES_DIR / f"{figure_name}.pdf"
+    fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
+    plt.close(fig)
+    print(f"   → {out_pdf.relative_to(BASE)}")
+    _write_stub(sub, volt, figure_name)
+
+
+# ─── Combined figure (all amplitudes overlaid; no fits in this view) ──────
+print(f"\nCombined (all amps): {len(m)} runs")
+fig = _make_figure(m, volt=None)
+out_pdf = FIGURES_DIR / "ch05_damping_ka_fit.pdf"
+fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
+plt.close(fig)
+print(f"   → {out_pdf.relative_to(BASE)}")
+_write_combined_stub(m, "ch05_damping_ka_fit")
+
+print("\nDone.")
