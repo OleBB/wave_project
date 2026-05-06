@@ -143,6 +143,10 @@ def harmonic_summary(harmonized, f, probes, target_freqs, halfwidth):
     For each target frequency: per-run dB difference at the bin, paired t-test,
     cross-run correlation of band-integrated amplitudes, and variance of
     the simple mean compared to each single-probe variance.
+
+    Also returns the mean of per-run linear power ratios `P_b[bin] / P_a[bin]`
+    (for the reader-friendly Option-D table) and the per-run amplitudes
+    (for downstream non-parametric spread reporting if desired).
     """
     stack_a = stack_runs(harmonized, probes[0])
     stack_b = stack_runs(harmonized, probes[1])
@@ -150,15 +154,22 @@ def harmonic_summary(harmonized, f, probes, target_freqs, halfwidth):
     for fh in target_freqs:
         # Nearest bin for the per-bin dB test
         bin_idx = int(np.argmin(np.abs(f - fh)))
-        d_db = safe_db(stack_b[:, bin_idx]) - safe_db(stack_a[:, bin_idx])
+        pa = stack_a[:, bin_idx]
+        pb = stack_b[:, bin_idx]
+        d_db = safe_db(pb) - safe_db(pa)
         d_db = d_db[np.isfinite(d_db)]
         if len(d_db) >= 2:
-            tt = stats.ttest_rel(safe_db(stack_b[:, bin_idx]),
-                                 safe_db(stack_a[:, bin_idx]),
-                                 nan_policy="omit")
+            tt = stats.ttest_rel(safe_db(pb), safe_db(pa), nan_policy="omit")
             mean_db, std_db, p_val = float(np.mean(d_db)), float(np.std(d_db, ddof=1)), float(tt.pvalue)
         else:
             mean_db, std_db, p_val = np.nan, np.nan, np.nan
+
+        # Geometric mean of per-run power ratios = 10^(mean_dB / 10).
+        # Geometric is the natural mean for ratios (and the natural pair to
+        # the dB math); arithmetic mean blows up when one run has a small
+        # P_wall, which we observed at 1.6 Hz nowind (1 run inflated the
+        # arithmetic mean to 1.50 while the median stayed near 1.00).
+        ratio_mean = float(10 ** (mean_db / 10.0)) if np.isfinite(mean_db) else np.nan
 
         # Band-integrated amplitudes for variance / correlation
         a_a = _band_amplitudes(stack_a, f, fh - halfwidth, fh + halfwidth)
@@ -179,6 +190,7 @@ def harmonic_summary(harmonized, f, probes, target_freqs, halfwidth):
         rows.append(dict(
             freq=fh, n=int(len(d_db)),
             mean_db=mean_db, std_db=std_db, p_value=p_val,
+            ratio_mean=ratio_mean,
             n_band=n_band, corr=r,
             std_a=np.sqrt(v_a) if np.isfinite(v_a) else np.nan,
             std_b=np.sqrt(v_b) if np.isfinite(v_b) else np.nan,
@@ -251,26 +263,38 @@ def plot_three_panel(f, summary, diff_mean, diff_std, target_freqs, out_path,
 
 # === Thesis-table writer (LaTeX tabular -> output/TABLES/) ==================
 
-THESIS_TABLE_NAME = "ch04_parallel_probe_psd_agreement"
+THESIS_TABLE_BASE = "ch04_parallel_probe_psd_agreement"
+
+# Range × wind cells produce one table each. Keys map to file-name suffixes
+# (and FIGURE_CAPTIONS keys in main_save_figures.py).
+RANGE_LABELS = {"lowrange": "low", "highrange": "high"}
+WIND_LABELS = {"nowind": "no", "fullwind": "full"}
 
 
-def write_tex_table(rows, out_path):
+def _table_name(range_label, wind_label):
+    """e.g. ('lowrange', 'nowind') -> 'ch04_parallel_probe_psd_agreement_lowrange_nowind'."""
+    return f"{THESIS_TABLE_BASE}_{range_label}_{wind_label}"
+
+
+def write_tex_table(rows, out_path, *, range_label, wind_label, scope_note):
     """Render `rows` (from harmonic_summary) as a thesis-ready LaTeX tabular.
 
-    Caption resolved via the central FIGURE_CAPTIONS / FIGURE_CAPTIONS_SHORT
-    dicts in main_save_figures.py (per the project-wide invariant). Layout
-    matches the 10-column markdown table previously circulated in chat:
-    f, N, mean dB, std dB, p, r, sigma_wall, sigma_far, sigma_mean, var-change.
+    Reader-friendly Option-D layout (5 columns):
+      Bølgefrekvens | P_langt/P_vegg (snitt) | Pearsons ρ | Beste probe |
+      Variansøkning ved snitt [%]
 
-    Bolding rules:
-      - p column         : bold when p < 0.05 (paired t-test significant).
-      - sigma A columns  : bold the smallest sigma in the row (best precision).
+    `range_label`  in {'lowrange', 'highrange'}  — probe-hardware sensitivity
+    `wind_label`   in {'nowind', 'fullwind'}     — wind condition filter
+    `scope_note`   one-line description of the folder/wind subset, dropped
+                   into the IMMUTABLE inputs block so the .tex documents what
+                   it was generated from.
     """
     from datetime import datetime as _dt
     from wavescripts.plot_utils import _lookup_central_caption
 
-    caption_full = _lookup_central_caption(THESIS_TABLE_NAME, kind="full")
-    caption_short = _lookup_central_caption(THESIS_TABLE_NAME, kind="short")
+    table_name = _table_name(range_label, wind_label)
+    caption_full = _lookup_central_caption(table_name, kind="full")
+    caption_short = _lookup_central_caption(table_name, kind="short")
     if caption_full and caption_short:
         caption_block = (f"  \\caption[{caption_short}]{{\n"
                          f"    {caption_full}\n  }}\n")
@@ -282,7 +306,7 @@ def write_tex_table(rows, out_path):
                          "(edit FIGURE_CAPTIONS in main_save_figures.py)\n"
                          "  }\n")
 
-    n_runs = rows[0]["n"] if rows else 0
+    n_per_freq = ", ".join(f"{r['freq']:.1f}Hz:n={r['n']}" for r in rows)
     freq_list = ", ".join(f"{r['freq']:.1f}" for r in rows)
     immutable = "\n".join([
         "%! TEX root = ../main.tex",
@@ -294,67 +318,60 @@ def write_tex_table(rows, out_path):
         "%   plot_type         : parallel_probe_psd_agreement_table",
         "%   chapter           : 04",
         f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
-        f"%   caption_label     : tab:{THESIS_TABLE_NAME}",
+        f"%   caption_label     : tab:{table_name}",
         f"%   caption_short     : {caption_short or ''}",
         "%",
         "% — Method ────────────────────────────────────────────────────",
         "%   Pairwise comparison of 9373/170 (wall) and 9373/340 (far) at",
         "%   each thesis paddle frequency (1.3, 1.4, 1.5, 1.6 Hz).",
-        "%   Δ̄        : mean across runs of 10·log10(P_far) − 10·log10(P_wall)",
-        "%               at the PSD bin nearest f.",
-        "%   σ_Δ       : std across runs of the same per-bin difference.",
-        "%   p         : two-sided paired t-test, H0: Δ̄ = 0 dB.",
-        "%   r(A)      : Pearson correlation across runs of band-integrated",
+        "%   P_langt/P_vegg : geometric mean across runs of P_far[bin]/P_wall[bin]",
+        "%               at the PSD bin nearest f, computed as 10^(mean_dB/10).",
+        "%               1.00 = perfect calibration agreement. Geometric mean is",
+        "%               used because it pairs naturally with the dB math and is",
+        "%               robust to a single run with near-zero P_wall.",
+        "%   Pearsons ρ : Pearson correlation across runs of band-integrated",
         "%               amplitudes A = sqrt(2·∫ S(f) df) over ±0.1 Hz of f.",
-        "%   σA        : std across runs of A.",
-        "%   ΔVar(mean): % change in Var(½(A_wall + A_far)) vs the smaller",
-        "%               of Var(A_wall), Var(A_far). Positive ⇒ averaging",
-        "%               worsens precision relative to the better single probe.",
+        "%               High ρ ⇒ the two probes track the same physical wave.",
+        "%   Beste probe: the single probe with the smallest std(A) across runs",
+        "%               (lowest scatter ⇒ better single estimator).",
+        "%   Variansøkning ved snitt [%] : % change in Var(½(A_wall + A_far))",
+        "%               vs the smaller of Var(A_wall), Var(A_far). Positive",
+        "%               ⇒ averaging worsens precision relative to the better",
+        "%               single probe (the two probes are not independent).",
         "%",
         "% — Inputs ────────────────────────────────────────────────────",
-        f"%   N runs            : {n_runs}",
-        "%   data scope        : panel-full, quality-ok, both probes present,",
-        "%                       canon March-2026 lowrange folders.",
+        f"%   N runs per freq   : {n_per_freq}  (panel-full, quality-ok, both probes)",
+        f"%   wind condition    : {wind_label}",
+        f"%   probe-range setup : {range_label}",
+        f"%   data scope        : {scope_note}",
         f"%   target frequencies: {freq_list} Hz",
-        "%",
-        "% — Bolding ───────────────────────────────────────────────────",
-        "%   Bold in p column        ⇒ paired t-test significant at α = 0.05",
-        "%   Bold in σA columns      ⇒ smallest σA in that row (best probe)",
         "%",
         "% ── end immutable block ─────────────────────────────────────────",
     ])
 
     body_lines = []
     for r in rows:
-        sigmas = {"a": r["std_a"], "b": r["std_b"], "m": r["std_mean"]}
-        sigmas_finite = {k: v for k, v in sigmas.items() if np.isfinite(v)}
-        best = min(sigmas_finite, key=sigmas_finite.get) if sigmas_finite else None
+        # "Beste probe" = single probe with smallest std(A). Mean is excluded
+        # from the comparison (averaging is judged separately by Variansøkning).
+        if np.isfinite(r["std_a"]) and np.isfinite(r["std_b"]):
+            best = "vegg" if r["std_a"] < r["std_b"] else "langt"
+        else:
+            best = "n/a"
 
-        def _bold(s, do):
-            return f"\\textbf{{{s}}}" if do else s
-
-        f_cell  = f"\\num{{{r['freq']:.2f}}}"
-        n_cell  = f"\\num{{{r['n']}}}"
-        d_cell  = f"\\num{{{r['mean_db']:+.2f}}}"
-        sd_cell = f"\\num{{{r['std_db']:.2f}}}"
-        p_val   = r["p_value"]
-        p_str   = f"\\num{{{p_val:.3g}}}" if np.isfinite(p_val) else "n/a"
-        p_cell  = _bold(p_str, np.isfinite(p_val) and p_val < 0.05)
-        r_cell  = (f"\\num{{{r['corr']:+.3f}}}"
-                   if np.isfinite(r["corr"]) else "n/a")
-        sa_cell = _bold(f"\\num{{{r['std_a']:.3f}}}", best == "a")
-        sb_cell = _bold(f"\\num{{{r['std_b']:.3f}}}", best == "b")
-        sm_cell = _bold(f"\\num{{{r['std_mean']:.3f}}}", best == "m")
-        # Sign convention in the IMMUTABLE block + column header:
-        # positive ⇒ averaging WORSENS precision vs the better single probe.
-        # `reduction_pct` is the fractional REDUCTION (negative when worse), so
-        # negate to get the worsening %.
-        v_cell  = (f"\\num{{{-r['reduction_pct']:+.1f}}}"
-                   if np.isfinite(r["reduction_pct"]) else "n/a")
+        f_cell = f"\\num{{{r['freq']:.2f}}}"
+        ratio_cell = (f"\\num{{{r['ratio_mean']:.2f}}}"
+                      if np.isfinite(r["ratio_mean"]) else "n/a")
+        rho_cell = (f"\\num{{{r['corr']:+.3f}}}"
+                    if np.isfinite(r["corr"]) else "n/a")
+        best_cell = best
+        # Sign: positive % = averaging WORSENS precision vs the better single
+        # probe. `reduction_pct` is the fractional REDUCTION (negative when
+        # worse), so negate.
+        v_cell = (f"\\num{{{-r['reduction_pct']:+.1f}}}"
+                  if np.isfinite(r["reduction_pct"]) else "n/a")
 
         body_lines.append(
-            f"    {f_cell} & {n_cell} & {d_cell} & {sd_cell} & {p_cell} & "
-            f"{r_cell} & {sa_cell} & {sb_cell} & {sm_cell} & {v_cell} \\\\"
+            f"    {f_cell} & {ratio_cell} & {rho_cell} & {best_cell} & {v_cell} \\\\"
         )
 
     table_body = (
@@ -362,19 +379,14 @@ def write_tex_table(rows, out_path):
         "  \\centering\n"
         "  \\small\n"
         + caption_block
-        + f"  \\label{{tab:{THESIS_TABLE_NAME}}}\n"
-        "  \\begin{tabular}{cccccccccc}\n"
+        + f"  \\label{{tab:{table_name}}}\n"
+        "  \\begin{tabular}{ccccc}\n"
         "    \\toprule\n"
-        "    $f$ [\\unit{\\hertz}] &\n"
-        "      $N$ &\n"
-        "      $\\bar\\Delta$ [dB] &\n"
-        "      $\\sigma_\\Delta$ [dB] &\n"
-        "      $p$ &\n"
-        "      $r(A)$ &\n"
-        "      $\\sigma_{A,\\mathrm{wall}}$ [\\unit{\\milli\\metre}] &\n"
-        "      $\\sigma_{A,\\mathrm{far}}$ [\\unit{\\milli\\metre}] &\n"
-        "      $\\sigma_{A,\\mathrm{mean}}$ [\\unit{\\milli\\metre}] &\n"
-        "      $\\Delta\\mathrm{Var}_\\mathrm{mean}$ [\\%]\\\\\n"
+        "    Bølgefrekvens [\\unit{\\hertz}] &\n"
+        "      $P_\\mathrm{langt}/P_\\mathrm{vegg}$ (snitt) &\n"
+        "      Probe-samsvar (Pearsons $\\rho$) &\n"
+        "      Beste probe &\n"
+        "      Variansøkning ved snitt [\\%]\\\\\n"
         "    \\midrule\n"
         + "\n".join(body_lines) + "\n"
         "    \\bottomrule\n"
@@ -450,22 +462,47 @@ def print_implications(rows):
 # === Project-specific data loader (the only non-portable bit) ===============
 
 def _load_psd_data_from_project(target_freqs=TARGET_FREQS,
-                                only_fullpanel=True):
+                                only_fullpanel=True,
+                                range_label="lowrange",
+                                wind_label=None):
     """
     Convert the project's `{csv_path: DataFrame}` PSD cache into the simple
     `{run_id: {probe: {f, Pxx}}}` format the analysis core consumes.
 
-    Filter defaults: fullpanel, quality_flag=ok, WaveFrequencyInput in
-    `target_freqs` (broad pool so the per-bin paired test has decent n).
-    Edit the `mask` block below to reshape.
+    Parameters
+    ----------
+    target_freqs : iterable of float
+        Paddle frequencies to keep (within ±0.005 Hz).
+    only_fullpanel : bool
+        Restrict to PanelCondition == "full" (default true; methodology check).
+    range_label : {"lowrange", "highrange"}
+        Probe-hardware sensitivity setup. Selects a different folder pool:
+          - "lowrange"  : 26 + 27 March 2026 height100-lowrange folders
+                          (parallel-probe canon, low-sensitivity hardware).
+          - "highrange" : 16 + 19 March 2026 under9Mooring folders
+                          (parallel-probe canon, high-sensitivity hardware,
+                           272 mm above tank). Smaller n (~11 thesis runs).
+        The poor-quality high-range 100mm batch and the 136mm batch are
+        deliberately excluded per CLAUDE-level decision (2026-05-06).
+    wind_label : {"nowind", "fullwind", None}
+        WindCondition filter. None pools all wind conditions (legacy).
     """
     from wavescripts.improved_data_loader import load_analysis_data
 
     base = Path(__file__).parent.parent
-    target_dirs = [
-        base / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
-        base / "waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange",
-    ]
+    if range_label == "lowrange":
+        target_dirs = [
+            base / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
+            base / "waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange",
+        ]
+    elif range_label == "highrange":
+        target_dirs = [
+            base / "waveprocessed/PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring",
+            base / "waveprocessed/PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring",
+        ]
+    else:
+        raise ValueError(f"range_label must be 'lowrange' or 'highrange', got {range_label!r}")
+
     meta, _proc, _fft, psd_dict = load_analysis_data(
         *map(str, target_dirs), load_processed=False
     )
@@ -477,9 +514,16 @@ def _load_psd_data_from_project(target_freqs=TARGET_FREQS,
     )
     if only_fullpanel:
         mask &= (meta["PanelCondition"] == "full")
+    if wind_label == "nowind":
+        mask &= (meta["WindCondition"] == "no")
+    elif wind_label == "fullwind":
+        mask &= (meta["WindCondition"] == "full")
+    elif wind_label is not None:
+        raise ValueError(f"wind_label must be 'nowind', 'fullwind', or None, got {wind_label!r}")
+
     sel_paths = meta.loc[mask, "path"].tolist()
     sel_paths = [p for p in sel_paths if p in psd_dict]
-    print(f"  {len(sel_paths)} runs selected from canon March-2026 lowrange.")
+    print(f"  {len(sel_paths)} runs selected for {range_label}/{wind_label or 'pooled'}.")
 
     psd_data = {}
     for path in sel_paths:
@@ -511,28 +555,72 @@ def _load_psd_data_from_project(target_freqs=TARGET_FREQS,
 # === Driver =================================================================
 
 def main():
-    print("Loading PSD data ...")
-    psd_data = _load_psd_data_from_project()
+    """Generate one .tex table per (range, wind) cell — 4 tables total.
 
-    f, harmonized = harmonize_grid(psd_data, n_grid=N_GRID, f_max=F_MAX_HZ)
-    summary = run_averaged(harmonized, PROBES)
-    stack_a = stack_runs(harmonized, PROBES[0])
-    stack_b = stack_runs(harmonized, PROBES[1])
-    _, diff_mean, diff_std, _, _ = per_freq_paired_diff(stack_a, stack_b)
-
-    rows = harmonic_summary(harmonized, f, PROBES, TARGET_FREQS,
-                            BAND_HALFWIDTH_HZ)
-
-    out_pdf = Path(__file__).parent / "parallel_probe_psd_agreement.pdf"
-    plot_three_panel(f, summary, diff_mean, diff_std, TARGET_FREQS, str(out_pdf))
-
-    # Thesis table (CH04 §3e sibling) — central caption resolution.
+    Also keeps the legacy three-panel diagnostic PDF, regenerated from the
+    pooled lowrange (no wind filter) for reference.
+    """
     base = Path(__file__).resolve().parent.parent
-    out_tex = base / "output" / "TABLES" / f"{THESIS_TABLE_NAME}.tex"
-    write_tex_table(rows, out_tex)
+    tables_dir = base / "output" / "TABLES"
 
-    print_summary_table(rows, n_runs=len(harmonized))
-    print_implications(rows)
+    # The four reader-facing tables (Option D, 5 cols, Norwegian headers).
+    scope_notes = {
+        ("lowrange", "nowind"):
+            "low-range hardware, 100mm above; under9Mooring + under9Mooring30 (Mar 26+27 2026); WindCondition=no",
+        ("lowrange", "fullwind"):
+            "low-range hardware, 100mm above; under9Mooring + under9Mooring30 (Mar 26+27 2026); WindCondition=full",
+        ("highrange", "nowind"):
+            "high-range hardware, 272mm above; under9Mooring (Mar 16+19 2026); WindCondition=no",
+        ("highrange", "fullwind"):
+            "high-range hardware, 272mm above; under9Mooring (Mar 16+19 2026); WindCondition=full",
+    }
+    last_rows = None
+    last_harmonized = None
+    last_f = None
+    for range_label in ("lowrange", "highrange"):
+        for wind_label in ("nowind", "fullwind"):
+            print(f"\n=== {range_label} / {wind_label} ===")
+            psd_data = _load_psd_data_from_project(
+                range_label=range_label, wind_label=wind_label
+            )
+            if not psd_data:
+                print(f"  No runs — skipping {range_label}/{wind_label}.")
+                continue
+            f, harmonized = harmonize_grid(psd_data, n_grid=N_GRID, f_max=F_MAX_HZ)
+            rows = harmonic_summary(harmonized, f, PROBES, TARGET_FREQS,
+                                    BAND_HALFWIDTH_HZ)
+
+            out_tex = tables_dir / f"{_table_name(range_label, wind_label)}.tex"
+            write_tex_table(
+                rows, out_tex,
+                range_label=range_label, wind_label=wind_label,
+                scope_note=scope_notes[(range_label, wind_label)],
+            )
+            print_summary_table(rows, n_runs=len(harmonized))
+            if range_label == "lowrange":
+                last_rows = rows
+                last_harmonized = harmonized
+                last_f = f
+
+    # Legacy 3-panel diagnostic PDF (pooled lowrange, all winds) — kept for the
+    # pre-existing CH04 figure pipeline. Falls back to the lowrange+nowind
+    # subset if the pooled load returns nothing for some reason.
+    print("\n=== Diagnostic PDF (pooled lowrange, all winds) ===")
+    psd_pooled = _load_psd_data_from_project(
+        range_label="lowrange", wind_label=None
+    )
+    if psd_pooled:
+        f, harmonized = harmonize_grid(psd_pooled, n_grid=N_GRID, f_max=F_MAX_HZ)
+        summary = run_averaged(harmonized, PROBES)
+        stack_a = stack_runs(harmonized, PROBES[0])
+        stack_b = stack_runs(harmonized, PROBES[1])
+        _, diff_mean, diff_std, _, _ = per_freq_paired_diff(stack_a, stack_b)
+        out_pdf = Path(__file__).parent / "parallel_probe_psd_agreement.pdf"
+        plot_three_panel(f, summary, diff_mean, diff_std, TARGET_FREQS, str(out_pdf))
+        # Plain-language headline from the pooled data (handy console summary).
+        rows_pooled = harmonic_summary(harmonized, f, PROBES, TARGET_FREQS,
+                                       BAND_HALFWIDTH_HZ)
+        print_implications(rows_pooled)
 
 
 if __name__ == "__main__":

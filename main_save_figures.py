@@ -473,13 +473,13 @@ FIGURE_CAPTIONS: dict[str, str] = {
     # ── CHAPTER 04 — METHODOLOGY ─────────────────────────────────────────────
 
     # § 1 — Probe noise floor (parent + 4 subfigs) — OUTDATED, kept for backwards refs
-    "ch04_probe_noise_floor":          "Hver enkelt probes støygulv",
-    "ch04_probe_noise_floor_group0":   "Prober hengende høyt over vannet.",
-    "ch04_probe_noise_floor_group1":   "",
-    "ch04_probe_noise_floor_group2":   "",
-    "ch04_probe_noise_floor_group3":   "Prober hengende lavt over vannet.",
+    # "ch04_probe_noise_floor":          "Hver enkelt probes støygulv", #these four figs are replaced by the table now
+    # "ch04_probe_noise_floor_group0":   "Prober hengende høyt over vannet.",
+    # "ch04_probe_noise_floor_group1":   "",
+    # "ch04_probe_noise_floor_group2":   "",
+    # "ch04_probe_noise_floor_group3":   "Prober hengende lavt over vannet.",
     # § 1 (replacement) — reader-facing noise-floor table
-    "ch04_probe_noise_floor_table":    "",   # TODO: write caption
+    "ch04_probe_noise_floor_table":    "Oversikt over støygulvet til prober ved innledende og endelig oppsett.",   # TODO: write caption
 
     # § 2 — Stillwater timing (placeholder)
     # "ch04_stillwater_timing":          "", !archived
@@ -545,7 +545,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_inspirational_fullwind":     r"Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, med vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn:   \\num{0.1531}, ka, ut: \num{0.0979}", #however these are illustrative plots...and i think the precision perhaps doesnt matter too much in plots. tables are more important.
 
     # § 5b — Highway-effect visual evidence (per40 overlay + pre-paddle)
-    "ch04_wind_pre_paddle_overlay":    "",
+    "ch04_wind_pre_paddle_overlay":    "To like bølger, med og uten vind, lagt oppå hverandre.",
     "ch04_per40_overlay_t10-21":       "",
     "ch04_per40_overlay_t40-51":       "",
 

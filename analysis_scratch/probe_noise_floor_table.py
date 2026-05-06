@@ -62,10 +62,10 @@ OUT_CSV = BASE / "analysis_scratch" / f"{THESIS_NAME}.csv"
 
 # Probes in row order — display label tracks the existing thesis vocabulary.
 PROBE_ORDER = [
-    ("8804/250",  "8804/250 (oppstrøms)"),
-    ("9373/170",  "9373/170 (IN, vegg)"),
-    ("9373/340",  "9373/340 (IN, fjern)"),
-    ("12400/250", "12400/250 (OUT)"),
+    ("8804/250",  "Posisjon 1"),
+    ("9373/170",  "Posisjon 2A"),
+    ("9373/340",  "Posisjon 2B"),
+    ("12400/250", "Posisjon 3"),
 ]
 
 GROUP_INITIAL = "h272 / high"   # innledende
@@ -213,7 +213,7 @@ immutable = "\n".join([
     "%   ratio column  = thr3sigma_initial / thr3sigma_final.",
     "%",
     "% — Caveats ───────────────────────────────────────────────────",
-    "%   * The four 'sonde' rows are PROBE POSITIONS, not the same physical",
+    "%   * The four 'probe' rows are PROBE POSITIONS, not the same physical",
     "%     sensors across configs. Per the march2026_better_rearranging",
     "%     layout (CLAUDE.md §8), each position is held constant; only the",
     "%     hardware height and range mode change between groups.",
@@ -231,9 +231,9 @@ table_body = (
     + f"  \\label{{tab:{THESIS_NAME}}}\n"
     "  \\begin{tabular}{lccc}\n"
     "    \\toprule\n"
-    "    Sonde &\n"
-    "      h272/high (innledende) &\n"
-    "      h100/low (endelig) &\n"
+    "    Probe &\n"
+    "      Innledende  &\n"
+    "      Endelig   &\n"
     "      Forbedring \\\\\n"
     "          &\n"
     "      $3\\sigma$ [\\unit{\\milli\\metre}] &\n"
@@ -251,3 +251,25 @@ OUT_TEX.write_text(immutable + "\n" + table_body, encoding="utf-8")
 print(f"TEX → {OUT_TEX.relative_to(BASE)}")
 
 print("\nDone.")
+
+# table_body = (
+#     "\\begin{table}[hbt]\n"
+#     "  \\centering\n"
+#     + caption_block
+#     + f"  \\label{{tab:{THESIS_NAME}}}\n"
+#     "  \\begin{tabular}{lccc}\n"
+#     "    \\toprule\n"
+#     "    Sonde &\n"
+#     "      h272/high (innledende) &\n"
+#     "      h100/low (endelig) &\n"
+#     "      Forbedring \\\\\n"
+#     "          &\n"
+#     "      $3\\sigma$ [\\unit{\\milli\\metre}] &\n"
+#     "      $3\\sigma$ [\\unit{\\milli\\metre}] &\n"
+#     "          \\\\\n"
+#     "    \\midrule\n"
+#     + "\n".join(body) + "\n"
+#     "    \\bottomrule\n"
+#     "  \\end{tabular}\n"
+#     "\\end{table}\n"
+# )
