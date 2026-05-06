@@ -25,9 +25,11 @@ This variant:
         normal panel  → ○ A1, □ A2, △ A3
         revers panel  → 6-point star A1, 5-point star A2, 4-point star A3
 
-Outputs (one PDF per amp):
+Outputs (one PDF per amp + one combined column-stacked stub):
     analysis_scratch/mooring_focus_at_1_3hz_ka_A{1,2,3}.pdf
     output/FIGURES/ch05_mooring_focus_at_1_3hz_ka_A{1,2,3}.pdf
+    output/TEXFIGU/ch05_mooring_focus_at_1_3hz_ka.tex      (single A4 page,
+                                                            3 subfigs stacked)
     analysis_scratch/mooring_focus_at_1_3hz_ka_summary.csv
 """
 
@@ -56,7 +58,9 @@ os.chdir(BASE)
 from wavescripts.improved_data_loader import load_analysis_data
 from wavescripts.plot_utils import (
     WIND_COLOR_MAP, amp_to_label, apply_thesis_style, freq_to_k,
+    apply_horizontal_ylabel,
 )
+import wavescripts.plot_utils as pu
 
 apply_thesis_style()
 
@@ -115,8 +119,8 @@ PANEL_AMP_MARKER = {
 }
 PANEL_LABEL = {"full": "normal", "reverse": "revers panelretning"}
 WIND_LABEL   = {"no": "uten vind", "full": "med vind"}
-MOORING_LABEL = {"below_90": "below_90 (canon)",
-                 "above_50": "above_50"}
+MOORING_LABEL = {"below_90": "Under",
+                 "above_50": "Over"}
 
 MARKER_SIZE = 90        # bigger so hollow rings are clearly visible
 EDGE_LW     = 1.6
@@ -178,16 +182,14 @@ for amp_v, amp_tag, amp_v_lbl in AMP_TIERS:
     ax.set_ylim(y_lo, y_hi)
     ax.set_xlabel(r"$ka$  (per kjøring; $k(1.30\,\mathrm{Hz})\cdot a_\mathrm{IN}$)",
                    fontsize=10)
-    ax.set_ylabel(r"$K_t$", fontsize=12, rotation=0, ha="right", va="center")
-    ax.set_title(
-        f"{amp_tag} ({amp_v_lbl}) — K_t vs ka ved {TARGET_FREQ} Hz · "
-        "mooring (above_50 vs below_90) og panelretning",
-        fontsize=10.5,
-    )
+    # No ax.set_title — caption belongs in the .tex stub (user-edited).
     ax.grid(which="major", alpha=0.30, lw=0.6)
     ax.grid(which="minor", alpha=0.15, lw=0.4)
     ax.yaxis.set_major_locator(MultipleLocator(0.05))
     ax.yaxis.set_minor_locator(MultipleLocator(0.025))
+    # Horizontal $K_t$ above leftmost tick → frees the left margin for max
+    # plotting width (matches the ch05_damping_freq convention).
+    apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
 
     # Two-block legend.
     moor_wind_handles = [
@@ -205,9 +207,9 @@ for amp_v, amp_tag, amp_v_lbl in AMP_TIERS:
                       mew=EDGE_LW, label=PANEL_LABEL[p])
         for p in ["full", "reverse"]
     ]
-    leg1 = ax.legend(handles=moor_wind_handles, loc="upper left",
+    leg1 = ax.legend(handles=moor_wind_handles, loc="upper right",
                       fontsize=8, framealpha=0.92,
-                      title="Mooring · vind", title_fontsize=8,
+                      title="Moring · vind", title_fontsize=8,
                       bbox_to_anchor=(0.005, 0.995))
     ax.add_artist(leg1)
     ax.legend(handles=panel_handles, loc="lower right",
@@ -232,5 +234,76 @@ csv_path = (Path(__file__).parent
              / "mooring_focus_at_1_3hz_ka_summary.csv")
 pd.DataFrame(summary_rows).to_csv(csv_path, index=False)
 print(f"\n   Summary → {csv_path.relative_to(BASE)}")
+
+# ── 4. Combined TEXFIGU stub ──────────────────────────────────────────────────
+# Single .tex file with subfig_layout="column" → 3 subfigs stacked vertically
+# on one A4 page float. Mirrors the ch05_damping_freq pattern in plot_damping_freq.
+# Caption text comes from FIGURE_CAPTIONS / FIGURE_CAPTIONS_SHORT in
+# main_save_figures.py (looked up via output/.figure_captions.json).
+COMBINED_NAME = "ch05_mooring_focus_at_1_3hz_ka"
+SUBFIG_NAMES  = [f"{COMBINED_NAME}_{tag}"
+                  for amp_v, tag, _ in AMP_TIERS
+                  if (sel["amp_v"] == amp_v).any()]
+SUBFIG_CAPS   = [f"{tag} ({lbl})"
+                  for amp_v, tag, lbl in AMP_TIERS
+                  if (sel["amp_v"] == amp_v).any()]
+
+# Provenance datasets, like other DELEG figures.
+pu.ACTIVE_DATASETS = [Path(d).name for d in all_dirs]
+
+_meta_stub = pu.build_fig_meta(
+    {
+        "filters": {
+            "PanelCondition":            "full, reverse",
+            "WaveFrequencyInput [Hz]":   f"{TARGET_FREQ}",
+            "WaveAmplitudeInput [Volt]": "0.10, 0.20, 0.30",
+            "WindCondition":             "no, full",
+            "Mooring":                   "below_90_loose230, below_90_loose300, above_50",
+            "quality_flag":              "ok",
+        },
+        "plotting": {"figure_name": COMBINED_NAME},
+    },
+    chapter="05",
+    extra={"script": "analysis_scratch/mooring_focus_at_1_3hz_ka.py"},
+    computed_in=("analysis_scratch/mooring_focus_at_1_3hz_ka.py "
+                 "(single-freq mooring + panelretning scatter, ka on x)"),
+    data_class="DELEG",
+    findings_doc=None,
+    fft_window_hz=0.1,
+    extra_params=(
+        f"freq = {TARGET_FREQ} Hz only. ka per run from "
+        f"k({TARGET_FREQ} Hz) × IN Amplitude (FFT) [mm] / 1000. "
+        "Three subfigures, one per amplitude tier (A1/A2/A3); within each, "
+        "x-axis is ka (natural per-run spread). Mooring: "
+        "below_90 (canon, lumping below_90_loose230 + below_90_loose300, "
+        "and pooling tidligere + cond4 hardware) gets WIND_COLOR_MAP "
+        "(blue uten / red med vind); above_50 gets cyan / bright pink. "
+        "Panelretning by marker family: normal = ○ □ △; revers = "
+        "6/5/4-point star (matching A1/A2/A3). All markers hollow. "
+        "Subfigures stacked vertically (subfig_layout='column') as one "
+        "A4 page float."
+    ),
+    extra_stats={
+        "n_runs_total": int(len(sel)),
+        "n_below_90":   int((sel["moor_grp"] == "below_90").sum()),
+        "n_above_50":   int((sel["moor_grp"] == "above_50").sum()),
+        "n_normal":     int((sel["PanelCondition"] == "full").sum()),
+        "n_revers":     int((sel["PanelCondition"] == "reverse").sum()),
+        "n_per_amp_A1": int((sel["amp_v"] == 0.10).sum()),
+        "n_per_amp_A2": int((sel["amp_v"] == 0.20).sum()),
+        "n_per_amp_A3": int((sel["amp_v"] == 0.30).sum()),
+        "k_const_radm": round(k_const, 4),
+    },
+)
+
+pu.write_figure_stub(
+    _meta_stub,
+    plot_type="mooring_focus_ka",
+    subfig_filenames=SUBFIG_NAMES,
+    subfig_captions=SUBFIG_CAPS,
+    subfig_layout="column",
+    force=True,
+)
+print(f"   Combined stub → output/TEXFIGU/{COMBINED_NAME}.tex")
 
 print("\nDone.")

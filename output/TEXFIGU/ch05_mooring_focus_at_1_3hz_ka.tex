@@ -1,0 +1,110 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/mooring_focus_at_1_3hz_ka.py
+%   computed_in       : analysis_scratch/mooring_focus_at_1_3hz_ka.py (single-freq mooring + panelretning scatter, ka on x)
+%   plot_type         : mooring_focus_ka
+%   data_class        : DELEG
+%   generated_at      : 2026-05-06T11:35:12
+%   findings_doc      : 
+%
+% — Thesis context ──────────────────────────────────────────────
+%   chapter           : 05
+%   caption_label     : fig:ch05_mooring_focus_at_1_3hz_ka
+%   caption_short     : Mooring + panelretning ved 1.30 Hz.
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : full, reverse
+%   wind              : no, full
+%   amplitude [V]     : 0.10, 0.20, 0.30
+%   frequency [Hz]    : 1.3
+%   probes            : 
+%   run_category      : 
+%   quality_flag      : ok
+%   mooring           : below_90_loose230, below_90_loose300, above_50
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_runs            : 
+%   in_probes_used    : 
+%   out_probes_used   : 
+%   probe_configs     : 
+%   non_final_config_n: 
+%   datasets        :
+%     PROCESSED-20251005-sixttry6roof-highMooring
+%     PROCESSED-20251110-tett6roof-lowMooring
+%     PROCESSED-20251110-tett6roof-lowMooring-2
+%     PROCESSED-20251112-tett6roof
+%     PROCESSED-20251113-tett6roof
+%     PROCESSED-20251113-tett6roof-loosepaneltaped
+%     PROCESSED-20251113-tett6roof-probeadjusted
+%     PROCESSED-20260305-newProbePos-tett6roof
+%     PROCESSED-20260306-newProbePos-tett6roof
+%     PROCESSED-20260307-ProbPos4_31_FPV_2-tett6roof
+%     PROCESSED-20260312-ProbPos4_31_FPV_2-tett6roof
+%     PROCESSED-20260313-ProbePos4_31_FPV_2-tett6roof
+%     PROCESSED-20260314-ProbePos4_31_FPV_2-tett6roof
+%     PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof
+%     PROCESSED-20260316-ProbePos4_31_FPV_2-tett6roof-under9Mooring
+%     PROCESSED-20260319-ProbePos4_31_FPV_2-tett6roof-under9Mooring
+%     PROCESSED-20260321-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-RENAMED
+%     PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260323-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height136
+%     PROCESSED-20260324-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260325-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%   run_paths       :
+%     (omitted — aggregate over > threshold runs, see datasets)
+%
+% — Method / numerical parameters ─────────────────────────────
+%   grouper           : 
+%   collapse_panels   : 
+%   fft_window_hz     : 0.1
+%   extra_params      : freq = 1.3 Hz only. ka per run from k(1.3 Hz) × IN Amplitude (FFT) [mm] / 1000. Three subfigures, one per amplitude tier (A1/A2/A3); within each, x-axis is ka (natural per-run spread). Mooring: below_90 (canon, lumping below_90_loose230 + below_90_loose300, and pooling tidligere + cond4 hardware) gets WIND_COLOR_MAP (blue uten / red med vind); above_50 gets cyan / bright pink. Panelretning by marker family: normal = ○ □ △; revers = 6/5/4-point star (matching A1/A2/A3). All markers hollow. Subfigures stacked vertically (subfig_layout='column') as one A4 page float.
+%
+% — Summary stats cited in caption ────────────────────────────
+%   stat:n_runs_total : 104
+%   stat:n_below_90   : 59
+%   stat:n_above_50   : 45
+%   stat:n_normal     : 81
+%   stat:n_revers     : 23
+%   stat:n_per_amp_A1 : 60
+%   stat:n_per_amp_A2 : 24
+%   stat:n_per_amp_A3 : 20
+%   stat:k_const_radm : 6.8085
+%
+% — Subfigures available ───────────────────────────────────────
+%     FIGURES/ch05_mooring_focus_at_1_3hz_ka_A1.pdf
+%     FIGURES/ch05_mooring_focus_at_1_3hz_ka_A2.pdf
+%     FIGURES/ch05_mooring_focus_at_1_3hz_ka_A3.pdf
+% ── end immutable block ─────────────────────────────────────────
+\begin{figure}[p]
+  \centering
+  \begin{subfigure}[b]{1.0\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{FIGURES/ch05_mooring_focus_at_1_3hz_ka_A1.pdf}
+    \caption{A1 (0.1V)}
+    \label{fig:ch05_mooring_focus_at_1_3hz_ka_A1}
+  \end{subfigure}
+  \\[1ex]
+  \begin{subfigure}[b]{1.0\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{FIGURES/ch05_mooring_focus_at_1_3hz_ka_A2.pdf}
+    \caption{A2 (0.2V)}
+    \label{fig:ch05_mooring_focus_at_1_3hz_ka_A2}
+  \end{subfigure}
+  \\[1ex]
+  \begin{subfigure}[b]{1.0\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{FIGURES/ch05_mooring_focus_at_1_3hz_ka_A3.pdf}
+    \caption{A3 (0.3V)}
+    \label{fig:ch05_mooring_focus_at_1_3hz_ka_A3}
+  \end{subfigure}
+  \caption[Mooring + panelretning ved 1.30 Hz.]{
+    TODO: skriv hovedteksten. Sammenligning av transmisjon $K_t$ ved 1.30 Hz på tvers av mooring (below\_90 vs above\_50) og panelretning (normal vs revers), for hver av amplitudevalgene $A_1$, $A_2$, $A_3$. Fyrer (hule) markører for å se overlappende punkter.
+  }
+  \label{fig:ch05_mooring_focus_at_1_3hz_ka}
+\end{figure}
