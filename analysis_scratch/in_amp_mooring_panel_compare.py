@@ -48,7 +48,9 @@ import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
-from wavescripts.plot_utils import apply_thesis_style
+from wavescripts.plot_utils import (
+    apply_thesis_style, WIND_COLOR_MAP, PANEL_MARKERS, MARKERS,
+)
 
 apply_thesis_style()
 
@@ -87,31 +89,26 @@ AMP_TIERS = [0.10, 0.20, 0.30]
 AMP_LABEL = {0.10: r"$A_1$ (0.1 V)", 0.20: r"$A_2$ (0.2 V)",
              0.30: r"$A_3$ (0.3 V)"}
 
-# Mooring colours (Row A).
+# Wind = colour (thesis-wide convention).
+WIND_LABEL = {"no": "uten vind", "full": "med vind"}
+
+# Row A — mooring as marker shape. Pick distinct shapes from MARKERS that
+# don't collide with the PANEL_MARKERS used in Row B (o / s / ^).
 MOORING_GROUPS = ["above_50", "below_90_loose230", "below_90_loose300"]
-MOORING_COLOR  = {
-    "above_50":           "#1f77b4",   # blue
-    "below_90_loose230":  "#2ca02c",   # green
-    "below_90_loose300":  "#9467bd",   # purple
+MOORING_MARKER = {
+    "above_50":           "D",   # diamond
+    "below_90_loose230":  "v",   # down-triangle
+    "below_90_loose300":  "P",   # plus
 }
-MOORING_LABEL  = {
+MOORING_LABEL = {
     "above_50":          "above_50",
     "below_90_loose230": "below_90_loose230",
     "below_90_loose300": "below_90_loose300",
 }
 
-# Panel colours (Row B).
+# Row B — panel as marker shape (canonical PANEL_MARKERS from plot_utils).
 PANEL_GROUPS = ["full", "reverse", "no"]
-PANEL_COLOR  = {
-    "full":    "#d62728",   # red
-    "reverse": "#ff7f0e",   # orange
-    "no":      "#7f7f7f",   # grey
-}
 PANEL_LABEL  = {"full": "full", "reverse": "revers", "no": "ingen panel"}
-
-WIND_LS    = {"no": "-", "full": "--"}
-WIND_LABEL = {"no": "uten vind", "full": "med vind"}
-WIND_MARKER = {"no": "o", "full": "s"}
 
 # ── 2. Aggregator ──────────────────────────────────────────────────────────────
 def aggregate(df, group_col):
@@ -136,19 +133,19 @@ rowB = aggregate(rowB_src, "PanelCondition")
 fig, axes = plt.subplots(2, 3, figsize=(11.5, 7.5),
                           sharex=True, sharey="row")
 
-def _plot_cell(ax, df, group_col, group_order, color_map):
+def _plot_cell(ax, df, group_col, group_order, marker_map):
     for grp in group_order:
         for wind in ["no", "full"]:
             sub = df[(df[group_col] == grp) & (df["wind"] == wind)]
             if sub.empty:
                 continue
             sub = sub.sort_values("freq")
-            color = color_map[grp]
+            color = WIND_COLOR_MAP[wind]
             ax.errorbar(
                 sub["freq"], sub["mean"],
                 yerr=sub["std"].fillna(0),
-                marker=WIND_MARKER[wind], ms=5, mew=0.4, mec="black",
-                color=color, lw=1.2, ls=WIND_LS[wind],
+                marker=marker_map[grp], ms=6, mew=0.4, mec="black",
+                color=color, lw=1.2, ls="-",
                 capsize=2.5, capthick=0.8, elinewidth=0.7,
                 alpha=0.9,
             )
@@ -157,14 +154,14 @@ def _plot_cell(ax, df, group_col, group_order, color_map):
 for j, amp_v in enumerate(AMP_TIERS):
     cell_df = rowA[rowA["amp_v"] == amp_v]
     _plot_cell(axes[0, j], cell_df, "Mooring",
-                MOORING_GROUPS, MOORING_COLOR)
+                MOORING_GROUPS, MOORING_MARKER)
     axes[0, j].set_title(f"{AMP_LABEL[amp_v]}", fontsize=10)
 
 # Row B — panel comparison (above_50 mooring).
 for j, amp_v in enumerate(AMP_TIERS):
     cell_df = rowB[rowB["amp_v"] == amp_v]
     _plot_cell(axes[1, j], cell_df, "PanelCondition",
-                PANEL_GROUPS, PANEL_COLOR)
+                PANEL_GROUPS, PANEL_MARKERS)
 
 # Row labels via leftmost-cell ylabels.
 axes[0, 0].set_ylabel(
@@ -188,30 +185,30 @@ for ax in axes.flat:
     ax.yaxis.set_major_locator(MultipleLocator(0.1))
     ax.yaxis.set_minor_locator(MultipleLocator(0.05))
 
-# Per-row legends.
+# Per-row legends. Wind = colour (red/blue); group = marker shape.
+wind_handles = [
+    mlines.Line2D([], [], color=WIND_COLOR_MAP[w], marker="o",
+                  ms=7, mec="black", mew=0.4, lw=1.2,
+                  label=WIND_LABEL[w]) for w in ["no", "full"]
+]
 mooring_handles = [
-    mlines.Line2D([], [], color=MOORING_COLOR[m], marker="o",
-                  ms=6, mec="black", mew=0.4,
+    mlines.Line2D([], [], color="black", marker=MOORING_MARKER[m],
+                  ms=7, mec="black", mew=0.4, lw=0,
                   label=MOORING_LABEL[m]) for m in MOORING_GROUPS
 ]
 panel_handles = [
-    mlines.Line2D([], [], color=PANEL_COLOR[p], marker="o",
-                  ms=6, mec="black", mew=0.4,
+    mlines.Line2D([], [], color="black", marker=PANEL_MARKERS[p],
+                  ms=7, mec="black", mew=0.4, lw=0,
                   label=PANEL_LABEL[p]) for p in PANEL_GROUPS
-]
-wind_handles = [
-    mlines.Line2D([], [], color="black", marker=WIND_MARKER[w],
-                  ms=5, mec="black", mew=0.4, lw=1.2, ls=WIND_LS[w],
-                  label=WIND_LABEL[w]) for w in ["no", "full"]
 ]
 
 # Place row-A legend on top-right cell, row-B on bottom-right cell.
-leg_a = axes[0, 2].legend(handles=mooring_handles + wind_handles,
+leg_a = axes[0, 2].legend(handles=wind_handles + mooring_handles,
                             loc="best", fontsize=7.5, framealpha=0.92,
-                            title="Mooring + vind", title_fontsize=8, ncol=1)
-leg_b = axes[1, 2].legend(handles=panel_handles + wind_handles,
+                            title="Vind / mooring", title_fontsize=8, ncol=1)
+leg_b = axes[1, 2].legend(handles=wind_handles + panel_handles,
                             loc="best", fontsize=7.5, framealpha=0.92,
-                            title="Panel + vind", title_fontsize=8, ncol=1)
+                            title="Vind / panel", title_fontsize=8, ncol=1)
 
 fig.suptitle("Transmission $K_t$ på tvers av mooring og panel",
               fontsize=12, y=0.995)
