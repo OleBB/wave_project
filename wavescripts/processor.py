@@ -1160,7 +1160,11 @@ def _update_all_metrics(
     for i, pos in col_names.items():
         freq_col = f"Probe {pos} Frequency (FFT)"
         k_col    = f"Probe {pos} Wavenumber (FFT)"
-        amp_col  = f"Probe {pos} Amplitude"
+        # Honest "(FFT)" suffix: paddle-only FFT amplitude, NOT the time-domain
+        # percentile column. Under wind the percentile amplitude includes
+        # wind-wave energy on top of the paddle wave and inflates ka by ~50%
+        # (see CLAUDE.md §16). Switched 2026-05-07.
+        amp_col  = f"Probe {pos} Amplitude (FFT)"
 
         meta_indexed[k_col] = calculate_wavenumbers_vectorized(
             frequencies=meta_indexed[freq_col],
@@ -1195,8 +1199,10 @@ def _update_all_metrics(
 
     # Global wave dimensions — "input-based ka"
     # k is solved from WaveFrequencyInput [Hz] (wavemaker setting, not measured).
-    # Amplitude is the measured IN probe amplitude.
-    # This gives a hybrid ka: intended frequency × actual wave height at IN probe.
+    # Amplitude is the measured IN probe FFT amplitude — paddle-tone only.
+    # (Switched from time-domain percentile amplitude 2026-05-07: the percentile
+    # column is wind-contaminated, see CLAUDE.md §16.)
+    # This gives a hybrid ka: intended frequency × paddle-only IN amplitude.
     # Thesis writer: distinguish from per-probe "Probe {pos} ka (FFT)" which uses
     # the FFT-measured frequency at each probe (closer to the actual incoming wave).
     in_pos = col_names[cfg.in_probe]
@@ -1208,7 +1214,7 @@ def _update_all_metrics(
         k=meta_indexed[GC.WAVENUMBER],
         H=meta_indexed[GC.WATER_DEPTH],
         PC=meta_indexed[GC.PANEL_CONDITION],
-        amp=meta_indexed[f"Probe {in_pos} Amplitude"],
+        amp=meta_indexed[f"Probe {in_pos} Amplitude (FFT)"],
         windspeed=meta_indexed[GC.WINDSPEED],
         freq=meta_indexed[GC.WAVE_FREQUENCY_INPUT],
     )

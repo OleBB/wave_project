@@ -236,4 +236,64 @@ mean_df.to_csv(SCRATCH_CSV, index=False)
 print(f"   Summary → {SCRATCH_CSV.relative_to(BASE)}\n")
 print(mean_df.round(4).to_string(index=False))
 
+# ── 4. TEXFIGU stub ───────────────────────────────────────────────────────────
+# Caption text comes from FIGURE_CAPTIONS / FIGURE_CAPTIONS_SHORT in
+# main_save_figures.py via output/.figure_captions.json.
+import wavescripts.plot_utils as pu
+
+THESIS_NAME = "ch05_full_vs_reverse_at_1_3hz_ka"
+pu.ACTIVE_DATASETS = [Path(d).name for d in all_dirs]
+
+_meta_stub = pu.build_fig_meta(
+    {
+        "filters": {
+            "PanelCondition":            "full, reverse",
+            "WaveFrequencyInput [Hz]":   f"{TARGET_FREQ}",
+            "WaveAmplitudeInput [Volt]": "0.10, 0.20, 0.30",
+            "WindCondition":             "no, full",
+            "Mooring":                   "below_90_loose230, below_90_loose300, above_50",
+            "quality_flag":              "ok",
+        },
+        "plotting": {"figure_name": THESIS_NAME},
+    },
+    chapter="05",
+    extra={"script": "analysis_scratch/full_vs_reverse_at_1_3hz_ka.py"},
+    computed_in=("analysis_scratch/full_vs_reverse_at_1_3hz_ka.py "
+                 "(combined K_t vs ka scatter at 1.30 Hz, all 3 amps)"),
+    data_class="DELEG",
+    findings_doc=None,
+    fft_window_hz=0.1,
+    extra_params=(
+        f"freq = {TARGET_FREQ} Hz only. ka per run from "
+        f"k({TARGET_FREQ} Hz) × IN Amplitude (FFT) [mm] / 1000 — paddle-only "
+        "FFT amplitude (NOT the wind-contaminated `IN ka (FFT)` pipeline column "
+        "which mixes FFT wavenumber with time-domain percentile amplitude). "
+        "Mooring colours: below_90 (canon, lumping below_90_loose230 + "
+        "below_90_loose300, hardware pooled) gets WIND_COLOR_MAP "
+        "(blue uten / red med vind); above_50 gets cyan / bright pink. "
+        "Panelretning by marker family: normal = ○ □ △; revers = "
+        "6/5/4-point star (matching A1/A2/A3). All markers hollow. "
+        "x/y limits matched to ch05_damping_ka so the figures stack visually."
+    ),
+    extra_stats={
+        "n_runs_total": int(len(sel)),
+        "n_below_90":   int((sel["moor_grp"] == "below_90").sum()),
+        "n_above_50":   int((sel["moor_grp"] == "above_50").sum()),
+        "n_normal":     int((sel["PanelCondition"] == "full").sum()),
+        "n_revers":     int((sel["PanelCondition"] == "reverse").sum()),
+        "n_per_amp_A1": int((sel["amp_v"] == 0.10).sum()),
+        "n_per_amp_A2": int((sel["amp_v"] == 0.20).sum()),
+        "n_per_amp_A3": int((sel["amp_v"] == 0.30).sum()),
+        "k_const_radm": round(k_const, 4),
+    },
+)
+
+pu.write_figure_stub(
+    _meta_stub,
+    plot_type="full_vs_reverse_at_1_3hz_ka",
+    subfig_filenames=[THESIS_NAME],
+)
+out_stub = BASE / "output" / "TEXFIGU" / f"{THESIS_NAME}.tex"
+print(f"   Stub → {out_stub.relative_to(BASE)}")
+
 print("\nDone.")

@@ -270,6 +270,7 @@ CHAPTER 05 — RESULTS
   §4b   ch05_mooring_focus_at_1_3hz_ka   [DELEG] ~  Mooring + panelretning at 1.30 Hz — single A4 page, 3 stacked subfigs
         ch05_mooring_focus_at_1_3hz_ka_{A1,A2,A3}  [DELEG] ~     └─ per-amp subfigs (loaded from above)
         ch05_mooring_focus_at_1_3hz_table  [DELEG] ~     └─ companion table: K_t per wind, ΔK_t pp, T-økn %, D-red % per (amp, panel, mooring)
+  §4c   ch05_full_vs_reverse_at_1_3hz_ka  [DELEG] ~  Combined: same data as §4b, all 3 amps in one scatter (axes match §4)
   §5    (removed — was Swell/Wind/Total band scatter; PSD-band columns dropped 2026-05-02)
   §6    (moved → CH04 §4-3b as ch04_reconstructed)
   §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions
@@ -608,6 +609,9 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_mooring_focus_at_1_3hz_table": "Tall til figur \ref{fig:ch05_mooring_focus_at_1_3hz_ka}. Transmisjon for panelrekken fortøyd på ulike måter. Merk: kun for \qty{1.3}{\hertz}. Antall (n) kjøringer.",
     # claude kladd). Per $\\Delta K_t$, transmisjonsforhold $K_{t,\\text{vind}}/K_{t,\\text{uten}}$ ($>1$ = vind slipper mer bølge gjennom), og dempningsforhold $D_{\\text{vind}}/D_{\\text{uten}}$ med $D = 1 - K_t$ ($<1$ = vind reduserer panelets demping). Tomt felt for revers $\\cdot$ below\\_90 — denne kombinasjonen ble ikke kjørt.",
 
+    # § 4c — Combined scatter (same data as §4b, all amps in one panel).
+    "ch05_full_vs_reverse_at_1_3hz_ka":  "Samme data som figur \\ref{fig:ch05_mooring_focus_at_1_3hz_ka}, men alle tre amplituder samlet i én figur. Akser matcher figur \\ref{fig:ch05_damping_ka} for direkte sammenligning.",
+
     # § 6 — moved to CH04 §4-3b as ch04_reconstructed (paired with ch04_fft_wave)
 
     # § 7 — All-data scatter (supplementary)
@@ -713,6 +717,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_mooring_focus_at_1_3hz_ka_A2": "Mooring + panelretning, $A_2$.",
     "ch05_mooring_focus_at_1_3hz_ka_A3": "Mooring + panelretning, $A_3$.",
     "ch05_mooring_focus_at_1_3hz_table": "Mooring + panelretning ved 1.30 Hz — hardtall.",
+    "ch05_full_vs_reverse_at_1_3hz_ka":  "Mooring + panelretning ved 1.30 Hz — alle amplituder samlet.",
     "ch05_damping_all_data_scatter":   "",
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
@@ -2650,6 +2655,35 @@ _run_delegated_if_missing(
     "analysis_scratch/mooring_focus_at_1_3hz_table.py",
     [Path("output/TABLES/ch05_mooring_focus_at_1_3hz_table.tex")],
     label="ch05_mooring_focus_at_1_3hz_table",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/full_vs_reverse_at_1_3hz_ka.py
+"""
+── CH05 § 4c — Combined K_t vs ka at 1.30 Hz (all 3 amps in one scatter) ────
+Same data, scope, and visual language as §4b (mooring_focus_at_1_3hz_ka),
+but with all three amplitudes pooled in a single scatter instead of
+3 stacked subfigures.
+
+x-axis = freq_to_k(1.30 Hz) × `IN Amplitude (FFT)` — paddle-only ka,
+NOT the wind-contaminated `IN ka (FFT)` pipeline column. x/y limits
+match ch05_damping_ka so the reader can stack the figures visually.
+
+Encoding:
+  hue   : mooring × wind — below_90 → blue/red (WIND_COLOR_MAP);
+                            above_50 → cyan / bright pink
+  shape : panelretning × amp — normal = ○ □ △ (A1/A2/A3);
+                                revers = 6/5/4-point star
+  fill  : all hollow
+
+Caption text comes from FIGURE_CAPTIONS / FIGURE_CAPTIONS_SHORT in this
+file (looked up via output/.figure_captions.json).
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/full_vs_reverse_at_1_3hz_ka.py",
+    [Path("output/FIGURES/ch05_full_vs_reverse_at_1_3hz_ka.pdf"),
+     Path("output/TEXFIGU/ch05_full_vs_reverse_at_1_3hz_ka.tex")],
+    label="ch05_full_vs_reverse_at_1_3hz_ka",
 )
 
 # %%

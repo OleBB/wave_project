@@ -26,6 +26,20 @@
 >
 > **2026-05-05 follow-up**: the same Mooring-keyed grouping was still active in the `ch05_damping_freq` figure (`main_save_figures.py` ch05_damping_freq cell → `damping_all_amplitude_grouper`). The figure's per-point `n_runs` tokens written into the TEXFIGU stub split n by mooring (e.g. `no-1.40Hz:n=2; no-1.40Hz:n=3` instead of pooled `n=5`), so they disagreed with the §1b table totals. **Fix applied**: same `_damping_meta.drop(columns=["Mooring"], errors="ignore")` pattern as the tables; inline note added in the cell and at `wavescripts/plotter.py::_make_damping_freq_fig`'s per-point provenance section.
 
+> **⚠ TOP-PRIORITY OPEN FIX (2026-05-07, awaiting `main.py --force-recompute`)** —
+> `Probe {pos} ka (FFT)`, `IN ka (FFT)`, `OUT ka (FFT)`, and `Expected ka` were
+> all built from FFT wavenumber × **time-domain percentile** amplitude. The
+> `(FFT)` suffix was true only for `k`; the amplitude was wind-contaminated.
+> Under fullwind these ka columns inflated by ~50–80 % vs the honest
+> paddle-only ka. **Fix landed** in [`wavescripts/processor.py`](wavescripts/processor.py)
+> at line 1163 (per-probe ka site) and line 1215 (`Expected ka` site): both
+> `amp_col` lines switched to `Probe {pos} Amplitude (FFT)`. Run
+> `python main.py --force-recompute` to refresh every `meta.json`, then regen
+> `ch05_damping_ka*`, `ch05_damping_ka_fit*`, and any other figure that pulls
+> `IN ka (FFT)` / `Expected ka` / per-probe `ka (FFT)` from meta.
+> K_t values (pure FFT/FFT ratio) are unaffected. Full memo:
+> [`memory/methodology_ka_now_uses_fft_amplitude.md`](memory/methodology_ka_now_uses_fft_amplitude.md). See also §6 entry.
+
 ---
 
 ## 0. How to use this document
@@ -276,6 +290,46 @@ Historical note: pre-2026-04-18 `meta.json` files contained `OUT/IN (FFT)` compu
 | `"Probe {pos} Amplitude (phase) mean"` | per-cycle sample reading at `u+T/4`, `u+3T/4` | Paddle tone's quarter-period amplitude |
 
 **OUT/IN uses `(FFT)` or `(LS)` — never the time-domain methods.** See §5 for the full suffix convention; see CH04 §4h comparison figure for cross-method agreement (< 0.4 % on 128 nowind measurements).
+
+### `ka` columns now use FFT amplitude too (2026-05-07)
+
+Until 2026-05-07, every column with the suffix `(FFT)` that involved an
+amplitude — `Probe {pos} ka (FFT)`, the canonical `IN ka (FFT)` and
+`OUT ka (FFT)`, plus the global `Expected ka` — was secretly built from
+the time-domain percentile column `Probe {pos} Amplitude`, not from
+`Probe {pos} Amplitude (FFT)`. The `(FFT)` suffix referred only to the
+**wavenumber** (FFT-measured frequency → k via dispersion). The
+**amplitude** was percentile, so under wind the columns inflated by
+the wind-wave-on-top energy — typically +50–80 % at fullwind, ~+1 %
+at nowind.
+
+**Fix landed (uncommitted as of writing)**: two `amp_col` lines in
+[`wavescripts/processor.py`](wavescripts/processor.py) at the per-probe
+ka site (line 1163) and the global `Expected ka` site (line 1215),
+both switched from `"Probe {pos} Amplitude"` to
+`"Probe {pos} Amplitude (FFT)"`. Comments inline note the date and link
+to this section.
+
+**Action item**: `python main.py --force-recompute` to refresh
+every `meta.json`. After recompute, `IN ka (FFT)`, `Expected ka`, and
+all per-probe `ka (FFT)` columns are honestly paddle-tone-only.
+
+**What changes downstream**: only the `ka` and `Ursell` outputs of
+`calculate_wavedimensions` shift (those depend on `a`); `Wavelength`,
+`kL`, `tanh(kH)`, `Celerity`, `Froude`, `Wind/Celerity`, `f/f_PM`,
+`Expected Wavelength`, `Expected kL`, `Expected kH`, `Expected tanh(kH)`,
+`Expected Celerity` are unchanged (those depend on `k` only).
+
+**What still uses `Probe {pos} Amplitude` (legitimately)**:
+- `processor2nd.py::_update_more_metrics` parallel-probe disagreement
+  diagnostic (`{IN,OUT}_disagree_frac` is FFT-amplitude-based; the
+  percentile-amp parallel-probe block is a separate diagnostic).
+- `plot_browsers.py`, `plotter.py` time-domain visualisation paths,
+  noise-floor / parallel-probe agreement plotters — these use the
+  percentile column for what it actually is (a time-domain measurement
+  including wind waves), not as a paddle-tone proxy.
+
+Full memo: [`memory/methodology_ka_now_uses_fft_amplitude.md`](memory/methodology_ka_now_uses_fft_amplitude.md).
 
 ### FFT amplitude window
 
@@ -554,6 +608,16 @@ Measured noise floor per probe (excluding row 1 outlier):
   - `"Probe {pos} Amplitude"` = (P99.5−P0.5)/2 of time-domain signal — includes wind waves
   - `"Probe {pos} Amplitude (FFT)"` = FFT peak within 0.1 Hz of target — paddle-wave only
 - The **OUT/IN ratio** must always be computed from `"Probe {pos} Amplitude (FFT)"` (paddle frequency only). Time-domain amplitude includes wind-wave energy which inflates the IN probe under fullwind conditions, making OUT/IN meaningless for damping. Wind waves are a real physical phenomenon to characterize separately, not noise to average into the damping ratio.
+- The **`ka` columns** follow the same rule. As of 2026-05-07 the
+  pipeline computes `Probe {pos} ka (FFT)`, `IN ka (FFT)`, `OUT ka (FFT)`,
+  and `Expected ka` from `Probe {pos} Amplitude (FFT)` — paddle-tone-only.
+  Before that fix, every `(FFT)`-suffixed ka column secretly used the
+  time-domain percentile amplitude and was inflated by ~50–80 % under
+  fullwind. See §6 "`ka` columns now use FFT amplitude too" and
+  [`memory/methodology_ka_now_uses_fft_amplitude.md`](memory/methodology_ka_now_uses_fft_amplitude.md).
+  Pre-2026-05-07 figures and tables that cite `IN ka (FFT)` ranges
+  under fullwind are inflated; recompute (or recompute `ka` per script
+  from FFT amplitude) before trusting absolute ka values.
 
 ### FFT-based OUT/IN under fullwind — empirical observations (2026-05-07 update)
 
