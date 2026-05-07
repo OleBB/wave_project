@@ -280,7 +280,7 @@ def write_tex_table(rows, out_path, *, range_label, wind_label, scope_note):
     """Render `rows` (from harmonic_summary) as a thesis-ready LaTeX tabular.
 
     Reader-friendly Option-D layout (5 columns):
-      Bølgefrekvens | P_langt/P_vegg (snitt) | Pearsons ρ | Beste probe |
+      Bølgefrekvens | P_fjern/P_nær (snitt) | Pearsons ρ | Beste probe |
       Variansøkning ved snitt [%]
 
     `range_label`  in {'lowrange', 'highrange'}  — probe-hardware sensitivity
@@ -324,7 +324,7 @@ def write_tex_table(rows, out_path, *, range_label, wind_label, scope_note):
         "% — Method ────────────────────────────────────────────────────",
         "%   Pairwise comparison of 9373/170 (wall) and 9373/340 (far) at",
         "%   each thesis paddle frequency (1.3, 1.4, 1.5, 1.6 Hz).",
-        "%   P_langt/P_vegg : geometric mean across runs of P_far[bin]/P_wall[bin]",
+        "%   P_fjern/P_nær : geometric mean across runs of P_far[bin]/P_wall[bin]",
         "%               at the PSD bin nearest f, computed as 10^(mean_dB/10).",
         "%               1.00 = perfect calibration agreement. Geometric mean is",
         "%               used because it pairs naturally with the dB math and is",
@@ -354,7 +354,7 @@ def write_tex_table(rows, out_path, *, range_label, wind_label, scope_note):
         # "Beste probe" = single probe with smallest std(A). Mean is excluded
         # from the comparison (averaging is judged separately by Variansøkning).
         if np.isfinite(r["std_a"]) and np.isfinite(r["std_b"]):
-            best = "vegg" if r["std_a"] < r["std_b"] else "langt"
+            best = "nær" if r["std_a"] < r["std_b"] else "fjern"
         else:
             best = "n/a"
 
@@ -382,9 +382,9 @@ def write_tex_table(rows, out_path, *, range_label, wind_label, scope_note):
         + f"  \\label{{tab:{table_name}}}\n"
         "  \\begin{tabular}{ccccc}\n"
         "    \\toprule\n"
-        "    Bølgefrekvens [\\unit{\\hertz}] &\n"
-        "      $P_\\mathrm{langt}/P_\\mathrm{vegg}$ (snitt) &\n"
-        "      Probe-samsvar (Pearsons $\\rho$) &\n"
+        "      f [\\unit{\\hertz}] &\n"
+        "      $P_\\mathrm{fjern}/P_\\mathrm{nær}$ (snitt) &\n"
+        "      Pearsons $\\rho$ &\n"
         "      Beste probe &\n"
         "      Variansøkning ved snitt [\\%]\\\\\n"
         "    \\midrule\n"

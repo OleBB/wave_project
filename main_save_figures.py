@@ -492,7 +492,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_sound_speed":                "",
     "ch04_parallel_probe_agreement":   "",
     "ch04_parallel_probe_agreement_by_freq": "Forskjell mellom høyre og venstre prober. Hvert vindu viser én frekvens og tre amplituder.",
-    "ch04_parallel_probe_psd_agreement":     "",
+    "ch04_parallel_probe_psd_agreement":     "Samsvar mellom parallelle prober",
     "ch04_parallel_probe_psd_agreement_simple": "",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
     "ch04_depth_regime":               "",
 
@@ -500,7 +500,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_wind_psd":                   "",
     "ch04_wind_reflection":            "",
     "ch04_fft_wave":                   "Frekvensspekter for bølge på \qty{1.4}{\hertz}, amplitudevalg $A_2$. Oppe uten vind, ned med vind. Innkommende til venstre, utgående til høyre.",
-    "ch04_reconstructed":              "Hovedmoden fra bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.  Stablet ovenfra og ned: Innkommende uten vind, Utgående uten vind, Innkommende med vind, Utgående med vind. Felles x- og y-akser for alle fire paneler.",
+    "ch04_reconstructed":              "Hovedfrekvensen fra bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, resten av signalet er separert ut.  Stablet ovenfra og ned: Innkommende uten vind, Utgående uten vind, Innkommende med vind, Utgående med vind. Felles x- og y-akser for alle fire paneler.",
     "ch04_wind_snr":                   "",
     "ch04_td_vs_fft":                  "",
     "ch04_td_vs_fft_scatter":          "",
@@ -541,8 +541,8 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_wind_setup_baseline_table":  "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
 
     # § 5 — Reading a time series (inspirational opener) #NOTE: used raw string r"" because of python newline break.
-    "ch04_inspirational_nowind":       r"Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: \\num{0.1287},   ka, ut:  \num{0.0878}",#todo: consider changing these numbers if the pipeline changes... if amplitude changes slightly..
-    "ch04_inspirational_fullwind":     r"Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, med vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn:   \\num{0.1531}, ka, ut: \num{0.0979}", #however these are illustrative plots...and i think the precision perhaps doesnt matter too much in plots. tables are more important.
+    "ch04_inspirational_nowind":       r"Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: \num{0.1287},   ka, ut:  \num{0.0878}",#todo: consider changing these numbers if the pipeline changes... if amplitude changes slightly..
+    "ch04_inspirational_fullwind":     r"Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, med vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn:   \num{0.1531}, ka, ut: \num{0.0979}", #however these are illustrative plots...and i think the precision perhaps doesnt matter too much in plots. tables are more important.
 
     # § 5b — Highway-effect visual evidence (per40 overlay + pre-paddle)
     "ch04_wind_pre_paddle_overlay":    "To like bølger, med og uten vind, lagt oppå hverandre.",
@@ -589,17 +589,17 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_damping_ka_A2":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_2$.",
     "ch05_damping_ka_A3":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_3$.",
 
-    # § 4a — Damping vs ka with per-wind poly-2 fits
+    # § 4a — Damping vs ka with per-wind poly-2 fits # tror æ droppe denne
     "ch05_damping_ka_fit":             "TODO: skriv hovedteksten. Samme data som figur \\ref{fig:ch05_damping_ka}, uten overlagt kurvetilpasning (kombinert kombinert visning blir for trang for tilpasningskurver).",
     "ch05_damping_ka_fit_A1":          "TODO: skriv hovedteksten. Samme data som figur \\ref{fig:ch05_damping_ka_A1}, med en grad-2-polynom-tilpasning per vindkondisjon (per240 + per40 slått sammen). Kurvetilpasning + $R^2$-verdier i figuren viser at uten-vind-data følger en tydelig kurve mens med-vind-data har større spredning på samme amplitude.",
     "ch05_damping_ka_fit_A2":          "TODO: skriv hovedteksten. Som figur \\ref{fig:ch05_damping_ka_fit_A1}, men for $A_2$.",
     "ch05_damping_ka_fit_A3":          "TODO: skriv hovedteksten. Som figur \\ref{fig:ch05_damping_ka_fit_A1}, men for $A_3$.",
 
     # § 4b — Mooring + panelretning at 1.30 Hz (single-page A4, 3 subfigs)
-    "ch05_mooring_focus_at_1_3hz_ka":   "TODO: skriv hovedteksten. Sammenligning av transmisjon $K_t$ ved 1.30 Hz på tvers av mooring (below\\_90 vs above\\_50) og panelretning (normal vs revers), for hver av amplitudevalgene $A_1$, $A_2$, $A_3$. Fyrer (hule) markører for å se overlappende punkter.",
-    "ch05_mooring_focus_at_1_3hz_ka_A1": "TODO: undertekst $A_1$.",
-    "ch05_mooring_focus_at_1_3hz_ka_A2": "TODO: undertekst $A_2$.",
-    "ch05_mooring_focus_at_1_3hz_ka_A3": "TODO: undertekst $A_3$.",
+    "ch05_mooring_focus_at_1_3hz_ka":    "Sammenlikning av transmisjon for tre amplituder ved frekvens \\qty{1.3}{\hertz}", #"TODO: skriv hovedteksten. Sammenligning av transmisjon $K_t$ ved 1.30 Hz på tvers av mooring (below\\_90 vs above\\_50) og panelretning (normal vs revers), for hver av amplitudevalgene $A_1$, $A_2$, $A_3$. Fyrer (hule) markører for å se overlappende punkter.",
+    "ch05_mooring_focus_at_1_3hz_ka_A1": " $A_1$.",
+    "ch05_mooring_focus_at_1_3hz_ka_A2": " $A_2$.",
+    "ch05_mooring_focus_at_1_3hz_ka_A3": " $A_3$.",
     # § 4b — Companion table for the figure above.
     "ch05_mooring_focus_at_1_3hz_table": "Tall til figur \ref{fig:ch05_mooring_focus_at_1_3hz_ka}. Transmisjon for panelrekken fortøyd på ulike måter. Merk: kun for \qty{1.3}{\hertz}. Antall (n) kjøringer.",
     # claude kladd). Per $\\Delta K_t$, transmisjonsforhold $K_{t,\\text{vind}}/K_{t,\\text{uten}}$ ($>1$ = vind slipper mer bølge gjennom), og dempningsforhold $D_{\\text{vind}}/D_{\\text{uten}}$ med $D = 1 - K_t$ ($<1$ = vind reduserer panelets demping). Tomt felt for revers $\\cdot$ below\\_90 — denne kombinasjonen ble ikke kjørt.",
