@@ -61,10 +61,10 @@ LONG_RUN_CSVS = [
 
 PROBES = ["8804/250", "9373/170", "9373/340", "12400/250"]
 LABELS = {
-    "8804/250":  "8804/250 (upstream)",
-    "9373/170":  "9373/170 (IN, wall)",
-    "9373/340":  "9373/340 (IN, far)", #todo: recent findings shows this is really the better one, Im considering the switch.
-    "12400/250": "12400/250 (OUT)",
+    "8804/250":  "Posisjon 1",
+    "9373/170":  "Posisjon 2, nær",
+    "9373/340":  "Posisjon 2, fjern", #todo: recent findings shows this is really the better one, Im considering the switch.
+    "12400/250": "Posisjon 3",
 }
 
 SNIPPET_S = 3.0          # 3 s safe at all probes: closest is 8804 mm, √(gh)=2.39 m/s → 3.68 s safety

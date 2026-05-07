@@ -71,20 +71,22 @@ from wavescripts.improved_data_loader import load_analysis_data
 from wavescripts.constants import PROBE_HEIGHT_DEFAULT_MM
 from wavescripts.plot_utils import (
     WIND_COLOR_MAP, amp_to_label, apply_thesis_style, freq_to_k,
+    apply_horizontal_ylabel,
 )
 
 # Per-(panel, amp) markers. Reader sees panel via shape family
-# (round/square/triangle vs star/star/X), not via linestyle.
-# (6, 1, 0) = matplotlib "6-pointed star" — Star of David approximation.
+# (round/square/triangle vs 6/5/4-point star), not via linestyle.
+# Synced with `mooring_focus_at_1_3hz_ka.py` per-amp variant so the reader
+# can compare the combined and per-amp figures directly.
 PANEL_AMP_MARKER = {
     ("full",    0.10): "o",
     ("full",    0.20): "s",
     ("full",    0.30): "^",
-    ("reverse", 0.10): (6, 1, 0),
-    ("reverse", 0.20): "*",
-    ("reverse", 0.30): "X",
+    ("reverse", 0.10): (6, 1, 0),   # 6-point star
+    ("reverse", 0.20): (5, 1, 0),   # 5-point star
+    ("reverse", 0.30): (4, 1, 0),   # 4-point star
 }
-PANEL_LABEL = {"full": "normal", "reverse": "revers panelretning"}
+PANEL_LABEL = {"full": "normal", "reverse": "revers"}
 
 apply_thesis_style()
 
@@ -99,17 +101,6 @@ TARGET_FREQ = 1.30
 print("1. Loading processed folders …")
 all_dirs = sorted(glob.glob(str(BASE / "waveprocessed" / "PROCESSED-*")))
 meta, _, _, _ = load_analysis_data(*all_dirs, load_processed=False)
-
-def assign_condition(row):
-    h = row.get("probe_height_mm", PROBE_HEIGHT_DEFAULT_MM)
-    r = row.get("probe_range_mode", "high")
-    if pd.isna(h):
-        h = PROBE_HEIGHT_DEFAULT_MM
-    h = int(h)
-    return "cond4_h100_low" if (h == 100 and r == "low") else "earlier"
-
-meta["condition"] = meta.apply(assign_condition, axis=1)
-meta["is_final"] = meta["condition"] == "cond4_h100_low"
 
 def mooring_group(m):
     if m in ("below_90_loose230", "below_90_loose300"):
@@ -140,11 +131,9 @@ print(f"   ka range: [{sel['ka'].min():.3f}, {sel['ka'].max():.3f}]")
 
 # ── 2. Visual constants ────────────────────────────────────────────────────────
 WIND_LABEL  = {"no": "uten vind", "full": "med vind"}
-MARKER_SIZE = 70
-ALPHA_FILLED   = 0.70
-ALPHA_HOLLOW   = 0.85
-EDGE_LW_FILLED = 0.3
-EDGE_LW_HOLLOW = 1.4
+MARKER_SIZE = 90        # match per-amp `mooring_focus_at_1_3hz_ka.py`
+EDGE_LW     = 1.6
+ALPHA       = 0.85
 
 COLOR = {
     ("below_90", "no"):   WIND_COLOR_MAP["no"],     # #1F77B4 — blue
@@ -152,38 +141,34 @@ COLOR = {
     ("above_50", "no"):   "#00CED1",                # cyan (DarkTurquoise)
     ("above_50", "full"): "#FF1493",                # bright pink (DeepPink)
 }
-MOORING_LABEL = {"below_90": "below_90 (canon)", "above_50": "above_50"}
+MOORING_LABEL = {"below_90": "Under", "above_50": "Over"}
 
 # ── 3. Plot ────────────────────────────────────────────────────────────────────
 fig, ax = plt.subplots(figsize=(7.5, 5.4))
 
-# Scatter all individual runs. Marker = (panel, amp); colour = (mooring, wind);
-# fill = hardware. No connecting lines / mean overlays — the ka grouping
-# already places points where the eye expects them.
+# Scatter all individual runs. Marker = (panel, amp); colour = (mooring, wind).
+# All hollow — matches per-amp `mooring_focus_at_1_3hz_ka.py`. Hardware (canon
+# vs earlier) lumped under below_90; the probe-config diagnostics already
+# established that the canon vs earlier hardware split inside below_90_loose230
+# doesn't carry a statistically defensible bias.
 mean_rows = []
-for (panel, moor, wind, amp_v, is_final), grp in sel.groupby(
-    ["PanelCondition", "moor_grp", "WindCondition", "amp_v", "is_final"]
+for (panel, moor, wind, amp_v), grp in sel.groupby(
+    ["PanelCondition", "moor_grp", "WindCondition", "amp_v"]
 ):
     if grp.empty:
         continue
     color = COLOR[(moor, wind)]
     marker = PANEL_AMP_MARKER.get((panel, amp_v), "X")
-    if is_final:
-        fc, ec = color, "black"
-        lw, a = EDGE_LW_FILLED, ALPHA_FILLED
-    else:
-        fc, ec = "none", color
-        lw, a = EDGE_LW_HOLLOW, ALPHA_HOLLOW
     ax.scatter(
         grp["ka"], grp["OUT/IN (FFT)"],
-        facecolors=fc, edgecolors=ec, marker=marker,
-        s=MARKER_SIZE, linewidths=lw, alpha=a,
-        zorder=3 if is_final else 2,
+        facecolors="none", edgecolors=color, marker=marker,
+        s=MARKER_SIZE, linewidths=EDGE_LW, alpha=ALPHA,
+        zorder=3,
     )
     # Bookkeeping (mean stats kept for the CSV, not plotted).
     mean_rows.append(dict(
         panel=panel, moor_grp=moor, wind=wind, amp_v=amp_v,
-        is_final=bool(is_final), n=int(len(grp)),
+        n=int(len(grp)),
         ka_mean=float(grp["ka"].mean()),
         Kt_mean=float(grp["OUT/IN (FFT)"].mean()),
         Kt_std=float(grp["OUT/IN (FFT)"].std()) if len(grp) > 1 else None,
@@ -192,70 +177,50 @@ for (panel, moor, wind, amp_v, is_final), grp in sel.groupby(
 ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.5)
 ax.set_xlabel(r"$ka$  (per kjøring; $k(1.30\,\mathrm{Hz})\cdot a_\mathrm{IN}$)",
                fontsize=10)
-ax.set_ylabel(r"$K_t$", fontsize=12, rotation=0, ha="right", va="center")
-ax.set_title(
-    f"Mooring og panelretning ved {TARGET_FREQ} Hz — $K_t$ vs $ka$\n"
-    "(mooring dominerer; panelretning er sekundær, kun målbar på above_50)",
-    fontsize=10.5,
-)
 ax.grid(which="major", alpha=0.30, lw=0.6)
 ax.grid(which="minor", alpha=0.15, lw=0.4)
 ax.yaxis.set_major_locator(MultipleLocator(0.05))
 ax.yaxis.set_minor_locator(MultipleLocator(0.025))
+# Horizontal $K_t$ above leftmost tick — matches per-amp variant.
+apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
 
-# Y-range fitted with small pad.
-y_lo = sel["OUT/IN (FFT)"].min() - 0.02
-y_hi = sel["OUT/IN (FFT)"].max() + 0.02
-ax.set_ylim(y_lo, y_hi)
+# X- and Y-range matched to ch05_damping_ka so the reader can compare scales.
+ax.set_xlim(0.045, 0.29)
+ax.set_ylim(0.34, 0.91)
 
-# Legend stack — split the visual dimensions into clear mini-legends.
+# Two-block legend — same structure as per-amp variant. Panel block expanded
+# to 6 entries (2 panels × 3 amps) since the combined figure pools all amps.
 moor_wind_handles = [
-    mlines.Line2D([], [], color=COLOR[("below_90", "no")], lw=4,
-                  label=f"{MOORING_LABEL['below_90']} · uten vind"),
-    mlines.Line2D([], [], color=COLOR[("below_90", "full")], lw=4,
-                  label=f"{MOORING_LABEL['below_90']} · med vind"),
-    mlines.Line2D([], [], color=COLOR[("above_50", "no")], lw=4,
-                  label=f"{MOORING_LABEL['above_50']} · uten vind"),
-    mlines.Line2D([], [], color=COLOR[("above_50", "full")], lw=4,
-                  label=f"{MOORING_LABEL['above_50']} · med vind"),
-]
-# Amp × panel — 6 marker entries, grouped by panel for legibility.
-amp_panel_handles = []
-for panel in ("full", "reverse"):
-    for v in (0.10, 0.20, 0.30):
-        amp_panel_handles.append(
-            mlines.Line2D([], [], color="black",
-                          marker=PANEL_AMP_MARKER[(panel, v)],
-                          linestyle="None", markersize=8,
-                          markerfacecolor="lightgray", markeredgecolor="black",
-                          markeredgewidth=0.4,
-                          label=f"{PANEL_LABEL[panel]} · {amp_to_label(v)}")
-        )
-hw_handles = [
-    mlines.Line2D([], [], color="black",
-                  marker="o", linestyle="None", markersize=8,
-                  markerfacecolor="black", markeredgecolor="black",
-                  markeredgewidth=0.3, label="endelig (cond4)"),
-    mlines.Line2D([], [], color="black",
-                  marker="o", linestyle="None", markersize=8,
-                  markerfacecolor="none", markeredgecolor="black",
-                  markeredgewidth=1.4, label="tidligere"),
+    mlines.Line2D(
+        [], [],
+        color=COLOR[(m, w)],
+        linestyle="-",
+        linewidth=2.0,
+        marker=None,
+        label=f"{MOORING_LABEL[m]} · {WIND_LABEL[w]}",
+    )
+    for m in ["below_90", "above_50"]
+    for w in ["no", "full"]
 ]
 
-leg1 = ax.legend(handles=moor_wind_handles, loc="upper left",
+panel_handles = [
+    mlines.Line2D([], [], color="black",
+                  marker=PANEL_AMP_MARKER[(p, v)],
+                  ms=10, lw=0, mfc="none", mec="black",
+                  mew=EDGE_LW,
+                  label=f"{PANEL_LABEL[p]} · {amp_to_label(v)}")
+    for p in ["full", "reverse"]
+    for v in [0.10, 0.20, 0.30]
+]
+
+leg1 = ax.legend(handles=moor_wind_handles, loc="upper right",
                   fontsize=8, framealpha=0.92,
-                  title="Mooring · vind", title_fontsize=8,
-                  bbox_to_anchor=(0.005, 0.995))
+                  title="Moring · vind", title_fontsize=8)
 ax.add_artist(leg1)
-leg2 = ax.legend(handles=amp_panel_handles, loc="lower left",
-                  fontsize=7.5, framealpha=0.92,
-                  title="Panel · amplitude", title_fontsize=8,
-                  ncol=2, bbox_to_anchor=(0.005, 0.005))
-ax.add_artist(leg2)
-ax.legend(handles=hw_handles, loc="lower right",
-           fontsize=8, framealpha=0.92,
-           title="Oppsett (fyll)", title_fontsize=8,
-           bbox_to_anchor=(0.995, 0.005))
+ax.legend(handles=panel_handles, loc="lower right",
+           fontsize=8.5, framealpha=0.92,
+           title="Panelretning", title_fontsize=8.5,
+           ncol=2, bbox_to_anchor=(0.995, 0.005))
 
 fig.tight_layout()
 

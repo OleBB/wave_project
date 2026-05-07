@@ -555,25 +555,35 @@ Measured noise floor per probe (excluding row 1 outlier):
   - `"Probe {pos} Amplitude (FFT)"` = FFT peak within 0.1 Hz of target — paddle-wave only
 - The **OUT/IN ratio** must always be computed from `"Probe {pos} Amplitude (FFT)"` (paddle frequency only). Time-domain amplitude includes wind-wave energy which inflates the IN probe under fullwind conditions, making OUT/IN meaningless for damping. Wind waves are a real physical phenomenon to characterize separately, not noise to average into the damping ratio.
 
-### FFT-based OUT/IN under fullwind — two competing biases (CRITICAL)
+### FFT-based OUT/IN under fullwind — empirical observations (2026-05-07 update)
 
-When wind is on during a paddle-wave run, two competing biases act on the FFT amplitude at the paddle frequency. Both affect the **IN probe** (9373/170, fully exposed to wind). The **OUT probe** (12400/250) is sheltered by the panel and largely unaffected by both.
+**Headline observation (from `analysis_scratch/paddle_contamination_study.py` + `paddle_contamination_findings.md`):** spectral contamination of the paddle bin from the broadband wind PSD is **small** — median 0.95 % (max 2.31 %) of A_in,fw. After incoherent subtraction (`A_in_corr = √(A_in_fw² − A_wind²)`), the remaining gap between A_in,corr and A_in,nw is still 5.55 % (median) up to 30 % (max).
+
+**Per (amp × freq) raw A_in,fw / A_in,nw ratio:**
+
+| Amp | 1.30 Hz | 1.40 Hz | 1.50 Hz | 1.60 Hz |
+|---|---|---|---|---|
+| 0.10 V | 0.978 | 0.971 | 1.055 | **1.248** |
+| 0.20 V | 1.021 | 1.042 | 1.089 | **1.153** |
+| 0.30 V | 1.039 | 1.048 | 1.094 | **1.160** |
+
+Wind enhances A_in by 5–25 %, growing strongly with frequency. **Spectral contamination explains < 1 percentage point of this.** The remaining ~10–25 % at 1.5–1.6 Hz is dominated by *non-spectral* wind effects on the wave field — real physics, not measurement contamination.
+
+*Candidate explanations (hypotheses, not verified)*: wind-induced mean-level setup altering local dispersion; wind-driven turbulence modifying wave generation/propagation; wind-paddle coupling near the surface; wave-train modulation by wind-driven currents.
+
+**Implication for K_t reporting:** K_t = A_out / A_in measured under fullwind is **not** a "biased measurement of the true (wind-free) transmission." It is the actual transmission ratio with the wave field as physically modified by wind. The IN-side wave amplitude itself depends on wind condition — that's a real property of the experiment, not a measurement artefact. Report fullwind K_t as-is; flag that A_in itself depends on wind condition; don't apply spectral-contamination corrections (they're <1 % and miss the dominant mechanism anyway).
+
+**Earlier framing (retained for historical context — partially superseded by 2026-05-07 observations above):**
+
+Two competing biases were proposed before the empirical correction was run:
 
 **(1) Spectral contamination — biases OUT/IN DOWNWARD**
-Wind has a broadband PSD with a low-frequency tail. Even though most wind energy is at 3–5 Hz, there is non-zero wind energy within the 0.1 Hz FFT window at the paddle frequency. This adds spurious amplitude to A_IN_FFT:
-- A_IN_FFT is inflated → OUT/IN appears lower than the true transmission
-- Effect is larger at lower paddle frequencies (where the wind PSD tail is higher) and at low wave amplitudes (0.1 V), where wind energy can dominate A_IN
-- The asymmetry is key: IN probe is contaminated, OUT probe is not → the bias is always downward
+Wind has a broadband PSD with a low-frequency tail. Even though most wind energy is at 3–5 Hz, there is non-zero wind energy within the 0.1 Hz FFT window at the paddle frequency. *Update: empirically this contributes < 1 % to A_in,fw — too small to be the dominant K_t-shifting mechanism it was framed as.*
 
 **(2) Phase jitter (coherence loss) — biases OUT/IN UPWARD**
-Wind-induced turbulence and wind waves cause small cycle-to-cycle phase variations in the paddle wave. This spreads FFT energy away from the exact paddle frequency, reducing the FFT peak:
-- A_IN_FFT is deflated → OUT/IN appears higher than true transmission
-- Quantified by `wave_stability` column in `combined_meta` (values < 1 indicate jitter)
-- More pronounced at higher frequencies and for longer runs
+Wind-induced turbulence and wind waves cause small cycle-to-cycle phase variations in the paddle wave, spreading FFT energy away from the exact paddle frequency. Quantified by `wave_stability` column (values < 1 indicate jitter), more pronounced at higher frequencies and for longer runs. *Update: not directly quantified against A_in changes; magnitude unknown.*
 
-**Net effect:** At 0.1 V fullwind, bias (1) likely dominates (IN reads high → OUT/IN deflated). At 0.2–0.3 V, bias (2) may be comparable. The observed wind *increase* in OUT/IN at 1.5–1.6 Hz survives both biases — bias (1) would suppress it, yet the increase is still clearly seen, meaning the true effect is at least as large as measured and probably larger.
-
-**Implication:** Measured OUT/IN under fullwind is a conservative (lower-bound) estimate of true transmission when bias (1) dominates. Never report fullwind OUT/IN without acknowledging this.
+**Net effect (revised 2026-05-07):** Both proposed biases are real but small (~1–2 % each). The dominant wind effect on A_in is not a measurement bias; it is a real physical change in the wave field. The earlier "K_t under fullwind is a conservative lower bound" framing was wrong in direction *of interpretation* (it implied K_t was a biased estimator of an underlying wind-free truth, when in fact wind genuinely changes A_in).
 
 **Data reliability limit:** `WaveAmplitudeInput > 1.6 Hz` at 0.2 V or 0.3 V is unreliable — frequent dropouts at high amplitude + high frequency. Exclude from main results. See `memory/feedback_freq_amp_limits.md`.
 
