@@ -203,6 +203,7 @@ CHAPTER 04 — METHODOLOGY
   §3d   ch04_sound_speed                 [META]  ~  Speed-of-sound / lab temperature drift
   §3e   ch04_parallel_probe_agreement    [OUTDATED]  replaced by ch04_parallel_probe_agreement_by_freq
         ch04_parallel_probe_agreement_by_freq  [DELEG] ✓  9373/170 vs 9373/340 — mean-IN canonical ref, faceted by frequency (2x2 grid)
+        ch04_parallel_probe_agreement_bland_altman  [DELEG] ✓  Single-panel Bland-Altman (mean vs % disagreement) — same data, 4 freqs in one figure
         ch04_parallel_probe_psd_agreement      [DELEG] ✓  table: paired t-test + variance-reduction stats (output/TABLES/)
         ch04_parallel_probe_psd_agreement_simple [DELEG] ✓     └─ 4-col reader-facing summary: f · N · <A> · Δ%
   §3f   ch04_depth_regime                [DELEG] ✓  Depth-regime map: kd vs f at d=0.58 m + deep-water-approx error
@@ -494,6 +495,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_sound_speed":                "",
     "ch04_parallel_probe_agreement":   "",
     "ch04_parallel_probe_agreement_by_freq": "Forskjell mellom høyre og venstre prober. Hvert vindu viser én frekvens og tre amplituder.",
+    "ch04_parallel_probe_agreement_bland_altman": "Forskjell mellom parallelle prober. ",
     "ch04_parallel_probe_psd_agreement":     "Samsvar mellom parallelle prober",
     "ch04_parallel_probe_psd_agreement_simple": "",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
     "ch04_depth_regime":               "",
@@ -646,6 +648,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_sound_speed":                "",
     # "ch04_parallel_probe_agreement":   "", !disabled
     "ch04_parallel_probe_agreement_by_freq": "Parallelle prober, fire frekvenser.",
+    "ch04_parallel_probe_agreement_bland_altman": "",
     "ch04_parallel_probe_psd_agreement":     "",
     "ch04_parallel_probe_psd_agreement_simple": "",
     "ch04_depth_regime":               "",
@@ -1181,6 +1184,24 @@ _run_delegated_if_missing(
     [Path("output/FIGURES/ch04_parallel_probe_agreement_by_freq.pdf"),
      Path("output/TEXFIGU/ch04_parallel_probe_agreement_by_freq.tex")],
     label="ch04_parallel_probe_agreement_by_freq",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/parallel_probe_agreement_bland_altman.py
+"""
+── CH04 § 3e (single-panel sibling) — Parallel-probe Bland-Altman ───────────
+Same n=80 runs, same scope as the 2×2 facet above. Replotted as a single
+panel: x = mean amplitude, y = signed disagreement (%). Marker convention
+copies ch05_damping_ka (_freq_marker): outline shape = amplitude tier
+(○ A1, □ A2, △ A3); orientation/fill = paddle frequency. Colour = wind.
+Lets the reader compare wind / amp / freq trends in disagreement at a
+glance, where the facet shows per-frequency scatter intuition.
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/parallel_probe_agreement_bland_altman.py",
+    [Path("output/FIGURES/ch04_parallel_probe_agreement_bland_altman.pdf"),
+     Path("output/TEXFIGU/ch04_parallel_probe_agreement_bland_altman.tex")],
+    label="ch04_parallel_probe_agreement_bland_altman",
 )
 
 # %%

@@ -26,18 +26,23 @@
 >
 > **2026-05-05 follow-up**: the same Mooring-keyed grouping was still active in the `ch05_damping_freq` figure (`main_save_figures.py` ch05_damping_freq cell → `damping_all_amplitude_grouper`). The figure's per-point `n_runs` tokens written into the TEXFIGU stub split n by mooring (e.g. `no-1.40Hz:n=2; no-1.40Hz:n=3` instead of pooled `n=5`), so they disagreed with the §1b table totals. **Fix applied**: same `_damping_meta.drop(columns=["Mooring"], errors="ignore")` pattern as the tables; inline note added in the cell and at `wavescripts/plotter.py::_make_damping_freq_fig`'s per-point provenance section.
 
-> **⚠ TOP-PRIORITY OPEN FIX (2026-05-07, awaiting `main.py --force-recompute`)** —
-> `Probe {pos} ka (FFT)`, `IN ka (FFT)`, `OUT ka (FFT)`, and `Expected ka` were
-> all built from FFT wavenumber × **time-domain percentile** amplitude. The
-> `(FFT)` suffix was true only for `k`; the amplitude was wind-contaminated.
-> Under fullwind these ka columns inflated by ~50–80 % vs the honest
-> paddle-only ka. **Fix landed** in [`wavescripts/processor.py`](wavescripts/processor.py)
-> at line 1163 (per-probe ka site) and line 1215 (`Expected ka` site): both
-> `amp_col` lines switched to `Probe {pos} Amplitude (FFT)`. Run
-> `python main.py --force-recompute` to refresh every `meta.json`, then regen
-> `ch05_damping_ka*`, `ch05_damping_ka_fit*`, and any other figure that pulls
-> `IN ka (FFT)` / `Expected ka` / per-probe `ka (FFT)` from meta.
-> K_t values (pure FFT/FFT ratio) are unaffected. Full memo:
+> **⚠ TOP-PRIORITY OPEN FIX (2026-05-07, RESOLVED 2026-05-07)** —
+> `Probe {pos} ka (FFT)`, `IN ka (FFT)`, `OUT ka (FFT)`, and `Expected ka`
+> were all built from FFT wavenumber × **time-domain percentile** amplitude.
+> The `(FFT)` suffix was true only for `k`; the amplitude was
+> wind-contaminated. Under fullwind these ka columns inflated by ~50–80 %
+> vs the honest paddle-only ka. **Pipeline fix** in
+> [`wavescripts/processor.py`](wavescripts/processor.py) at line 1163
+> (per-probe ka site) and line 1215 (`Expected ka` site): both `amp_col`
+> lines switched to `Probe {pos} Amplitude (FFT)`. **Cached `meta.json`
+> patched in place** by [`analysis_scratch/repair_ka_in_meta.py`](analysis_scratch/repair_ka_in_meta.py)
+> on 2026-05-07T16:26 — 7118 cells across 26 columns in 24 of 25 PROCESSED-*
+> folders, timestamped `meta.json.bak.20260507T162626` backups beside each.
+> Affected figures regenerated: `ch05_damping_ka*`, `ch05_damping_ka_fit*`,
+> `ch05_damping_all_data_scatter_ka`, `ch05_mooring_panel_freq_ka_*`,
+> `ch05_full_vs_reverse_at_1_3hz_ka`, `ch05_mooring_focus_at_1_3hz_ka_*` —
+> all four ka conventions in the project now agree. K_t values
+> (pure FFT/FFT ratio) unaffected. Full memo:
 > [`memory/methodology_ka_now_uses_fft_amplitude.md`](memory/methodology_ka_now_uses_fft_amplitude.md). See also §6 entry.
 
 ---
@@ -303,16 +308,24 @@ the time-domain percentile column `Probe {pos} Amplitude`, not from
 the wind-wave-on-top energy — typically +50–80 % at fullwind, ~+1 %
 at nowind.
 
-**Fix landed (uncommitted as of writing)**: two `amp_col` lines in
+**Fix landed**: two `amp_col` lines in
 [`wavescripts/processor.py`](wavescripts/processor.py) at the per-probe
-ka site (line 1163) and the global `Expected ka` site (line 1215),
-both switched from `"Probe {pos} Amplitude"` to
-`"Probe {pos} Amplitude (FFT)"`. Comments inline note the date and link
-to this section.
+ka site (line 1163) and the global `Expected ka` site (line 1215), both
+switched from `"Probe {pos} Amplitude"` to `"Probe {pos} Amplitude (FFT)"`.
+Comments inline note the date and link to this section.
 
-**Action item**: `python main.py --force-recompute` to refresh
-every `meta.json`. After recompute, `IN ka (FFT)`, `Expected ka`, and
-all per-probe `ka (FFT)` columns are honestly paddle-tone-only.
+**Cached meta.json patched in place** the same day via
+[`analysis_scratch/repair_ka_in_meta.py`](analysis_scratch/repair_ka_in_meta.py)
+— 7118 cells across 26 columns (per-probe + canonical IN/OUT + global
+`Expected`, both `ka` and `Ursell`) in 24 of 25 PROCESSED-* folders.
+Timestamped `meta.json.bak.20260507T162626` backups sit beside each
+patched file. The script reads `Amplitude (FFT)`, `Wavenumber (FFT)`
+and `Wavelength (FFT)` columns already in meta and rewrites the four
+amplitude-dependent column families in-place. No FFT recompute, no
+parquet touched, ~5 seconds vs ~20 min for a full `--force-recompute`.
+Future runs of `main.py --force-recompute` will produce identical
+values (the script mirrors `processor.py`/`processor2nd.py` averaging
+exactly).
 
 **What changes downstream**: only the `ka` and `Ursell` outputs of
 `calculate_wavedimensions` shift (those depend on `a`); `Wavelength`,

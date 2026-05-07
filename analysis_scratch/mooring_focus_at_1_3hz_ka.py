@@ -47,6 +47,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+from matplotlib import patheffects as pe
 from matplotlib.ticker import MultipleLocator
 
 BASE = Path(__file__).resolve().parent.parent
@@ -130,14 +131,23 @@ AMP_TIERS = [(0.10, "A1", "0.1V"),
              (0.20, "A2", "0.2V"),
              (0.30, "A3", "0.3V")]
 
-# Per-amp horizontal extent — choose ka window with small padding.
+# Per-amp horizontal extent — fixed 0.018-wide window centered on each
+# amp's data midpoint. Same width across A1/A2/A3 so the three subfigures
+# read at the same horizontal scale; 0.018 just fits A3 (widest natural
+# spread, ~0.026 raw → 0.018 with slight clipping at the edges) while
+# leaving A1 (narrowest spread) still readable rather than collapsed.
+KA_WINDOW_WIDTH = 0.018
 amp_x_window = {
-    amp_v: (sel.loc[sel["amp_v"] == amp_v, "ka"].min() - 0.005,
-            sel.loc[sel["amp_v"] == amp_v, "ka"].max() + 0.005)
+    amp_v: (
+        (sel.loc[sel["amp_v"] == amp_v, "ka"].min()
+         + sel.loc[sel["amp_v"] == amp_v, "ka"].max()) / 2 - KA_WINDOW_WIDTH / 2,
+        (sel.loc[sel["amp_v"] == amp_v, "ka"].min()
+         + sel.loc[sel["amp_v"] == amp_v, "ka"].max()) / 2 + KA_WINDOW_WIDTH / 2,
+    )
     for amp_v, _, _ in AMP_TIERS
     if (sel["amp_v"] == amp_v).any()
 }
-print(f"   ka windows per amp: {amp_x_window}")
+print(f"   ka windows per amp (width={KA_WINDOW_WIDTH}): {amp_x_window}")
 
 # Shared y-range across all 3 amp figures for visual stacking.
 y_lo = sel["OUT/IN (FFT)"].min() - 0.02
@@ -167,6 +177,10 @@ for amp_v, amp_tag, amp_v_lbl in AMP_TIERS:
             facecolors="none", edgecolors=color, marker=marker,
             s=MARKER_SIZE, linewidths=EDGE_LW, alpha=ALPHA,
             zorder=3,
+            path_effects=[
+                pe.Stroke(linewidth=EDGE_LW + 1.0, foreground="black"),
+                pe.Normal(),
+            ],
         )
         summary_rows.append(dict(
             amp_tag=amp_tag, amp_v=amp_v,
@@ -209,7 +223,11 @@ for amp_v, amp_tag, amp_v_lbl in AMP_TIERS:
         mlines.Line2D([], [], color="black",
                       marker=PANEL_AMP_MARKER[(p, amp_v)],
                       ms=10, lw=0, mfc="none", mec="black",
-                      mew=EDGE_LW, label=PANEL_LABEL[p])
+                      mew=EDGE_LW, label=PANEL_LABEL[p],
+                      path_effects=[
+                          pe.Stroke(linewidth=EDGE_LW + 1.0, foreground="black"),
+                          pe.Normal(),
+                      ])
         for p in ["full", "reverse"]
     ]
     leg1 = ax.legend(handles=moor_wind_handles, loc="upper right",

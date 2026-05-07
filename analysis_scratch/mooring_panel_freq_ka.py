@@ -57,6 +57,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+from matplotlib import patheffects as pe
 from matplotlib.ticker import MultipleLocator
 
 BASE = Path(__file__).resolve().parent.parent
@@ -208,6 +209,10 @@ for amp_v, amp_tag in AMP_TIERS:
             facecolors="none", edgecolors=color, marker=marker,
             s=MARKER_SIZE, linewidths=EDGE_LW, alpha=ALPHA,
             zorder=3,
+            path_effects=[
+                pe.Stroke(linewidth=EDGE_LW + 1.0, foreground="black"),
+                pe.Normal(),
+            ],
         )
         summary_rows.append(dict(
             amp_tag=amp_tag, amp_v=amp_v,
@@ -249,12 +254,17 @@ for amp_v, amp_tag in AMP_TIERS:
     # 4 freq markers for "normal" (full panel) at this amp + 1 star for "revers"
     # (only 1.30 Hz). Even if the data has fewer freqs at this amp, show the
     # full marker family for legibility (matches damping_ka_fit's behaviour).
+    _legend_path_effects = [
+        pe.Stroke(linewidth=EDGE_LW + 1.0, foreground="black"),
+        pe.Normal(),
+    ]
     panel_freq_handles = [
         mlines.Line2D([], [], color="black",
                       marker=_freq_marker(amp_v, FREQ_IDX[f]),
                       ms=10, lw=0, mfc="none", mec="black",
                       mew=EDGE_LW,
-                      label=f"{PANEL_LABEL['full']} · {f:.1f} Hz")
+                      label=f"{PANEL_LABEL['full']} · {f:.1f} Hz",
+                      path_effects=_legend_path_effects)
         for f in THESIS_FREQS
     ]
     panel_freq_handles.append(
@@ -262,7 +272,8 @@ for amp_v, amp_tag in AMP_TIERS:
                       marker=REVERSE_MARKER[amp_v],
                       ms=10, lw=0, mfc="none", mec="black",
                       mew=EDGE_LW,
-                      label=f"{PANEL_LABEL['reverse']} · 1.3 Hz")
+                      label=f"{PANEL_LABEL['reverse']} · 1.3 Hz",
+                      path_effects=_legend_path_effects)
     )
 
     leg1 = ax.legend(handles=moor_wind_handles, loc="upper right",

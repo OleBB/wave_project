@@ -279,38 +279,50 @@ def _make_figure(sub: pd.DataFrame,
                       loc="lower right", framealpha=0.92)
     ax.add_artist(leg_w)
 
-    # Frequency legend — shows the orientation/fill cycle within each amp
-    # family. In per-volt mode this uses the single relevant amp family
-    # (so the markers in the legend match the data exactly); in combined
-    # mode it uses A2 (rectangles, the visually clearest rotation cycle)
-    # as a representative sample — the reader generalises shape→amp from
-    # the Amplitude legend on the right.
-    freq_legend_amp = volt if not combined else 0.20
-    freq_handles = [
-        mlines.Line2D([], [], color="gray",
-                      marker=_freq_marker(freq_legend_amp, fi),
-                      ls="None", ms=7, mec="black", mew=0.35,
-                      label=f"{f:.1f} Hz")
-        for f, fi in FREQ_IDX.items()
-    ]
-    leg_f = ax.legend(handles=freq_handles, title="Frekvens",
-                      title_fontsize=8, fontsize=8,
-                      loc="upper left", framealpha=0.92)
-
-    # Amplitude legend — only in combined mode. Shows one marker per amp
-    # family (using f=1.3 Hz orientation = "full" / 0° / up).
     if combined:
-        ax.add_artist(leg_f)
-        amp_handles = [
+        # Marker matrix inset — explicit 3×4 grid of every (amp × freq) marker.
+        # Replaces the prior "Frekvens (one amp exemplar) + Amplitude (one
+        # freq exemplar)" pair so the reader can read the actual marker for
+        # any (amp, freq) cell directly, instead of generalising from one row.
+        # Placed at bottom-centre where the data is sparse.
+        AMPS = [0.10, 0.20, 0.30]
+        ax_legend = ax.inset_axes([0.30, 0.04, 0.40, 0.22])
+        ax_legend.set_facecolor("white")
+        for i, amp_v in enumerate(AMPS):
+            for j, fh in enumerate(THESIS_FREQS):
+                ax_legend.scatter(
+                    j, len(AMPS) - 1 - i,
+                    marker=_freq_marker(amp_v, FREQ_IDX[fh]),
+                    color="gray", s=70,
+                    edgecolor="black", linewidth=0.4,
+                )
+        ax_legend.set_xlim(-0.5, len(THESIS_FREQS) - 0.5)
+        ax_legend.set_ylim(-0.7, len(AMPS) - 0.3)
+        ax_legend.set_xticks(range(len(THESIS_FREQS)))
+        ax_legend.set_xticklabels([f"{f:.1f} Hz" for f in THESIS_FREQS],
+                                    fontsize=8)
+        ax_legend.set_yticks(range(len(AMPS)))
+        ax_legend.set_yticklabels(
+            [amp_to_label(v) for v in reversed(AMPS)], fontsize=9
+        )
+        ax_legend.tick_params(length=0, pad=2)
+        for spine in ax_legend.spines.values():
+            spine.set_edgecolor("#999")
+            spine.set_linewidth(0.6)
+        ax_legend.set_title("Amplitude · Frekvens", fontsize=9, pad=4)
+    else:
+        # Per-volt (single amp) view — Frekvens legend uses the actual amp's
+        # marker family, no abstraction needed. Kept as a regular legend.
+        freq_handles = [
             mlines.Line2D([], [], color="gray",
-                          marker=_freq_marker(v, 0),
+                          marker=_freq_marker(volt, fi),
                           ls="None", ms=7, mec="black", mew=0.35,
-                          label=amp_to_label(v))
-            for v in (0.10, 0.20, 0.30)
+                          label=f"{f:.1f} Hz")
+            for f, fi in FREQ_IDX.items()
         ]
-        ax.legend(handles=amp_handles, title="Amplitude",
-                  title_fontsize=8, fontsize=8,
-                  loc="upper right", framealpha=0.92)
+        ax.legend(handles=freq_handles, title="Frekvens",
+                   title_fontsize=8, fontsize=8,
+                   loc="upper left", framealpha=0.92)
 
     fig.subplots_adjust(left=0.07, right=0.97, top=0.88, bottom=0.13)
     apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)

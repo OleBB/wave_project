@@ -59,6 +59,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+from matplotlib import patheffects as pe
 from matplotlib.ticker import MultipleLocator
 
 BASE = Path(__file__).resolve().parent.parent
@@ -164,6 +165,10 @@ for (panel, moor, wind, amp_v), grp in sel.groupby(
         facecolors="none", edgecolors=color, marker=marker,
         s=MARKER_SIZE, linewidths=EDGE_LW, alpha=ALPHA,
         zorder=3,
+        path_effects=[
+            pe.Stroke(linewidth=EDGE_LW + 1.0, foreground="black"),
+            pe.Normal(),
+        ],
     )
     # Bookkeeping (mean stats kept for the CSV, not plotted).
     mean_rows.append(dict(
@@ -185,7 +190,7 @@ ax.yaxis.set_minor_locator(MultipleLocator(0.025))
 apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
 
 # X- and Y-range matched to ch05_damping_ka so the reader can compare scales.
-ax.set_xlim(0.045, 0.29)
+ax.set_xlim(0.045, 0.26)
 ax.set_ylim(0.34, 0.91)
 
 # Two-block legend — same structure as per-amp variant. Panel block expanded
@@ -208,7 +213,11 @@ panel_handles = [
                   marker=PANEL_AMP_MARKER[(p, v)],
                   ms=10, lw=0, mfc="none", mec="black",
                   mew=EDGE_LW,
-                  label=f"{PANEL_LABEL[p]} · {amp_to_label(v)}")
+                  label=f"{PANEL_LABEL[p]} · {amp_to_label(v)}",
+                  path_effects=[
+                      pe.Stroke(linewidth=EDGE_LW + 1.0, foreground="black"),
+                      pe.Normal(),
+                  ])
     for p in ["full", "reverse"]
     for v in [0.10, 0.20, 0.30]
 ]
