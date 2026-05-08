@@ -123,9 +123,11 @@ spp_cells = " &\n      ".join(
     for _, r in table.iterrows()
 )
 
-# Caption from central FIGURE_CAPTIONS dict (via JSON cache).
-caption_full  = _lookup_central_caption(THESIS_NAME, kind="full")
-caption_short = _lookup_central_caption(THESIS_NAME, kind="short")
+# Caption is read from output/.table_captions.json (written by main_save_tables.py).
+# Run main_save_tables.py once before this script to populate the cache.
+_CAPTIONS_JSON = BASE / "output" / ".table_captions.json"
+caption_full  = _lookup_central_caption(THESIS_NAME, kind="full",  json_path=_CAPTIONS_JSON)
+caption_short = _lookup_central_caption(THESIS_NAME, kind="short", json_path=_CAPTIONS_JSON)
 
 if caption_full:
     if caption_short:

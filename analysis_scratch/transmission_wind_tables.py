@@ -288,11 +288,16 @@ def _fmt_num_pm(mean, std, decimals: int = 3) -> str:
     return rf"$\num{{{m:.{decimals}f}}} \pm \num{{{s:.{decimals}f}}}$"
 
 
+# Caption is read from output/.table_captions.json (written by main_save_tables.py).
+# Run main_save_tables.py once before this script to populate the cache.
+_CAPTIONS_JSON = BASE / "output" / ".table_captions.json"
+
+
 def _caption_block(thesis_name: str) -> str:
-    """Render \\caption[short]{full} from central FIGURE_CAPTIONS lookup,
+    """Render \\caption[short]{full} from central TABLE_CAPTIONS lookup,
     or a TODO placeholder when both are empty."""
-    caption_full  = _lookup_central_caption(thesis_name, kind="full")
-    caption_short = _lookup_central_caption(thesis_name, kind="short")
+    caption_full  = _lookup_central_caption(thesis_name, kind="full",  json_path=_CAPTIONS_JSON)
+    caption_short = _lookup_central_caption(thesis_name, kind="short", json_path=_CAPTIONS_JSON)
     if caption_full and caption_short:
         return (f"  \\caption[{caption_short}]{{\n"
                 f"    {caption_full}\n"
@@ -317,7 +322,7 @@ def _immutable_block(thesis_name: str, *, table_kind: str, n_rows: int,
         f"%   chapter           : {CHAPTER}",
         f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
         f"%   caption_label     : tab:{thesis_name}",
-        f"%   caption_short     : {_lookup_central_caption(thesis_name, kind='short')}",
+        f"%   caption_short     : {_lookup_central_caption(thesis_name, kind='short', json_path=_CAPTIONS_JSON)}",
         f"%   n_rows            : {n_rows}",
         "%",
         "% — Inputs ────────────────────────────────────────────────────",
