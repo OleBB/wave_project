@@ -76,7 +76,7 @@ from wavescripts.table_render import render_table
 TABLE_CAPTIONS = {
     # ── CHAPTER 04 — METHODOLOGY ─────────────────────────────────────────────
     "ch04_probe_noise_floor_table":              "Oversikt over støygulvet til prober ved innledende og endelig oppsett.",   # TODO: write caption
-    "ch04_parallel_probe_psd_agreement_simple":  "",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
+    "ch04_parallel_probe_psd_agreement_simple":  "Forskjellen mellom parallelle prober",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
     "ch04_window_intervals":                     "",
     "ch04_window_choice_nowind":                 "",
     "ch04_window_choice_fullwind":               "",
@@ -337,7 +337,7 @@ _column_headers = [
     r"$f$ [\unit{\hertz}]",
     r"$N$",
     r"$\langle A \rangle$ [\unit{\milli\metre}]",
-    r"$\Delta$ (far$-$wall) [\%]",
+    r"$\Delta$ (fjern$-$nær) [\%]",
 ]
 
 _render_with_caption_short(
