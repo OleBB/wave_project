@@ -167,6 +167,10 @@ Data-class tag:   [META]       combined_meta + FFT/PSD dicts — loaded up front
                   [CSV]        reads a pre-computed CSV (regenerated via [DELEG] helper)
                   [OUTDATED]   cell commented out (dropped/superseded). Body kept as a
                                marker; description records the replacement figure name.
+                  [EXTRAS]     figure moved to main_save_extras.py — methodology / exploration
+                               that's not in the thesis figure list. Underlying script in
+                               analysis_scratch/ unchanged; cell here removed; index entry
+                               kept as a breadcrumb pointing readers at main_save_extras.py.
                                The agent should NEVER cite or re-enable these without
                                the user's explicit go-ahead.
 
@@ -207,7 +211,7 @@ CHAPTER 04 — METHODOLOGY
         ch04_parallel_ratio_scatter      [META]  ~     └─ per-run scatter sibling
   §3b   ch04_probe_height                [DELEG] ✓  Probe height & range-mode validity
   §3c   ch04_mooring_comparison          [DELEG] ✓  Mooring rubber band length: loose230 vs loose300
-  §3d   ch04_sound_speed                 [META]  ~  Speed-of-sound / lab temperature drift
+  §3d   ch04_sound_speed                 [EXTRAS] →  Moved to main_save_extras.py — speed-of-sound / lab temperature drift
   §3e   ch04_parallel_probe_agreement    [OUTDATED]  replaced by ch04_parallel_probe_agreement_by_freq
         ch04_parallel_probe_agreement_by_freq  [DELEG] ✓  9373/170 vs 9373/340 — mean-IN canonical ref, faceted by frequency (2x2 grid)
         ch04_parallel_probe_agreement_bland_altman  [DELEG] ✓  Single-panel Bland-Altman (mean vs % disagreement) — same data, 4 freqs in one figure
@@ -219,12 +223,12 @@ CHAPTER 04 — METHODOLOGY
   §4-3  ch04_fft_wave                    [DELEG] ✓  FFT spectrum at paddle freq (1.4 Hz canon — 2×2 bar grid w/ Δ)
   §4-3b ch04_reconstructed                [META]  ✓  FFT-reconstructed paddle signal — 4 stacked panels (wind × probe), A4-tall
   §4-4  ch04_wind_snr                    [META]  ~  Spectral SNR: paddle / wind noise per probe
-  §4-5  ch04_td_vs_fft                   [META]  ~  A_td vs A_FFT: why FFT is required
-        ch04_td_vs_fft_scatter           [META]  ~     └─ per-run scatter sibling
+  §4-5  ch04_td_vs_fft                   [EXTRAS] →  Moved to main_save_extras.py — A_td vs A_FFT: why FFT is required
+        ch04_td_vs_fft_scatter           [EXTRAS] →     └─ per-run scatter sibling
   §4b   ch04_fft_peak_bias_cancellation  [CSV]   ~  Peak-bin FFT bias cancels in OUT/IN ratio
   §4c   ch04_mansard_funke_reflection    [DELEG] ✓  Mansard–Funke reflection coefficient
-  §4d   ch04_sw_correction_test          [DELEG] ✓  Standing-wave correction test — negative evidence
-  §4e   ch04_sliding_afft_stability      [DELEG] ✓  Sliding-window FFT stability at IN probe
+  §4d   ch04_sw_correction_test          [EXTRAS] →  Moved to main_save_extras.py — standing-wave correction test (negative evidence)
+  §4e   ch04_sliding_afft_stability      [EXTRAS] →  Moved to main_save_extras.py — sliding-window FFT stability at IN probe
   §4f   ch04_reconstruction_AvsB         [DELEG] ✓  Peak-bin (A) vs band-integrated (B) equivalence
   §4g   ch04_reconstruction_pure_wind    [DELEG] ✓  Pure wind via no-wind residual subtraction
   §4h   ch04_fft_method_comparison       [DELEG] ~  4-method FFT comparison (nearest/parabolic/goertzel/ls_fit)
@@ -1034,29 +1038,6 @@ _run_delegated_if_missing(
     label="ch04_mooring_comparison",
 )
 
-# %%
-# [DATA: META]
-"""
-── CH04 § 3d — Speed-of-sound / lab temperature drift ───────────────────────
-Goal: show that lab temperature variation introduces < 0.4 % amplitude scale
-error, and that this cancels exactly for OUT/IN ratios.
-Data: sound_speed_mean_ms / sound_speed_std_ms in combined_meta (pipeline).
-"""
-
-_pv_sound_speed = {
-    "filters": {},
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,            # DRAFT — not yet polished
-        "draft":       False,
-        "figure_name": "ch04_sound_speed",
-        "force_stub":  True,
-        "figsize":     (10, 3),
-    },
-}
-
-plot_sound_speed(combined_meta, _pv_sound_speed, chapter="04")
-
 # %% !disabled  (sibling below)
 # [DATA: OUTDATED]  — replaced by analysis_scratch/parallel_probe_agreement_by_freq.py
 # Original cell: analysis_scratch/parallel_probe_agreement.py (3-panel scatter
@@ -1339,46 +1320,6 @@ _pv_wind_snr = {
 
 plot_wind_snr(combined_meta, combined_psd_dict, _pv_wind_snr, chapter="04")
 
-# %%
-# [DATA: META]
-"""
-── CH04 § 4-5 — Time-domain vs FFT amplitude: why A_FFT is required ─────────
-Goal: demonstrate that time-domain amplitude is wind-dominated at the IN probe
-under full wind, making OUT/IN from A_td meaningless. FFT amplitude isolates
-the paddle frequency and is unaffected by broadband wind energy.
-Data: combined_meta wave rows (Probe {pos} Amplitude and Probe {pos} Amplitude (FFT)).
-"""
-
-_pv_td_vs_fft = {
-    "filters": {
-        "min_periods":               10,
-        "WaveAmplitudeInput [Volt]": None,
-        "WaveFrequencyInput [Hz]":   None,
-        "WindCondition":             None,
-        "PanelCondition":            None,
-    },
-    "plotting": {
-        "show_plot":   True,
-        "save_plot":   True,            # DRAFT — not yet polished
-        "draft":       True,
-        "figure_name": "ch04_td_vs_fft",
-        "force_stub":  True,
-        "probes":      ANALYSIS_PROBES,
-    },
-}
-
-plot_td_vs_fft(combined_meta, _pv_td_vs_fft, chapter="04")
-
-_pv_td_vs_fft_scatter = {
-    "filters": {**_pv_td_vs_fft["filters"]},
-    "plotting": {
-        **_pv_td_vs_fft["plotting"],
-        "scatter":     True,
-        "figure_name": "ch04_td_vs_fft_scatter",
-    },
-}
-plot_td_vs_fft(combined_meta, _pv_td_vs_fft_scatter, chapter="04")
-
 # %% !disabled - either repurpose or archive
 # [DATA: CSV]  — analysis_scratch/fft_peak_bias_outin_impact.py regens CSV;
 #                then plotter reads it
@@ -1440,52 +1381,6 @@ _run_delegated_if_missing(
     [Path("output/FIGURES/ch04_mansard_funke_reflection.pdf"),
      Path("output/TEXFIGU/ch04_mansard_funke_reflection.tex")],
     label="ch04_mansard_funke_reflection",
-)
-
-# %%
-# [DATA: DELEG]  — analysis_scratch/sw_correction.py
-"""
-── CH04 § 4d — Standing-wave correction test (negative evidence) ────────────
-Goal: show that applying a standing-wave correction at R = 0.20 to the raw
-OUT/IN(FFT) curve creates a violent zigzag not present in the raw data.
-This is the complementary result to §4c — raw data shows no node/antinode
-fingerprint at the predicted frequency spacing, putting an upper bound of
-R ≲ 0.05 on the panel reflection coefficient.
-
-Generated by analysis_scratch/sw_correction.py. Writes figure + stub
-directly to output/. Re-run after any pipeline change that alters OUT/IN.
-"""
-
-_run_delegated_if_missing(
-    "analysis_scratch/sw_correction.py",
-    [Path("output/FIGURES/ch04_sw_correction_test.pdf"),
-     Path("output/TEXFIGU/ch04_sw_correction_test.tex")],
-    label="ch04_sw_correction_test",
-)
-
-# %%
-# [DATA: DELEG]  — analysis_scratch/sliding_afft_fullwind_sweep.py
-"""
-── CH04 § 4e — Sliding-window FFT stability at the IN probe ─────────────────
-Goal: show that the paddle-frequency FFT amplitude at the IN probe
-(9373/170) is stable across the run for fullwind per240 conditions. Any
-apparent discrepancies between the pipeline AFFT (short analysis window)
-and alternative FFT windows reflect FFT bin-grid alignment (see §4b),
-not physical within-run transients. This is a companion figure to §4b —
-§4b establishes the bias mechanism and OUT/IN cancellation; §4e shows
-that the underlying signal is genuinely stable (so the bias is the only
-suspect when short/long-window FFT values disagree).
-
-Generated by analysis_scratch/sliding_afft_fullwind_sweep.py. Writes
-PDF + stub directly into output/. A deeper 1.5 Hz / 0.2 V zoom lives
-in analysis_scratch/sliding_afft_15hz_02v_zoom.{py,pdf} for reference.
-"""
-
-_run_delegated_if_missing(
-    "analysis_scratch/sliding_afft_fullwind_sweep.py",
-    [Path("output/FIGURES/ch04_sliding_afft_stability.pdf"),
-     Path("output/TEXFIGU/ch04_sliding_afft_stability.tex")],
-    label="ch04_sliding_afft_stability",
 )
 
 # %%
