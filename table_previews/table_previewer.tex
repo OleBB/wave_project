@@ -1,0 +1,66 @@
+\documentclass{article}
+
+\usepackage[toc]{appendix}
+\usepackage[main=norsk,english]{babel}
+\usepackage[a4paper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+%\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{float} %for å kontrollere bildeplasseringene 
+\usepackage{placeins} %for å kontrollere \FloatBarrier
+\usepackage{caption}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{tikz}
+
+\usepackage{mathrsfs}
+\usepackage{bm,mathrsfs} 
+\usepackage{calligra}
+\usepackage{amssymb}
+\usepackage{amssymb}
+\usepackage{chancery}
+\usepackage{fontspec}
+
+\sisetup{
+  output-decimal-marker = {,},
+  group-separator       = {},
+  group-minimum-digits  = 4,
+  range-phrase          = {~til~},
+  detect-weight         = true,
+  detect-family         = true,
+  round-mode            = places,
+  round-precision       = 3,
+  round-pad             = false,
+}
+
+% Special version for tables: use a dash instead of "til"
+\newcommand{\tabnumrange}[2]{%
+%  \numrange[range-phrase = {\,-\,}]{#1}{#2}%
+\numrange[range-phrase = {–}]{#1}{#2}
+
+}
+
+\sisetup{
+  detect-all,
+  locale = DE, % or NO, or leave out; affects decimal comma/point
+}
+
+\renewcommand\thesubsection{\alph{subsection})} %Gjør at subsection blir a) i stedet for 1.1.1
+\newcommand{\vect}[1]{\boldsymbol{{#1}}} %en ny kommando som sier at \vect gir fet skrift. det er alternativ vektornotasjon.
+
+
+\begin{document}
+
+
+\input{../output/TABLES/ch05_damping_freq_table.tex}
+
+\input{../output/TABLES/ch04_parallel_probe_psd_agreement_highrange_fullwind.tex}
+
+\input{../output/TABLES/ch04_dt_budget_canonical.tex}
+
+\begin{equation}
+ch04_dt_budget_canonical.texch04_parallel_probe_psd_agreement_highrange_fullwind.texch04_parallel_probe_psd_agreement_highrange_nowind.texch04_parallel_probe_psd_agreement_lowrange_fullwind.texch04_parallel_probe_psd_agreement_lowrange_nowind.texch04_parallel_probe_psd_agreement_simple.texch04_parallel_probe_psd_agreement.texch04_plateau_values.texch04_plateau_values.tex.beforech04_plateau_values.tex.before_main_save_tablesch04_probe_noise_floor_table.texch04_tidsvindu.texch04_wind_effects_data.texch04_wind_effects_scoreboard.texch04_wind_lowestwind_monotonicity.texch04_wind_pre_paddle_table.texch04_wind_setup_baseline_table.texch04_window_choice_fullwind.texch04_window_choice_nowind.texch04_window_intervals.texch05_damping_freq_table.texch05_damping_freq_table.tex.beforech05_damping_freq_table.tex.before_main_save_tablesch05_loose230_vs_loose300_table_broad.texch05_loose230_vs_loose300_table.tex%ch05_mooring_focus_at_1_3hz_table.tex%ch05_mooring_focus_at_1_3hz_table.tex.before%ch05_mooring_focus_at_1_3hz_table.tex.before_main_save_tablesch05_transmission_wind_amplitudes.texch05_transmission_wind_ratios.texch05_wind_effect_table_by_amp.texch05_wind_effect_table.tex	
+\end{equation}
+	
+\end{document}
