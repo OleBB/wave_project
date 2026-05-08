@@ -1,12 +1,24 @@
 """Render thesis tables from precomputed CSV + meta.json sidecars.
 
-Run end-to-end for full recalc (delegated data scripts fire when their
-CSVs are missing, then render_table writes the .tex). Open in Zed REPL
-and re-run individual cells for fast layout iteration — the pipeline
-data stays on disk, render runs in ~50 ms.
+RENDER-ONLY by design — cells in this file NEVER invoke the data
+scripts. Editing column_headers / cell_format / row_groups in a cell
+and re-running it produces a fresh .tex in ~50 ms against whatever
+CSV + meta sidecars are currently on disk. Pipeline reloads do not
+happen here.
 
-Sister script to main_save_figures.py — same DELEG / REPL idioms,
-scoped to tables only. Captions for ALL thesis tables live here in
+To regenerate a CSV + meta after editing the data script (e.g.
+changing a probe label, bumping a column), invoke the script
+yourself:
+
+    python analysis_scratch/<name>_table.py
+
+Then re-run the cell. The data script is invoked manually so the
+cost of the data layer is paid only when explicitly asked. If a CSV
+or meta sidecar is missing on disk when a cell runs, the cell prints
+the regen command and skips rendering (no error).
+
+Sister script to main_save_figures.py (figures) and main_save_extras.py
+(not-in-thesis figures). Captions for ALL thesis tables live here in
 TABLE_CAPTIONS / TABLE_CAPTIONS_SHORT (single source of truth) and are
 written to output/.table_captions.json on import — including tables
 whose data still renders from main_save_figures.py cells (those scripts
@@ -47,7 +59,6 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 
-from wavescripts.save_utils  import _run_delegated_if_missing
 from wavescripts.table_render import render_table
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -71,7 +82,7 @@ TABLE_CAPTIONS = {
     "ch04_window_choice_fullwind":               "",
     "ch04_plateau_values":                       "Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.",
     "ch04_tidsvindu":                            "Frekvensenes tidsvinduer",
-    "ch04_wind_pre_paddle_table":                "",
+    "ch04_wind_pre_paddle_table":                "Vindspekteret fra lange målinger sammenliknet med 3-sekundersmålinger fra hver kjøring",
     "ch04_wind_setup_baseline_table":            "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
 
     # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
@@ -121,16 +132,47 @@ def _render_with_caption_short(
     short_caption: str,
     render_fn,
 ) -> None:
-    """Run `render_fn()` with caption_short temporarily patched into meta.json.
+    """Render the .tex from existing CSV + meta sidecars. Never fires the data script.
 
-    Data scripts always write meta.json with caption_short blank (they
-    own the data, not the captions). The renderer bakes caption_short
-    into the .tex IMMUTABLE block by reading meta.json from disk, so we
-    patch the file just before render_fn runs and revert it after — the
-    on-disk meta.json stays the data script's truth, no spurious git diff.
+    Cells in this file are RENDER-ONLY by design. Editing column_headers
+    / cell_format / row_groups in the cell and re-running it never
+    triggers a pipeline reload — render runs in ~50 ms against the CSV
+    on disk.
 
-    Skip both write+revert when the desired value already matches.
+    To regenerate the CSV + meta after editing the data SCRIPT (e.g.
+    changing a probe label, bumping a column), invoke the script
+    yourself:
+
+        python <script_rel from meta.json>
+
+    Then re-run this cell.
+
+    Behaviour:
+      1. Derives `csv_path` from `meta_path` by sibling-file convention
+         (replaces `.meta.json` with `.csv`).
+      2. If either sidecar is missing, prints a warning with the
+         script-regen command (read from meta.json's `script` field
+         when available) and returns without rendering.
+      3. Otherwise patches `caption_short` into meta.json on disk just
+         long enough for `render_fn()` to read it, then reverts the
+         file via try/finally so meta.json stays unchanged.
     """
+    csv_path = meta_path.parent / meta_path.name.replace(".meta.json", ".csv")
+    missing = [p.name for p in (csv_path, meta_path) if not p.exists()]
+    if missing:
+        script_hint = ""
+        if meta_path.exists():
+            try:
+                _m = json.loads(meta_path.read_text(encoding="utf-8"))
+                if _m.get("script"):
+                    script_hint = f"     Run: python {_m['script']}"
+            except Exception:
+                pass
+        print(f"  ⚠ {csv_path.stem}: missing sidecar(s) {missing}")
+        if script_hint:
+            print(script_hint)
+        return
+
     if not short_caption:
         render_fn()
         return
@@ -160,18 +202,18 @@ def _fmt_signed(x: float, decimals: int = 3) -> str:
 # %%
 # TABLE_INDEX
 # ═══════════════════════════════════════════════════════════════════════════════
-#   ch04_probe_noise_floor_table             [DELEG] ✓  3σ noise per probe — innledende vs endelig
-#   ch04_parallel_probe_psd_agreement_simple [DELEG] ✓  Δ% (far−wall) per thesis freq
-#   ch04_window_intervals                    [DELEG] ✓  H&G theoretical window intervals per freq
-#   ch04_wind_pre_paddle_table               [DELEG] ✓  σ_η long vs 3 s pre-paddle per probe
-#   ch05_damping_freq_table          [DELEG] ✓  Per-amp K_t,uten/K_t,vind/ΔK_t at 1.3–1.6 Hz
-#   ch05_mooring_focus_at_1_3hz_table [DELEG] ✓  Mooring × panel × wind transmission at 1.30 Hz
-#   ch04_plateau_values              [DELEG] ✓  A_in/A_out/K_t per (amp, freq, wind), all 3 amplitudes
+#   ch04_probe_noise_floor_table             [RENDER] ✓  3σ noise per probe — innledende vs endelig
+#   ch04_parallel_probe_psd_agreement_simple [RENDER] ✓  Δ% (far−wall) per thesis freq
+#   ch04_window_intervals                    [RENDER] ✓  H&G theoretical window intervals per freq
+#   ch04_wind_pre_paddle_table               [RENDER] ✓  σ_η long vs 3 s pre-paddle per probe
+#   ch05_damping_freq_table          [RENDER] ✓  Per-amp K_t,uten/K_t,vind/ΔK_t at 1.3–1.6 Hz
+#   ch05_mooring_focus_at_1_3hz_table [RENDER] ✓  Mooring × panel × wind transmission at 1.30 Hz
+#   ch04_plateau_values              [RENDER] ✓  A_in/A_out/K_t per (amp, freq, wind), all 3 amplitudes
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/probe_noise_floor_table.py
+# [DATA: RENDER]  — analysis_scratch/probe_noise_floor_table.py
 """
 ── CH04 § 1 — Probe noise-floor table (innledende vs endelig) ──────────────
 Per probe position, 3σ stillwater detection threshold for the initial
@@ -182,13 +224,6 @@ _NAME = "ch04_probe_noise_floor_table"
 _CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
 _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
 _TEX  = Path(f"output/TABLES/{_NAME}.tex")
-
-_run_delegated_if_missing(
-    "analysis_scratch/probe_noise_floor_table.py",
-    [_CSV, _META],
-    label=f"{_NAME}_data",
-)
-
 
 def _fmt_mm_2dp(col: str):
     def _impl(row: pd.Series) -> str:
@@ -257,7 +292,7 @@ print(f"   TEX → {_TEX}")
 
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/parallel_probe_psd_agreement_simple.py
+# [DATA: RENDER]  — analysis_scratch/parallel_probe_psd_agreement_simple.py
 """
 ── CH04 § 3 — Parallel-probe PSD agreement (simple) ─────────────────────────
 Per thesis frequency, N runs, mean amplitude, signed mean Δ% between
@@ -267,13 +302,6 @@ _NAME = "ch04_parallel_probe_psd_agreement_simple"
 _CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
 _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
 _TEX  = Path(f"output/TABLES/{_NAME}.tex")
-
-_run_delegated_if_missing(
-    "analysis_scratch/parallel_probe_psd_agreement_simple.py",
-    [_CSV, _META],
-    label=f"{_NAME}_data",
-)
-
 
 def _fmt_freq_2dp(row: pd.Series) -> str:
     return rf"\num{{{row['freq']:.2f}}}"
@@ -333,9 +361,9 @@ print(f"   TEX → {_TEX}")
 
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/window_intervals_table.py
+# [DATA: RENDER]  — analysis_scratch/window_intervals_table.py
 """
-── CH04 § 4 — H&G theoretical window intervals per thesis frequency ────────
+── CH04 § 4 — ( ! note exact "H&G"-numbers is not in use anymore.) theoretical window intervals per thesis frequency ────────
 Wide layout: each thesis frequency is a COLUMN, the rows are
 (Innkommende [s], Utgående [s], samples per period). The CSV is per-freq;
 this cell pivots it into the wide form via per-row cell formatters that
@@ -345,12 +373,6 @@ _NAME = "ch04_window_intervals"
 _CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
 _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
 _TEX  = Path(f"output/TABLES/{_NAME}.tex")
-
-_run_delegated_if_missing(
-    "analysis_scratch/window_intervals_table.py",
-    [_CSV, _META],
-    label=f"{_NAME}_data",
-)
 
 _WIN_FREQS = [1.3, 1.4, 1.5, 1.6]
 _WIN_FREQ_COLS = [f"f_{f:.1f}" for f in _WIN_FREQS]
@@ -432,7 +454,7 @@ print(f"   TEX → {_TEX}")
 
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/wind_pre_paddle_table.py
+# [DATA: RENDER]  — analysis_scratch/wind_pre_paddle_table.py
 """
 ── CH04 § 4q — Pre-paddle wind summary (long-run vs 3 s) per probe ─────────
 Per probe row: long-run σ_η, 3 s mean σ_η, Δ%, 3 s 1σ scatter. One block,
@@ -443,11 +465,6 @@ _CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
 _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
 _TEX  = Path(f"output/TABLES/{_NAME}.tex")
 
-_run_delegated_if_missing(
-    "analysis_scratch/wind_pre_paddle_table.py",
-    [_CSV, _META],
-    label=f"{_NAME}_data",
-)
 
 
 def _fmt_mm(col: str, decimals: int = 2):
@@ -482,7 +499,7 @@ _columns        = [
     "sigma_3s_scatter_mm",
 ]
 _column_headers = [
-    "sonde",
+    "Probe",
     r"$\sigma_\eta$ (lang) [\unit{\milli\metre}]",
     r"$\sigma_\eta$ (\qty{3}{\second}) [\unit{\milli\metre}]",
     r"$\Delta$ [\%]",
@@ -510,7 +527,7 @@ print(f"   TEX → {_TEX}")
 
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/damping_freq_table.py
+# [DATA: RENDER]  — analysis_scratch/damping_freq_table.py
 """
 ── CH05 § 1b — Damping-vs-frequency table (companion to ch05_damping_freq) ─
 Per amplitude tier (A1/A2/A3), tabulates K_t at no-wind, K_t at full-wind,
@@ -522,11 +539,6 @@ _CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
 _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
 _TEX  = Path(f"output/TABLES/{_NAME}.tex")
 
-_run_delegated_if_missing(
-    "analysis_scratch/damping_freq_table.py",
-    [_CSV, _META],
-    label=f"{_NAME}_data",
-)
 
 _THESIS_FREQS = [1.3, 1.4, 1.5, 1.6]
 _THESIS_AMPS  = [0.10, 0.20, 0.30]
@@ -585,7 +597,7 @@ print(f"   TEX → {_TEX}")
 
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/mooring_focus_at_1_3hz_table.py
+# [DATA: RENDER]  — analysis_scratch/mooring_focus_at_1_3hz_table.py
 """
 ── CH05 § 4b — Mooring + panelretning at 1.30 Hz: companion table ───────────
 Hard numbers for ch05_mooring_focus_at_1_3hz_ka. Same data, same scope (1.30
@@ -595,12 +607,6 @@ _NAME = "ch05_mooring_focus_at_1_3hz_table"
 _CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
 _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
 _TEX  = Path(f"output/TABLES/{_NAME}.tex")
-
-_run_delegated_if_missing(
-    "analysis_scratch/mooring_focus_at_1_3hz_table.py",
-    [_CSV, _META],
-    label=f"{_NAME}_data",
-)
 
 _THESIS_AMPS = [0.10, 0.20, 0.30]
 
@@ -684,7 +690,7 @@ print(f"   TEX → {_TEX}")
 
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/plateau_values_table.py
+# [DATA: RENDER]  — analysis_scratch/plateau_values_table.py
 """
 ── CH04 § 4o (companion table) — Plateau A_FFT values inside chosen window ──
 Per (f, amp, wind) cell: median A_IN, A_OUT, OUT/IN over the chosen window
@@ -696,11 +702,6 @@ _CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
 _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
 _TEX  = Path(f"output/TABLES/{_NAME}.tex")
 
-_run_delegated_if_missing(
-    "analysis_scratch/plateau_values_table.py",
-    [_CSV, _META],
-    label=f"{_NAME}_data",
-)
 
 _AMP_TIERS = [
     (0.10, "A1", r"$A_1$"),
