@@ -9,28 +9,31 @@
 %   data_class        : DELEG
 %   generated_at      : 2026-05-05T12:31:19
 %   findings_doc      : (none)
+%   note              : 2026-05-08 split from ch04_wind_transition_overview.tex
+%                       — this stub keeps subfigs a+b (ramp-up only); decay
+%                       subfigs c+d moved to ch04_wind_decay_overview.tex.
 %
 % — Thesis context ──────────────────────────────────────────────
 %   chapter           : 04
-%   caption_label     : fig:ch04_wind_transition_overview
-%   caption_short     : 
+%   caption_label     : fig:ch04_wind_rampup_overview
+%   caption_short     :
 %
 % — Filters ────────────────────────────────────────────────────
-%   panel             : 
-%   wind              : transition
-%   amplitude [V]     : 
-%   frequency [Hz]    : 
-%   probes            : 
-%   run_category      : 
-%   quality_flag      : 
-%   mooring           : 
+%   panel             :
+%   wind              : transition (0 → max)
+%   amplitude [V]     :
+%   frequency [Hz]    :
+%   probes            :
+%   run_category      :
+%   quality_flag      :
+%   mooring           :
 %
 % — Data provenance ────────────────────────────────────────────
-%   n_runs            : 
-%   in_probes_used    : 
-%   out_probes_used   : 
-%   probe_configs     : 
-%   non_final_config_n: 
+%   n_runs            :
+%   in_probes_used    :
+%   out_probes_used   :
+%   probe_configs     :
+%   non_final_config_n:
 %   datasets        :
 %     PROCESSED-20251005-sixttry6roof-highMooring
 %     PROCESSED-20251110-tett6roof-lowMooring
@@ -60,10 +63,10 @@
 %     (omitted — aggregate over > threshold runs, see datasets)
 %
 % — Method / numerical parameters ─────────────────────────────
-%   grouper           : 
-%   collapse_panels   : 
-%   fft_window_hz     : 
-%   extra_params      : Two single-run time-series. Wind ramp-up = 20260314 fullpanel-fromZeroWinToMaxWin-run1.csv (probe config march2026_better_rearranging). Wind decay   = 20260327 experimental-fromMaxToZeroWin-depth580-mstop30-run-endofday.csv (same probe config). Probes shown: IN=9373/170 (colour #FEA11B amber, fully exposed to wind), OUT=12400/250 (colour #2EC483 green, sheltered behind panel). Per-probe baseline μ₀ subtracted: ramp-up = mean of first 2 s (tank at rest before fan); decay = mean of last 2 s (tank settled by ~23 min). Y-axis clipped to ±15 mm so the wind-setup tilt and chop envelope are readable on the same scale across all four panels. Subfigure order top→bottom: ramp-up full record (minutes), ramp-up first 60 s (seconds), decay full record (minutes), decay first 60 s (seconds).
+%   grouper           :
+%   collapse_panels   :
+%   fft_window_hz     :
+%   extra_params      : Single-run time-series, wind ramp-up = 20260314 fullpanel-fromZeroWinToMaxWin-run1.csv (probe config march2026_better_rearranging). Probes shown: IN=9373/170 (colour #FEA11B amber, fully exposed to wind), OUT=12400/250 (colour #2EC483 green, sheltered behind panel). Per-probe baseline μ₀ subtracted: mean of first 2 s (tank at rest before fan). Y-axis clipped to ±15 mm so the wind-setup tilt and chop envelope are readable on the same scale across both panels. Subfigure order top→bottom: ramp-up full record (minutes), ramp-up first 60 s (seconds).
 %
 % — Summary stats cited in caption ────────────────────────────
 %   (none registered — pass extra_stats=... to build_fig_meta)
@@ -71,8 +74,6 @@
 % — Subfigures available ───────────────────────────────────────
 %     FIGURES/ch04_wind_rampup_full.pdf
 %     FIGURES/ch04_wind_rampup_zoom60.pdf
-%     FIGURES/ch04_wind_decay_full.pdf
-%     FIGURES/ch04_wind_decay_zoom60.pdf
 % ── end immutable block ─────────────────────────────────────────
 \begin{figure}[p]
   \centering
@@ -89,22 +90,8 @@
     \caption{Zoomet på 60 s.}
     \label{fig:ch04_wind_rampup_zoom60}
   \end{subfigure}
-  \\[1ex]
-  \begin{subfigure}[b]{1.0\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch04_wind_decay_full.pdf}
-    \caption{Fra full vind til null vind.}
-    \label{fig:ch04_wind_decay_full}
-  \end{subfigure}
-  \\[1ex]
-  \begin{subfigure}[b]{1.0\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{FIGURES/ch04_wind_decay_zoom60.pdf}
-    \caption{Zoomet på 60 s.}
-    \label{fig:ch04_wind_decay_zoom60}
-  \end{subfigure}
   \caption{
-    Vindens påvirkning på vannets nivå. Merk: Ulike x-akser.
+    Vindens påvirkning på vannets nivå under oppstart fra null til full vind. Merk: Ulike x-akser.
   }
-  \label{fig:ch04_wind_transition_overview}
+  \label{fig:ch04_wind_rampup_overview}
 \end{figure}

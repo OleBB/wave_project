@@ -953,7 +953,15 @@ def plot_frequency_spectrum(
     fontsize = 7
 
     col_prefix = "Pxx" if data_type.lower() == "psd" else "FFT"
-    ylabel = col_prefix
+    # FFT spectra are stored as |fft_vals|/N (one-sided complex magnitude;
+    # see signal_processing.py:419). The reader-facing wave amplitude is
+    # 2·|fft_vals|/N — i.e. the spectrum peak at the paddle bin should
+    # equal `Probe {pos} Amplitude (FFT)` in meta and equal max(signal_swell)
+    # in the reconstructed plot. We double y at display time so the visible
+    # peak is the actual wave amplitude in mm. PSD has units mm²/Hz and is
+    # plotted as-is.
+    fft_amp_scale = 2.0 if col_prefix == "FFT" else 1.0
+    ylabel = "Amplitude [mm]" if col_prefix == "FFT" else col_prefix
 
     base_freq_val = plotvariables.get("filters", {}).get("WaveFrequencyInput [Hz]")
     base_freq = None
@@ -1021,6 +1029,8 @@ def plot_frequency_spectrum(
                 if y.empty:
                     continue
                 x = y.index.values
+                # Scale to wave-amplitude convention for FFT (×2); PSD untouched.
+                y_vals = y.values * fft_amp_scale
 
                 plot_label = (
                     label_base
@@ -1032,7 +1042,7 @@ def plot_frequency_spectrum(
 
                 ax.plot(
                     x,
-                    y.values,
+                    y_vals,
                     linewidth=linewidth,
                     label=plot_label,
                     linestyle=lstyle,
@@ -1043,10 +1053,10 @@ def plot_frequency_spectrum(
                 if n_peaks and n_peaks > 0:
                     from wavescripts.plot_utils import _top_k_indices
 
-                    top_idx = _top_k_indices(y.values, n_peaks)
+                    top_idx = _top_k_indices(y_vals, n_peaks)
                     ax.scatter(
                         x[top_idx],
-                        y.values[top_idx],
+                        y_vals[top_idx],
                         color=color,
                         s=80,
                         zorder=5,
@@ -1157,9 +1167,11 @@ def plot_frequency_spectrum(
                         if y.empty:
                             continue
                         x = y.index.values
+                        # Scale to wave-amplitude convention for FFT (×2); PSD untouched.
+                        y_vals = y.values * fft_amp_scale
                         ax_s.plot(
                             x,
-                            y.values,
+                            y_vals,
                             linewidth=linewidth,
                             label=label_base,
                             linestyle=lstyle,
@@ -1167,10 +1179,10 @@ def plot_frequency_spectrum(
                             antialiased=False,
                         )
                         if n_peaks and n_peaks > 0:
-                            top_idx = _top_k_indices(y.values, n_peaks)
+                            top_idx = _top_k_indices(y_vals, n_peaks)
                             ax_s.scatter(
                                 x[top_idx],
-                                y.values[top_idx],
+                                y_vals[top_idx],
                                 color=color,
                                 s=80,
                                 zorder=5,
@@ -1337,6 +1349,16 @@ def plot_reconstructed(
             fft_ord = np.fft.ifftshift(fft_complex).astype(complex)
             fftfreqs = np.fft.ifftshift(freq_bins)
 
+            # No sign flip: this plot is the FFT counterpart to the
+            # inspirational zoom panel — "first 5 periods of the 10-period
+            # analysis window" — and must show what is actually inside that
+            # window. The analysis-window start is snapped to a raw-ULS
+            # upcrossing (= η downcrossing), so sample 0 sits at η passing
+            # through zero going down, and the first quarter-period is a
+            # trough. The inspirational zoom panel shows the same trough
+            # first; keeping signs aligned here means the two figures are
+            # phase-locked and directly comparable. See CLAUDE.md §6 for
+            # the underlying sign convention (raw ULS vs η).
             signal_full = np.real(np.fft.ifft(fft_ord))
             time_axis = np.arange(N) / sr
             pos_freqs = fftfreqs[fftfreqs > 0]
@@ -1347,6 +1369,11 @@ def plot_reconstructed(
             fft_swell = np.zeros_like(fft_ord, dtype=complex)
             fft_swell[peak_idx] = fft_ord[peak_idx]
             fft_swell[mirror_idx] = fft_ord[mirror_idx]
+            # No sign flip — same reasoning as signal_full above. The
+            # reconstructed paddle wave is shown trough-first, faithfully
+            # matching the analysis-window content and the inspirational
+            # zoom panel. signal_wind tracks the same convention via
+            # subtraction.
             signal_swell = np.real(np.fft.ifft(fft_swell))
             signal_wind = signal_full - signal_swell
             amplituden = np.round(max(signal_swell),3)
@@ -1561,6 +1588,16 @@ def plot_reconstructed_combined(
 
         fft_ord = np.fft.ifftshift(fft_complex).astype(complex)
         fftfreqs = np.fft.ifftshift(freq_bins)
+        # No sign flip: this plot is the FFT counterpart to the
+        # inspirational zoom panel — "first 5 periods of the 10-period
+        # analysis window" — and must show what is actually inside that
+        # window. The analysis-window start is snapped to a raw-ULS
+        # upcrossing (= η downcrossing), so sample 0 sits at η passing
+        # through zero going down, and the first quarter-period is a
+        # trough. The inspirational zoom panel shows the same trough
+        # first; keeping signs aligned here means the two figures are
+        # phase-locked and directly comparable. See CLAUDE.md §6 for
+        # the underlying sign convention (raw ULS vs η).
         signal_full = np.real(np.fft.ifft(fft_ord))
         time_axis = np.arange(N) / sr
         pos_freqs = fftfreqs[fftfreqs > 0]
@@ -1570,6 +1607,11 @@ def plot_reconstructed_combined(
         fft_swell = np.zeros_like(fft_ord, dtype=complex)
         fft_swell[peak_idx] = fft_ord[peak_idx]
         fft_swell[mirror_idx] = fft_ord[mirror_idx]
+        # No sign flip — same reasoning as signal_full above. The
+        # reconstructed paddle wave is shown trough-first, faithfully
+        # matching the analysis-window content and the inspirational
+        # zoom panel. signal_resid tracks the same convention via
+        # subtraction.
         signal_swell = np.real(np.fft.ifft(fft_swell))
         signal_resid = signal_full - signal_swell
         amplituden = max(signal_swell)
