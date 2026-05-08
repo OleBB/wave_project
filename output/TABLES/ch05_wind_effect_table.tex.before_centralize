@@ -3,11 +3,11 @@
 % IMMUTABLE — generated automatically, do not edit this block
 %
 % — Provenance ───────────────────────────────────────────────────
-%   script            : analysis_scratch/wind_effect_table_by_amp.py
-%   plot_type         : wind_effect_table_by_amp
+%   script            : analysis_scratch/wind_effect_table.py
+%   plot_type         : wind_effect_table
 %   chapter           : 05
-%   generated_at      : 2026-05-08T12:09:45
-%   caption_label     : tab:ch05_wind_effect_table_by_amp
+%   generated_at      : 2026-05-06T12:46:31
+%   caption_label     : tab:ch05_wind_effect_table
 %   caption_short     : 
 %
 % — Filters ────────────────────────────────────────────────────
@@ -26,15 +26,15 @@
 %
 % — Method ────────────────────────────────────────────────────
 %   grouper           : damping_all_amplitude_grouper
-%   sort_order        : amplitude outer, frequency inner
 %   mooring pooling   : Mooring column dropped pre-grouper, so each
 %                       (freq, amp, wind) cell pools across all canon
 %                       moorings (n-weighted mean / true std / total n).
 %   metric_definitions:
 %     Kt_nw / Kt_fw      : mean OUT/IN(FFT) at no- / full-wind
-%     Delta_Kt (pp)      : (Kt_fw - Kt_nw) * 100
-%     pct_T_gain (%)     : (Kt_fw - Kt_nw) / Kt_nw * 100
-%     pct_D_red  (%)     : (D_nw - D_fw) / D_nw * 100,  D = 1 - K_t
+%     Delta_Kt           : Kt_fw - Kt_nw  (signed decimal fraction)
+%     ratio_Kt           : Kt_fw / Kt_nw  (>1 = wind passes more wave)
+%     ratio_D            : D_fw / D_nw    (D = 1 - K_t)
+%                          <1 = wind erodes panel damping
 %
 % ── end immutable block ─────────────────────────────────────────
 \begin{table}[htbp]
@@ -42,26 +42,27 @@
   \small
   \begin{tabular}{cc cc r r r}
     \toprule
-      Amp & $f$ [Hz] & $K_{t,\text{uten}}$ & $K_{t,\text{vind}}$ & $\Delta K_t$ & $K_{t,\text{vind}}/K_{t,\text{uten}}$ & $D_{\text{vind}}/D_{\text{uten}}$ \\
+      $f$ [Hz] & Amp & $K_{t,\text{uten}}$ & $K_{t,\text{vind}}$ & $\Delta K_t$ & $K_{t,\text{vind}}/K_{t,\text{uten}}$ & $D_{\text{vind}}/D_{\text{uten}}$ \\
     \midrule
-  $A_1$ & 1.3 & 0.660 & 0.786 & +0.126 & 1.190 & 0.630 \\
-  $A_1$ & 1.4 & 0.502 & 0.721 & +0.219 & 1.436 & 0.560 \\
-  $A_1$ & 1.5 & 0.453 & 0.695 & +0.243 & 1.536 & 0.557 \\
-  $A_1$ & 1.6 & 0.367 & 0.613 & +0.246 & 1.672 & 0.611 \\
+  1.3 & $A_1$ & 0.660 & 0.786 & +0.126 & 1.190 & 0.630 \\
+  1.3 & $A_2$ & 0.811 & 0.858 & +0.047 & 1.058 & 0.751 \\
+  1.3 & $A_3$ & 0.830 & 0.833 & +0.003 & 1.004 & 0.982 \\
 \midrule
-  $A_2$ & 1.3 & 0.811 & 0.858 & +0.047 & 1.058 & 0.751 \\
-  $A_2$ & 1.4 & 0.687 & 0.759 & +0.072 & 1.105 & 0.769 \\
-  $A_2$ & 1.5 & 0.594 & 0.733 & +0.138 & 1.233 & 0.659 \\
-  $A_2$ & 1.6 & 0.486 & 0.684 & +0.199 & 1.409 & 0.614 \\
+  1.4 & $A_1$ & 0.502 & 0.721 & +0.219 & 1.436 & 0.560 \\
+  1.4 & $A_2$ & 0.687 & 0.759 & +0.072 & 1.105 & 0.769 \\
+  1.4 & $A_3$ & 0.672 & 0.766 & +0.095 & 1.141 & 0.712 \\
 \midrule
-  $A_3$ & 1.3 & 0.830 & 0.833 & +0.003 & 1.004 & 0.982 \\
-  $A_3$ & 1.4 & 0.672 & 0.766 & +0.095 & 1.141 & 0.712 \\
-  $A_3$ & 1.5 & 0.612 & 0.729 & +0.118 & 1.192 & 0.697 \\
-  $A_3$ & 1.6 & 0.522 & 0.706 & +0.184 & 1.352 & 0.615 \\
+  1.5 & $A_1$ & 0.453 & 0.695 & +0.243 & 1.536 & 0.557 \\
+  1.5 & $A_2$ & 0.594 & 0.733 & +0.138 & 1.233 & 0.659 \\
+  1.5 & $A_3$ & 0.612 & 0.729 & +0.118 & 1.192 & 0.697 \\
+\midrule
+  1.6 & $A_1$ & 0.367 & 0.613 & +0.246 & 1.672 & 0.611 \\
+  1.6 & $A_2$ & 0.486 & 0.684 & +0.199 & 1.409 & 0.614 \\
+  1.6 & $A_3$ & 0.522 & 0.706 & +0.184 & 1.352 & 0.615 \\
     \bottomrule
   \end{tabular}
   \caption{
     % TODO: write caption
   }
-  \label{tab:ch05_wind_effect_table_by_amp}
+  \label{tab:ch05_wind_effect_table}
 \end{table}

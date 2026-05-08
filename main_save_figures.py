@@ -192,6 +192,13 @@ Figure-stub invariants (2026-04-24 durable rule):
   authored captions in the Python `CAPTIONS` dict are applied verbatim.
   See memory/feedback_figure_stub_invariants.md.
 
+Captions for ALL thesis tables (every `tab:` label below) live in
+main_save_tables.py:TABLE_CAPTIONS / TABLE_CAPTIONS_SHORT — even when the
+table data still renders from a cell in this file. Run main_save_tables.py
+once after editing a caption so output/.table_captions.json picks it up;
+the data scripts read it from there. Figure (`fig:`) captions stay in
+FIGURE_CAPTIONS below.
+
 CHAPTER 04 — METHODOLOGY
   §1    ch04_probe_noise_floor           [OUTDATED]  replaced by ch04_probe_noise_floor_table  (4-panel bar plot superseded 2026-05-06)
         ch04_probe_noise_floor_table     [DELEG] ✓  Reader-facing table: stillwater noise per probe, h272/high (innledende) vs h100/low (endelig)
@@ -424,7 +431,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     # "ch04_probe_noise_floor_group2":   "",
     # "ch04_probe_noise_floor_group3":   "Prober hengende lavt over vannet.",
     # § 1 (replacement) — reader-facing noise-floor table
-    "ch04_probe_noise_floor_table":    "Oversikt over støygulvet til prober ved innledende og endelig oppsett.",   # TODO: write caption
+    # Caption moved to main_save_tables.py:TABLE_CAPTIONS["ch04_probe_noise_floor_table"]
 
     # § 2 — Stillwater timing (placeholder)
     # "ch04_stillwater_timing":          "", !archived
@@ -439,7 +446,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_parallel_probe_agreement_by_freq": "Forskjell mellom høyre og venstre prober. Hvert vindu viser én frekvens og tre amplituder.",
     "ch04_parallel_probe_agreement_bland_altman": "Forskjell mellom parallelle prober. ",
     "ch04_parallel_probe_psd_agreement":     "Samsvar mellom parallelle prober",
-    "ch04_parallel_probe_psd_agreement_simple": "",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
+    # ch04_parallel_probe_psd_agreement_simple caption → main_save_tables.py:TABLE_CAPTIONS
     "ch04_depth_regime":               "",
 
     # § 4 — Wind characterisation / FFT methodology
@@ -462,14 +469,12 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_hg_per40_window_fitness_f14": "",
     "ch04_hg_per40_window_fitness_f15": "",
     "ch04_hg_per40_window_fitness_f16": "",
-    "ch04_window_intervals":           "",
+    # Table captions for ch04_window_intervals, ch04_window_choice_{nowind,fullwind},
+    # and ch04_tidsvindu live in main_save_tables.py:TABLE_CAPTIONS.
     "ch04_window_choice":              "",
-    "ch04_window_choice_nowind":       "",
-    "ch04_window_choice_fullwind":     "",
     "ch04_plateau_overview_A1":        "Glidende gjennomsnitt av amplitude. $A_1$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
     "ch04_plateau_overview_A2":        "Glidende gjennomsnitt av amplitude. $A_2$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
     "ch04_plateau_overview_A3":        "Glidende gjennomsnitt av amplitude. $A_3$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
-    "ch04_tidsvindu":                  "Frekvensenes tidsvinduer",
 
     # § 4p — Wind transition (split 2026-05-08 into ramp-up + decay parents)
     "ch04_wind_rampup_overview":       "Vindens påvirkning på vannets nivå under oppstart fra null til full vind. Merk: Ulike x-akser.",
@@ -481,10 +486,10 @@ FIGURE_CAPTIONS: dict[str, str] = {
 
     # § 4q — Pre-paddle wind PSD validation (3 s snippet vs long nowave runs)
     "ch04_wind_pre_paddle_psd":        "",
-    "ch04_wind_pre_paddle_table":      "",
+    # ch04_wind_pre_paddle_table caption → main_save_tables.py:TABLE_CAPTIONS
     "ch04_wind_qc_control_chart":      "",
     "ch04_wind_qc_boxplot":            "",
-    "ch04_wind_setup_baseline_table":  "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
+    # ch04_wind_setup_baseline_table caption → main_save_tables.py:TABLE_CAPTIONS
 
     # § 5 — Reading a time series (inspirational opener) #NOTE: used raw string r"" because of python newline break.
     "ch04_inspirational_nowind":       r"Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: \num{0.1287},   ka, ut:  \num{0.0878}",#todo: consider changing these numbers if the pipeline changes... if amplitude changes slightly..
@@ -518,12 +523,12 @@ FIGURE_CAPTIONS: dict[str, str] = {
 
     # § 3 — Wind effect (table; replaces the old scatter ch05_damping_wind_delta,
     #         archived 2026-04-28).
-    "ch05_wind_effect_table":          "",
-    "ch05_wind_effect_table_by_amp":   "",   # TODO: caption — same data as ch05_wind_effect_table, sorted amp-outer / freq-inner
+    # ch05_wind_effect_table + ch05_wind_effect_table_by_amp captions →
+    # main_save_tables.py:TABLE_CAPTIONS
 
     # § 3a — Transmission/wind ratio summary tables (per-(f, amp) main + supporting)
-    "ch05_transmission_wind_ratios":     "",
-    "ch05_transmission_wind_amplitudes": "",
+    # ch05_transmission_wind_{ratios,amplitudes} captions →
+    # main_save_tables.py:TABLE_CAPTIONS
 
     # § 3b — T_cross (parent + 3 subfigs)
     "ch05_t_cross":                    "",
@@ -577,7 +582,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
 
     # ── CHAPTER 04 ───────────────────────────────────────────────────────────
     "ch04_probe_noise_floor":          "Probes støygulv",
-    "ch04_probe_noise_floor_table":    "",   # TODO: short caption
+    # ch04_probe_noise_floor_table short caption → main_save_tables.py:TABLE_CAPTIONS_SHORT
     # "ch04_stillwater_timing":          "", !archived
     # "ch04_parallel_ratio":             "", !disabled
     # "ch04_parallel_ratio_scatter":     "", !disabled
@@ -588,7 +593,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_parallel_probe_agreement_by_freq": "Parallelle prober, fire frekvenser.",
     "ch04_parallel_probe_agreement_bland_altman": "",
     "ch04_parallel_probe_psd_agreement":     "",
-    "ch04_parallel_probe_psd_agreement_simple": "",
+    # ch04_parallel_probe_psd_agreement_simple → main_save_tables.py:TABLE_CAPTIONS_SHORT
     "ch04_depth_regime":               "",
     # "ch04_wind_psd":                   "", - moved to main_save_archive.py
     # "ch04_wind_reflection":            "", - moved to main_save_archive.py
@@ -609,21 +614,19 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_hg_per40_window_fitness_f14": "",
     "ch04_hg_per40_window_fitness_f15": "",
     "ch04_hg_per40_window_fitness_f16": "",
-    "ch04_window_intervals":           "",
+    # ch04_window_intervals, ch04_window_choice_{nowind,fullwind}, ch04_tidsvindu
+    # short captions → main_save_tables.py:TABLE_CAPTIONS_SHORT
     "ch04_window_choice":              "",
-    "ch04_window_choice_nowind":       "",
-    "ch04_window_choice_fullwind":     "",
     "ch04_plateau_overview_A1":        "Platå, A1",
     "ch04_plateau_overview_A2":        "Platå, A2",
     "ch04_plateau_overview_A3":        "Platå, A3",
-    "ch04_tidsvindu":                  "Frekvensenes tidsvindu",
     "ch04_wind_rampup_overview":       "",
     "ch04_wind_decay_overview":        "",
     "ch04_wind_pre_paddle_psd":        "",
-    "ch04_wind_pre_paddle_table":      "",
+    # ch04_wind_pre_paddle_table short caption → main_save_tables.py:TABLE_CAPTIONS_SHORT
     "ch04_wind_qc_control_chart":      "",
     "ch04_wind_qc_boxplot":            "",
-    "ch04_wind_setup_baseline_table":  "",
+    # ch04_wind_setup_baseline_table short caption → main_save_tables.py:TABLE_CAPTIONS_SHORT
     "ch04_inspirational_nowind":       "Tidsserie uten vind",
     "ch04_inspirational_fullwind":     "Tidsserie med vind",
     "ch04_amp_methods_a1_fullwind":    "Tre amplitudemetoder, $A_1$ med vind",
@@ -639,10 +642,9 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     # ── CHAPTER 05 ───────────────────────────────────────────────────────────
     "ch05_damping_freq":               "",
     "ch05_damping_scatter":            "Transmisjon per frekvens",
-    "ch05_wind_effect_table":          "",
-    "ch05_wind_effect_table_by_amp":   "",
-    "ch05_transmission_wind_ratios":     "",
-    "ch05_transmission_wind_amplitudes": "",
+    # ch05_wind_effect_table, ch05_wind_effect_table_by_amp,
+    # ch05_transmission_wind_{ratios,amplitudes} short captions →
+    # main_save_tables.py:TABLE_CAPTIONS_SHORT
     "ch05_t_cross":                    "",
     "ch05_damping_ka":                 "Transmisjon per ka. Samlet.",
     "ch05_damping_ka_A1":              "Transmisjon per ka. A1",

@@ -116,8 +116,11 @@ for r in records:
     body_lines.append("    " + " & ".join(cells) + r" \\")
 
 
-caption_full  = _lookup_central_caption(THESIS_NAME, kind="full")
-caption_short = _lookup_central_caption(THESIS_NAME, kind="short")
+# Caption is read from output/.table_captions.json (written by main_save_tables.py).
+# Run main_save_tables.py once before this script to populate the cache.
+_CAPTIONS_JSON = BASE / "output" / ".table_captions.json"
+caption_full  = _lookup_central_caption(THESIS_NAME, kind="full",  json_path=_CAPTIONS_JSON)
+caption_short = _lookup_central_caption(THESIS_NAME, kind="short", json_path=_CAPTIONS_JSON)
 if caption_full and caption_short:
     caption_block = (
         f"  \\caption[{caption_short}]{{\n"
