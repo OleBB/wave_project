@@ -25,18 +25,20 @@ pivot_table(aggfunc="first"), which silently kept exactly one mooring per
 cell. See memory/finding_wind_effect_table_aggregation_bias.md.
 
 Outputs:
-    output/TABLES/ch05_damping_freq_table.tex   (thesis include)
-    analysis_scratch/damping_freq_table.csv     (human-readable companion)
+    output/TABLES/data/ch05_damping_freq_table.csv       (render-shape data)
+    output/TABLES/data/ch05_damping_freq_table.meta.json (provenance)
+    output/TABLES/ch05_damping_freq_table.tex            (thesis include)
+    analysis_scratch/damping_freq_table.csv              (audit-trail companion)
 
 Caption text is read from FIGURE_CAPTIONS["ch05_damping_freq_table"] in
 main_save_figures.py via output/.figure_captions.json.
 """
 
+import json
 import os
 import sys
 import warnings
 from pathlib import Path
-from datetime import datetime as _dt
 
 warnings.filterwarnings("ignore")
 
@@ -51,12 +53,17 @@ from wavescripts.improved_data_loader import load_analysis_data
 from wavescripts.filters import (apply_experimental_filters,
                                  damping_all_amplitude_grouper)
 from wavescripts.plot_utils import _lookup_central_caption, amp_to_label
+from wavescripts.table_render import render_table
 
 # ── I/O ────────────────────────────────────────────────────────────────────
-SCRATCH_CSV = Path(__file__).parent / "damping_freq_table.csv"
-THESIS_NAME = "ch05_damping_freq_table"
-OUT_TEX     = BASE / "output" / "TABLES" / f"{THESIS_NAME}.tex"
-CHAPTER     = "05"
+SCRATCH_CSV   = Path(__file__).parent / "damping_freq_table.csv"
+THESIS_NAME   = "ch05_damping_freq_table"
+DATA_DIR      = BASE / "output" / "TABLES" / "data"
+RENDER_CSV    = DATA_DIR / f"{THESIS_NAME}.csv"
+META_JSON     = DATA_DIR / f"{THESIS_NAME}.meta.json"
+OUT_TEX       = BASE / "output" / "TABLES" / f"{THESIS_NAME}.tex"
+CHAPTER       = "05"
+SCRIPT_REL    = "analysis_scratch/damping_freq_table.py"
 
 # Same canon scope as ch05_damping_freq + ch05_wind_effect_table.
 RESULTS_DIRS = [
@@ -98,10 +105,6 @@ print(f"   {len(stats)} grouped rows from damping_all_amplitude_grouper")
 
 
 # ── 2. Pivot → (freq × amp) cells with one column per wind ─────────────────
-# After the Mooring drop above, each (freq, amp, wind) cell has at most one
-# row in `stats`, so the pivot's aggfunc is a no-op for the K_t pivot;
-# n_runs uses sum so the count remains correct if a future input ever
-# reintroduces multiple rows per cell.
 def _pivot(values: str, aggfunc: str = "mean") -> pd.DataFrame:
     return stats.pivot_table(
         index=["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]"],
@@ -137,10 +140,102 @@ print(table.round(3).to_string(index=False))
 
 SCRATCH_CSV.parent.mkdir(parents=True, exist_ok=True)
 table.to_csv(SCRATCH_CSV, index=False)
-print(f"\n   CSV → {SCRATCH_CSV.relative_to(BASE)}")
+print(f"\n   audit CSV → {SCRATCH_CSV.relative_to(BASE)}")
+
+# ── 3. Reshape into render-shape (one row per output table line) ───────────
+# Three logical metric rows per amplitude tier.
+KIND_ORDER  = ["nw", "fw", "delta"]
+KIND_LABELS = {
+    "nw":    r"$K_t$ (uten vind)",
+    "fw":    r"$K_t$ (full vind)",
+    "delta": r"$\Delta K_t$      ",
+}
+FREQ_COLS = [f"f_{f:.1f}" for f in THESIS_FREQS]
 
 
-# ── 3. Render LaTeX table ──────────────────────────────────────────────────
+def _value(row: pd.Series, kind: str, freq: float) -> float:
+    if kind == "nw":
+        return float(row["Kt_nw"])
+    if kind == "fw":
+        return float(row["Kt_fw"])
+    return float(row["Delta_Kt"])
+
+
+render_rows: list[dict] = []
+for i, amp in enumerate(THESIS_AMPS):
+    sub = table[np.isclose(table["WaveAmplitudeInput [Volt]"], amp)]
+    for j, kind in enumerate(KIND_ORDER):
+        rec: dict = {
+            "amp_volt":          amp,
+            "amp_label_display": amp_to_label(amp) if j == 0 else "     ",
+            "kind":              kind,
+            "kind_label":        KIND_LABELS[kind],
+        }
+        for f, col in zip(THESIS_FREQS, FREQ_COLS):
+            r = sub[np.isclose(sub["WaveFrequencyInput [Hz]"], f)]
+            rec[col] = float("nan") if r.empty else _value(r.iloc[0], kind, f)
+        render_rows.append(rec)
+
+render_df = pd.DataFrame(render_rows)
+
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+render_df.to_csv(RENDER_CSV, index=False)
+print(f"   render CSV → {RENDER_CSV.relative_to(BASE)}")
+
+
+# ── 4. Build provenance meta.json ──────────────────────────────────────────
+caption_full  = _lookup_central_caption(THESIS_NAME, kind="full") or None
+caption_short = _lookup_central_caption(THESIS_NAME, kind="short") or None
+
+n_total_runs = int(table["n_nw"].fillna(0).sum() + table["n_fw"].fillna(0).sum())
+
+meta_payload = {
+    "script":          SCRIPT_REL,
+    "plot_type":       "damping_freq_table",
+    "chapter":         CHAPTER,
+    "caption_label":   f"tab:{THESIS_NAME}",
+    "caption_short":   caption_short or "",
+    "sections": [
+        {
+            "title": "Filters",
+            "lines": [
+                "panel             : full",
+                "wind              : no, full",
+                f"amplitude [V]     : {', '.join(f'{a:.1f}' for a in THESIS_AMPS)}",
+                f"frequency [Hz]    : {', '.join(f'{f:.1f}' for f in THESIS_FREQS)}",
+                "quality_flag      : ok",
+            ],
+        },
+        {
+            "title": "Data provenance",
+            "lines": [
+                f"n_cells           : {len(table)}",
+                f"n_runs (nw + fw)  : {n_total_runs}",
+                "datasets        :",
+                *[f"  {p.name}" for p in RESULTS_DIRS],
+            ],
+        },
+        {
+            "title": "Method",
+            "lines": [
+                "grouper           : damping_all_amplitude_grouper",
+                "mooring pooling   : Mooring column dropped pre-grouper, so each",
+                "                    (freq, amp, wind) cell pools across all canon",
+                "                    moorings (n-weighted mean / true std / total n).",
+                "metric_definitions:",
+                "  K_t (uten vind)   : mean OUT/IN(FFT) at no-wind",
+                "  K_t (full vind)   : mean OUT/IN(FFT) at full-wind",
+                "  Delta K_t         : Kt_fw - Kt_nw  (signed, raw ratio units)",
+            ],
+        },
+    ],
+}
+
+META_JSON.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
+print(f"   meta JSON  → {META_JSON.relative_to(BASE)}")
+
+
+# ── 5. Cell formatters ─────────────────────────────────────────────────────
 def _fmt_signed(x: float, decimals: int = 3) -> str:
     if pd.isna(x):
         return "—"
@@ -153,135 +248,49 @@ def _fmt_unsigned(x: float, decimals: int = 3) -> str:
     return f"{x:.{decimals}f}"
 
 
-def _row_for(amp: float, kind: str) -> str:
-    """One LaTeX row for a (amp, kind) cell across THESIS_FREQS columns.
-
-    kind ∈ {"nw", "fw", "delta"} selects which value to render.
-    """
-    sub = table[np.isclose(table["WaveAmplitudeInput [Volt]"], amp)]
-    cells = []
-    for f in THESIS_FREQS:
-        row = sub[np.isclose(sub["WaveFrequencyInput [Hz]"], f)]
-        if row.empty:
-            cells.append("—")
-            continue
-        r = row.iloc[0]
-        if kind == "nw":
-            cells.append(_fmt_unsigned(r["Kt_nw"], 3))
-        elif kind == "fw":
-            cells.append(_fmt_unsigned(r["Kt_fw"], 3))
-        elif kind == "delta":
-            cells.append(_fmt_signed(r["Delta_Kt"], 3))
-        else:
-            cells.append("—")
-    return " & ".join(cells)
+def _fmt_value_cell(freq_col: str):
+    def _impl(row: pd.Series) -> str:
+        v = row[freq_col]
+        if row["kind"] == "delta":
+            return _fmt_signed(v, 3)
+        return _fmt_unsigned(v, 3)
+    return _impl
 
 
-# Three row-blocks (A1/A2/A3), each three rows. The amp tier label sits
-# in the first column of the first row of each block; the cell stays
-# blank for the other two rows so the reader's eye groups them visually
-# without needing the multirow package.
-body_lines: list[str] = []
-for i, amp in enumerate(THESIS_AMPS):
-    label = amp_to_label(amp)        # e.g. "$A_1$"
-    if i > 0:
-        body_lines.append("    \\midrule")
-    body_lines.append(
-        f"    {label} & $K_t$ (uten vind) & {_row_for(amp, 'nw')} \\\\"
-    )
-    body_lines.append(
-        f"          & $K_t$ (full vind) & {_row_for(amp, 'fw')} \\\\"
-    )
-    body_lines.append(
-        f"          & $\\Delta K_t$       & {_row_for(amp, 'delta')} \\\\"
-    )
+cell_format = {
+    "amp_label_display": lambda r: str(r["amp_label_display"]),
+    "kind_label":        lambda r: str(r["kind_label"]),
+}
+for fc in FREQ_COLS:
+    cell_format[fc] = _fmt_value_cell(fc)
 
-# Caption from central FIGURE_CAPTIONS dict (via JSON cache).
-caption_full  = _lookup_central_caption(THESIS_NAME, kind="full")
-caption_short = _lookup_central_caption(THESIS_NAME, kind="short")
+columns        = ["amp_label_display", "kind_label"] + FREQ_COLS
+column_headers = [
+    "", "",
+    *[f"{f:.1f}\\,Hz" for f in THESIS_FREQS],
+]
 
-if caption_full:
-    if caption_short:
-        caption_block = (
-            f"  \\caption[{caption_short}]{{\n"
-            f"    {caption_full}\n"
-            f"  }}\n"
-        )
-    else:
-        caption_block = (
-            f"  \\caption{{\n"
-            f"    {caption_full}\n"
-            f"  }}\n"
-        )
-else:
-    caption_block = (
-        "  \\caption{\n"
-        "    % TODO: write caption\n"
-        "  }\n"
+row_groups: list[tuple[str | None, callable]] = []
+for amp in THESIS_AMPS:
+    row_groups.append(
+        (None, (lambda a: lambda df: df[np.isclose(df["amp_volt"], a)])(amp))
     )
 
 
-# IMMUTABLE provenance block — same pattern as wind_effect_table.py.
-n_total_runs = int(table["n_nw"].fillna(0).sum() + table["n_fw"].fillna(0).sum())
-immutable = "\n".join([
-    "%! TEX root = ../main.tex",
-    "% ==============================================================",
-    "% IMMUTABLE — generated automatically, do not edit this block",
-    "%",
-    "% — Provenance ───────────────────────────────────────────────────",
-    "%   script            : analysis_scratch/damping_freq_table.py",
-    "%   plot_type         : damping_freq_table",
-    f"%   chapter           : {CHAPTER}",
-    f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
-    f"%   caption_label     : tab:{THESIS_NAME}",
-    f"%   caption_short     : {caption_short}",
-    "%",
-    "% — Filters ────────────────────────────────────────────────────",
-    "%   panel             : full",
-    "%   wind              : no, full",
-    f"%   amplitude [V]     : {', '.join(f'{a:.1f}' for a in THESIS_AMPS)}",
-    f"%   frequency [Hz]    : {', '.join(f'{f:.1f}' for f in THESIS_FREQS)}",
-    "%   quality_flag      : ok",
-    "%",
-    "% — Data provenance ────────────────────────────────────────────",
-    f"%   n_cells           : {len(table)}",
-    f"%   n_runs (nw + fw)  : {n_total_runs}",
-    "%   datasets        :",
-    *[f"%     {p.name}" for p in RESULTS_DIRS],
-    "%",
-    "% — Method ────────────────────────────────────────────────────",
-    "%   grouper           : damping_all_amplitude_grouper",
-    "%   mooring pooling   : Mooring column dropped pre-grouper, so each",
-    "%                       (freq, amp, wind) cell pools across all canon",
-    "%                       moorings (n-weighted mean / true std / total n).",
-    "%   metric_definitions:",
-    "%     K_t (uten vind)   : mean OUT/IN(FFT) at no-wind",
-    "%     K_t (full vind)   : mean OUT/IN(FFT) at full-wind",
-    "%     Delta K_t         : Kt_fw - Kt_nw  (signed, raw ratio units)",
-    "%",
-    "% ── end immutable block ─────────────────────────────────────────",
-])
-
-# Three row-groups visually mirror the three stacked subfigures of
-# ch05_damping_freq (A1 → A2 → A3 from top to bottom).
-table_body = (
-    "\\begin{table}[htbp]\n"
-    "  \\centering\n"
-    "  \\small\n"
-    "  \\begin{tabular}{ll cccc}\n"
-    "    \\toprule\n"
-    "     &  & 1.3\\,Hz & 1.4\\,Hz & 1.5\\,Hz & 1.6\\,Hz \\\\\n"
-    "    \\midrule\n"
-    + "\n".join(body_lines) + "\n"
-    "    \\bottomrule\n"
-    "  \\end{tabular}\n"
-    + caption_block
-    + f"  \\label{{tab:{THESIS_NAME}}}\n"
-    "\\end{table}\n"
+# ── 6. Render ──────────────────────────────────────────────────────────────
+render_table(
+    csv_path=RENDER_CSV,
+    meta_path=META_JSON,
+    out_tex_path=OUT_TEX,
+    columns=columns,
+    column_headers=column_headers,
+    column_spec="ll cccc",
+    cell_format=cell_format,
+    row_groups=row_groups,
+    label=f"tab:{THESIS_NAME}",
+    caption=caption_full,
+    short_caption=caption_short,
 )
 
-OUT_TEX.parent.mkdir(parents=True, exist_ok=True)
-OUT_TEX.write_text(immutable + "\n" + table_body, encoding="utf-8")
 print(f"   TEX → {OUT_TEX.relative_to(BASE)}")
-
 print("\nDone.")

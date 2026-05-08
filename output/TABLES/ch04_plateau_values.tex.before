@@ -2,15 +2,15 @@
 % ==============================================================
 % IMMUTABLE — generated automatically, do not edit this block
 %
-% — Provenance ─────────────────────────────────────────────────
+% — Provenance ───────────────────────────────────────────────────
 %   script            : analysis_scratch/plateau_values_table.py
 %   plot_type         : plateau_values_table
 %   chapter           : 04
-%   generated_at      : 2026-05-08T09:48:49
+%   generated_at      : 2026-05-07T13:40:22
 %   caption_label     : tab:ch04_plateau_values
-%   caption_short     :
+%   caption_short     : 
 %
-% — Method ─────────────────────────────────────────────────────
+% — Method ────────────────────────────────────────────────────
 %   per-run window FFT amplitudes at paddle frequency f, computed over
 %   probe-shifted windows:
 %     win_IN  = [r_IN/c_g(f) + N_off/f,  r_IN/c_g(f) + (N_off+N_len)/f]
@@ -23,7 +23,7 @@
 %   FFT band          : ±0.05 Hz around target f
 %   c_g dispersion    : full ω²=gk·tanh(kh) via wavescripts.constants.c_group
 %
-% — Aggregation ────────────────────────────────────────────────
+% — Aggregation ───────────────────────────────────────────────
 %   per (amp, freq, wind) cell:
 %     n         = number of canon runs
 %     A_IN      = median across runs of per-run window-FFT amplitude
@@ -31,19 +31,28 @@
 %     OUT/IN    = median across runs of per-run ratio (NOT median(A_OUT)/median(A_IN))
 %     σ(OUT/IN) = run-to-run std of the per-run ratio
 %
-% — Inputs ─────────────────────────────────────────────────────
+% — Inputs ────────────────────────────────────────────────────
 %   frequencies [Hz]  : 1.3, 1.4, 1.5, 1.6
 %   amplitudes        : 0.10V (A_1), 0.20V (A_2), 0.30V (A_3)
 %   wind conditions   : no, full
 %   filter            : PanelCondition=full, quality_flag=ok, canon March-2026 cond4 lowrange
 %
-% ── end immutable block ───────────────────────────────────────
-\begin{table}[htbp]
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
   \centering
-  \small
+  \caption{
+    Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.
+  }
+  \label{tab:ch04_plateau_values}
   \begin{tabular}{ccccccc}
     \toprule
-    $f$ [\unit{\hertz}] & vind & $n$ & $A_\mathrm{Inn}$ [\unit{\milli\meter}] & $A_\mathrm{Ut}$ [\unit{\milli\meter}] & $K_t$ & $\sigma (K_t)$ \\
+    $f$ [\unit{\hertz}] &
+      vind &
+      $n$ &
+      $A_\mathrm{Inn}$ [\unit{\milli\meter}] &
+      $A_\mathrm{Ut}$ [\unit{\milli\meter}] &
+      $K_t$ &
+      $\sigma (K_t)$ \\
     \midrule
     \multicolumn{7}{l}{\textbf{$A_1$} ($V = 0.10$ V)} \\
     $\num{1.3}$ & full & $\num{10}$ & $\num{7.49}$ & $\num{5.85}$ & $\num{0.778}$ & $\num{0.046}$ \\
@@ -76,8 +85,4 @@
     $\num{1.6}$ & uten & $\num{3}$ & $\num{20.68}$ & $\num{11.01}$ & $\num{0.535}$ & $\num{0.025}$ \\
     \bottomrule
   \end{tabular}
-  \caption{
-    Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.
-  }
-  \label{tab:ch04_plateau_values}
 \end{table}

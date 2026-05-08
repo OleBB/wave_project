@@ -22,14 +22,21 @@ Per (f, amp, wind) cell, we report:
   * σ(OUT/IN)  — run-to-run standard deviation of the ratio
 
 24 cells = 4 freqs × 3 amps × 2 winds. Grouped by amp tier in the
-LaTeX output for visual scanning. Cohort = canon March-2026 cond4
-lowrange, full panel, quality_ok.
+LaTeX output (visible group label per tier) for visual scanning.
+Cohort = canon March-2026 cond4 lowrange, full panel, quality_ok.
 
 Outputs:
-    output/TABLES/ch04_plateau_values.tex
-    analysis_scratch/plateau_values.csv
+    output/TABLES/data/ch04_plateau_values.csv       (render-shape data)
+    output/TABLES/data/ch04_plateau_values.meta.json (provenance)
+    output/TABLES/ch04_plateau_values.tex            (thesis include)
+    analysis_scratch/plateau_values.csv              (audit-trail companion)
+
+Caption text is read from FIGURE_CAPTIONS["ch04_plateau_values"] in
+main_save_figures.py via output/.figure_captions.json.
 """
 
+import json
+import os
 import sys
 import warnings
 from pathlib import Path
@@ -41,13 +48,12 @@ import pandas as pd
 
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
-
-import os
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
 from wavescripts.constants import c_group, HG
 from wavescripts.plot_utils import _lookup_central_caption
+from wavescripts.table_render import render_table
 
 
 # ── Config ──────────────────────────────────────────────────────────────
@@ -77,10 +83,15 @@ PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"),
 ]
 
-THESIS_NAME = "ch04_plateau_values"
-OUT_TEX = BASE / "output" / "TABLES" / f"{THESIS_NAME}.tex"
-OUT_CSV = Path(__file__).parent / "plateau_values.csv"
-CHAPTER = "04"
+THESIS_NAME  = "ch04_plateau_values"
+CHAPTER      = "04"
+SCRIPT_REL   = "analysis_scratch/plateau_values_table.py"
+
+DATA_DIR     = BASE / "output" / "TABLES" / "data"
+RENDER_CSV   = DATA_DIR / f"{THESIS_NAME}.csv"
+META_JSON    = DATA_DIR / f"{THESIS_NAME}.meta.json"
+OUT_TEX      = BASE / "output" / "TABLES" / f"{THESIS_NAME}.tex"
+SCRATCH_CSV  = Path(__file__).parent / "plateau_values.csv"
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────
@@ -216,124 +227,148 @@ agg = (
 print(f"\n{len(agg)} aggregated cells:")
 print(agg.round(4).to_string(index=False))
 
-agg.to_csv(OUT_CSV, index=False)
-print(f"\n   CSV → {OUT_CSV.relative_to(BASE)}")
+agg.to_csv(SCRATCH_CSV, index=False)
+print(f"\n   audit CSV → {SCRATCH_CSV.relative_to(BASE)}")
 
 
-# ── LaTeX table ─────────────────────────────────────────────────────────
-def fmt_num(v, decimals=2):
-    if pd.isna(v):
-        return r"\textendash"
-    return rf"$\num{{{v:.{decimals}f}}}$"
-
-
-# Render: blocks per amp, each with 8 rows (4 freqs × 2 winds).
-amp_label_lookup = {a: lbl for a, _, lbl in AMP_TIERS}
-body_lines = []
+# ── Reshape into render-shape (one row per output table line) ──────────
+# Sort matches the original LaTeX block order: amp outer (A1, A2, A3),
+# then within each block freq ascending, then wind=full before wind=uten
+# (alphabetical: 'full' < 'uten', which is how the original sort_values
+# ["freq_hz", "wind"] resolved it).
 amps_in_order = [a for a, _, _ in AMP_TIERS]
-for i, a in enumerate(amps_in_order):
-    body_lines.append(
-        f"    \\multicolumn{{7}}{{l}}{{\\textbf{{{amp_label_lookup[a]}}} "
-        f"($V = {a:.2f}$ V)}} \\\\"
-    )
-    sub = agg[agg["amp_v"] == a].sort_values(["freq_hz", "wind"])
-    for _, row in sub.iterrows():
-        cells = [
-            rf"$\num{{{row['freq_hz']:.1f}}}$",
-            WIND_LABEL[row["wind"]],
-            rf"$\num{{{int(row['n'])}}}$",
-            fmt_num(row["A_in_mm"],   2),
-            fmt_num(row["A_out_mm"],  2),
-            fmt_num(row["OUT_IN"],    3),
-            fmt_num(row["OUT_IN_sd"], 3) if pd.notna(row["OUT_IN_sd"]) else r"\textendash",
-        ]
-        body_lines.append("    " + " & ".join(cells) + r" \\")
-    if i != len(amps_in_order) - 1:
-        body_lines.append("    \\midrule")
+agg = agg.sort_values(
+    ["amp_v", "freq_hz", "wind"],
+    key=lambda s: pd.Categorical(
+        s, categories=amps_in_order, ordered=True
+    ) if s.name == "amp_v" else s,
+).reset_index(drop=True)
+
+render_df = agg.rename(columns={
+    "freq_hz":   "freq",
+    "A_in_mm":   "A_in",
+    "A_out_mm":  "A_out",
+    "OUT_IN":    "Kt",
+    "OUT_IN_sd": "sigma_Kt",
+})[["amp_v", "freq", "wind", "n", "A_in", "A_out", "Kt", "sigma_Kt"]]
+
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+render_df.to_csv(RENDER_CSV, index=False)
+print(f"   render CSV → {RENDER_CSV.relative_to(BASE)}")
 
 
-caption_full  = _lookup_central_caption(THESIS_NAME, kind="full")
-caption_short = _lookup_central_caption(THESIS_NAME, kind="short")
-if caption_full and caption_short:
-    caption_block = (
-        f"  \\caption[{caption_short}]{{\n"
-        f"    {caption_full}\n"
-        f"  }}\n"
-    )
-elif caption_full:
-    caption_block = f"  \\caption{{\n    {caption_full}\n  }}\n"
-else:
-    caption_block = "  \\caption{\n    % TODO: write caption\n  }\n"
+# ── Build provenance meta.json ──────────────────────────────────────────
+caption_full  = _lookup_central_caption(THESIS_NAME, kind="full") or None
+caption_short = _lookup_central_caption(THESIS_NAME, kind="short") or None
 
-from datetime import datetime as _dt
-immutable = "\n".join([
-    "%! TEX root = ../main.tex",
-    "% ==============================================================",
-    "% IMMUTABLE — generated automatically, do not edit this block",
-    "%",
-    "% — Provenance ───────────────────────────────────────────────────",
-    "%   script            : analysis_scratch/plateau_values_table.py",
-    "%   plot_type         : plateau_values_table",
-    f"%   chapter           : {CHAPTER}",
-    f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
-    f"%   caption_label     : tab:{THESIS_NAME}",
-    f"%   caption_short     : {caption_short}",
-    "%",
-    "% — Method ────────────────────────────────────────────────────",
-    "%   per-run window FFT amplitudes at paddle frequency f, computed over",
-    "%   probe-shifted windows:",
-    "%     win_IN  = [r_IN/c_g(f) + N_off/f,  r_IN/c_g(f) + (N_off+N_len)/f]",
-    "%     win_OUT = [r_OUT/c_g(f) + N_off/f, r_OUT/c_g(f) + (N_off+N_len)/f]",
-    f"%   N_offset          : {N_OFFSET} periods",
-    f"%   N_length          : {N_LENGTH} periods",
-    f"%   r_IN              : {PROBE_R_M[IN_PROBES[0]]} m  ({', '.join(IN_PROBES)})",
-    f"%   r_OUT             : {PROBE_R_M[OUT_PROBE]} m  ({OUT_PROBE})",
-    f"%   tank depth h      : {TANK_DEPTH_M} m",
-    f"%   FFT band          : ±{FFT_BAND_HZ} Hz around target f",
-    "%   c_g dispersion    : full ω²=gk·tanh(kh) via wavescripts.constants.c_group",
-    "%",
-    "% — Aggregation ───────────────────────────────────────────────",
-    "%   per (amp, freq, wind) cell:",
-    "%     n         = number of canon runs",
-    "%     A_IN      = median across runs of per-run window-FFT amplitude",
-    "%     A_OUT     = same for OUT",
-    "%     OUT/IN    = median across runs of per-run ratio (NOT median(A_OUT)/median(A_IN))",
-    "%     σ(OUT/IN) = run-to-run std of the per-run ratio",
-    "%",
-    "% — Inputs ────────────────────────────────────────────────────",
-    f"%   frequencies [Hz]  : {', '.join(f'{f:.1f}' for f in THESIS_FREQS)}",
-    f"%   amplitudes        : {', '.join(f'{a:.2f}V ({lbl})' for a, _, lbl in AMP_TIERS).replace('$','')}",
-    "%   wind conditions   : no, full",
-    "%   filter            : PanelCondition=full, quality_flag=ok, canon March-2026 cond4 lowrange",
-    "%",
-    "% ── end immutable block ─────────────────────────────────────────",
-])
-
-
-table_body = (
-    "\\begin{table}[hbt]\n"
-    "  \\centering\n"
-    + caption_block
-    + f"  \\label{{tab:{THESIS_NAME}}}\n"
-    "  \\begin{tabular}{ccccccc}\n"
-    "    \\toprule\n"
-    "    $f$ [\\unit{\\hertz}] &\n"
-    "      vind &\n"
-    "      $n$ &\n"
-    "      $A_\\mathrm{Inn}$ [\\unit{\\milli\\meter}] &\n"
-    "      $A_\\mathrm{Ut}$ [\\unit{\\milli\\meter}] &\n"
-    "      $K_t$ &\n"
-    "      $\\sigma (K_t)$ \\\\\n"
-    "    \\midrule\n"
-    + "\n".join(body_lines) + "\n"
-    "    \\bottomrule\n"
-    "  \\end{tabular}\n"
-    "\\end{table}\n"
+amplitude_summary = ", ".join(
+    f"{a:.2f}V ({lbl.replace('$','')})" for a, _, lbl in AMP_TIERS
 )
 
-OUT_TEX.parent.mkdir(parents=True, exist_ok=True)
-# Note: header has 7 columns (f, vind, n, A_IN, A_OUT, OUT/IN, σ).
-# But the multicolumn-amp rows above use \multicolumn{7}{l}{...} which
-# spans the same 7 → matching column count.
-OUT_TEX.write_text(immutable + "\n" + table_body, encoding="utf-8")
+meta_payload = {
+    "script":          SCRIPT_REL,
+    "plot_type":       "plateau_values_table",
+    "chapter":         CHAPTER,
+    "caption_label":   f"tab:{THESIS_NAME}",
+    "caption_short":   caption_short or "",
+    "sections": [
+        {
+            "title": "Method",
+            "lines": [
+                "per-run window FFT amplitudes at paddle frequency f, computed over",
+                "probe-shifted windows:",
+                "  win_IN  = [r_IN/c_g(f) + N_off/f,  r_IN/c_g(f) + (N_off+N_len)/f]",
+                "  win_OUT = [r_OUT/c_g(f) + N_off/f, r_OUT/c_g(f) + (N_off+N_len)/f]",
+                f"N_offset          : {N_OFFSET} periods",
+                f"N_length          : {N_LENGTH} periods",
+                f"r_IN              : {PROBE_R_M[IN_PROBES[0]]} m  ({', '.join(IN_PROBES)})",
+                f"r_OUT             : {PROBE_R_M[OUT_PROBE]} m  ({OUT_PROBE})",
+                f"tank depth h      : {TANK_DEPTH_M} m",
+                f"FFT band          : ±{FFT_BAND_HZ} Hz around target f",
+                "c_g dispersion    : full ω²=gk·tanh(kh) via wavescripts.constants.c_group",
+            ],
+        },
+        {
+            "title": "Aggregation",
+            "lines": [
+                "per (amp, freq, wind) cell:",
+                "  n         = number of canon runs",
+                "  A_IN      = median across runs of per-run window-FFT amplitude",
+                "  A_OUT     = same for OUT",
+                "  OUT/IN    = median across runs of per-run ratio (NOT median(A_OUT)/median(A_IN))",
+                "  σ(OUT/IN) = run-to-run std of the per-run ratio",
+            ],
+        },
+        {
+            "title": "Inputs",
+            "lines": [
+                f"frequencies [Hz]  : {', '.join(f'{f:.1f}' for f in THESIS_FREQS)}",
+                f"amplitudes        : {amplitude_summary}",
+                "wind conditions   : no, full",
+                "filter            : PanelCondition=full, quality_flag=ok, canon March-2026 cond4 lowrange",
+            ],
+        },
+    ],
+}
+
+META_JSON.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
+print(f"   meta JSON  → {META_JSON.relative_to(BASE)}")
+
+
+# ── Cell formatters ─────────────────────────────────────────────────────
+def _fmt_num_or_dash(value: float, decimals: int) -> str:
+    if pd.isna(value):
+        return r"\textendash"
+    return rf"$\num{{{value:.{decimals}f}}}$"
+
+
+cell_format = {
+    "freq":     lambda r: rf"$\num{{{r['freq']:.1f}}}$",
+    "wind":     lambda r: WIND_LABEL[r["wind"]],
+    "n":        lambda r: rf"$\num{{{int(r['n'])}}}$",
+    "A_in":     lambda r: _fmt_num_or_dash(r["A_in"],     2),
+    "A_out":    lambda r: _fmt_num_or_dash(r["A_out"],    2),
+    "Kt":       lambda r: _fmt_num_or_dash(r["Kt"],       3),
+    "sigma_Kt": lambda r: _fmt_num_or_dash(r["sigma_Kt"], 3),
+}
+
+columns        = ["freq", "wind", "n", "A_in", "A_out", "Kt", "sigma_Kt"]
+column_headers = [
+    r"$f$ [\unit{\hertz}]",
+    "vind",
+    r"$n$",
+    r"$A_\mathrm{Inn}$ [\unit{\milli\meter}]",
+    r"$A_\mathrm{Ut}$ [\unit{\milli\meter}]",
+    r"$K_t$",
+    r"$\sigma (K_t)$",
+]
+
+# Visible row groups — `\multicolumn{7}{l}{\textbf{$A_i$} ($V = 0.xx$ V)} \\`
+# before each amp tier's data rows. Renderer emits a `\midrule` between
+# tiers but NOT before the first tier label.
+row_groups: list[tuple[str | None, callable]] = []
+for amp, _short, label in AMP_TIERS:
+    group_label = rf"\textbf{{{label}}} ($V = {amp:.2f}$ V)"
+    row_groups.append(
+        (group_label,
+         (lambda a: lambda df: df[np.isclose(df["amp_v"], a)])(amp))
+    )
+
+
+# ── Render ──────────────────────────────────────────────────────────────
+render_table(
+    csv_path=RENDER_CSV,
+    meta_path=META_JSON,
+    out_tex_path=OUT_TEX,
+    columns=columns,
+    column_headers=column_headers,
+    column_spec="ccccccc",
+    cell_format=cell_format,
+    row_groups=row_groups,
+    label=f"tab:{THESIS_NAME}",
+    caption=caption_full,
+    short_caption=None,
+)
+
 print(f"   TEX → {OUT_TEX.relative_to(BASE)}")
+print("\nDone.")
