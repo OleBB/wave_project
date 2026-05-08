@@ -361,10 +361,15 @@ os.chdir(file_dir)
 # to True to force every delegated script to re-run (use when the pipeline
 # data changed). Default False: run only when outputs are missing.
 import argparse
-import subprocess
-import sys
 
-REGENERATE_DELEGATED = False
+from wavescripts import save_utils
+from wavescripts.save_utils import _run_delegated_if_missing
+
+# Re-exported so existing references like `REGENERATE_DELEGATED = True`
+# at line ~387 (CLI handler) continue to read like a local toggle.
+# The function reads `save_utils.REGENERATE_DELEGATED` at call time, so
+# we keep both in sync via the assignment in the CLI block below.
+REGENERATE_DELEGATED = save_utils.REGENERATE_DELEGATED
 
 # ── CLI flags (parsed once at module load) ────────────────────────────────────
 # Default (no flags): run end-to-end, including both load gates.
@@ -385,72 +390,11 @@ SKIP_HEAVY = _args.skip_heavy or _args.skip_dfs
 SKIP_DFS   = _args.skip_dfs
 if _args.regenerate:
     REGENERATE_DELEGATED = True
+    save_utils.REGENERATE_DELEGATED = True
 if SKIP_DFS:
     print("CLI: --skip-dfs set → light tier only (no processed_dfs)")
 elif SKIP_HEAVY:
     print("CLI: --skip-heavy set → medium tier ok, heavy gate skipped")
-
-def _run_delegated_if_missing(
-    script_rel: str,
-    outputs: list[Path],
-    label: str | None = None,
-    *,
-    force: bool | None = None,
-    timeout_s: int = 900,
-) -> None:
-    """Run ``analysis_scratch/<script>`` if any expected output is missing.
-
-    Parameters
-    ----------
-    script_rel : str
-        Repo-relative path of the scratch script.
-    outputs : list[Path]
-        Files the script is expected to write. Checked with ``exists()``;
-        write-once stubs + existing PDFs both qualify as "already there".
-    label : str, optional
-        Short label for the status line. Defaults to the first output stem.
-    force : bool, optional
-        Run the script even if all outputs are already present. Defaults
-        to the module-level ``REGENERATE_DELEGATED`` toggle.
-    timeout_s : int
-        Kill the subprocess after this many seconds. Default 900 (15 min).
-
-    Never raises — the cell's downstream existence check still fires a
-    visible warning if the figure truly didn't land.
-    """
-    label = label or Path(outputs[0]).stem
-    missing = [p for p in outputs if not p.exists()]
-    if force is None:
-        force = REGENERATE_DELEGATED
-    if not missing and not force:
-        print(f"  {label}: OK ({len(outputs)} output(s) present)")
-        return
-    reason = "REGENERATE_DELEGATED=True" if force else f"{len(missing)} missing"
-    print(f"  {label}: running {script_rel} ({reason})")
-    try:
-        r = subprocess.run(
-            # sys.executable = the same interpreter this file is running in,
-            # so the subprocess inherits the conda env (draumkvedet) whether
-            # main_save_figures.py is run from CLI, Zed REPL, or a notebook.
-            [sys.executable, script_rel],
-            cwd=str(file_dir),
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout_s,
-        )
-    except subprocess.TimeoutExpired:
-        print(f"    {label}: TIMEOUT after {timeout_s}s — script killed")
-        return
-    if r.returncode != 0:
-        tail = (r.stderr or "(no stderr)")[-400:].rstrip()
-        print(f"    {label}: FAILED (rc={r.returncode}); stderr tail: {tail}")
-        return
-    still_missing = [p.name for p in outputs if not p.exists()]
-    if still_missing:
-        print(f"    {label}: ran but outputs still missing → {still_missing}")
-        return
-    print(f"    {label}: regenerated {len(outputs)} output(s)")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FIGURE CAPTIONS — single source of truth for thesis caption text.
