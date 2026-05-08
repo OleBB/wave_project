@@ -6,14 +6,30 @@ and re-run individual cells for fast layout iteration — the pipeline
 data stays on disk, render runs in ~50 ms.
 
 Sister script to main_save_figures.py — same DELEG / REPL idioms,
-scoped to tables only. Captions for the migrated tables live here in
+scoped to tables only. Captions for ALL thesis tables live here in
 TABLE_CAPTIONS / TABLE_CAPTIONS_SHORT (single source of truth) and are
-written to output/.table_captions.json on import.
+written to output/.table_captions.json on import — including tables
+whose data still renders from main_save_figures.py cells (those scripts
+read this JSON via _lookup_central_caption(json_path=...)).
 
-Currently wired:
+Currently wired (rendered here, two-step pattern):
   ch05_damping_freq_table
   ch05_mooring_focus_at_1_3hz_table
   ch04_plateau_values
+
+Captions-only (rendered from main_save_figures.py cells):
+  ch04_probe_noise_floor_table
+  ch04_parallel_probe_psd_agreement_simple
+  ch04_window_intervals
+  ch04_window_choice_nowind
+  ch04_window_choice_fullwind
+  ch04_tidsvindu
+  ch04_wind_pre_paddle_table
+  ch04_wind_setup_baseline_table
+  ch05_wind_effect_table
+  ch05_wind_effect_table_by_amp
+  ch05_transmission_wind_ratios
+  ch05_transmission_wind_amplitudes
 """
 import json
 import os
@@ -33,20 +49,56 @@ from wavescripts.save_utils  import _run_delegated_if_missing
 from wavescripts.table_render import render_table
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TABLE CAPTIONS — single source of truth for the migrated tables.
+# TABLE CAPTIONS — single source of truth for ALL thesis tables.
 # Mirrors FIGURE_CAPTIONS in main_save_figures.py. Empty strings → renderer
 # emits "% TODO: write caption" inside the body's \caption{}; missing key
 # in the short dict → no [short] arg.
+#
+# This dict covers BOTH (a) tables fully wired here (two-step CSV+meta render
+# below) and (b) tables whose data still lives in main_save_figures.py cells
+# but whose captions have been centralised here. The (b) scripts call
+# _lookup_central_caption(name, json_path=Path("output/.table_captions.json"))
+# so they read these strings via the JSON cache written below.
 # ══════════════════════════════════════════════════════════════════════════════
 TABLE_CAPTIONS = {
+    # ── CHAPTER 04 — METHODOLOGY ─────────────────────────────────────────────
+    "ch04_probe_noise_floor_table":              "Oversikt over støygulvet til prober ved innledende og endelig oppsett.",   # TODO: write caption
+    "ch04_parallel_probe_psd_agreement_simple":  "",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
+    "ch04_window_intervals":                     "",
+    "ch04_window_choice_nowind":                 "",
+    "ch04_window_choice_fullwind":               "",
+    "ch04_plateau_values":                       "Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.",
+    "ch04_tidsvindu":                            "Frekvensenes tidsvinduer",
+    "ch04_wind_pre_paddle_table":                "",
+    "ch04_wind_setup_baseline_table":            "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
+
+    # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
     "ch05_damping_freq_table":           "",   # TODO: caption — per-amp K_t,uten, K_t,vind, ΔK_t across 1.3–1.6 Hz, mirrors ch05_damping_freq layout
+    "ch05_wind_effect_table":            "",
+    "ch05_wind_effect_table_by_amp":     "",   # TODO: caption — same data as ch05_wind_effect_table, sorted amp-outer / freq-inner
+    "ch05_transmission_wind_ratios":     "",
+    "ch05_transmission_wind_amplitudes": "",
     "ch05_mooring_focus_at_1_3hz_table": r"Tall til figur \ref{fig:ch05_mooring_focus_at_1_3hz_ka}. Transmisjon for panelrekken fortøyd på ulike måter. Merk: kun for \qty{1.3}{\hertz}. Antall (n) kjøringer.",
-    "ch04_plateau_values":               "Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.",
 }
 TABLE_CAPTIONS_SHORT = {
+    # ── CHAPTER 04 ───────────────────────────────────────────────────────────
+    "ch04_probe_noise_floor_table":              "",   # TODO: short caption
+    "ch04_parallel_probe_psd_agreement_simple":  "",
+    "ch04_window_intervals":                     "",
+    "ch04_window_choice_nowind":                 "",
+    "ch04_window_choice_fullwind":               "",
+    "ch04_plateau_values":                       "",
+    "ch04_tidsvindu":                            "Frekvensenes tidsvindu",
+    "ch04_wind_pre_paddle_table":                "",
+    "ch04_wind_setup_baseline_table":            "",
+
+    # ── CHAPTER 05 ───────────────────────────────────────────────────────────
     "ch05_damping_freq_table":           "",
-    "ch05_mooring_focus_at_1_3hz_table": "Mooring + panelretning ved 1.30 Hz — hardtall.",
-    "ch04_plateau_values":               "",
+    "ch05_wind_effect_table":            "",
+    "ch05_wind_effect_table_by_amp":     "",
+    "ch05_transmission_wind_ratios":     "",
+    "ch05_transmission_wind_amplitudes": "",
+    "ch05_mooring_focus_at_1_3hz_table": "Moring vs panelretning. 1,3 Hz",
 }
 
 # Persist for any downstream reader (e.g. _lookup_central_caption with the
