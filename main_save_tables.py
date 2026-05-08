@@ -13,18 +13,18 @@ whose data still renders from main_save_figures.py cells (those scripts
 read this JSON via _lookup_central_caption(json_path=...)).
 
 Currently wired (rendered here, two-step pattern):
-  ch05_damping_freq_table
-  ch05_mooring_focus_at_1_3hz_table
-  ch04_plateau_values
-
-Captions-only (rendered from main_save_figures.py cells):
   ch04_probe_noise_floor_table
   ch04_parallel_probe_psd_agreement_simple
   ch04_window_intervals
+  ch04_wind_pre_paddle_table
+  ch04_plateau_values
+  ch05_damping_freq_table
+  ch05_mooring_focus_at_1_3hz_table
+
+Captions-only (rendered from main_save_figures.py cells):
   ch04_window_choice_nowind
   ch04_window_choice_fullwind
   ch04_tidsvindu
-  ch04_wind_pre_paddle_table
   ch04_wind_setup_baseline_table
   ch05_wind_effect_table
   ch05_wind_effect_table_by_amp
@@ -160,10 +160,353 @@ def _fmt_signed(x: float, decimals: int = 3) -> str:
 # %%
 # TABLE_INDEX
 # ═══════════════════════════════════════════════════════════════════════════════
+#   ch04_probe_noise_floor_table             [DELEG] ✓  3σ noise per probe — innledende vs endelig
+#   ch04_parallel_probe_psd_agreement_simple [DELEG] ✓  Δ% (far−wall) per thesis freq
+#   ch04_window_intervals                    [DELEG] ✓  H&G theoretical window intervals per freq
+#   ch04_wind_pre_paddle_table               [DELEG] ✓  σ_η long vs 3 s pre-paddle per probe
 #   ch05_damping_freq_table          [DELEG] ✓  Per-amp K_t,uten/K_t,vind/ΔK_t at 1.3–1.6 Hz
 #   ch05_mooring_focus_at_1_3hz_table [DELEG] ✓  Mooring × panel × wind transmission at 1.30 Hz
 #   ch04_plateau_values              [DELEG] ✓  A_in/A_out/K_t per (amp, freq, wind), all 3 amplitudes
 # ═══════════════════════════════════════════════════════════════════════════════
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/probe_noise_floor_table.py
+"""
+── CH04 § 1 — Probe noise-floor table (innledende vs endelig) ──────────────
+Per probe position, 3σ stillwater detection threshold for the initial
+hardware config (h272 / high range) vs the final canon config (h100 / low
+range), plus the improvement ratio. Single block of 4 rows (one per probe).
+"""
+_NAME = "ch04_probe_noise_floor_table"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+_run_delegated_if_missing(
+    "analysis_scratch/probe_noise_floor_table.py",
+    [_CSV, _META],
+    label=f"{_NAME}_data",
+)
+
+
+def _fmt_mm_2dp(col: str):
+    def _impl(row: pd.Series) -> str:
+        v = row[col]
+        if pd.isna(v):
+            return "—"
+        return rf"$\num{{{v:.2f}}}$"
+    return _impl
+
+
+def _fmt_ratio_x(col: str):
+    def _impl(row: pd.Series) -> str:
+        v = row[col]
+        if pd.isna(v):
+            return "—"
+        return rf"$\num{{{v:.1f}}}\times$"
+    return _impl
+
+
+_cell_format = {
+    "probe_label":            lambda r: str(r["probe_label"]),
+    "thr3sigma_initial_mm":   _fmt_mm_2dp("thr3sigma_initial_mm"),
+    "thr3sigma_final_mm":     _fmt_mm_2dp("thr3sigma_final_mm"),
+    "ratio_init_over_final":  _fmt_ratio_x("ratio_init_over_final"),
+}
+
+_columns = [
+    "probe_label",
+    "thr3sigma_initial_mm",
+    "thr3sigma_final_mm",
+    "ratio_init_over_final",
+]
+# Two-row header — second row stuffed onto the last column header so the
+# joined `& `-output and trailing `\\` produce a tidy 2-line header.
+_column_headers = [
+    "Probe",
+    "Innledende",
+    "Endelig",
+    (
+        "Forbedring \\\\\n"
+        "         &\n"
+        "      $3\\sigma$ [\\unit{\\milli\\metre}] &\n"
+        "      $3\\sigma$ [\\unit{\\milli\\metre}] &\n"
+        "         "
+    ),
+]
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "lccc",
+        cell_format    = _cell_format,
+        row_groups     = [(None, lambda df: df)],
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/parallel_probe_psd_agreement_simple.py
+"""
+── CH04 § 3 — Parallel-probe PSD agreement (simple) ─────────────────────────
+Per thesis frequency, N runs, mean amplitude, signed mean Δ% between
+9373/170 (wall) and 9373/340 (far). One block, four rows.
+"""
+_NAME = "ch04_parallel_probe_psd_agreement_simple"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+_run_delegated_if_missing(
+    "analysis_scratch/parallel_probe_psd_agreement_simple.py",
+    [_CSV, _META],
+    label=f"{_NAME}_data",
+)
+
+
+def _fmt_freq_2dp(row: pd.Series) -> str:
+    return rf"\num{{{row['freq']:.2f}}}"
+
+
+def _fmt_int_n(row: pd.Series) -> str:
+    return rf"\num{{{int(row['n'])}}}"
+
+
+def _fmt_amp_2dp(row: pd.Series) -> str:
+    v = row["mean_amp"]
+    if pd.isna(v):
+        return "n/a"
+    return rf"\num{{{v:.2f}}}"
+
+
+def _fmt_signed_pct_2dp(row: pd.Series) -> str:
+    v = row["diff_pct"]
+    if pd.isna(v):
+        return "n/a"
+    return rf"\num{{{v:+.2f}}}"
+
+
+_cell_format = {
+    "freq":     _fmt_freq_2dp,
+    "n":        _fmt_int_n,
+    "mean_amp": _fmt_amp_2dp,
+    "diff_pct": _fmt_signed_pct_2dp,
+}
+
+_columns        = ["freq", "n", "mean_amp", "diff_pct"]
+_column_headers = [
+    r"$f$ [\unit{\hertz}]",
+    r"$N$",
+    r"$\langle A \rangle$ [\unit{\milli\metre}]",
+    r"$\Delta$ (far$-$wall) [\%]",
+]
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "cccc",
+        cell_format    = _cell_format,
+        row_groups     = [(None, lambda df: df)],
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/window_intervals_table.py
+"""
+── CH04 § 4 — H&G theoretical window intervals per thesis frequency ────────
+Wide layout: each thesis frequency is a COLUMN, the rows are
+(Innkommende [s], Utgående [s], samples per period). The CSV is per-freq;
+this cell pivots it into the wide form via per-row cell formatters that
+read the relevant freq-column out of the long CSV.
+"""
+_NAME = "ch04_window_intervals"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+_run_delegated_if_missing(
+    "analysis_scratch/window_intervals_table.py",
+    [_CSV, _META],
+    label=f"{_NAME}_data",
+)
+
+_WIN_FREQS = [1.3, 1.4, 1.5, 1.6]
+_WIN_FREQ_COLS = [f"f_{f:.1f}" for f in _WIN_FREQS]
+
+
+def _fmt_in_range(freq_col: str):
+    def _impl(row: pd.Series) -> str:
+        s = row[f"{freq_col}_in_start_s"]
+        e = row[f"{freq_col}_in_end_s"]
+        return rf"\tabnumrange{{{s:.1f}}}{{{e:.1f}}}"
+    return _impl
+
+
+def _fmt_out_range(freq_col: str):
+    def _impl(row: pd.Series) -> str:
+        s = row[f"{freq_col}_out_start_s"]
+        e = row[f"{freq_col}_out_end_s"]
+        return rf"\tabnumrange{{{s:.1f}}}{{{e:.1f}}}"
+    return _impl
+
+
+def _fmt_spp(freq_col: str):
+    def _impl(row: pd.Series) -> str:
+        v = row[f"{freq_col}_samples_per_period"]
+        return rf"$\num{{{v:.10f}}}$"
+    return _impl
+
+
+# Each row in the CSV is one thesis row (label + per-freq cells). Build
+# cell formatters that look up the {row label, freq column} cell.
+def _fmt_label(row: pd.Series) -> str:
+    return str(row["row_label"])
+
+
+def _fmt_value_for_kind(freq_col: str):
+    def _impl(row: pd.Series) -> str:
+        kind = row["kind"]
+        v = row[f"{freq_col}_value"]
+        if kind == "in_range":
+            s, e = v.split("|")
+            return rf"\tabnumrange{{{float(s):.1f}}}{{{float(e):.1f}}}"
+        if kind == "out_range":
+            s, e = v.split("|")
+            return rf"\tabnumrange{{{float(s):.1f}}}{{{float(e):.1f}}}"
+        if kind == "spp":
+            return rf"$\num{{{float(v):.10f}}}$"
+        return str(v)
+    return _impl
+
+
+_cell_format = {"row_label": _fmt_label}
+for _fc in _WIN_FREQ_COLS:
+    _cell_format[f"{_fc}_value"] = _fmt_value_for_kind(_fc)
+
+_columns        = ["row_label", *[f"{_fc}_value" for _fc in _WIN_FREQ_COLS]]
+_column_headers = [
+    r"Frekvens [\unit{\hertz}]",
+    *[rf"$\num{{{f}}}$" for f in _WIN_FREQS],
+]
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "lcccc",
+        cell_format    = _cell_format,
+        row_groups     = [(None, lambda df: df)],
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/wind_pre_paddle_table.py
+"""
+── CH04 § 4q — Pre-paddle wind summary (long-run vs 3 s) per probe ─────────
+Per probe row: long-run σ_η, 3 s mean σ_η, Δ%, 3 s 1σ scatter. One block,
+four rows.
+"""
+_NAME = "ch04_wind_pre_paddle_table"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+_run_delegated_if_missing(
+    "analysis_scratch/wind_pre_paddle_table.py",
+    [_CSV, _META],
+    label=f"{_NAME}_data",
+)
+
+
+def _fmt_mm(col: str, decimals: int = 2):
+    def _impl(row: pd.Series) -> str:
+        v = row[col]
+        if pd.isna(v):
+            return "—"
+        return rf"$\num{{{v:.{decimals}f}}}$"
+    return _impl
+
+
+def _fmt_signed_pct(col: str, decimals: int = 1):
+    def _impl(row: pd.Series) -> str:
+        v = row[col]
+        if pd.isna(v):
+            return "—"
+        sign = "+" if v >= 0 else "-"
+        return rf"${sign}\num{{{abs(v):.{decimals}f}}}$"
+    return _impl
+
+
+_cell_format = {
+    "probe":               lambda r: str(r["probe"]),
+    "sigma_long_mm":       _fmt_mm("sigma_long_mm", 2),
+    "sigma_3s_mm":         _fmt_mm("sigma_3s_mm",   2),
+    "delta_pct":           _fmt_signed_pct("delta_pct", 1),
+    "sigma_3s_scatter_mm": _fmt_mm("sigma_3s_scatter_mm", 2),
+}
+
+_columns        = [
+    "probe", "sigma_long_mm", "sigma_3s_mm", "delta_pct",
+    "sigma_3s_scatter_mm",
+]
+_column_headers = [
+    "sonde",
+    r"$\sigma_\eta$ (lang) [\unit{\milli\metre}]",
+    r"$\sigma_\eta$ (\qty{3}{\second}) [\unit{\milli\metre}]",
+    r"$\Delta$ [\%]",
+    r"$\sigma_\eta$ (\qty{3}{\second}, $1\sigma$) [\unit{\milli\metre}]",
+]
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "lcccc",
+        cell_format    = _cell_format,
+        row_groups     = [(None, lambda df: df)],
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
 
 
 # %%

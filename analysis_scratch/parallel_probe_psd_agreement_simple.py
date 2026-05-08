@@ -10,17 +10,28 @@ Columns: $f$ [Hz] · $N$ · $\\langle A \\rangle$ [mm] · $\\Delta$ (far−wall)
 where Δ is the mean across runs of (A_far − A_wall) / ½(A_far + A_wall),
 expressed in percent and signed (positive ⇒ far reads higher than wall).
 
-Output:
-    output/TABLES/ch04_parallel_probe_psd_agreement_simple.tex
+Outputs:
+    output/TABLES/data/ch04_parallel_probe_psd_agreement_simple.csv       (render-shape)
+    output/TABLES/data/ch04_parallel_probe_psd_agreement_simple.meta.json (provenance)
+
+Caption text is owned by main_save_tables.py (TABLE_CAPTIONS).
 """
 
+import json
+import os
 import sys
+import warnings
 from pathlib import Path
-from datetime import datetime as _dt
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+warnings.filterwarnings("ignore")
 
 import numpy as np
+import pandas as pd
+
+BASE = (Path(__file__).resolve().parent.parent
+        if "__file__" in globals() else Path.cwd())
+sys.path.insert(0, str(BASE))
+os.chdir(BASE)
 
 # Reuse the data path + heavy lifting from the full-stats sibling so both
 # tables are guaranteed to be reading the same runs and the same band
@@ -30,12 +41,15 @@ from analysis_scratch.parallel_probe_psd_agreement import (
     _load_psd_data_from_project, harmonize_grid, stack_runs,
     _band_amplitudes,
 )
-from wavescripts.plot_utils import _lookup_central_caption
 
 
-THESIS_TABLE_NAME = "ch04_parallel_probe_psd_agreement_simple"
-BASE = Path(__file__).resolve().parent.parent
-OUT_TEX = BASE / "output" / "TABLES" / f"{THESIS_TABLE_NAME}.tex"
+THESIS_NAME = "ch04_parallel_probe_psd_agreement_simple"
+CHAPTER     = "04"
+SCRIPT_REL  = "analysis_scratch/parallel_probe_psd_agreement_simple.py"
+
+DATA_DIR    = BASE / "output" / "TABLES" / "data"
+RENDER_CSV  = DATA_DIR / f"{THESIS_NAME}.csv"
+META_JSON   = DATA_DIR / f"{THESIS_NAME}.meta.json"
 
 
 def per_freq_simple(harmonized, f_grid, probes, target_freqs, halfwidth):
@@ -49,8 +63,7 @@ def per_freq_simple(harmonized, f_grid, probes, target_freqs, halfwidth):
         finite = np.isfinite(a_a) & np.isfinite(a_b)
         n = int(finite.sum())
         if n == 0:
-            rows.append(dict(freq=fh, n=0, mean_amp=np.nan,
-                             diff_pct=np.nan))
+            rows.append(dict(freq=fh, n=0, mean_amp=np.nan, diff_pct=np.nan))
             continue
         a_a = a_a[finite]
         a_b = a_b[finite]
@@ -62,100 +75,6 @@ def per_freq_simple(harmonized, f_grid, probes, target_freqs, halfwidth):
                          mean_amp=mean_amp,
                          diff_pct=float(per_run.mean())))
     return rows
-
-
-def write_simple_tex_table(rows, out_path):
-    # Caption is read from output/.table_captions.json (written by main_save_tables.py).
-    # Run main_save_tables.py once before this script to populate the cache.
-    captions_json = BASE / "output" / ".table_captions.json"
-    caption_full  = _lookup_central_caption(THESIS_TABLE_NAME, kind="full",  json_path=captions_json)
-    caption_short = _lookup_central_caption(THESIS_TABLE_NAME, kind="short", json_path=captions_json)
-    if caption_full and caption_short:
-        caption_block = (f"  \\caption[{caption_short}]{{\n"
-                         f"    {caption_full}\n  }}\n")
-    elif caption_full:
-        caption_block = f"  \\caption{{\n    {caption_full}\n  }}\n"
-    else:
-        caption_block = ("  \\caption{\n"
-                         "    % TODO: write caption "
-                         "(edit FIGURE_CAPTIONS in main_save_figures.py)\n"
-                         "  }\n")
-
-    n_runs = rows[0]["n"] if rows else 0
-    freq_list = ", ".join(f"{r['freq']:.1f}" for r in rows)
-
-    # Worst (largest |Δ|) — surfaced into the immutable block so the
-    # reader's "they agree to within X %" claim is grounded in a number.
-    finite_rows = [r for r in rows if np.isfinite(r["diff_pct"])]
-    worst = max((abs(r["diff_pct"]) for r in finite_rows), default=float("nan"))
-
-    immutable = "\n".join([
-        "%! TEX root = ../main.tex",
-        "% ==============================================================",
-        "% IMMUTABLE — generated automatically, do not edit this block",
-        "%",
-        "% — Provenance ───────────────────────────────────────────────────",
-        "%   script            : analysis_scratch/parallel_probe_psd_agreement_simple.py",
-        "%   plot_type         : parallel_probe_psd_agreement_simple_table",
-        "%   chapter           : 04",
-        f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
-        f"%   caption_label     : tab:{THESIS_TABLE_NAME}",
-        f"%   caption_short     : {caption_short or ''}",
-        "%",
-        "% — Method ────────────────────────────────────────────────────",
-        f"%   probes            : {PROBES[0]} (wall) vs {PROBES[1]} (far)",
-        f"%   band              : ±{BAND_HALFWIDTH_HZ:.2f} Hz around f, integrated PSD",
-        "%   <A>               : 0.5·(mean A_wall + mean A_far) across runs",
-        "%   Δ (far−wall) [%]  : mean across runs of",
-        "%                       100 · (A_far − A_wall) / [½ · (A_far + A_wall)]",
-        "%                       Sign: + ⇒ far reads higher than wall.",
-        "%",
-        "% — Inputs ────────────────────────────────────────────────────",
-        f"%   N runs            : {n_runs}",
-        "%   data scope        : panel-full, quality-ok, both probes present,",
-        "%                       canon March-2026 lowrange folders.",
-        f"%   target frequencies: {freq_list} Hz",
-        "%",
-        "% — Headline ──────────────────────────────────────────────────",
-        f"%   worst |Δ|         : {worst:.2f} %  (across all rows)",
-        "%   companion table   : ch04_parallel_probe_psd_agreement.tex",
-        "%                       (full 10-column statistical breakdown)",
-        "%",
-        "% ── end immutable block ─────────────────────────────────────────",
-    ])
-
-    body_lines = []
-    for r in rows:
-        f_cell  = f"\\num{{{r['freq']:.2f}}}"
-        n_cell  = f"\\num{{{r['n']}}}"
-        a_cell  = (f"\\num{{{r['mean_amp']:.2f}}}"
-                   if np.isfinite(r["mean_amp"]) else "n/a")
-        d_cell  = (f"\\num{{{r['diff_pct']:+.2f}}}"
-                   if np.isfinite(r["diff_pct"]) else "n/a")
-        body_lines.append(f"    {f_cell} & {n_cell} & {a_cell} & {d_cell} \\\\")
-
-    table_body = (
-        "\\begin{table}[hbt]\n"
-        "  \\centering\n"
-        "  \\small\n"
-        + caption_block
-        + f"  \\label{{tab:{THESIS_TABLE_NAME}}}\n"
-        "  \\begin{tabular}{cccc}\n"
-        "    \\toprule\n"
-        "    $f$ [\\unit{\\hertz}] &\n"
-        "      $N$ &\n"
-        "      $\\langle A \\rangle$ [\\unit{\\milli\\metre}] &\n"
-        "      $\\Delta$ (far$-$wall) [\\%] \\\\\n"
-        "    \\midrule\n"
-        + "\n".join(body_lines) + "\n"
-        "    \\bottomrule\n"
-        "  \\end{tabular}\n"
-        "\\end{table}\n"
-    )
-
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(immutable + "\n" + table_body)
-    print(f"Saved -> {out_path}")
 
 
 def main():
@@ -172,7 +91,58 @@ def main():
               f"{r['diff_pct']:>+17.2f}")
     print()
 
-    write_simple_tex_table(rows, OUT_TEX)
+    # Render-shape CSV.
+    render_df = pd.DataFrame(rows)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    render_df.to_csv(RENDER_CSV, index=False)
+    print(f"render CSV → {RENDER_CSV.relative_to(BASE)}")
+
+    # Provenance meta.json.
+    n_runs = int(rows[0]["n"]) if rows else 0
+    freq_list = ", ".join(f"{r['freq']:.1f}" for r in rows)
+    finite_rows = [r for r in rows if np.isfinite(r["diff_pct"])]
+    worst = max((abs(r["diff_pct"]) for r in finite_rows), default=float("nan"))
+
+    meta_payload = {
+        "script":          SCRIPT_REL,
+        "plot_type":       "parallel_probe_psd_agreement_simple_table",
+        "chapter":         CHAPTER,
+        "caption_label":   f"tab:{THESIS_NAME}",
+        "caption_short":   "",
+        "sections": [
+            {
+                "title": "Method",
+                "lines": [
+                    f"probes            : {PROBES[0]} (wall) vs {PROBES[1]} (far)",
+                    f"band              : ±{BAND_HALFWIDTH_HZ:.2f} Hz around f, integrated PSD",
+                    "<A>               : 0.5·(mean A_wall + mean A_far) across runs",
+                    "Δ (far−wall) [%]  : mean across runs of",
+                    "                    100 · (A_far − A_wall) / [½ · (A_far + A_wall)]",
+                    "                    Sign: + ⇒ far reads higher than wall.",
+                ],
+            },
+            {
+                "title": "Inputs",
+                "lines": [
+                    f"N runs            : {n_runs}",
+                    "data scope        : panel-full, quality-ok, both probes present,",
+                    "                    canon March-2026 lowrange folders.",
+                    f"target frequencies: {freq_list} Hz",
+                ],
+            },
+            {
+                "title": "Headline",
+                "lines": [
+                    f"worst |Δ|         : {worst:.2f} %  (across all rows)",
+                    "companion table   : ch04_parallel_probe_psd_agreement.tex",
+                    "                    (full 10-column statistical breakdown)",
+                ],
+            },
+        ],
+    }
+    META_JSON.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
+    print(f"meta JSON  → {META_JSON.relative_to(BASE)}")
+
     print("\nDone.")
 
 
