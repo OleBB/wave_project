@@ -1,0 +1,45 @@
+{
+  "script": "analysis_scratch/plateau_values_table.py",
+  "plot_type": "plateau_values_table",
+  "chapter": "04",
+  "caption_label": "tab:ch04_plateau_values",
+  "caption_short": "",
+  "sections": [
+    {
+      "title": "Method",
+      "lines": [
+        "per-run window FFT amplitudes at paddle frequency f, computed over",
+        "probe-shifted windows:",
+        "  win_IN  = [r_IN/c_g(f) + N_off/f,  r_IN/c_g(f) + (N_off+N_len)/f]",
+        "  win_OUT = [r_OUT/c_g(f) + N_off/f, r_OUT/c_g(f) + (N_off+N_len)/f]",
+        "N_offset          : 7 periods",
+        "N_length          : 10 periods",
+        "r_IN              : 9.373 m  (9373/170, 9373/340)",
+        "r_OUT             : 12.4 m  (12400/250)",
+        "tank depth h      : 0.58 m",
+        "FFT band          : \u00b10.05 Hz around target f",
+        "c_g dispersion    : full \u03c9\u00b2=gk\u00b7tanh(kh) via wavescripts.constants.c_group"
+      ]
+    },
+    {
+      "title": "Aggregation",
+      "lines": [
+        "per (amp, freq, wind) cell:",
+        "  n         = number of canon runs",
+        "  A_IN      = median across runs of per-run window-FFT amplitude",
+        "  A_OUT     = same for OUT",
+        "  OUT/IN    = median across runs of per-run ratio (NOT median(A_OUT)/median(A_IN))",
+        "  \u03c3(OUT/IN) = run-to-run std of the per-run ratio"
+      ]
+    },
+    {
+      "title": "Inputs",
+      "lines": [
+        "frequencies [Hz]  : 1.3, 1.4, 1.5, 1.6",
+        "amplitudes        : 0.10V (A_1), 0.20V (A_2), 0.30V (A_3)",
+        "wind conditions   : no, full",
+        "filter            : PanelCondition=full, quality_flag=ok, canon March-2026 cond4 lowrange"
+      ]
+    }
+  ]
+}
