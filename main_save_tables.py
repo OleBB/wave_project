@@ -16,6 +16,7 @@ Currently wired (rendered here, two-step pattern):
   ch04_probe_noise_floor_table
   ch04_parallel_probe_psd_agreement_simple
   ch04_window_intervals
+  ch04_wind_pre_paddle_table
   ch04_plateau_values
   ch05_damping_freq_table
   ch05_mooring_focus_at_1_3hz_table
@@ -24,7 +25,6 @@ Captions-only (rendered from main_save_figures.py cells):
   ch04_window_choice_nowind
   ch04_window_choice_fullwind
   ch04_tidsvindu
-  ch04_wind_pre_paddle_table
   ch04_wind_setup_baseline_table
   ch05_wind_effect_table
   ch05_wind_effect_table_by_amp
@@ -163,6 +163,7 @@ def _fmt_signed(x: float, decimals: int = 3) -> str:
 #   ch04_probe_noise_floor_table             [DELEG] ✓  3σ noise per probe — innledende vs endelig
 #   ch04_parallel_probe_psd_agreement_simple [DELEG] ✓  Δ% (far−wall) per thesis freq
 #   ch04_window_intervals                    [DELEG] ✓  H&G theoretical window intervals per freq
+#   ch04_wind_pre_paddle_table               [DELEG] ✓  σ_η long vs 3 s pre-paddle per probe
 #   ch05_damping_freq_table          [DELEG] ✓  Per-amp K_t,uten/K_t,vind/ΔK_t at 1.3–1.6 Hz
 #   ch05_mooring_focus_at_1_3hz_table [DELEG] ✓  Mooring × panel × wind transmission at 1.30 Hz
 #   ch04_plateau_values              [DELEG] ✓  A_in/A_out/K_t per (amp, freq, wind), all 3 amplitudes
@@ -408,6 +409,84 @@ _columns        = ["row_label", *[f"{_fc}_value" for _fc in _WIN_FREQ_COLS]]
 _column_headers = [
     r"Frekvens [\unit{\hertz}]",
     *[rf"$\num{{{f}}}$" for f in _WIN_FREQS],
+]
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "lcccc",
+        cell_format    = _cell_format,
+        row_groups     = [(None, lambda df: df)],
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/wind_pre_paddle_table.py
+"""
+── CH04 § 4q — Pre-paddle wind summary (long-run vs 3 s) per probe ─────────
+Per probe row: long-run σ_η, 3 s mean σ_η, Δ%, 3 s 1σ scatter. One block,
+four rows.
+"""
+_NAME = "ch04_wind_pre_paddle_table"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+_run_delegated_if_missing(
+    "analysis_scratch/wind_pre_paddle_table.py",
+    [_CSV, _META],
+    label=f"{_NAME}_data",
+)
+
+
+def _fmt_mm(col: str, decimals: int = 2):
+    def _impl(row: pd.Series) -> str:
+        v = row[col]
+        if pd.isna(v):
+            return "—"
+        return rf"$\num{{{v:.{decimals}f}}}$"
+    return _impl
+
+
+def _fmt_signed_pct(col: str, decimals: int = 1):
+    def _impl(row: pd.Series) -> str:
+        v = row[col]
+        if pd.isna(v):
+            return "—"
+        sign = "+" if v >= 0 else "-"
+        return rf"${sign}\num{{{abs(v):.{decimals}f}}}$"
+    return _impl
+
+
+_cell_format = {
+    "probe":               lambda r: str(r["probe"]),
+    "sigma_long_mm":       _fmt_mm("sigma_long_mm", 2),
+    "sigma_3s_mm":         _fmt_mm("sigma_3s_mm",   2),
+    "delta_pct":           _fmt_signed_pct("delta_pct", 1),
+    "sigma_3s_scatter_mm": _fmt_mm("sigma_3s_scatter_mm", 2),
+}
+
+_columns        = [
+    "probe", "sigma_long_mm", "sigma_3s_mm", "delta_pct",
+    "sigma_3s_scatter_mm",
+]
+_column_headers = [
+    "sonde",
+    r"$\sigma_\eta$ (lang) [\unit{\milli\metre}]",
+    r"$\sigma_\eta$ (\qty{3}{\second}) [\unit{\milli\metre}]",
+    r"$\Delta$ [\%]",
+    r"$\sigma_\eta$ (\qty{3}{\second}, $1\sigma$) [\unit{\milli\metre}]",
 ]
 
 _render_with_caption_short(
