@@ -59,10 +59,10 @@ SCRATCH_CSV = Path("analysis_scratch/wind_pre_paddle_table.csv")
 
 # Probes in row order (label as it appears in the CSV → display label).
 PROBE_ORDER = [
-    ("8804/250 (upstream)",   "8804/250 (upstream)"),
-    ("9373/170 (IN, wall)",   "9373/170 (IN, wall)"),
-    ("9373/340 (IN, far)",    "9373/340 (IN, far)"),
-    ("12400/250 (OUT)",       "12400/250 (OUT)"),
+    ("8804/250 (upstream)",   "Posisjon 1"),
+    ("9373/170 (IN, wall)",   "Posisjon 2 (nær)"),
+    ("9373/340 (IN, far)",    "Posisjon 2 (fjern)"),
+    ("12400/250 (OUT)",       "Posisjon 3"),
 ]
 
 # ── Read inputs ──────────────────────────────────────────────────────────
