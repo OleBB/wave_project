@@ -1,0 +1,83 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ─────────────────────────────────────────────────
+%   script            : analysis_scratch/plateau_values_table.py
+%   plot_type         : plateau_values_table
+%   chapter           : 04
+%   generated_at      : 2026-05-08T09:48:49
+%   caption_label     : tab:ch04_plateau_values
+%   caption_short     :
+%
+% — Method ─────────────────────────────────────────────────────
+%   per-run window FFT amplitudes at paddle frequency f, computed over
+%   probe-shifted windows:
+%     win_IN  = [r_IN/c_g(f) + N_off/f,  r_IN/c_g(f) + (N_off+N_len)/f]
+%     win_OUT = [r_OUT/c_g(f) + N_off/f, r_OUT/c_g(f) + (N_off+N_len)/f]
+%   N_offset          : 7 periods
+%   N_length          : 10 periods
+%   r_IN              : 9.373 m  (9373/170, 9373/340)
+%   r_OUT             : 12.4 m  (12400/250)
+%   tank depth h      : 0.58 m
+%   FFT band          : ±0.05 Hz around target f
+%   c_g dispersion    : full ω²=gk·tanh(kh) via wavescripts.constants.c_group
+%
+% — Aggregation ────────────────────────────────────────────────
+%   per (amp, freq, wind) cell:
+%     n         = number of canon runs
+%     A_IN      = median across runs of per-run window-FFT amplitude
+%     A_OUT     = same for OUT
+%     OUT/IN    = median across runs of per-run ratio (NOT median(A_OUT)/median(A_IN))
+%     σ(OUT/IN) = run-to-run std of the per-run ratio
+%
+% — Inputs ─────────────────────────────────────────────────────
+%   frequencies [Hz]  : 1.3, 1.4, 1.5, 1.6
+%   amplitudes        : 0.10V (A_1), 0.20V (A_2), 0.30V (A_3)
+%   wind conditions   : no, full
+%   filter            : PanelCondition=full, quality_flag=ok, canon March-2026 cond4 lowrange
+%
+% ── end immutable block ───────────────────────────────────────
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{ccccccc}
+    \toprule
+    $f$ [\unit{\hertz}] & vind & $n$ & $A_\mathrm{Inn}$ [\unit{\milli\meter}] & $A_\mathrm{Ut}$ [\unit{\milli\meter}] & $K_t$ & $\sigma (K_t)$ \\
+    \midrule
+    \multicolumn{7}{l}{\textbf{$A_1$} ($V = 0.10$ V)} \\
+    $\num{1.3}$ & full & $\num{10}$ & $\num{7.49}$ & $\num{5.85}$ & $\num{0.778}$ & $\num{0.046}$ \\
+    $\num{1.3}$ & uten & $\num{9}$ & $\num{7.50}$ & $\num{4.96}$ & $\num{0.662}$ & $\num{0.028}$ \\
+    $\num{1.4}$ & full & $\num{3}$ & $\num{8.01}$ & $\num{5.69}$ & $\num{0.710}$ & $\num{0.080}$ \\
+    $\num{1.4}$ & uten & $\num{2}$ & $\num{8.01}$ & $\num{4.06}$ & $\num{0.507}$ & $\num{0.036}$ \\
+    $\num{1.5}$ & full & $\num{3}$ & $\num{7.99}$ & $\num{5.67}$ & $\num{0.710}$ & $\num{0.076}$ \\
+    $\num{1.5}$ & uten & $\num{2}$ & $\num{7.67}$ & $\num{3.46}$ & $\num{0.452}$ & $\num{0.016}$ \\
+    $\num{1.6}$ & full & $\num{3}$ & $\num{8.29}$ & $\num{5.09}$ & $\num{0.597}$ & $\num{0.030}$ \\
+    $\num{1.6}$ & uten & $\num{2}$ & $\num{7.12}$ & $\num{2.61}$ & $\num{0.367}$ & $\num{0.005}$ \\
+    \midrule
+    \multicolumn{7}{l}{\textbf{$A_2$} ($V = 0.20$ V)} \\
+    $\num{1.3}$ & full & $\num{3}$ & $\num{14.73}$ & $\num{12.75}$ & $\num{0.844}$ & $\num{0.019}$ \\
+    $\num{1.3}$ & uten & $\num{2}$ & $\num{14.76}$ & $\num{11.93}$ & $\num{0.809}$ & $\num{0.007}$ \\
+    $\num{1.4}$ & full & $\num{3}$ & $\num{15.56}$ & $\num{11.89}$ & $\num{0.744}$ & $\num{0.054}$ \\
+    $\num{1.4}$ & uten & $\num{2}$ & $\num{15.27}$ & $\num{10.48}$ & $\num{0.687}$ & $\num{0.003}$ \\
+    $\num{1.5}$ & full & $\num{3}$ & $\num{15.36}$ & $\num{11.35}$ & $\num{0.714}$ & $\num{0.045}$ \\
+    $\num{1.5}$ & uten & $\num{2}$ & $\num{14.98}$ & $\num{8.98}$ & $\num{0.599}$ & $\num{0.019}$ \\
+    $\num{1.6}$ & full & $\num{3}$ & $\num{15.28}$ & $\num{10.72}$ & $\num{0.689}$ & $\num{0.021}$ \\
+    $\num{1.6}$ & uten & $\num{2}$ & $\num{14.69}$ & $\num{7.13}$ & $\num{0.486}$ & $\num{0.000}$ \\
+    \midrule
+    \multicolumn{7}{l}{\textbf{$A_3$} ($V = 0.30$ V)} \\
+    $\num{1.3}$ & full & $\num{4}$ & $\num{22.25}$ & $\num{18.51}$ & $\num{0.827}$ & $\num{0.016}$ \\
+    $\num{1.3}$ & uten & $\num{2}$ & $\num{21.52}$ & $\num{17.88}$ & $\num{0.831}$ & $\num{0.003}$ \\
+    $\num{1.4}$ & full & $\num{4}$ & $\num{23.11}$ & $\num{17.64}$ & $\num{0.768}$ & $\num{0.009}$ \\
+    $\num{1.4}$ & uten & $\num{2}$ & $\num{22.41}$ & $\num{15.03}$ & $\num{0.671}$ & $\num{0.005}$ \\
+    $\num{1.5}$ & full & $\num{4}$ & $\num{23.12}$ & $\num{17.05}$ & $\num{0.737}$ & $\num{0.010}$ \\
+    $\num{1.5}$ & uten & $\num{2}$ & $\num{21.48}$ & $\num{13.09}$ & $\num{0.609}$ & $\num{0.002}$ \\
+    $\num{1.6}$ & full & $\num{5}$ & $\num{23.08}$ & $\num{16.23}$ & $\num{0.702}$ & $\num{0.017}$ \\
+    $\num{1.6}$ & uten & $\num{3}$ & $\num{20.68}$ & $\num{11.01}$ & $\num{0.535}$ & $\num{0.025}$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{
+    Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.
+  }
+  \label{tab:ch04_plateau_values}
+\end{table}

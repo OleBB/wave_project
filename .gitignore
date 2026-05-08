@@ -26,6 +26,8 @@ pre_pipline_eta_change_waveprocessed_folder/
 # Runtime caption cache (rewritten on every main_save_figures.py import;
 # source of truth is FIGURE_CAPTIONS dict in main_save_figures.py).
 output/.figure_captions.json
+# Sister cache for the table orchestrator (main_save_tables.py).
+output/.table_captions.json
 
 # Temporary files
 *.log

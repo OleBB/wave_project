@@ -45,15 +45,15 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 
-BASE = Path(__file__).resolve().parent.parent
+BASE = (Path(__file__).resolve().parent.parent
+        if "__file__" in globals() else Path.cwd())
 sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
 from wavescripts.filters import (apply_experimental_filters,
                                  damping_all_amplitude_grouper)
-from wavescripts.plot_utils import _lookup_central_caption, amp_to_label
-from wavescripts.table_render import render_table
+from wavescripts.plot_utils import amp_to_label
 
 # ── I/O ────────────────────────────────────────────────────────────────────
 SCRATCH_CSV   = Path(__file__).parent / "damping_freq_table.csv"
@@ -184,9 +184,8 @@ print(f"   render CSV → {RENDER_CSV.relative_to(BASE)}")
 
 
 # ── 4. Build provenance meta.json ──────────────────────────────────────────
-caption_full  = _lookup_central_caption(THESIS_NAME, kind="full") or None
-caption_short = _lookup_central_caption(THESIS_NAME, kind="short") or None
-
+# Caption text + caption_short are owned by main_save_tables.py — it patches
+# meta.json's caption_short field after this script runs.
 n_total_runs = int(table["n_nw"].fillna(0).sum() + table["n_fw"].fillna(0).sum())
 
 meta_payload = {
@@ -194,7 +193,7 @@ meta_payload = {
     "plot_type":       "damping_freq_table",
     "chapter":         CHAPTER,
     "caption_label":   f"tab:{THESIS_NAME}",
-    "caption_short":   caption_short or "",
+    "caption_short":   "",
     "sections": [
         {
             "title": "Filters",
@@ -234,63 +233,4 @@ meta_payload = {
 META_JSON.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
 print(f"   meta JSON  → {META_JSON.relative_to(BASE)}")
 
-
-# ── 5. Cell formatters ─────────────────────────────────────────────────────
-def _fmt_signed(x: float, decimals: int = 3) -> str:
-    if pd.isna(x):
-        return "—"
-    return f"{x:+.{decimals}f}"
-
-
-def _fmt_unsigned(x: float, decimals: int = 3) -> str:
-    if pd.isna(x):
-        return "—"
-    return f"{x:.{decimals}f}"
-
-
-def _fmt_value_cell(freq_col: str):
-    def _impl(row: pd.Series) -> str:
-        v = row[freq_col]
-        if row["kind"] == "delta":
-            return _fmt_signed(v, 3)
-        return _fmt_unsigned(v, 3)
-    return _impl
-
-
-cell_format = {
-    "amp_label_display": lambda r: str(r["amp_label_display"]),
-    "kind_label":        lambda r: str(r["kind_label"]),
-}
-for fc in FREQ_COLS:
-    cell_format[fc] = _fmt_value_cell(fc)
-
-columns        = ["amp_label_display", "kind_label"] + FREQ_COLS
-column_headers = [
-    "", "",
-    *[f"{f:.1f}\\,Hz" for f in THESIS_FREQS],
-]
-
-row_groups: list[tuple[str | None, callable]] = []
-for amp in THESIS_AMPS:
-    row_groups.append(
-        (None, (lambda a: lambda df: df[np.isclose(df["amp_volt"], a)])(amp))
-    )
-
-
-# ── 6. Render ──────────────────────────────────────────────────────────────
-render_table(
-    csv_path=RENDER_CSV,
-    meta_path=META_JSON,
-    out_tex_path=OUT_TEX,
-    columns=columns,
-    column_headers=column_headers,
-    column_spec="ll cccc",
-    cell_format=cell_format,
-    row_groups=row_groups,
-    label=f"tab:{THESIS_NAME}",
-    caption=caption_full,
-    short_caption=caption_short,
-)
-
-print(f"   TEX → {OUT_TEX.relative_to(BASE)}")
 print("\nDone.")

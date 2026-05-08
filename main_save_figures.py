@@ -232,7 +232,6 @@ CHAPTER 04 — METHODOLOGY
         ch04_window_choice_nowind        [DELEG] ~     └─ companion table (nowind, eyeball plateau)
         ch04_window_choice_fullwind      [DELEG] ~     └─ companion table (fullwind, empirical plateau ±2%)
         ch04_plateau_overview_A{1,2,3}   [DELEG] ~     └─ reader-facing plateau (sliding A_FFT, 4×2 IN/OUT panels, both winds), one per amp tier
-        ch04_plateau_values              [DELEG] ~     └─ appendix table (A_IN, A_OUT, OUT/IN at chosen window per (f, amp, wind))
         ch04_tidsvindu                   [DELEG] ~     └─ main-text table (c_g, IN/OUT vindu, Δt, vindusbredde — 5×4, read from meta)
   §4p   ch04_wind_rampup_overview        [DELEG] ~  Wind ramp-up (full + 60 s zoom — IN/OUT only, μ₀-subtracted, ±15 mm)
         ch04_wind_rampup_full / _zoom60  [DELEG] ~     └─ subfigs: 20260314 fan 0 → max
@@ -258,7 +257,6 @@ CHAPTER 04 — METHODOLOGY
 
 CHAPTER 05 — RESULTS
   §1    ch05_damping_freq                [META]  ✓  OUT/IN (FFT) vs frequency  ← primary result
-  §1b   ch05_damping_freq_table          [DELEG] ✓     └─ companion table: per-amp K_t,uten / K_t,vind / ΔK_t across 1.3–1.6 Hz
   §2    ch05_damping_scatter             [META]  ✓  OUT/IN scatter vs amplitude
   §3    ch05_wind_effect_table           [DELEG] ~  Wind effect: per-(freq,amp) ΔK_t + % gains/reductions table
         ch05_wind_effect_table_by_amp    [DELEG] ✓     └─ same data, sorted amp-outer / freq-inner (sibling layout)
@@ -271,7 +269,6 @@ CHAPTER 05 — RESULTS
         ch05_damping_ka_fit_{A1,A2,A3}   [DELEG] ~     └─ per-amp subfigs with R² annotation
   §4b   ch05_mooring_focus_at_1_3hz_ka   [DELEG] ~  Mooring + panelretning at 1.30 Hz — single A4 page, 3 stacked subfigs
         ch05_mooring_focus_at_1_3hz_ka_{A1,A2,A3}  [DELEG] ~     └─ per-amp subfigs (loaded from above)
-        ch05_mooring_focus_at_1_3hz_table  [DELEG] ~     └─ companion table: K_t per wind, ΔK_t pp, T-økn %, D-red % per (amp, panel, mooring)
   §4c   ch05_full_vs_reverse_at_1_3hz_ka  [DELEG] ~  Combined: same data as §4b, all 3 amps in one scatter (axes match §4)
   §5    (removed — was Swell/Wind/Total band scatter; PSD-band columns dropped 2026-05-02)
   §6    (moved → CH04 §4-3b as ch04_reconstructed)
@@ -361,10 +358,15 @@ os.chdir(file_dir)
 # to True to force every delegated script to re-run (use when the pipeline
 # data changed). Default False: run only when outputs are missing.
 import argparse
-import subprocess
-import sys
 
-REGENERATE_DELEGATED = False
+from wavescripts import save_utils
+from wavescripts.save_utils import _run_delegated_if_missing
+
+# Re-exported so existing references like `REGENERATE_DELEGATED = True`
+# at line ~387 (CLI handler) continue to read like a local toggle.
+# The function reads `save_utils.REGENERATE_DELEGATED` at call time, so
+# we keep both in sync via the assignment in the CLI block below.
+REGENERATE_DELEGATED = save_utils.REGENERATE_DELEGATED
 
 # ── CLI flags (parsed once at module load) ────────────────────────────────────
 # Default (no flags): run end-to-end, including both load gates.
@@ -385,72 +387,11 @@ SKIP_HEAVY = _args.skip_heavy or _args.skip_dfs
 SKIP_DFS   = _args.skip_dfs
 if _args.regenerate:
     REGENERATE_DELEGATED = True
+    save_utils.REGENERATE_DELEGATED = True
 if SKIP_DFS:
     print("CLI: --skip-dfs set → light tier only (no processed_dfs)")
 elif SKIP_HEAVY:
     print("CLI: --skip-heavy set → medium tier ok, heavy gate skipped")
-
-def _run_delegated_if_missing(
-    script_rel: str,
-    outputs: list[Path],
-    label: str | None = None,
-    *,
-    force: bool | None = None,
-    timeout_s: int = 900,
-) -> None:
-    """Run ``analysis_scratch/<script>`` if any expected output is missing.
-
-    Parameters
-    ----------
-    script_rel : str
-        Repo-relative path of the scratch script.
-    outputs : list[Path]
-        Files the script is expected to write. Checked with ``exists()``;
-        write-once stubs + existing PDFs both qualify as "already there".
-    label : str, optional
-        Short label for the status line. Defaults to the first output stem.
-    force : bool, optional
-        Run the script even if all outputs are already present. Defaults
-        to the module-level ``REGENERATE_DELEGATED`` toggle.
-    timeout_s : int
-        Kill the subprocess after this many seconds. Default 900 (15 min).
-
-    Never raises — the cell's downstream existence check still fires a
-    visible warning if the figure truly didn't land.
-    """
-    label = label or Path(outputs[0]).stem
-    missing = [p for p in outputs if not p.exists()]
-    if force is None:
-        force = REGENERATE_DELEGATED
-    if not missing and not force:
-        print(f"  {label}: OK ({len(outputs)} output(s) present)")
-        return
-    reason = "REGENERATE_DELEGATED=True" if force else f"{len(missing)} missing"
-    print(f"  {label}: running {script_rel} ({reason})")
-    try:
-        r = subprocess.run(
-            # sys.executable = the same interpreter this file is running in,
-            # so the subprocess inherits the conda env (draumkvedet) whether
-            # main_save_figures.py is run from CLI, Zed REPL, or a notebook.
-            [sys.executable, script_rel],
-            cwd=str(file_dir),
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout_s,
-        )
-    except subprocess.TimeoutExpired:
-        print(f"    {label}: TIMEOUT after {timeout_s}s — script killed")
-        return
-    if r.returncode != 0:
-        tail = (r.stderr or "(no stderr)")[-400:].rstrip()
-        print(f"    {label}: FAILED (rc={r.returncode}); stderr tail: {tail}")
-        return
-    still_missing = [p.name for p in outputs if not p.exists()]
-    if still_missing:
-        print(f"    {label}: ran but outputs still missing → {still_missing}")
-        return
-    print(f"    {label}: regenerated {len(outputs)} output(s)")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FIGURE CAPTIONS — single source of truth for thesis caption text.
@@ -528,7 +469,6 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_plateau_overview_A1":        "Glidende gjennomsnitt av amplitude. $A_1$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
     "ch04_plateau_overview_A2":        "Glidende gjennomsnitt av amplitude. $A_2$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
     "ch04_plateau_overview_A3":        "Glidende gjennomsnitt av amplitude. $A_3$. Innkommende til venstre, utgående til høyre. Vertikale linjer indikerer estimerte tider for andre effekter.",
-    "ch04_plateau_values":             "Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.",
     "ch04_tidsvindu":                  "Frekvensenes tidsvinduer",
 
     # § 4p — Wind transition (split 2026-05-08 into ramp-up + decay parents)
@@ -572,7 +512,6 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_damping_freq_full_A1":       "Amplitudevalg $A_1$",
     "ch05_damping_freq_full_A2":       "Amplitudevalg $A_2$",
     "ch05_damping_freq_full_A3":       "Amplitudevalg $A_3$",
-    "ch05_damping_freq_table":         "",   # TODO: caption — per-amp K_t,uten, K_t,vind, ΔK_t across 1.3–1.6 Hz, mirrors ch05_damping_freq layout
 
     # § 2 — Damping vs amplitude
     "ch05_damping_scatter":            "Transmisjonskoeffisient per frekvens. Endelig oppsett. Samlet figur med alle tre amplitudene. Usikkerhetsstolper er fjernet.",
@@ -609,9 +548,6 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_mooring_focus_at_1_3hz_ka_A1": " $A_1$.",
     "ch05_mooring_focus_at_1_3hz_ka_A2": " $A_2$.",
     "ch05_mooring_focus_at_1_3hz_ka_A3": " $A_3$.",
-    # § 4b — Companion table for the figure above.
-    "ch05_mooring_focus_at_1_3hz_table": "Tall til figur \ref{fig:ch05_mooring_focus_at_1_3hz_ka}. Transmisjon for panelrekken fortøyd på ulike måter. Merk: kun for \qty{1.3}{\hertz}. Antall (n) kjøringer.",
-    # claude kladd). Per $\\Delta K_t$, transmisjonsforhold $K_{t,\\text{vind}}/K_{t,\\text{uten}}$ ($>1$ = vind slipper mer bølge gjennom), og dempningsforhold $D_{\\text{vind}}/D_{\\text{uten}}$ med $D = 1 - K_t$ ($<1$ = vind reduserer panelets demping). Tomt felt for revers $\\cdot$ below\\_90 — denne kombinasjonen ble ikke kjørt.",
 
     # § 4c — Combined scatter (same data as §4b, all amps in one panel).
     "ch05_full_vs_reverse_at_1_3hz_ka":  "Samme data som figur \\ref{fig:ch05_mooring_focus_at_1_3hz_ka}, men alle tre amplituder samlet i én figur. Akser matcher figur \\ref{fig:ch05_damping_ka} for direkte sammenligning.",
@@ -680,7 +616,6 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_plateau_overview_A1":        "Platå, A1",
     "ch04_plateau_overview_A2":        "Platå, A2",
     "ch04_plateau_overview_A3":        "Platå, A3",
-    "ch04_plateau_values":             "",
     "ch04_tidsvindu":                  "Frekvensenes tidsvindu",
     "ch04_wind_rampup_overview":       "",
     "ch04_wind_decay_overview":        "",
@@ -704,7 +639,6 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     # ── CHAPTER 05 ───────────────────────────────────────────────────────────
     "ch05_damping_freq":               "",
     "ch05_damping_scatter":            "Transmisjon per frekvens",
-    "ch05_damping_freq_table":         "",
     "ch05_wind_effect_table":          "",
     "ch05_wind_effect_table_by_amp":   "",
     "ch05_transmission_wind_ratios":     "",
@@ -722,7 +656,6 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_mooring_focus_at_1_3hz_ka_A1": "Mooring + panelretning, $A_1$.",
     "ch05_mooring_focus_at_1_3hz_ka_A2": "Mooring + panelretning, $A_2$.",
     "ch05_mooring_focus_at_1_3hz_ka_A3": "Mooring + panelretning, $A_3$.",
-    "ch05_mooring_focus_at_1_3hz_table": "Mooring + panelretning ved 1.30 Hz — hardtall.",
     "ch05_full_vs_reverse_at_1_3hz_ka":  "Mooring + panelretning ved 1.30 Hz — alle amplituder samlet.",
     "ch05_damping_all_data_scatter":   "",
 
@@ -1932,29 +1865,6 @@ _run_delegated_if_missing(
 )
 
 # %%
-# [DATA: DELEG]  — analysis_scratch/plateau_values_table.py
-"""
-── CH04 § 4o (companion table) — Plateau A_FFT values inside chosen window ──
-Numerical companion to ch04_plateau_overview_A{1,2,3}: per (f, amp, wind)
-cell, the median A_IN, A_OUT, and OUT/IN ratio computed over the chosen
-window (probe-shifted, N_off=7, N_len=10). Plus per-cell run-to-run σ on
-the ratio and the cell's run count n.
-
-24 cells (4 freqs × 3 amps × 2 winds), grouped into three amp blocks.
-Bridges the figure (visual plateau) to the CH05 result (OUT/IN values).
-
-Outputs:
-    output/TABLES/ch04_plateau_values.tex
-    analysis_scratch/plateau_values.csv
-"""
-
-_run_delegated_if_missing(
-    "analysis_scratch/plateau_values_table.py",
-    [Path("output/TABLES/ch04_plateau_values.tex")],
-    label="ch04_plateau_values",
-)
-
-# %%
 # [DATA: DELEG]  — analysis_scratch/tidsvindu_table.py
 """
 ── CH04 § 4o — Tidsvindu (main-text companion to plateau figure) ────────────
@@ -2374,24 +2284,10 @@ _damping_meta = _damping_meta.drop(columns=["Mooring"], errors="ignore")
 _damping_grouped = damping_all_amplitude_grouper(_damping_meta)
 plot_damping_freq(_damping_grouped, _pv_damping_freq)
 
-# %%
-# [DATA: DELEG]  — analysis_scratch/damping_freq_table.py
-"""
-── CH05 § 1b — Damping-vs-frequency table (companion to ch05_damping_freq) ─
-Per amplitude tier (A1/A2/A3), tabulates K_t at no-wind, K_t at full-wind,
-and ΔK_t across the four thesis frequencies. Three row-blocks mirror the
-three stacked subfigures of ch05_damping_freq so the reader can read off
-the plotted values without counting from a graph.
-
-Generated by analysis_scratch/damping_freq_table.py. Writes the table
-directly into output/TABLES/.
-"""
-
-_run_delegated_if_missing(
-    "analysis_scratch/damping_freq_table.py",
-    [Path("output/TABLES/ch05_damping_freq_table.tex")],
-    label="ch05_damping_freq_table",
-)
+# %% — moved to main_save_tables.py (3 migrated tables)
+# ch05_damping_freq_table, ch05_mooring_focus_at_1_3hz_table, ch04_plateau_values
+# now render via main_save_tables.py to enable fast REPL iteration
+# without reloading pipeline data.
 
 # %%
 # [DATA: META]
@@ -2662,27 +2558,6 @@ _run_delegated_if_missing(
      *(Path(f"output/FIGURES/ch05_mooring_focus_at_1_3hz_ka_{t}.pdf")
        for t in ("A1", "A2", "A3"))],
     label="ch05_mooring_focus_at_1_3hz_ka",
-)
-
-# %%
-# [DATA: DELEG]  — analysis_scratch/mooring_focus_at_1_3hz_table.py
-"""
-── CH05 § 4b — Mooring + panelretning at 1.30 Hz: companion table ───────────
-Hard numbers for the figure above. Same data, same scope (1.30 Hz only,
-panels ∈ {full, reverse}, moorings ∈ {below_90, above_50}). One row per
-(amp, panel, mooring) cell with K_t per wind, ΔK_t in pp, K_t-økn %, D-red %.
-
-The reverse · below_90 cell is honestly absent — reverse panel was never
-run on the below_90 mooring.
-
-Generated by analysis_scratch/mooring_focus_at_1_3hz_table.py. Writes:
-    output/TABLES/ch05_mooring_focus_at_1_3hz_table.tex   (thesis include)
-    analysis_scratch/mooring_focus_at_1_3hz_table.csv     (companion CSV)
-"""
-_run_delegated_if_missing(
-    "analysis_scratch/mooring_focus_at_1_3hz_table.py",
-    [Path("output/TABLES/ch05_mooring_focus_at_1_3hz_table.tex")],
-    label="ch05_mooring_focus_at_1_3hz_table",
 )
 
 # %%

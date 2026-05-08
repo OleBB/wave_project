@@ -479,7 +479,12 @@ TEXFIGU_DIR = Path("output/TEXFIGU")
 _CAPTIONS_CACHE_PATH = Path("output/.figure_captions.json")
 
 
-def _lookup_central_caption(figure_name: str, *, kind: str = "full") -> str:
+def _lookup_central_caption(
+    figure_name: str,
+    *,
+    kind: str = "full",
+    json_path: Path | None = None,
+) -> str:
     """Return the user-authored caption for ``figure_name`` from the JSON
     cache written by main_save_figures.py, or ``""`` if missing/unreadable.
 
@@ -490,13 +495,19 @@ def _lookup_central_caption(figure_name: str, *, kind: str = "full") -> str:
     kind : {'full', 'short'}
         'full'  → text for the figure body's \\caption{...}.
         'short' → text for the optional [short] arg (LOF entry).
+    json_path : Path, optional
+        Override the JSON file to read from. Defaults to the module-level
+        ``_CAPTIONS_CACHE_PATH`` (output/.figure_captions.json). Pass an
+        alternate path to read e.g. ``output/.table_captions.json`` from
+        ``main_save_tables.py``.
     """
     if not figure_name:
         return ""
-    if not _CAPTIONS_CACHE_PATH.exists():
+    path = json_path if json_path is not None else _CAPTIONS_CACHE_PATH
+    if not path.exists():
         return ""
     try:
-        data = json.loads(_CAPTIONS_CACHE_PATH.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return ""
     if not isinstance(data, dict):

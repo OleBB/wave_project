@@ -1,3 +1,4 @@
+# %%
 """
 Plateau values table — A_IN, A_OUT, OUT/IN at the chosen window.
 ==================================================================
@@ -46,14 +47,13 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 
-BASE = Path(__file__).resolve().parent.parent
+BASE = (Path(__file__).resolve().parent.parent
+        if "__file__" in globals() else Path.cwd())
 sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data, load_processed_dfs
 from wavescripts.constants import c_group, HG
-from wavescripts.plot_utils import _lookup_central_caption
-from wavescripts.table_render import render_table
 
 
 # ── Config ──────────────────────────────────────────────────────────────
@@ -76,7 +76,6 @@ AMP_TIERS = [
     (0.20, "A2", r"$A_2$"),
     (0.30, "A3", r"$A_3$"),
 ]
-WIND_LABEL = {"no": "uten", "full": "full"}
 
 PROCESSED_DIRS = [
     Path("waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"),
@@ -230,7 +229,6 @@ print(agg.round(4).to_string(index=False))
 agg.to_csv(SCRATCH_CSV, index=False)
 print(f"\n   audit CSV → {SCRATCH_CSV.relative_to(BASE)}")
 
-
 # ── Reshape into render-shape (one row per output table line) ──────────
 # Sort matches the original LaTeX block order: amp outer (A1, A2, A3),
 # then within each block freq ascending, then wind=full before wind=uten
@@ -258,9 +256,8 @@ print(f"   render CSV → {RENDER_CSV.relative_to(BASE)}")
 
 
 # ── Build provenance meta.json ──────────────────────────────────────────
-caption_full  = _lookup_central_caption(THESIS_NAME, kind="full") or None
-caption_short = _lookup_central_caption(THESIS_NAME, kind="short") or None
-
+# Caption text + caption_short are owned by main_save_tables.py — it patches
+# meta.json's caption_short field after this script runs.
 amplitude_summary = ", ".join(
     f"{a:.2f}V ({lbl.replace('$','')})" for a, _, lbl in AMP_TIERS
 )
@@ -270,7 +267,7 @@ meta_payload = {
     "plot_type":       "plateau_values_table",
     "chapter":         CHAPTER,
     "caption_label":   f"tab:{THESIS_NAME}",
-    "caption_short":   caption_short or "",
+    "caption_short":   "",
     "sections": [
         {
             "title": "Method",
@@ -314,61 +311,4 @@ meta_payload = {
 META_JSON.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
 print(f"   meta JSON  → {META_JSON.relative_to(BASE)}")
 
-
-# ── Cell formatters ─────────────────────────────────────────────────────
-def _fmt_num_or_dash(value: float, decimals: int) -> str:
-    if pd.isna(value):
-        return r"\textendash"
-    return rf"$\num{{{value:.{decimals}f}}}$"
-
-
-cell_format = {
-    "freq":     lambda r: rf"$\num{{{r['freq']:.1f}}}$",
-    "wind":     lambda r: WIND_LABEL[r["wind"]],
-    "n":        lambda r: rf"$\num{{{int(r['n'])}}}$",
-    "A_in":     lambda r: _fmt_num_or_dash(r["A_in"],     2),
-    "A_out":    lambda r: _fmt_num_or_dash(r["A_out"],    2),
-    "Kt":       lambda r: _fmt_num_or_dash(r["Kt"],       3),
-    "sigma_Kt": lambda r: _fmt_num_or_dash(r["sigma_Kt"], 3),
-}
-
-columns        = ["freq", "wind", "n", "A_in", "A_out", "Kt", "sigma_Kt"]
-column_headers = [
-    r"$f$ [\unit{\hertz}]",
-    "vind",
-    r"$n$",
-    r"$A_\mathrm{Inn}$ [\unit{\milli\meter}]",
-    r"$A_\mathrm{Ut}$ [\unit{\milli\meter}]",
-    r"$K_t$",
-    r"$\sigma (K_t)$",
-]
-
-# Visible row groups — `\multicolumn{7}{l}{\textbf{$A_i$} ($V = 0.xx$ V)} \\`
-# before each amp tier's data rows. Renderer emits a `\midrule` between
-# tiers but NOT before the first tier label.
-row_groups: list[tuple[str | None, callable]] = []
-for amp, _short, label in AMP_TIERS:
-    group_label = rf"\textbf{{{label}}} ($V = {amp:.2f}$ V)"
-    row_groups.append(
-        (group_label,
-         (lambda a: lambda df: df[np.isclose(df["amp_v"], a)])(amp))
-    )
-
-
-# ── Render ──────────────────────────────────────────────────────────────
-render_table(
-    csv_path=RENDER_CSV,
-    meta_path=META_JSON,
-    out_tex_path=OUT_TEX,
-    columns=columns,
-    column_headers=column_headers,
-    column_spec="ccccccc",
-    cell_format=cell_format,
-    row_groups=row_groups,
-    label=f"tab:{THESIS_NAME}",
-    caption=caption_full,
-    short_caption=None,
-)
-
-print(f"   TEX → {OUT_TEX.relative_to(BASE)}")
 print("\nDone.")
