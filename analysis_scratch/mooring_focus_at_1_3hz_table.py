@@ -47,8 +47,7 @@ sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
-from wavescripts.plot_utils import _lookup_central_caption, amp_to_label
-from wavescripts.table_render import render_table
+from wavescripts.plot_utils import amp_to_label
 
 # ── I/O ────────────────────────────────────────────────────────────────────
 SCRATCH_CSV = Path(__file__).parent / "mooring_focus_at_1_3hz_table.csv"
@@ -181,9 +180,8 @@ print(f"   render CSV → {RENDER_CSV.relative_to(BASE)}")
 
 
 # ── 5. Build provenance meta.json ──────────────────────────────────────────
-caption_full  = _lookup_central_caption(THESIS_NAME, kind="full") or None
-caption_short = _lookup_central_caption(THESIS_NAME, kind="short") or None
-
+# Caption text + caption_short are owned by main_save_tables.py — it patches
+# meta.json's caption_short field after this script runs.
 n_total_runs = int(table["n_nw"].fillna(0).sum() + table["n_fw"].fillna(0).sum())
 
 meta_payload = {
@@ -191,7 +189,7 @@ meta_payload = {
     "plot_type":       "mooring_focus_at_1_3hz_table",
     "chapter":         CHAPTER,
     "caption_label":   f"tab:{THESIS_NAME}",
-    "caption_short":   caption_short or "",
+    "caption_short":   "",
     "sections": [
         {
             "title": "Filters",
@@ -240,90 +238,4 @@ meta_payload = {
 META_JSON.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
 print(f"   meta JSON  → {META_JSON.relative_to(BASE)}")
 
-
-# ── 6. Cell formatters ─────────────────────────────────────────────────────
-def _fmt_signed(x: float, decimals: int = 3) -> str:
-    if pd.isna(x):
-        return "—"
-    return f"{x:+.{decimals}f}"
-
-
-def _fmt_ratio(x: float, decimals: int = 3) -> str:
-    """Unsigned ratio (e.g. 1.181, 0.653). NaN → em-dash."""
-    if pd.isna(x):
-        return "—"
-    return f"{x:.{decimals}f}"
-
-
-def _fmt_kt_n_factory(kt_col: str, n_col: str):
-    """Compound cell: '0.658\\,(23)' built from Kt + n columns."""
-    def _impl(row: pd.Series) -> str:
-        k = row[kt_col]
-        n = row[n_col]
-        if pd.isna(k):
-            return "—"
-        n_str = "—" if pd.isna(n) else f"{int(n)}"
-        return f"{k:.3f}\\,({n_str})"
-    return _impl
-
-
-def _fmt_str_or_blank(col: str):
-    """Render a string column; treat NaN (CSV round-trip of '') as blank."""
-    def _impl(row: pd.Series) -> str:
-        v = row[col]
-        if pd.isna(v):
-            return ""
-        return str(v)
-    return _impl
-
-
-cell_format = {
-    "amp_label_display": _fmt_str_or_blank("amp_label_display"),
-    "panel_label":       _fmt_str_or_blank("panel_label"),
-    "mooring_label":     _fmt_str_or_blank("mooring_label"),
-    "Kt_nw_n":           _fmt_kt_n_factory("Kt_nw", "n_nw"),
-    "Kt_fw_n":           _fmt_kt_n_factory("Kt_fw", "n_fw"),
-    "Delta_Kt":          lambda r: _fmt_signed(r["Delta_Kt"], 3),
-    "ratio_Kt":          lambda r: _fmt_ratio(r["ratio_Kt"], 3),
-    "ratio_D":           lambda r: _fmt_ratio(r["ratio_D"],  3),
-}
-
-columns = [
-    "amp_label_display", "panel_label", "mooring_label",
-    "Kt_nw_n", "Kt_fw_n",
-    "Delta_Kt", "ratio_Kt", "ratio_D",
-]
-column_headers = [
-    "Amp", "Panel", "Mooring",
-    r"$K_{t,\text{uten}}\,(n)$",
-    r"$K_{t,\text{vind}}\,(n)$",
-    r"$\Delta K_t$",
-    r"$K_{t,\text{vind}}/K_{t,\text{uten}}$",
-    r"$D_{\text{vind}}/D_{\text{uten}}$",
-]
-
-# Silent row groups — \midrule between amplitude tiers, no group-header row.
-row_groups: list[tuple[str | None, callable]] = []
-for amp in THESIS_AMPS:
-    row_groups.append(
-        (None, (lambda a: lambda df: df[np.isclose(df["amp_v"], a)])(amp))
-    )
-
-
-# ── 7. Render ──────────────────────────────────────────────────────────────
-render_table(
-    csv_path=RENDER_CSV,
-    meta_path=META_JSON,
-    out_tex_path=OUT_TEX,
-    columns=columns,
-    column_headers=column_headers,
-    column_spec="ccl rr r r r",
-    cell_format=cell_format,
-    row_groups=row_groups,
-    label=f"tab:{THESIS_NAME}",
-    caption=caption_full,
-    short_caption=caption_short,
-)
-
-print(f"   TEX → {OUT_TEX.relative_to(BASE)}")
 print("\nDone.")
