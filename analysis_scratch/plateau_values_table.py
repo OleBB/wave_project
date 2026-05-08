@@ -1,3 +1,4 @@
+# %%
 """
 Plateau values table — A_IN, A_OUT, OUT/IN at the chosen window.
 ==================================================================
@@ -46,7 +47,8 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 
-BASE = Path(__file__).resolve().parent.parent
+BASE = (Path(__file__).resolve().parent.parent
+        if "__file__" in globals() else Path.cwd())
 sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
@@ -230,7 +232,6 @@ print(agg.round(4).to_string(index=False))
 agg.to_csv(SCRATCH_CSV, index=False)
 print(f"\n   audit CSV → {SCRATCH_CSV.relative_to(BASE)}")
 
-
 # ── Reshape into render-shape (one row per output table line) ──────────
 # Sort matches the original LaTeX block order: amp outer (A1, A2, A3),
 # then within each block freq ascending, then wind=full before wind=uten
@@ -354,7 +355,7 @@ for amp, _short, label in AMP_TIERS:
          (lambda a: lambda df: df[np.isclose(df["amp_v"], a)])(amp))
     )
 
-
+# %%
 # ── Render ──────────────────────────────────────────────────────────────
 render_table(
     csv_path=RENDER_CSV,

@@ -1,0 +1,62 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ─────────────────────────────────────────────────
+%   script            : analysis_scratch/damping_freq_table.py
+%   plot_type         : damping_freq_table
+%   chapter           : 05
+%   generated_at      : 2026-05-08T09:25:40
+%   caption_label     : tab:ch05_damping_freq_table
+%   caption_short     :
+%
+% — Filters ────────────────────────────────────────────────────
+%   panel             : full
+%   wind              : no, full
+%   amplitude [V]     : 0.1, 0.2, 0.3
+%   frequency [Hz]    : 1.3, 1.4, 1.5, 1.6
+%   quality_flag      : ok
+%
+% — Data provenance ────────────────────────────────────────────
+%   n_cells           : 12
+%   n_runs (nw + fw)  : 80
+%   datasets        :
+%     PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange
+%     PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange
+%
+% — Method ─────────────────────────────────────────────────────
+%   grouper           : damping_all_amplitude_grouper
+%   mooring pooling   : Mooring column dropped pre-grouper, so each
+%                       (freq, amp, wind) cell pools across all canon
+%                       moorings (n-weighted mean / true std / total n).
+%   metric_definitions:
+%     K_t (uten vind)   : mean OUT/IN(FFT) at no-wind
+%     K_t (full vind)   : mean OUT/IN(FFT) at full-wind
+%     Delta K_t         : Kt_fw - Kt_nw  (signed, raw ratio units)
+%
+% ── end immutable block ───────────────────────────────────────
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{ll cccc}
+    \toprule
+     &  & 1.3\,Hz & 1.4\,Hz & 1.5\,Hz & 1.6\,Hz \\
+    \midrule
+    $A_1$ & $K_t$ (uten vind) & 0.660 & 0.502 & 0.453 & 0.367 \\
+          & $K_t$ (full vind) & 0.786 & 0.721 & 0.695 & 0.613 \\
+          & $\Delta K_t$       & +0.126 & +0.219 & +0.243 & +0.246 \\
+    \midrule
+    $A_2$ & $K_t$ (uten vind) & 0.811 & 0.687 & 0.594 & 0.486 \\
+          & $K_t$ (full vind) & 0.858 & 0.759 & 0.733 & 0.684 \\
+          & $\Delta K_t$       & +0.047 & +0.072 & +0.138 & +0.199 \\
+    \midrule
+    $A_3$ & $K_t$ (uten vind) & 0.830 & 0.672 & 0.612 & 0.522 \\
+          & $K_t$ (full vind) & 0.833 & 0.766 & 0.729 & 0.706 \\
+          & $\Delta K_t$       & +0.003 & +0.095 & +0.118 & +0.184 \\
+    \bottomrule
+  \end{tabular}
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch05_damping_freq_table}
+\end{table}

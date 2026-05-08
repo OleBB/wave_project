@@ -41,7 +41,8 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 
-BASE = Path(__file__).resolve().parent.parent
+BASE = (Path(__file__).resolve().parent.parent
+        if "__file__" in globals() else Path.cwd())
 sys.path.insert(0, str(BASE))
 os.chdir(BASE)
 
