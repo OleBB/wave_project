@@ -13,12 +13,12 @@ whose data still renders from main_save_figures.py cells (those scripts
 read this JSON via _lookup_central_caption(json_path=...)).
 
 Currently wired (rendered here, two-step pattern):
+  ch04_probe_noise_floor_table
+  ch04_plateau_values
   ch05_damping_freq_table
   ch05_mooring_focus_at_1_3hz_table
-  ch04_plateau_values
 
 Captions-only (rendered from main_save_figures.py cells):
-  ch04_probe_noise_floor_table
   ch04_parallel_probe_psd_agreement_simple
   ch04_window_intervals
   ch04_window_choice_nowind
@@ -160,10 +160,97 @@ def _fmt_signed(x: float, decimals: int = 3) -> str:
 # %%
 # TABLE_INDEX
 # ═══════════════════════════════════════════════════════════════════════════════
+#   ch04_probe_noise_floor_table             [DELEG] ✓  3σ noise per probe — innledende vs endelig
 #   ch05_damping_freq_table          [DELEG] ✓  Per-amp K_t,uten/K_t,vind/ΔK_t at 1.3–1.6 Hz
 #   ch05_mooring_focus_at_1_3hz_table [DELEG] ✓  Mooring × panel × wind transmission at 1.30 Hz
 #   ch04_plateau_values              [DELEG] ✓  A_in/A_out/K_t per (amp, freq, wind), all 3 amplitudes
 # ═══════════════════════════════════════════════════════════════════════════════
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/probe_noise_floor_table.py
+"""
+── CH04 § 1 — Probe noise-floor table (innledende vs endelig) ──────────────
+Per probe position, 3σ stillwater detection threshold for the initial
+hardware config (h272 / high range) vs the final canon config (h100 / low
+range), plus the improvement ratio. Single block of 4 rows (one per probe).
+"""
+_NAME = "ch04_probe_noise_floor_table"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+_run_delegated_if_missing(
+    "analysis_scratch/probe_noise_floor_table.py",
+    [_CSV, _META],
+    label=f"{_NAME}_data",
+)
+
+
+def _fmt_mm_2dp(col: str):
+    def _impl(row: pd.Series) -> str:
+        v = row[col]
+        if pd.isna(v):
+            return "—"
+        return rf"$\num{{{v:.2f}}}$"
+    return _impl
+
+
+def _fmt_ratio_x(col: str):
+    def _impl(row: pd.Series) -> str:
+        v = row[col]
+        if pd.isna(v):
+            return "—"
+        return rf"$\num{{{v:.1f}}}\times$"
+    return _impl
+
+
+_cell_format = {
+    "probe_label":            lambda r: str(r["probe_label"]),
+    "thr3sigma_initial_mm":   _fmt_mm_2dp("thr3sigma_initial_mm"),
+    "thr3sigma_final_mm":     _fmt_mm_2dp("thr3sigma_final_mm"),
+    "ratio_init_over_final":  _fmt_ratio_x("ratio_init_over_final"),
+}
+
+_columns = [
+    "probe_label",
+    "thr3sigma_initial_mm",
+    "thr3sigma_final_mm",
+    "ratio_init_over_final",
+]
+# Two-row header — second row stuffed onto the last column header so the
+# joined `& `-output and trailing `\\` produce a tidy 2-line header.
+_column_headers = [
+    "Probe",
+    "Innledende",
+    "Endelig",
+    (
+        "Forbedring \\\\\n"
+        "         &\n"
+        "      $3\\sigma$ [\\unit{\\milli\\metre}] &\n"
+        "      $3\\sigma$ [\\unit{\\milli\\metre}] &\n"
+        "         "
+    ),
+]
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "lccc",
+        cell_format    = _cell_format,
+        row_groups     = [(None, lambda df: df)],
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
 
 
 # %%

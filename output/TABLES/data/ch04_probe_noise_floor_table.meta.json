@@ -1,0 +1,53 @@
+{
+  "script": "analysis_scratch/probe_noise_floor_table.py",
+  "plot_type": "probe_noise_floor_table",
+  "chapter": "04",
+  "caption_label": "tab:ch04_probe_noise_floor_table",
+  "caption_short": "",
+  "sections": [
+    {
+      "title": "Inputs",
+      "lines": [
+        "source            : combined_meta stillwater rows",
+        "                    (WindCondition=='no', WaveFrequencyInput is NaN)",
+        "group_by          : probe_height_mm \u00d7 probe_range_mode",
+        "selected groups   : h272/high (innledende), h100/low (endelig)",
+        "intermediate configs h136/high and h100/high are NOT shown here."
+      ]
+    },
+    {
+      "title": "Counts",
+      "lines": [
+        "n stillwater (h272/high): 20",
+        "n stillwater (h100/low) : 9"
+      ]
+    },
+    {
+      "title": "Method",
+      "lines": [
+        "detection threshold = max(3 \u00b7 \u03c3_RMS, 2 \u00b7 q)  [pipeline column",
+        "  'detection_threshold_mm'].",
+        "\u03c3_RMS         = std of stillwater signal per run, then averaged",
+        "                 across accepted stillwater runs in the group.",
+        "q             = ULS digital quantum = 0.01 mm in BOTH modes",
+        "                 (verified against histogram of raw values across",
+        "                 8 run \u00d7 probe instances; values are exact",
+        "                 multiples of 0.01 mm and not of any coarser grid).",
+        "In both modes 3\u03c3 \u2265 0.09 mm and 2q = 0.02 mm, so 3\u03c3 always dominates.",
+        "ratio column  = thr3sigma_initial / thr3sigma_final."
+      ]
+    },
+    {
+      "title": "Caveats",
+      "lines": [
+        "* The four 'probe' rows are PROBE POSITIONS, not the same physical",
+        "  sensors across configs. Per the march2026_better_rearranging",
+        "  layout (CLAUDE.md \u00a78), each position is held constant; only the",
+        "  hardware height and range mode change between groups.",
+        "* h272/high pool is the broader pre-2026-03-23 stillwater set;",
+        "  h100/low pool is from the canon Mar 26-27 lowrange dates only.",
+        "* Numbers in mm; all are well below typical wave amplitudes (5-20 mm)."
+      ]
+    }
+  ]
+}
