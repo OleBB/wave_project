@@ -15,12 +15,12 @@ read this JSON via _lookup_central_caption(json_path=...)).
 Currently wired (rendered here, two-step pattern):
   ch04_probe_noise_floor_table
   ch04_parallel_probe_psd_agreement_simple
+  ch04_window_intervals
   ch04_plateau_values
   ch05_damping_freq_table
   ch05_mooring_focus_at_1_3hz_table
 
 Captions-only (rendered from main_save_figures.py cells):
-  ch04_window_intervals
   ch04_window_choice_nowind
   ch04_window_choice_fullwind
   ch04_tidsvindu
@@ -162,6 +162,7 @@ def _fmt_signed(x: float, decimals: int = 3) -> str:
 # ═══════════════════════════════════════════════════════════════════════════════
 #   ch04_probe_noise_floor_table             [DELEG] ✓  3σ noise per probe — innledende vs endelig
 #   ch04_parallel_probe_psd_agreement_simple [DELEG] ✓  Δ% (far−wall) per thesis freq
+#   ch04_window_intervals                    [DELEG] ✓  H&G theoretical window intervals per freq
 #   ch05_damping_freq_table          [DELEG] ✓  Per-amp K_t,uten/K_t,vind/ΔK_t at 1.3–1.6 Hz
 #   ch05_mooring_focus_at_1_3hz_table [DELEG] ✓  Mooring × panel × wind transmission at 1.30 Hz
 #   ch04_plateau_values              [DELEG] ✓  A_in/A_out/K_t per (amp, freq, wind), all 3 amplitudes
@@ -320,6 +321,105 @@ _render_with_caption_short(
         columns        = _columns,
         column_headers = _column_headers,
         column_spec    = "cccc",
+        cell_format    = _cell_format,
+        row_groups     = [(None, lambda df: df)],
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
+
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/window_intervals_table.py
+"""
+── CH04 § 4 — H&G theoretical window intervals per thesis frequency ────────
+Wide layout: each thesis frequency is a COLUMN, the rows are
+(Innkommende [s], Utgående [s], samples per period). The CSV is per-freq;
+this cell pivots it into the wide form via per-row cell formatters that
+read the relevant freq-column out of the long CSV.
+"""
+_NAME = "ch04_window_intervals"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+_run_delegated_if_missing(
+    "analysis_scratch/window_intervals_table.py",
+    [_CSV, _META],
+    label=f"{_NAME}_data",
+)
+
+_WIN_FREQS = [1.3, 1.4, 1.5, 1.6]
+_WIN_FREQ_COLS = [f"f_{f:.1f}" for f in _WIN_FREQS]
+
+
+def _fmt_in_range(freq_col: str):
+    def _impl(row: pd.Series) -> str:
+        s = row[f"{freq_col}_in_start_s"]
+        e = row[f"{freq_col}_in_end_s"]
+        return rf"\tabnumrange{{{s:.1f}}}{{{e:.1f}}}"
+    return _impl
+
+
+def _fmt_out_range(freq_col: str):
+    def _impl(row: pd.Series) -> str:
+        s = row[f"{freq_col}_out_start_s"]
+        e = row[f"{freq_col}_out_end_s"]
+        return rf"\tabnumrange{{{s:.1f}}}{{{e:.1f}}}"
+    return _impl
+
+
+def _fmt_spp(freq_col: str):
+    def _impl(row: pd.Series) -> str:
+        v = row[f"{freq_col}_samples_per_period"]
+        return rf"$\num{{{v:.10f}}}$"
+    return _impl
+
+
+# Each row in the CSV is one thesis row (label + per-freq cells). Build
+# cell formatters that look up the {row label, freq column} cell.
+def _fmt_label(row: pd.Series) -> str:
+    return str(row["row_label"])
+
+
+def _fmt_value_for_kind(freq_col: str):
+    def _impl(row: pd.Series) -> str:
+        kind = row["kind"]
+        v = row[f"{freq_col}_value"]
+        if kind == "in_range":
+            s, e = v.split("|")
+            return rf"\tabnumrange{{{float(s):.1f}}}{{{float(e):.1f}}}"
+        if kind == "out_range":
+            s, e = v.split("|")
+            return rf"\tabnumrange{{{float(s):.1f}}}{{{float(e):.1f}}}"
+        if kind == "spp":
+            return rf"$\num{{{float(v):.10f}}}$"
+        return str(v)
+    return _impl
+
+
+_cell_format = {"row_label": _fmt_label}
+for _fc in _WIN_FREQ_COLS:
+    _cell_format[f"{_fc}_value"] = _fmt_value_for_kind(_fc)
+
+_columns        = ["row_label", *[f"{_fc}_value" for _fc in _WIN_FREQ_COLS]]
+_column_headers = [
+    r"Frekvens [\unit{\hertz}]",
+    *[rf"$\num{{{f}}}$" for f in _WIN_FREQS],
+]
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "lcccc",
         cell_format    = _cell_format,
         row_groups     = [(None, lambda df: df)],
         label          = f"tab:{_NAME}",

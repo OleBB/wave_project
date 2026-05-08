@@ -24,13 +24,15 @@ not table-friendly. See ch04_hg_per40_window_fitness_f{13,14,15,16}.pdf
 for the snapped windows visualised against η(t).
 
 Outputs:
-    output/TABLES/ch04_window_intervals.tex  (thesis include)
-    analysis_scratch/window_intervals_table.csv  (human-readable companion)
+    output/TABLES/data/ch04_window_intervals.csv       (render-shape data, 3 rows × per-freq cols)
+    output/TABLES/data/ch04_window_intervals.meta.json (provenance)
+    analysis_scratch/window_intervals_table.csv        (audit-trail companion, long form)
 
-Caption text is read from FIGURE_CAPTIONS["ch04_window_intervals"] in
-main_save_figures.py via output/.figure_captions.json.
+Caption text is owned by main_save_tables.py (TABLE_CAPTIONS).
 """
 
+import json
+import os
 import sys
 import warnings
 from pathlib import Path
@@ -40,20 +42,22 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 
-BASE = Path(__file__).resolve().parent.parent
+BASE = (Path(__file__).resolve().parent.parent
+        if "__file__" in globals() else Path.cwd())
 sys.path.insert(0, str(BASE))
-
-import os
 os.chdir(BASE)
 
 from wavescripts.constants import c_group, HG, MEASUREMENT
-from wavescripts.plot_utils import _lookup_central_caption
 
 # ── I/O ────────────────────────────────────────────────────────────────────
-SCRATCH_CSV = Path(__file__).parent / "window_intervals_table.csv"
 THESIS_NAME = "ch04_window_intervals"
-OUT_TEX     = BASE / "output" / "TABLES" / f"{THESIS_NAME}.tex"
 CHAPTER     = "04"
+SCRIPT_REL  = "analysis_scratch/window_intervals_table.py"
+
+DATA_DIR    = BASE / "output" / "TABLES" / "data"
+RENDER_CSV  = DATA_DIR / f"{THESIS_NAME}.csv"
+META_JSON   = DATA_DIR / f"{THESIS_NAME}.meta.json"
+SCRATCH_CSV = Path(__file__).parent / "window_intervals_table.csv" if "__file__" in globals() else BASE / "analysis_scratch" / "window_intervals_table.csv"
 
 # ── Formula parameters (must match analysis_scratch/hg_per40_window_fitness.py
 #    and any future pipeline update). ─────────────────────────────────────
@@ -74,14 +78,14 @@ def proposed_window(r_m: float, f_hz: float):
     return t_start, t_end
 
 
-# ── 1. Compute the table ───────────────────────────────────────────────────
+# ── 1. Compute the per-frequency values ────────────────────────────────────
 print("1. Computing theoretical H&G window intervals across thesis freqs …")
-rows = []
+long_rows = []
 for f in THESIS_FREQS:
     in_s,  in_e  = proposed_window(R_IN_M,  f)
     out_s, out_e = proposed_window(R_OUT_M, f)
     samples_per_period = FS / f
-    rows.append({
+    long_rows.append({
         "freq_hz":             f,
         "in_start_s":          in_s,
         "in_end_s":            in_e,
@@ -90,121 +94,82 @@ for f in THESIS_FREQS:
         "samples_per_period":  samples_per_period,
     })
 
-table = pd.DataFrame(rows)
-print(table.round(3).to_string(index=False))
+long_df = pd.DataFrame(long_rows)
+print(long_df.round(3).to_string(index=False))
 
-
-# ── 2. Save companion CSV ──────────────────────────────────────────────────
+# Audit-trail CSV (long form).
 SCRATCH_CSV.parent.mkdir(parents=True, exist_ok=True)
-table.to_csv(SCRATCH_CSV, index=False)
-print(f"\n   CSV → {SCRATCH_CSV.relative_to(BASE)}")
+long_df.to_csv(SCRATCH_CSV, index=False)
+print(f"\n   audit CSV → {SCRATCH_CSV.relative_to(BASE)}")
 
 
-# ── 3. Render LaTeX table ──────────────────────────────────────────────────
-def _fmt_range(a: float, b: float, decimals: int = 1) -> str:
-    """Render an interval as `\tabnumrange{a}{b}`."""
-    return f"\\tabnumrange{{{a:.{decimals}f}}}{{{b:.{decimals}f}}}"
+# ── 2. Reshape to render shape: 3 rows × per-freq columns ──────────────────
+# Each output row in the rendered table is one (label, kind) pair. The
+# per-freq value is encoded as a string like "27.1|34.8" for ranges, and a
+# float for samples_per_period. The render-side cell formatter parses it.
+def _freq_col(f: float) -> str:
+    return f"f_{f:.1f}"
 
 
-# Header columns: one per frequency
-freq_cells = " &\n      ".join(
-    f"$\\num{{{f}}}$" for f in THESIS_FREQS
-)
-in_cells = " &\n      ".join(
-    _fmt_range(r["in_start_s"], r["in_end_s"], 1)
-    for _, r in table.iterrows()
-)
-out_cells = " &\n      ".join(
-    _fmt_range(r["out_start_s"], r["out_end_s"], 1)
-    for _, r in table.iterrows()
-)
-spp_cells = " &\n      ".join(
-    f"$\\num{{{r['samples_per_period']:.10f}}}$"
-    for _, r in table.iterrows()
-)
+def _row_for_kind(kind: str, label: str) -> dict:
+    rec: dict = {"row_label": label, "kind": kind}
+    for r in long_rows:
+        f = r["freq_hz"]
+        col = _freq_col(f) + "_value"
+        if kind == "in_range":
+            rec[col] = f"{r['in_start_s']:.6f}|{r['in_end_s']:.6f}"
+        elif kind == "out_range":
+            rec[col] = f"{r['out_start_s']:.6f}|{r['out_end_s']:.6f}"
+        elif kind == "spp":
+            rec[col] = f"{r['samples_per_period']:.10f}"
+    return rec
 
-# Caption is read from output/.table_captions.json (written by main_save_tables.py).
-# Run main_save_tables.py once before this script to populate the cache.
-_CAPTIONS_JSON = BASE / "output" / ".table_captions.json"
-caption_full  = _lookup_central_caption(THESIS_NAME, kind="full",  json_path=_CAPTIONS_JSON)
-caption_short = _lookup_central_caption(THESIS_NAME, kind="short", json_path=_CAPTIONS_JSON)
 
-if caption_full:
-    if caption_short:
-        caption_block = (
-            f"  \\caption[{caption_short}]{{\n"
-            f"    {caption_full}\n"
-            f"  }}\n"
-        )
-    else:
-        caption_block = (
-            f"  \\caption{{\n"
-            f"    {caption_full}\n"
-            f"  }}\n"
-        )
-else:
-    caption_block = (
-        "  \\caption{\n"
-        "    % TODO: write caption\n"
-        "  }\n"
-    )
+render_rows = [
+    _row_for_kind("in_range",  r"Innkommende  [\unit{\second}]"),
+    _row_for_kind("out_range", r"Utgående  [\si{\second}]"),
+    _row_for_kind("spp",       r"Antall samples per periode [\textendash]"),
+]
+render_df = pd.DataFrame(render_rows)
 
-# IMMUTABLE provenance block.
-from datetime import datetime as _dt
-immutable = "\n".join([
-    "%! TEX root = ../main.tex",
-    "% ==============================================================",
-    "% IMMUTABLE — generated automatically, do not edit this block",
-    "%",
-    "% — Provenance ───────────────────────────────────────────────────",
-    "%   script            : analysis_scratch/window_intervals_table.py",
-    "%   plot_type         : window_intervals_table",
-    f"%   chapter           : {CHAPTER}",
-    f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
-    f"%   caption_label     : tab:{THESIS_NAME}",
-    f"%   caption_short     : {caption_short}",
-    "%",
-    "% — Method ────────────────────────────────────────────────────",
-    "%   formula           : t_start = r/c_g(f, h) + N_offset/f, t_end = t_start + 10/f",
-    f"%   N_offset          : {N_OFFSET_PERIODS} periods (5 wavemaker-ramp + 10 H&G safety)",
-    f"%   window length     : {WINDOW_PERIODS} T",
-    f"%   r_IN              : {R_IN_M} m  (probes 9373/170, 9373/340)",
-    f"%   r_OUT             : {R_OUT_M} m  (probe 12400/250)",
-    f"%   tank depth h      : {TANK_DEPTH_M} m",
-    f"%   c_g dispersion    : full ω²=gk·tanh(kh) via wavescripts.constants.c_group",
-    f"%   sampling rate     : {FS} Hz",
-    "%   note              : table values are the THEORETICAL pre-snap window;"
-    " per-run windows snap to ±T upcrossings.",
-    "%",
-    "% — Inputs ────────────────────────────────────────────────────",
-    f"%   frequencies [Hz]  : {', '.join(f'{f:.1f}' for f in THESIS_FREQS)}",
-    "%",
-    "% ── end immutable block ─────────────────────────────────────────",
-])
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+render_df.to_csv(RENDER_CSV, index=False)
+print(f"   render CSV → {RENDER_CSV.relative_to(BASE)}")
 
-table_body = (
-    "\\begin{table}[hbt]\n"
-    "  \\centering\n"
-    + caption_block
-    + f"  \\label{{tab:{THESIS_NAME}}}\n"
-    "  \\begin{tabular}{lcccc}\n"
-    "    \\toprule\n"
-    "    Frekvens [\\unit{\\hertz}] &\n"
-    f"      {freq_cells} \\\\\n"
-    "    \\midrule\n"
-    "    Innkommende  [\\unit{\\second}] &\n"
-    f"      {in_cells} \\\\\n"
-    "    Utgående  [\\si{\\second}] &\n"
-    f"      {out_cells} \\\\\n"
-    "    Antall samples per periode [\\textendash] &\n"
-    f"      {spp_cells} \\\\\n"
-    "    \\bottomrule\n"
-    "  \\end{tabular}\n"
-    "\\end{table}\n"
-)
 
-OUT_TEX.parent.mkdir(parents=True, exist_ok=True)
-OUT_TEX.write_text(immutable + "\n" + table_body, encoding="utf-8")
-print(f"   TEX → {OUT_TEX.relative_to(BASE)}")
+# ── 3. Build provenance meta.json ──────────────────────────────────────────
+meta_payload = {
+    "script":          SCRIPT_REL,
+    "plot_type":       "window_intervals_table",
+    "chapter":         CHAPTER,
+    "caption_label":   f"tab:{THESIS_NAME}",
+    "caption_short":   "",
+    "sections": [
+        {
+            "title": "Method",
+            "lines": [
+                "formula           : t_start = r/c_g(f, h) + N_offset/f, t_end = t_start + 10/f",
+                f"N_offset          : {N_OFFSET_PERIODS} periods (5 wavemaker-ramp + 10 H&G safety)",
+                f"window length     : {WINDOW_PERIODS} T",
+                f"r_IN              : {R_IN_M} m  (probes 9373/170, 9373/340)",
+                f"r_OUT             : {R_OUT_M} m  (probe 12400/250)",
+                f"tank depth h      : {TANK_DEPTH_M} m",
+                "c_g dispersion    : full ω²=gk·tanh(kh) via wavescripts.constants.c_group",
+                f"sampling rate     : {FS} Hz",
+                "note              : table values are the THEORETICAL pre-snap window;"
+                " per-run windows snap to ±T upcrossings.",
+            ],
+        },
+        {
+            "title": "Inputs",
+            "lines": [
+                f"frequencies [Hz]  : {', '.join(f'{f:.1f}' for f in THESIS_FREQS)}",
+            ],
+        },
+    ],
+}
+
+META_JSON.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
+print(f"   meta JSON  → {META_JSON.relative_to(BASE)}")
 
 print("\nDone.")
