@@ -62,21 +62,35 @@ _TABLE_CAPTIONS_JSON.write_text(
 )
 
 
-def _inject_meta_caption_short(meta_path: Path, short_caption: str) -> None:
-    """Update meta.json's `caption_short` field in place.
+def _render_with_caption_short(
+    meta_path: Path,
+    short_caption: str,
+    render_fn,
+) -> None:
+    """Run `render_fn()` with caption_short temporarily patched into meta.json.
 
-    Data scripts no longer look up captions; they write meta.json with
-    `caption_short` blank. The renderer bakes that field into the .tex
-    IMMUTABLE block, so we patch it here just before rendering — keeps
-    both the body's \\caption[short]{} arg and the IMMUTABLE block in sync
-    with TABLE_CAPTIONS_SHORT.
+    Data scripts always write meta.json with caption_short blank (they
+    own the data, not the captions). The renderer bakes caption_short
+    into the .tex IMMUTABLE block by reading meta.json from disk, so we
+    patch the file just before render_fn runs and revert it after — the
+    on-disk meta.json stays the data script's truth, no spurious git diff.
+
+    Skip both write+revert when the desired value already matches.
     """
-    meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    meta["caption_short"] = short_caption or ""
-    meta_path.write_text(
-        json.dumps(meta, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    if not short_caption:
+        render_fn()
+        return
+    raw = meta_path.read_text(encoding="utf-8")
+    meta = json.loads(raw)
+    if meta.get("caption_short") == short_caption:
+        render_fn()
+        return
+    meta["caption_short"] = short_caption
+    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    try:
+        render_fn()
+    finally:
+        meta_path.write_text(raw, encoding="utf-8")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -117,8 +131,6 @@ _run_delegated_if_missing(
     label=f"{_NAME}_data",
 )
 
-_inject_meta_caption_short(_META, TABLE_CAPTIONS_SHORT.get(_NAME) or "")
-
 _THESIS_FREQS = [1.3, 1.4, 1.5, 1.6]
 _THESIS_AMPS  = [0.10, 0.20, 0.30]
 _FREQ_COLS    = [f"f_{f:.1f}" for f in _THESIS_FREQS]
@@ -155,18 +167,22 @@ for _amp in _THESIS_AMPS:
         (None, (lambda a: lambda df: df[np.isclose(df["amp_volt"], a)])(_amp))
     )
 
-render_table(
-    csv_path       = _CSV,
-    meta_path      = _META,
-    out_tex_path   = _TEX,
-    columns        = _columns,
-    column_headers = _column_headers,
-    column_spec    = "ll cccc",
-    cell_format    = _cell_format,
-    row_groups     = _row_groups,
-    label          = f"tab:{_NAME}",
-    caption        = TABLE_CAPTIONS.get(_NAME) or None,
-    short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "ll cccc",
+        cell_format    = _cell_format,
+        row_groups     = _row_groups,
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
 )
 print(f"   TEX → {_TEX}")
 
@@ -188,8 +204,6 @@ _run_delegated_if_missing(
     [_CSV, _META],
     label=f"{_NAME}_data",
 )
-
-_inject_meta_caption_short(_META, TABLE_CAPTIONS_SHORT.get(_NAME) or "")
 
 _THESIS_AMPS = [0.10, 0.20, 0.30]
 
@@ -252,18 +266,22 @@ for _amp in _THESIS_AMPS:
         (None, (lambda a: lambda df: df[np.isclose(df["amp_v"], a)])(_amp))
     )
 
-render_table(
-    csv_path       = _CSV,
-    meta_path      = _META,
-    out_tex_path   = _TEX,
-    columns        = _columns,
-    column_headers = _column_headers,
-    column_spec    = "ccl rr r r r",
-    cell_format    = _cell_format,
-    row_groups     = _row_groups,
-    label          = f"tab:{_NAME}",
-    caption        = TABLE_CAPTIONS.get(_NAME) or None,
-    short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "ccl rr r r r",
+        cell_format    = _cell_format,
+        row_groups     = _row_groups,
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
 )
 print(f"   TEX → {_TEX}")
 
@@ -286,8 +304,6 @@ _run_delegated_if_missing(
     [_CSV, _META],
     label=f"{_NAME}_data",
 )
-
-_inject_meta_caption_short(_META, TABLE_CAPTIONS_SHORT.get(_NAME) or "")
 
 _AMP_TIERS = [
     (0.10, "A1", r"$A_1$"),
@@ -332,18 +348,22 @@ for _amp, _short, _label in _AMP_TIERS:
          (lambda a: lambda df: df[np.isclose(df["amp_v"], a)])(_amp))
     )
 
-render_table(
-    csv_path       = _CSV,
-    meta_path      = _META,
-    out_tex_path   = _TEX,
-    columns        = _columns,
-    column_headers = _column_headers,
-    column_spec    = "ccccccc",
-    cell_format    = _cell_format,
-    row_groups     = _row_groups,
-    label          = f"tab:{_NAME}",
-    caption        = TABLE_CAPTIONS.get(_NAME) or None,
-    short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "ccccccc",
+        cell_format    = _cell_format,
+        row_groups     = _row_groups,
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
 )
 print(f"   TEX → {_TEX}")
 
