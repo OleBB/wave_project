@@ -239,7 +239,7 @@ CHAPTER 04 — METHODOLOGY
   §4m   ch04_per40_and_per240_HG_shifted [DELEG] ~  Per40+per240 pooling under probe-shifted H&G window (the answer: yes)
   §4n   ch04_hg_per40_window_fitness_f{13,14,15,16}  [DELEG] ~  Proposed H&G window (N=15 + UC-snap) overlaid on η(t), per40+per240, all 4 thesis freqs
         ch04_window_intervals            [DELEG] ~     └─ companion table: IN/OUT window intervals + samples-per-period at each thesis freq
-  §4o   ch04_window_choice               [DELEG] ~  Post-squeeze window (N_off=7, N_len=10 uniform): window vs nowind eyeball + fullwind empirical plateau
+  §4o   ch04_window_choice               [EXTRAS] →  Moved to main_save_extras.py — post-squeeze window vs nowind eyeball + fullwind empirical plateau
         ch04_window_choice_nowind        [DELEG] ~     └─ companion table (nowind, eyeball plateau)
         ch04_window_choice_fullwind      [DELEG] ~     └─ companion table (fullwind, empirical plateau ±2%)
         ch04_plateau_overview_A{1,2,3}   [DELEG] ~     └─ reader-facing plateau (sliding A_FFT, 4×2 IN/OUT panels, both winds), one per amp tier
@@ -1664,40 +1664,6 @@ _run_delegated_if_missing(
     "analysis_scratch/window_intervals_table.py",
     [Path("output/TABLES/ch04_window_intervals.tex")],
     label="ch04_window_intervals",
-)
-
-# %%
-# [DATA: DELEG]  — analysis_scratch/window_choice_figure.py
-"""
-── CH04 § 4o — Window-choice visual: Option B vs nowind eyeball + fullwind empirical ──
-Geometry-only figure (no per-run data) showing the post-squeeze Option B
-window per (f, probe) overlaid against:
-
-  • upper grey-hash band  → nowind plateau bounds eyeballed in
-                            RampDetectionBrowser (snarvei_eyeballing.md, 0.2 V)
-  • lower red-hash band   → fullwind empirical plateau (per40 sliding A_FFT,
-                            ±2 % relaxed criterion, n=1 per cell) from
-                            per40_plateau_end_aggregated.csv
-
-Option B parameters: t_start = r/c_g(f, h) + 10/f, length N(f)/f, with
-N(f) = {1.3:10, 1.4:13, 1.5:13, 1.6:13}. Markers t_arr (▼ blue),
-t_paras (▽ red), per40 paddle stop (✕ purple) for orientation.
-
-Visual claim: the Option B window sits inside both nowind and fullwind
-plateau bounds at every (f, probe) cell, except (1.3 Hz IN fullwind) where
-the empirical plateau ends ~2 s before the window does — that cell is
-also bound by the parasitic 2f arrival and is the binding case.
-
-Outputs:
-    output/FIGURES/ch04_window_choice.pdf
-    output/TEXFIGU/ch04_window_choice.tex
-"""
-
-_run_delegated_if_missing(
-    "analysis_scratch/window_choice_figure.py",
-    [Path("output/FIGURES/ch04_window_choice.pdf"),
-     Path("output/TEXFIGU/ch04_window_choice.tex")],
-    label="ch04_window_choice",
 )
 
 # %%

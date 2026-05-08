@@ -147,3 +147,37 @@ _run_delegated_if_missing(
      Path("output/TEXFIGU/ch04_sliding_afft_stability.tex")],
     label="ch04_sliding_afft_stability",
 )
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/window_choice_figure.py
+"""
+── CH04 § 4o — Window-choice visual: Option B vs nowind eyeball + fullwind empirical ──
+Geometry-only figure (no per-run data) showing the post-squeeze Option B
+window per (f, probe) overlaid against:
+
+  • upper grey-hash band  → nowind plateau bounds eyeballed in
+                            RampDetectionBrowser (snarvei_eyeballing.md, 0.2 V)
+  • lower red-hash band   → fullwind empirical plateau (per40 sliding A_FFT,
+                            ±2 % relaxed criterion, n=1 per cell) from
+                            per40_plateau_end_aggregated.csv
+
+Option B parameters: t_start = r/c_g(f, h) + 10/f, length N(f)/f, with
+N(f) = {1.3:10, 1.4:13, 1.5:13, 1.6:13}. Markers t_arr (▼ blue),
+t_paras (▽ red), per40 paddle stop (✕ purple) for orientation.
+
+Visual claim: the Option B window sits inside both nowind and fullwind
+plateau bounds at every (f, probe) cell, except (1.3 Hz IN fullwind) where
+the empirical plateau ends ~2 s before the window does — that cell is
+also bound by the parasitic 2f arrival and is the binding case.
+
+Outputs:
+    output/FIGURES/ch04_window_choice.pdf
+    output/TEXFIGU/ch04_window_choice.tex
+"""
+
+_run_delegated_if_missing(
+    "analysis_scratch/window_choice_figure.py",
+    [Path("output/FIGURES/ch04_window_choice.pdf"),
+     Path("output/TEXFIGU/ch04_window_choice.tex")],
+    label="ch04_window_choice",
+)
