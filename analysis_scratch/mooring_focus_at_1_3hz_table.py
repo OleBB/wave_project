@@ -20,18 +20,20 @@ Columns mirror the wind_effect tables: K_t per wind, ΔK_t in pp, K_t-økn %,
 D-red %. Per-cell n shown alongside K_t since several cells have n ≤ 4.
 
 Outputs:
-    output/TABLES/ch05_mooring_focus_at_1_3hz_table.tex   (thesis include)
-    analysis_scratch/mooring_focus_at_1_3hz_table.csv     (companion CSV)
+    output/TABLES/data/ch05_mooring_focus_at_1_3hz_table.csv       (render-shape data)
+    output/TABLES/data/ch05_mooring_focus_at_1_3hz_table.meta.json (provenance)
+    output/TABLES/ch05_mooring_focus_at_1_3hz_table.tex            (thesis include)
+    analysis_scratch/mooring_focus_at_1_3hz_table.csv              (audit-trail companion)
 
 Caption text is read from FIGURE_CAPTIONS["ch05_mooring_focus_at_1_3hz_table"]
 in main_save_figures.py via output/.figure_captions.json.
 """
 
+import json
 import os
 import sys
 import warnings
 from pathlib import Path
-from datetime import datetime as _dt
 import glob
 
 warnings.filterwarnings("ignore")
@@ -45,12 +47,17 @@ os.chdir(BASE)
 
 from wavescripts.improved_data_loader import load_analysis_data
 from wavescripts.plot_utils import _lookup_central_caption, amp_to_label
+from wavescripts.table_render import render_table
 
 # ── I/O ────────────────────────────────────────────────────────────────────
 SCRATCH_CSV = Path(__file__).parent / "mooring_focus_at_1_3hz_table.csv"
 THESIS_NAME = "ch05_mooring_focus_at_1_3hz_table"
+DATA_DIR    = BASE / "output" / "TABLES" / "data"
+RENDER_CSV  = DATA_DIR / f"{THESIS_NAME}.csv"
+META_JSON   = DATA_DIR / f"{THESIS_NAME}.meta.json"
 OUT_TEX     = BASE / "output" / "TABLES" / f"{THESIS_NAME}.tex"
 CHAPTER     = "05"
+SCRIPT_REL  = "analysis_scratch/mooring_focus_at_1_3hz_table.py"
 
 TARGET_FREQ  = 1.30
 THESIS_AMPS  = [0.10, 0.20, 0.30]
@@ -131,26 +138,114 @@ table = table.drop(columns=["_p_ord", "_m_ord"])
 print(f"   {len(table)} cells in final table\n")
 print(table.round(3).to_string(index=False))
 
-# ── 3. Save companion CSV ──────────────────────────────────────────────────
+# ── 3. Save companion CSV (audit trail, full numeric columns) ──────────────
 SCRATCH_CSV.parent.mkdir(parents=True, exist_ok=True)
 table.to_csv(SCRATCH_CSV, index=False)
-print(f"\n   CSV → {SCRATCH_CSV.relative_to(BASE)}")
+print(f"\n   audit CSV → {SCRATCH_CSV.relative_to(BASE)}")
 
-# ── 4. Render LaTeX table ──────────────────────────────────────────────────
+# ── 4. Reshape into render-shape (one row per output table line) ───────────
+# Same shape as the audit CSV — one row per (amp, panel, mooring) — but with
+# the display-ready label columns added. Compound cells (Kt + n) stay as
+# separate columns; the cell_format callable joins them into '0.658\,(23)'.
 PANEL_LBL   = {"full": "normal", "reverse": "revers"}
 MOORING_LBL = {"below_90": "below\\_90", "above_50": "above\\_50"}
 
-def _fmt_signed(x: float, decimals: int = 1) -> str:
+render_rows: list[dict] = []
+for _, r in table.iterrows():
+    a = float(r["amp_v"])
+    render_rows.append({
+        "amp_v":             a,
+        # Original script repeats the amp label on every row of a block, so
+        # `amp_to_label(a)` is unconditional here too — keeps the rendered
+        # cells byte-identical to the pre-migration baseline.
+        "amp_label_display": amp_to_label(a),
+        "panel":             r["panel"],
+        "panel_label":       PANEL_LBL[r["panel"]],
+        "mooring":           r["mooring"],
+        "mooring_label":     MOORING_LBL[r["mooring"]],
+        "Kt_nw":             float(r["Kt_nw"]),
+        "Kt_fw":             float(r["Kt_fw"]),
+        "n_nw":              int(r["n_nw"]) if pd.notna(r["n_nw"]) else None,
+        "n_fw":              int(r["n_fw"]) if pd.notna(r["n_fw"]) else None,
+        "Delta_Kt":          float(r["Delta_Kt"]),
+        "ratio_Kt":          float(r["ratio_Kt"]),
+        "ratio_D":           float(r["ratio_D"]),
+    })
+
+render_df = pd.DataFrame(render_rows)
+
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+render_df.to_csv(RENDER_CSV, index=False)
+print(f"   render CSV → {RENDER_CSV.relative_to(BASE)}")
+
+
+# ── 5. Build provenance meta.json ──────────────────────────────────────────
+caption_full  = _lookup_central_caption(THESIS_NAME, kind="full") or None
+caption_short = _lookup_central_caption(THESIS_NAME, kind="short") or None
+
+n_total_runs = int(table["n_nw"].fillna(0).sum() + table["n_fw"].fillna(0).sum())
+
+meta_payload = {
+    "script":          SCRIPT_REL,
+    "plot_type":       "mooring_focus_at_1_3hz_table",
+    "chapter":         CHAPTER,
+    "caption_label":   f"tab:{THESIS_NAME}",
+    "caption_short":   caption_short or "",
+    "sections": [
+        {
+            "title": "Filters",
+            "lines": [
+                "panel             : full, reverse",
+                "wind              : no, full",
+                "mooring           : below_90 (canon: loose230 + loose300),",
+                "                    above_50",
+                f"amplitude [V]     : {', '.join(f'{a:.1f}' for a in THESIS_AMPS)}",
+                f"frequency [Hz]    : {TARGET_FREQ}",
+                "quality_flag      : ok",
+            ],
+        },
+        {
+            "title": "Data provenance",
+            "lines": [
+                f"n_cells           : {len(table)}",
+                f"n_runs (nw + fw)  : {n_total_runs}",
+                "datasets        :",
+                *[f"  {Path(d).name}" for d in all_dirs],
+            ],
+        },
+        {
+            "title": "Method",
+            "lines": [
+                "grouper           : groupby(amp, panel, mooring, wind) → mean K_t",
+                "sort_order        : amplitude outer, then panel (normal first),",
+                "                    then mooring (below_90 first within each panel).",
+                "mooring pooling   : below_90 lumps loose230 + loose300; both panels",
+                "                    pool hardware (cond4 + earlier) — see",
+                "                    analysis_scratch/probe_config_bias_likeforlike.pdf",
+                "                    for the bias check.",
+                "metric_definitions:",
+                "  K_t                 : OUT/IN(FFT), narrow 0.1 Hz window at f_paddle",
+                "  Kt_nw / Kt_fw       : mean K_t at no- / full-wind",
+                "  n_nw  / n_fw        : run count per (amp, panel, mooring, wind)",
+                "  Delta_Kt            : Kt_fw - Kt_nw  (signed decimal fraction)",
+                "  ratio_Kt            : Kt_fw / Kt_nw  (>1 = wind passes more wave)",
+                "  ratio_D             : D_fw / D_nw    (D = 1 - K_t)",
+                "                        <1 = wind erodes panel damping",
+            ],
+        },
+    ],
+}
+
+META_JSON.write_text(json.dumps(meta_payload, indent=2), encoding="utf-8")
+print(f"   meta JSON  → {META_JSON.relative_to(BASE)}")
+
+
+# ── 6. Cell formatters ─────────────────────────────────────────────────────
+def _fmt_signed(x: float, decimals: int = 3) -> str:
     if pd.isna(x):
         return "—"
     return f"{x:+.{decimals}f}"
 
-def _fmt_kt_n(k: float, n) -> str:
-    """K_t value with sample size: '0.661 (13)'."""
-    if pd.isna(k):
-        return "—"
-    n_str = "—" if pd.isna(n) else f"{int(n)}"
-    return f"{k:.3f}\\,({n_str})"
 
 def _fmt_ratio(x: float, decimals: int = 3) -> str:
     """Unsigned ratio (e.g. 1.181, 0.653). NaN → em-dash."""
@@ -158,119 +253,76 @@ def _fmt_ratio(x: float, decimals: int = 3) -> str:
         return "—"
     return f"{x:.{decimals}f}"
 
-# Body rows. \midrule between AMPLITUDE blocks.
-body_rows = []
-last_amp = None
-for _, r in table.iterrows():
-    a = float(r["amp_v"])
-    if last_amp is not None and a != last_amp:
-        body_rows.append(r"\midrule")
-    body_rows.append(
-        f"  {amp_to_label(a)} & {PANEL_LBL[r['panel']]} & "
-        f"{MOORING_LBL[r['mooring']]} & "
-        f"{_fmt_kt_n(r['Kt_nw'], r['n_nw'])} & "
-        f"{_fmt_kt_n(r['Kt_fw'], r['n_fw'])} & "
-        f"{_fmt_signed(r['Delta_Kt'], 3)} & "        # ΔK_t as decimal fraction
-        f"{_fmt_ratio(r['ratio_Kt'], 3)} & "         # K_t,vind / K_t,uten
-        f"{_fmt_ratio(r['ratio_D'],  3)} \\\\"        # D_vind / D_uten
+
+def _fmt_kt_n_factory(kt_col: str, n_col: str):
+    """Compound cell: '0.658\\,(23)' built from Kt + n columns."""
+    def _impl(row: pd.Series) -> str:
+        k = row[kt_col]
+        n = row[n_col]
+        if pd.isna(k):
+            return "—"
+        n_str = "—" if pd.isna(n) else f"{int(n)}"
+        return f"{k:.3f}\\,({n_str})"
+    return _impl
+
+
+def _fmt_str_or_blank(col: str):
+    """Render a string column; treat NaN (CSV round-trip of '') as blank."""
+    def _impl(row: pd.Series) -> str:
+        v = row[col]
+        if pd.isna(v):
+            return ""
+        return str(v)
+    return _impl
+
+
+cell_format = {
+    "amp_label_display": _fmt_str_or_blank("amp_label_display"),
+    "panel_label":       _fmt_str_or_blank("panel_label"),
+    "mooring_label":     _fmt_str_or_blank("mooring_label"),
+    "Kt_nw_n":           _fmt_kt_n_factory("Kt_nw", "n_nw"),
+    "Kt_fw_n":           _fmt_kt_n_factory("Kt_fw", "n_fw"),
+    "Delta_Kt":          lambda r: _fmt_signed(r["Delta_Kt"], 3),
+    "ratio_Kt":          lambda r: _fmt_ratio(r["ratio_Kt"], 3),
+    "ratio_D":           lambda r: _fmt_ratio(r["ratio_D"],  3),
+}
+
+columns = [
+    "amp_label_display", "panel_label", "mooring_label",
+    "Kt_nw_n", "Kt_fw_n",
+    "Delta_Kt", "ratio_Kt", "ratio_D",
+]
+column_headers = [
+    "Amp", "Panel", "Mooring",
+    r"$K_{t,\text{uten}}\,(n)$",
+    r"$K_{t,\text{vind}}\,(n)$",
+    r"$\Delta K_t$",
+    r"$K_{t,\text{vind}}/K_{t,\text{uten}}$",
+    r"$D_{\text{vind}}/D_{\text{uten}}$",
+]
+
+# Silent row groups — \midrule between amplitude tiers, no group-header row.
+row_groups: list[tuple[str | None, callable]] = []
+for amp in THESIS_AMPS:
+    row_groups.append(
+        (None, (lambda a: lambda df: df[np.isclose(df["amp_v"], a)])(amp))
     )
-    last_amp = a
 
-# Caption from central FIGURE_CAPTIONS dict.
-caption_full  = _lookup_central_caption(THESIS_NAME, kind="full")
-caption_short = _lookup_central_caption(THESIS_NAME, kind="short")
 
-if caption_full:
-    if caption_short:
-        caption_block = (
-            f"  \\caption[{caption_short}]{{\n"
-            f"    {caption_full}\n"
-            f"  }}\n"
-        )
-    else:
-        caption_block = (
-            f"  \\caption{{\n"
-            f"    {caption_full}\n"
-            f"  }}\n"
-        )
-else:
-    caption_block = (
-        "  \\caption{\n"
-        "    % TODO: write caption\n"
-        "  }\n"
-    )
-
-# IMMUTABLE provenance block.
-n_total_runs = int(table["n_nw"].fillna(0).sum() + table["n_fw"].fillna(0).sum())
-immutable = "\n".join([
-    "%! TEX root = ../main.tex",
-    "% ==============================================================",
-    "% IMMUTABLE — generated automatically, do not edit this block",
-    "%",
-    "% — Provenance ───────────────────────────────────────────────────",
-    "%   script            : analysis_scratch/mooring_focus_at_1_3hz_table.py",
-    "%   plot_type         : mooring_focus_at_1_3hz_table",
-    f"%   chapter           : {CHAPTER}",
-    f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
-    f"%   caption_label     : tab:{THESIS_NAME}",
-    f"%   caption_short     : {caption_short}",
-    "%",
-    "% — Filters ────────────────────────────────────────────────────",
-    "%   panel             : full, reverse",
-    "%   wind              : no, full",
-    "%   mooring           : below_90 (canon: loose230 + loose300),",
-    "%                       above_50",
-    f"%   amplitude [V]     : {', '.join(f'{a:.1f}' for a in THESIS_AMPS)}",
-    f"%   frequency [Hz]    : {TARGET_FREQ}",
-    "%   quality_flag      : ok",
-    "%",
-    "% — Data provenance ────────────────────────────────────────────",
-    f"%   n_cells           : {len(table)}",
-    f"%   n_runs (nw + fw)  : {n_total_runs}",
-    "%   datasets        :",
-    *[f"%     {Path(d).name}" for d in all_dirs],
-    "%",
-    "% — Method ────────────────────────────────────────────────────",
-    "%   grouper           : groupby(amp, panel, mooring, wind) → mean K_t",
-    "%   sort_order        : amplitude outer, then panel (normal first),",
-    "%                       then mooring (below_90 first within each panel).",
-    "%   mooring pooling   : below_90 lumps loose230 + loose300; both panels",
-    "%                       pool hardware (cond4 + earlier) — see",
-    "%                       analysis_scratch/probe_config_bias_likeforlike.pdf",
-    "%                       for the bias check.",
-    "%   metric_definitions:",
-    "%     K_t                 : OUT/IN(FFT), narrow 0.1 Hz window at f_paddle",
-    "%     Kt_nw / Kt_fw       : mean K_t at no- / full-wind",
-    "%     n_nw  / n_fw        : run count per (amp, panel, mooring, wind)",
-    "%     Delta_Kt            : Kt_fw - Kt_nw  (signed decimal fraction)",
-    "%     ratio_Kt            : Kt_fw / Kt_nw  (>1 = wind passes more wave)",
-    "%     ratio_D             : D_fw / D_nw    (D = 1 - K_t)",
-    "%                           <1 = wind erodes panel damping",
-    "%",
-    "% ── end immutable block ─────────────────────────────────────────",
-])
-
-table_body = (
-    "\\begin{table}[htbp]\n"
-    "  \\centering\n"
-    "  \\small\n"
-    "  \\begin{tabular}{ccl rr r r r}\n"
-    "    \\toprule\n"
-    "      Amp & Panel & Mooring & $K_{t,\\text{uten}}\\,(n)$ & "
-    "$K_{t,\\text{vind}}\\,(n)$ & $\\Delta K_t$ & "
-    "$K_{t,\\text{vind}}/K_{t,\\text{uten}}$ & "
-    "$D_{\\text{vind}}/D_{\\text{uten}}$ \\\\\n"
-    "    \\midrule\n"
-    + "\n".join(body_rows) + "\n"
-    "    \\bottomrule\n"
-    "  \\end{tabular}\n"
-    + caption_block
-    + f"  \\label{{tab:{THESIS_NAME}}}\n"
-    "\\end{table}\n"
+# ── 7. Render ──────────────────────────────────────────────────────────────
+render_table(
+    csv_path=RENDER_CSV,
+    meta_path=META_JSON,
+    out_tex_path=OUT_TEX,
+    columns=columns,
+    column_headers=column_headers,
+    column_spec="ccl rr r r r",
+    cell_format=cell_format,
+    row_groups=row_groups,
+    label=f"tab:{THESIS_NAME}",
+    caption=caption_full,
+    short_caption=caption_short,
 )
 
-OUT_TEX.parent.mkdir(parents=True, exist_ok=True)
-OUT_TEX.write_text(immutable + "\n" + table_body, encoding="utf-8")
 print(f"   TEX → {OUT_TEX.relative_to(BASE)}")
-
 print("\nDone.")
