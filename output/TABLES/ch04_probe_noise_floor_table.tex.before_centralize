@@ -1,0 +1,69 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/probe_noise_floor_table.py
+%   plot_type         : probe_noise_floor_table
+%   chapter           : 04
+%   generated_at      : 2026-05-06T21:00:35
+%   caption_label     : tab:ch04_probe_noise_floor_table
+%   caption_short     : 
+%
+% — Inputs ────────────────────────────────────────────────────
+%   source            : combined_meta stillwater rows
+%                       (WindCondition=='no', WaveFrequencyInput is NaN)
+%   group_by          : probe_height_mm × probe_range_mode
+%   selected groups   : h272/high (innledende), h100/low (endelig)
+%   intermediate configs h136/high and h100/high are NOT shown here.
+%
+% — Counts ────────────────────────────────────────────────────
+%   n stillwater (h272/high): 20
+%   n stillwater (h100/low) : 9
+%
+% — Method ────────────────────────────────────────────────────
+%   detection threshold = max(3 · σ_RMS, 2 · q)  [pipeline column
+%     'detection_threshold_mm'].
+%   σ_RMS         = std of stillwater signal per run, then averaged
+%                    across accepted stillwater runs in the group.
+%   q             = ULS digital quantum = 0.01 mm in BOTH modes
+%                    (verified against histogram of raw values across
+%                    8 run × probe instances; values are exact
+%                    multiples of 0.01 mm and not of any coarser grid).
+%   In both modes 3σ ≥ 0.09 mm and 2q = 0.02 mm, so 3σ always dominates.
+%   ratio column  = thr3sigma_initial / thr3sigma_final.
+%
+% — Caveats ───────────────────────────────────────────────────
+%   * The four 'sonde' rows are PROBE POSITIONS, not the same physical
+%     sensors across configs. Per the march2026_better_rearranging
+%     layout (CLAUDE.md §8), each position is held constant; only the
+%     hardware height and range mode change between groups.
+%   * h272/high pool is the broader pre-2026-03-23 stillwater set;
+%     h100/low pool is from the canon Mar 26-27 lowrange dates only.
+%   * Numbers in mm; all are well below typical wave amplitudes (5-20 mm).
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \caption{
+    Oversikt over støygulvet til prober ved innledende og endelig oppsett.
+  }
+  \label{tab:ch04_probe_noise_floor_table}
+  \begin{tabular}{lccc}
+    \toprule
+    Probe &
+      Innledende  &
+      Endelig   &
+      Forbedring \\
+          &
+      $3\sigma$ [\unit{\milli\metre}] &
+      $3\sigma$ [\unit{\milli\metre}] &
+          \\
+    \midrule
+    Posisjon 1 & $\num{0.35}$ & $\num{0.09}$ & $\num{3.8}\times$ \\
+    Posisjon 2A & $\num{0.42}$ & $\num{0.16}$ & $\num{2.6}\times$ \\
+    Posisjon 2B & $\num{0.19}$ & $\num{0.12}$ & $\num{1.6}\times$ \\
+    Posisjon 3 & $\num{0.37}$ & $\num{0.17}$ & $\num{2.2}\times$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}

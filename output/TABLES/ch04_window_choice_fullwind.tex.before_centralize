@@ -1,0 +1,59 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/window_choice_table.py
+%   plot_type         : window_choice_table
+%   chapter           : 04
+%   wind condition    : fullwind
+%   generated_at      : 2026-05-05T12:27:38
+%   caption_label     : tab:ch04_window_choice_fullwind
+%   caption_short     : 
+%
+% — Method ────────────────────────────────────────────────────
+%   Option B post-squeeze window:
+%     t_start(probe, f) = r_probe / c_g(f, h) + N_offset / f
+%     t_end(probe, f)   = t_start + N(f) / f
+%   N_offset          : 10 periods
+%   N(f)              : {1.3: 10, 1.4: 13, 1.5: 13, 1.6: 13}
+%   r_IN              : 9.373 m  (9373/170, 9373/340)
+%   r_OUT             : 12.4 m  (12400/250)
+%   tank depth h      : 0.58 m
+%   c_g dispersion    : full ω²=gk·tanh(kh) via wavescripts.constants.c_group
+%
+% — Plateau column ───────────────────────────────────────────────
+%   plateau column = per40 fullwind sliding-A_FFT plateau, ±2 % relaxed criterion. Start = t_arr + 8/f (script's reference-region low edge). End = plat_end_relax_s_med from per40_plateau_end_aggregated.csv (canon March-2026 lowrange, n=1 per cell).
+%
+% — Inputs ────────────────────────────────────────────────────
+%   frequencies [Hz]  : 1.3, 1.4, 1.5, 1.6
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch04_window_choice_fullwind}
+  \begin{tabular}{cccccccc}
+    \toprule
+    $f$ [\unit{\hertz}] &
+      sonde &
+      $t_\mathrm{arr}$ [\unit{\second}] &
+      vindu [\unit{\second}] &
+      $\Delta$ [\unit{\second}] &
+      $t_\mathrm{2f}$ [\unit{\second}] &
+      platå (empirisk) [\unit{\second}] &
+      $N$ [perioder]\\
+    \midrule
+    $\num{1.3}$ & IN & $\num{15.5}$ & \tabnumrange{23.2}{30.9} & $\num{7.69}$ & $\num{31.2}$ & \tabnumrange{21.7}{28.5} & $\num{10}$ \\
+    $\num{1.3}$ & OUT & $\num{20.5}$ & \tabnumrange{28.2}{35.9} & $\num{7.69}$ & $\num{41.3}$ & \tabnumrange{26.7}{42.2} & $\num{10}$ \\
+    $\num{1.4}$ & IN & $\num{16.8}$ & \tabnumrange{23.9}{33.2} & $\num{9.29}$ & $\num{33.6}$ & \tabnumrange{22.5}{34.6} & $\num{13}$ \\
+    $\num{1.4}$ & OUT & $\num{22.2}$ & \tabnumrange{29.3}{38.6} & $\num{9.29}$ & $\num{44.5}$ & \tabnumrange{27.9}{39.9} & $\num{13}$ \\
+    $\num{1.5}$ & IN & $\num{18.0}$ & \tabnumrange{24.7}{33.3} & $\num{8.67}$ & $\num{36.0}$ & \tabnumrange{23.3}{33.5} & $\num{13}$ \\
+    $\num{1.5}$ & OUT & $\num{23.8}$ & \tabnumrange{30.5}{39.1} & $\num{8.67}$ & $\num{47.7}$ & \tabnumrange{29.1}{39.1} & $\num{13}$ \\
+    $\num{1.6}$ & IN & $\num{19.2}$ & \tabnumrange{25.5}{33.6} & $\num{8.12}$ & $\num{38.4}$ & \tabnumrange{24.2}{33.7} & $\num{13}$ \\
+    $\num{1.6}$ & OUT & $\num{25.4}$ & \tabnumrange{31.7}{39.8} & $\num{8.12}$ & $\num{50.8}$ & \tabnumrange{30.4}{39.3} & $\num{13}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}

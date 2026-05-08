@@ -1,0 +1,59 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/window_intervals_table.py
+%   plot_type         : window_intervals_table
+%   chapter           : 04
+%   generated_at      : 2026-05-05T12:27:31
+%   caption_label     : tab:ch04_window_intervals
+%   caption_short     : 
+%
+% — Method ────────────────────────────────────────────────────
+%   formula           : t_start = r/c_g(f, h) + N_offset/f, t_end = t_start + 10/f
+%   N_offset          : 15.0 periods (5 wavemaker-ramp + 10 H&G safety)
+%   window length     : 10.0 T
+%   r_IN              : 9.373 m  (probes 9373/170, 9373/340)
+%   r_OUT             : 12.4 m  (probe 12400/250)
+%   tank depth h      : 0.58 m
+%   c_g dispersion    : full ω²=gk·tanh(kh) via wavescripts.constants.c_group
+%   sampling rate     : 250.0 Hz
+%   note              : table values are the THEORETICAL pre-snap window; per-run windows snap to ±T upcrossings.
+%
+% — Inputs ────────────────────────────────────────────────────
+%   frequencies [Hz]  : 1.3, 1.4, 1.5, 1.6
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch04_window_intervals}
+  \begin{tabular}{lcccc}
+    \toprule
+    Frekvens [\unit{\hertz}] &
+      $\num{1.3}$ &
+      $\num{1.4}$ &
+      $\num{1.5}$ &
+      $\num{1.6}$ \\
+    \midrule
+    Innkommende  [\unit{\second}] &
+      \tabnumrange{27.1}{34.8} &
+      \tabnumrange{27.5}{34.6} &
+      \tabnumrange{28.0}{34.7} &
+      \tabnumrange{28.6}{34.8} \\
+    Utgående  [\si{\second}] &
+      \tabnumrange{32.1}{39.8} &
+      \tabnumrange{32.9}{40.1} &
+      \tabnumrange{33.8}{40.5} &
+      \tabnumrange{34.8}{41.0} \\
+    Antall samples per periode [\textendash] &
+      $\num{192.3076923077}$ &
+      $\num{178.5714285714}$ &
+      $\num{166.6666666667}$ &
+      $\num{156.2500000000}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}

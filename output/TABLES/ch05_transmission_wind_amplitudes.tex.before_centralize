@@ -1,0 +1,96 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ───────────────────────────────────────────────────
+%   script            : analysis_scratch/transmission_wind_tables.py
+%   plot_type         : transmission_wind_table
+%   table_kind        : amplitudes per condition (supporting)
+%   chapter           : 05
+%   generated_at      : 2026-05-05T12:35:00
+%   caption_label     : tab:ch05_transmission_wind_amplitudes
+%   caption_short     : 
+%   n_rows            : 22
+%
+% — Inputs ────────────────────────────────────────────────────
+%   per-run CSV       : analysis_scratch/wind_effect_per_condition_per_run.csv
+%                       (produced by analysis_scratch/wind_effect_per_condition.py)
+%   datasets          : PROCESSED-20260326-*-lowrange,
+%                       PROCESSED-20260327-*-lowrange (March panel canon)
+%   filters           : PanelCondition=full, quality_flag=ok,
+%                       WindCondition in {no, full}, 1.3-1.6 Hz x A1/A2/A3
+%                       (A3 @ 1.6 Hz excluded — high-amp dropout caveat)
+%   IN canonicalisation: A_IN per run = mean(9373/170, 9373/340)
+%   OUT probe         : 12400/250
+%
+% — Method ────────────────────────────────────────────────────
+%   Per (f, A) cell amplitudes are the mean of finite per-run values
+%   across all canon runs at that condition (symmetric NaN filter:
+%   drop a run if either A_IN or A_OUT is missing).
+%   Ratios are ratio-of-means at the (f, A) level (matches the
+%   R_IN / R_OUT plot in wind_effect_per_condition.py):
+%     R_IN  = mean(A_IN, wind)  / mean(A_IN, no)
+%     R_OUT = mean(A_OUT, wind) / mean(A_OUT, no)
+%     T_xxx = mean(A_OUT, xxx)  / mean(A_IN, xxx)
+%     R_T   = T_wind / T_no
+%   sigma propagation (independent-Gaussian on the run-mean estimators):
+%     sigma(R) / R ~ sqrt( (sigma_w/mean_w)^2 / n_w
+%                         + (sigma_n/mean_n)^2 / n_n )
+%   With n = 2-4 per cell (except A1 @ 1.3 Hz: n_no=9, n_wind=10),
+%   read sigma as a rough run-to-run scatter, not a confidence interval.
+%
+% — Columns ───────────────────────────────────────────────────
+%   f             : paddle frequency [Hz]
+%   amp           : amplitude tier (A1=0.10 V, A2=0.20 V, A3=0.30 V)
+%   wind          : wind state (no, full)
+%   A_IN  [mm]    : mean ± std of per-run A_IN_mean over the cell
+%                   (A_IN_mean = mean of probes 9373/170 + 9373/340)
+%   A_OUT [mm]    : mean ± std of per-run A_OUT over the cell
+%                   (A_OUT measured at probe 12400/250)
+%   T             : T_mean = mean(A_OUT) / mean(A_IN) (ratio-of-means);
+%                   T_std  = std (ddof=1) of per-run T = A_OUT/A_IN
+%   n_runs        : run count contributing to this (f, A, wind) cell
+%   '\textendash' : value undefined (n=1 → no std, or missing cell)
+%
+% ── end immutable block ─────────────────────────────────────────
+\begin{table}[hbt]
+  \centering
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch05_transmission_wind_amplitudes}
+  \begin{tabular}{cccccccr}
+    \toprule
+    $f$ [\unit{\hertz}] &
+      amp &
+      vind &
+      $A_\mathrm{IN}$ [\unit{\milli\metre}] &
+      $A_\mathrm{OUT}$ [\unit{\milli\metre}] &
+      $K_t$ &
+      $n_\mathrm{runs}$ \\
+    \midrule
+    $\num{1.3}$ & $\mathrm{A1}$ & no & $\num{7.558} \pm \num{0.190}$ & $\num{4.987} \pm \num{0.118}$ & $\num{0.6598} \pm \num{0.0282}$ & $\num{9}$ \\
+    $\num{1.3}$ & $\mathrm{A1}$ & full & $\num{7.500} \pm \num{0.124}$ & $\num{5.888} \pm \num{0.293}$ & $\num{0.7852} \pm \num{0.0463}$ & $\num{10}$ \\
+    $\num{1.4}$ & $\mathrm{A1}$ & no & $\num{8.052} \pm \num{0.062}$ & $\num{4.045} \pm \num{0.240}$ & $\num{0.5023} \pm \num{0.0337}$ & $\num{2}$ \\
+    $\num{1.4}$ & $\mathrm{A1}$ & full & $\num{7.845} \pm \num{0.482}$ & $\num{5.619} \pm \num{0.321}$ & $\num{0.7163} \pm \num{0.0854}$ & $\num{3}$ \\
+    $\num{1.5}$ & $\mathrm{A1}$ & no & $\num{7.654} \pm \num{0.136}$ & $\num{3.474} \pm \num{0.059}$ & $\num{0.4538} \pm \num{0.0157}$ & $\num{2}$ \\
+    $\num{1.5}$ & $\mathrm{A1}$ & full & $\num{8.014} \pm \num{0.300}$ & $\num{5.531} \pm \num{0.385}$ & $\num{0.6902} \pm \num{0.0718}$ & $\num{3}$ \\
+    $\num{1.6}$ & $\mathrm{A1}$ & no & $\num{7.119} \pm \num{0.038}$ & $\num{2.611} \pm \num{0.023}$ & $\num{0.3668} \pm \num{0.0052}$ & $\num{2}$ \\
+    $\num{1.6}$ & $\mathrm{A1}$ & full & $\num{8.287} \pm \num{0.378}$ & $\num{5.041} \pm \num{0.147}$ & $\num{0.6083} \pm \num{0.0302}$ & $\num{3}$ \\
+    $\num{1.3}$ & $\mathrm{A2}$ & no & $\num{14.767} \pm \num{0.023}$ & $\num{11.931} \pm \num{0.119}$ & $\num{0.8079} \pm \num{0.0068}$ & $\num{2}$ \\
+    $\num{1.3}$ & $\mathrm{A2}$ & full & $\num{14.850} \pm \num{0.221}$ & $\num{12.703} \pm \num{0.291}$ & $\num{0.8554} \pm \num{0.0217}$ & $\num{3}$ \\
+    $\num{1.4}$ & $\mathrm{A2}$ & no & $\num{15.213} \pm \num{0.155}$ & $\num{10.421} \pm \num{0.160}$ & $\num{0.6850} \pm \num{0.0036}$ & $\num{2}$ \\
+    $\num{1.4}$ & $\mathrm{A2}$ & full & $\num{15.734} \pm \num{0.738}$ & $\num{11.908} \pm \num{0.420}$ & $\num{0.7569} \pm \num{0.0550}$ & $\num{3}$ \\
+    $\num{1.5}$ & $\mathrm{A2}$ & no & $\num{15.087} \pm \num{0.000}$ & $\num{8.963} \pm \num{0.294}$ & $\num{0.5941} \pm \num{0.0195}$ & $\num{2}$ \\
+    $\num{1.5}$ & $\mathrm{A2}$ & full & $\num{15.526} \pm \num{0.610}$ & $\num{11.348} \pm \num{0.386}$ & $\num{0.7309} \pm \num{0.0487}$ & $\num{3}$ \\
+    $\num{1.6}$ & $\mathrm{A2}$ & no & $\num{14.719} \pm \num{0.097}$ & $\num{7.133} \pm \num{0.058}$ & $\num{0.4846} \pm \num{0.0008}$ & $\num{2}$ \\
+    $\num{1.6}$ & $\mathrm{A2}$ & full & $\num{15.580} \pm \num{0.622}$ & $\num{10.664} \pm \num{0.521}$ & $\num{0.6845} \pm \num{0.0275}$ & $\num{3}$ \\
+    $\num{1.3}$ & $\mathrm{A3}$ & no & $\num{21.543} \pm \num{0.059}$ & $\num{17.872} \pm \num{0.098}$ & $\num{0.8296} \pm \num{0.0023}$ & $\num{2}$ \\
+    $\num{1.3}$ & $\mathrm{A3}$ & full & $\num{22.290} \pm \num{0.509}$ & $\num{18.574} \pm \num{0.214}$ & $\num{0.8333} \pm \num{0.0174}$ & $\num{4}$ \\
+    $\num{1.4}$ & $\mathrm{A3}$ & no & $\num{22.479} \pm \num{0.025}$ & $\num{15.089} \pm \num{0.112}$ & $\num{0.6713} \pm \num{0.0043}$ & $\num{2}$ \\
+    $\num{1.4}$ & $\mathrm{A3}$ & full & $\num{23.110} \pm \num{0.407}$ & $\num{17.677} \pm \num{0.391}$ & $\num{0.7649} \pm \num{0.0088}$ & $\num{4}$ \\
+    $\num{1.5}$ & $\mathrm{A3}$ & no & $\num{21.411} \pm \num{0.135}$ & $\num{13.091} \pm \num{0.026}$ & $\num{0.6114} \pm \num{0.0026}$ & $\num{2}$ \\
+    $\num{1.5}$ & $\mathrm{A3}$ & full & $\num{23.378} \pm \num{0.761}$ & $\num{17.055} \pm \num{0.338}$ & $\num{0.7296} \pm \num{0.0098}$ & $\num{4}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
