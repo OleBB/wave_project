@@ -517,7 +517,7 @@ FIGURE_CAPTIONS: dict[str, str] = {
     # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
 
     # § 1 — Damping vs frequency (parent + 3 subfigs)
-    "ch05_damping_freq":               "Transmisjonskoeffisient per frekvens. Endelig oppsett. Usikkerhetsstolper viser standardavvik. Ingen stolpe hvis kun én serie er brukt.",
+    "ch05_damping_freq":               "Transmisjonskoeffisient per frekvens. Endelig oppsett. Usikkerhetsstolper viser standardavvik.",
     "ch05_damping_freq_full_A1":       "Amplitudevalg $A_1$",
     "ch05_damping_freq_full_A2":       "Amplitudevalg $A_2$",
     "ch05_damping_freq_full_A3":       "Amplitudevalg $A_3$",
