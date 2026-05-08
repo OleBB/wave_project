@@ -945,8 +945,11 @@ def damping_all_amplitude_grouper(
             base_columns.append(_pos_col)
     # Canonical IN/OUT amplitudes and their probe-composition provenance —
     # ride through the grouper so stats_df carries them into figure-stub
-    # metadata (see plot_utils.build_fig_meta).
+    # metadata (see plot_utils.build_fig_meta). "IN ka (FFT)" rides too so
+    # the damping plotters can show per-(wind) ka ranges in their legends
+    # (computed via min/max aggregations below).
     for _col in ("IN Amplitude (FFT)", "OUT Amplitude (FFT)",
+                 "IN ka (FFT)",
                  "in_probes_used", "out_probes_used",
                  "ain_disagree_frac", "aout_disagree_frac",
                  "file_date"):
@@ -1014,6 +1017,11 @@ def damping_all_amplitude_grouper(
     for _col in ("ain_disagree_frac", "aout_disagree_frac"):
         if _col in rmdf.columns:
             agg_dict[f"{_col}_mean"] = (_col, "mean")
+    # ka stats per group — used by damping plotters' legends.
+    if "IN ka (FFT)" in rmdf.columns:
+        agg_dict["mean_ka"] = ("IN ka (FFT)", "mean")
+        agg_dict["min_ka"]  = ("IN ka (FFT)", "min")
+        agg_dict["max_ka"]  = ("IN ka (FFT)", "max")
     if "file_date" in rmdf.columns:
         agg_dict["file_dates"] = (
             "file_date", lambda s: sorted({str(v) for v in s.dropna()})

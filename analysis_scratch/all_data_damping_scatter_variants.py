@@ -197,9 +197,29 @@ def make_scatter(wave_clip, panel_label: str, title_extra: str, out_pdfs: list[P
     secax.set_xticklabels([f"{f:.1f}" for f in _used_freqs])
     secax.tick_params(labelsize=7)
 
+    # ka range per wind condition for the legend — same data subset the
+    # scatter plots. Prefer "IN ka (FFT)" from meta (post-2026-05-07 fix);
+    # fallback computes it from k × IN-amplitude with mm→m conversion.
+    _ka_ranges = {}
+    for _w in ["no", "full"]:
+        _sub = wave_clip[wave_clip["WindCondition"] == _w]
+        if "IN ka (FFT)" in _sub.columns:
+            _ka_vals = _sub["IN ka (FFT)"].dropna()
+        elif "IN Amplitude (FFT)" in _sub.columns:
+            _ka_vals = (_sub["k"] * _sub["IN Amplitude (FFT)"] * 1e-3).dropna()
+        else:
+            _ka_vals = pd.Series(dtype=float)
+        _ka_ranges[_w] = (float(_ka_vals.min()), float(_ka_vals.max())) if len(_ka_vals) else None
+
+    def _wind_label_with_ka(w):
+        rng = _ka_ranges.get(w)
+        return WIND_LABEL[w] if rng is None else \
+            f"{WIND_LABEL[w]}  ($ka$: {rng[0]:.3f}–{rng[1]:.3f})"
+
     wind_handles = [
         mlines.Line2D([], [], color=WIND_COLOR_MAP[w],
-                      linestyle="-", linewidth=5, label=WIND_LABEL[w])
+                      linestyle="-", linewidth=5,
+                      label=_wind_label_with_ka(w))
         for w in ["no", "full"]
     ]
     amp_handles = [

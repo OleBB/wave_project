@@ -257,10 +257,18 @@ def _make_damping_freq_fig(
     fig, ax = plt.subplots(figsize=figsize)
     for wind, grp in subset.groupby(GC.WIND_CONDITION):
         grp = grp.sort_values(GC.WAVE_FREQUENCY_INPUT)
+        # Append per-wind ka range to the legend label when the grouper
+        # provided min/max ka aggregations (added 2026-05-08 — see
+        # filters.py::damping_all_amplitude_grouper).
+        label = wind_to_label(wind)
+        if "min_ka" in grp.columns and grp["min_ka"].notna().any():
+            ka_lo = float(grp["min_ka"].min())
+            ka_hi = float(grp["max_ka"].max())
+            label = f"{label}  ($ka$: {ka_lo:.3f}–{ka_hi:.3f})"
         ax.errorbar(
             freq_to_k(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
             yerr=grp["std_out_in"],
-            label=wind_to_label(wind), color=WIND_COLOR_MAP.get(wind),
+            label=label, color=WIND_COLOR_MAP.get(wind),
             marker=marker, markersize=6, linewidth=1.4, capsize=3,
         )
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
@@ -463,16 +471,21 @@ def _make_damping_scatter_fig(
     ax.set_ylim(0.33, 0.93)
     ax.grid(True, alpha=0.3)
 
-    # Bottom x-axis: ticks at the 4 thesis-scope k-values (those that match
-    # the 4 used frequencies 1.3–1.6 Hz). Replaces the default 0.5-step
-    # ticks so the 4 key values are unambiguously marked.
+    # Bottom x-axis: linear-k ruler with INTEGER major ticks (7, 8, 9, 10),
+    # half-integer minor ticks. The four data points sit at their true k
+    # positions (6.8, 7.9, 9.1, 10.3) and therefore fall BETWEEN ruler ticks —
+    # the visual offsets are the small non-uniformity Δk = 1.1, 1.2, 1.2 from
+    # the dispersion ω² = gk·tanh(kh). Earlier convention placed ticks at the
+    # 4 data k-values, which hid the linearity from readers.
     KEY_FREQS = [1.3, 1.4, 1.5, 1.6]
-    KEY_KS = freq_to_k(np.asarray(KEY_FREQS))
-    ax.set_xticks(KEY_KS)
-    ax.set_xticklabels([f"{k:.1f}" for k in KEY_KS])
+    ax.set_xlim(6.5, 10.6)
+    ax.set_xticks([7, 8, 9, 10])
+    ax.set_xticks([6.5, 7.5, 8.5, 9.5, 10.5], minor=True)
     ax.set_xlabel("$k$", fontsize=11)
 
-    # Top x-axis: paired ticks at the 4 frequencies, full title above.
+    # Top x-axis: Hz labels at the four experiment frequencies. Because the
+    # bottom is linear-k and add_freq_axis maps via dispersion, these land at
+    # k = 6.8 / 7.9 / 9.1 / 10.3 — i.e. directly above the data columns.
     secax = add_freq_axis(ax)
     secax.set_xticks(KEY_FREQS)
     secax.set_xticklabels([f"{f:.1f}" for f in KEY_FREQS])
