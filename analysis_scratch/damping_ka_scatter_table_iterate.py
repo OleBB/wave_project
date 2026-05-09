@@ -1,0 +1,239 @@
+"""
+Iteration script: tables to accompany the three ka-scatter figures
+==================================================================
+
+Companion to ``all_data_damping_scatter_ka.py``. Re-uses the same data
+preparation (load → filter → categorise → ka column) so the rows here
+are exactly the dots you see in those figures.
+
+Pooling granularity (per user 2026-05-09):
+    (category × amplitude × wind condition)
+e.g. one row for "below_loose230_full × A1 × full vind".
+
+Three views — one table per view, mirroring the figure split:
+    all   = loose300 + loose230 + above_50 pooled
+    under = loose300 + loose230 (full panel only)
+    over  = above_50 (full + reverse panel pooled)
+
+Per row we compute:
+    n              count of runs in the cell
+    ka_min/max     ka range in the cell (paddle-only ka)
+    Kt_mean        mean of OUT/IN (FFT)
+    Kt_std         std of OUT/IN (FFT)
+    n_freqs        unique paddle frequencies represented
+    slope_dKt_dka  slope of K_t vs ka inside the cell (linear)
+    R2             R² of that linear fit
+    ka_at_min/max  Kt(ka_min)/(ka_max) from the linear fit (sanity)
+
+The slope/R² columns are diagnostic at this granularity (n_freqs is often
+3–4, so R² is noisy). Treat as informative, not decisive — the user will
+decide whether to keep them, drop them, or move them to a coarser table.
+
+Run:
+    conda run -n draumkvedet python analysis_scratch/damping_ka_scatter_table_iterate.py
+
+Outputs to analysis_scratch/ (NOT output/) — this is iteration scratch:
+    damping_ka_scatter_table_iterate_all.csv
+    damping_ka_scatter_table_iterate_under.csv
+    damping_ka_scatter_table_iterate_over.csv
+
+Once the row shape / ordering / fit decision is locked, promote to
+output/TABLES/data/<name>.{csv,meta.json} and add render cells in
+main_save_tables.py (two-step pattern, 2026-05-08 convention).
+"""
+
+import sys
+import glob
+import warnings
+from pathlib import Path
+
+warnings.filterwarnings("ignore")
+
+import numpy as np
+import pandas as pd
+
+BASE = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE))
+
+import os
+os.chdir(BASE)
+
+from wavescripts.improved_data_loader import load_analysis_data
+
+K_COL = "IN Wavenumber (FFT)"
+A_COL = "IN Amplitude (FFT)"
+
+
+# ── 1. Load + filter + categorise (mirror of the figure script) ───────────────
+print("1. Loading all processed folders …")
+all_dirs = sorted(glob.glob(str(BASE / "waveprocessed" / "PROCESSED-*")))
+meta, _, _, _ = load_analysis_data(*all_dirs, load_processed=False)
+print(f"   {len(all_dirs)} folders, {len(meta)} total rows")
+
+wave = meta[
+    meta["WaveFrequencyInput [Hz]"].notna()
+    & (meta["WaveFrequencyInput [Hz]"] > 0)
+    & meta["PanelCondition"].isin(["full", "reverse"])
+    & meta["WindCondition"].isin(["no", "full"])
+    & (meta["quality_flag"] == "ok")
+    & meta["OUT/IN (FFT)"].notna()
+    & meta[K_COL].notna()
+    & meta[A_COL].notna()
+].copy()
+wave_clip = wave[(wave["OUT/IN (FFT)"] <= 2.0) & (wave["OUT/IN (FFT)"] >= 0.1)].copy()
+wave_clip = wave_clip[wave_clip["WaveFrequencyInput [Hz]"] < 2.0].copy()
+wave_clip = wave_clip[wave_clip["Mooring"] != "above_200"].copy()
+wave_clip["ka"] = (wave_clip[K_COL].astype(float)
+                   * wave_clip[A_COL].astype(float) / 1000.0)
+
+
+def _category(row):
+    m, p = row["Mooring"], row["PanelCondition"]
+    if m == "below_90_loose300" and p == "full":              return "below_loose300_full"
+    if m == "below_90_loose230" and p == "full":              return "below_loose230_full"
+    if m == "above_50"          and p in ("full", "reverse"): return "above_50"
+    return "other"
+
+
+wave_clip["category"] = wave_clip.apply(_category, axis=1)
+wave_clip = wave_clip[wave_clip["category"] != "other"].copy()
+print(f"   {len(wave_clip)} runs in scope across 3 categories")
+
+
+# ── 2. Aggregation helper ─────────────────────────────────────────────────────
+def _round_amp(v):
+    return round(float(v), 2)
+
+
+CATEGORY_LABEL = {
+    "below_loose300_full": "Under, loose300, full panel",
+    "below_loose230_full": "Under, loose230, full panel",
+    "above_50":            "Over (50 mm), pooled paneler",
+}
+CATEGORY_ORDER = ["below_loose300_full", "below_loose230_full", "above_50"]
+WIND_ORDER     = ["no", "full"]
+WIND_LABEL     = {"no": "uten", "full": "full"}
+AMP_LABEL      = {0.10: "A1", 0.20: "A2", 0.30: "A3"}
+AMP_ORDER      = [0.10, 0.20, 0.30]
+
+
+PANEL_LENGTH_M = 2.6   # L — panel longitudinal length [m]; fixed.
+
+
+def _linfit(x: np.ndarray, y: np.ndarray) -> tuple[float, float]:
+    """Return (slope, R²) of y = a*x + b. NaN if x has no spread."""
+    if len(x) < 2 or x.std() < 1e-9:
+        return (np.nan, np.nan)
+    p = np.polyfit(x, y, deg=1)
+    pred  = np.polyval(p, x)
+    ss_res = float(np.sum((y - pred) ** 2))
+    ss_tot = float(np.sum((y - y.mean()) ** 2))
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else np.nan
+    return (float(p[0]), r2)
+
+
+def _aggregate(df: pd.DataFrame) -> pd.DataFrame:
+    """Group → (category, amp, wind), one row per cell.
+
+    Per cell, we compute TWO parallel linear fits of K_t against
+    different x-axes:
+      • vs ka : steepness slope; ka couples wavenumber AND amplitude
+      • vs k  : wavelength-only slope; amplitude variation within the
+                cell is absorbed into residuals
+    R²_ka and R²_k can differ — that difference is itself diagnostic.
+    kL columns are a fixed scaling of k by L=2.6 m (panel length).
+    """
+    df = df.copy()
+    df["amp_v"] = df["WaveAmplitudeInput [Volt]"].apply(_round_amp)
+    rows = []
+    for cat in CATEGORY_ORDER:
+        for amp_v in AMP_ORDER:
+            for wind in WIND_ORDER:
+                cell = df[(df["category"] == cat)
+                          & (df["amp_v"] == amp_v)
+                          & (df["WindCondition"] == wind)]
+                if cell.empty:
+                    continue
+                ka = cell["ka"].to_numpy(float)
+                k  = cell[K_COL].to_numpy(float)        # rad/m
+                kt = cell["OUT/IN (FFT)"].to_numpy(float)
+                slope_ka, r2_ka = _linfit(ka, kt)
+                slope_k,  r2_k  = _linfit(k,  kt)
+                # kL is a constant rescaling of k; slope rescales as 1/L.
+                slope_kL = slope_k * PANEL_LENGTH_M if pd.notna(slope_k) else np.nan
+                rows.append({
+                    "category":  cat,
+                    "category_label": CATEGORY_LABEL[cat],
+                    "amp":       AMP_LABEL[amp_v],
+                    "amp_volt":  amp_v,
+                    "wind":      wind,
+                    "wind_label": WIND_LABEL[wind],
+                    "n":         int(len(cell)),
+                    "n_freqs":   int(cell["WaveFrequencyInput [Hz]"].nunique()),
+                    # K_t summary
+                    "Kt_mean":   float(kt.mean()),
+                    "Kt_std":    float(kt.std(ddof=1)) if len(kt) > 1 else np.nan,
+                    # ka block
+                    "ka_min":    float(ka.min()),
+                    "ka_max":    float(ka.max()),
+                    "slope_dKt_dka": slope_ka,
+                    "R2_ka":     r2_ka,
+                    # k block (rad/m)
+                    "k_min":     float(k.min()),
+                    "k_max":     float(k.max()),
+                    "slope_dKt_dk": slope_k,
+                    "R2_k":      r2_k,
+                    # kL block (dimensionless; L = 2.6 m)
+                    "kL_min":    float(k.min()) * PANEL_LENGTH_M,
+                    "kL_max":    float(k.max()) * PANEL_LENGTH_M,
+                    "slope_dKt_dkL": slope_kL,
+                    # R²_kL == R²_k (linear rescale); not duplicated.
+                })
+    return pd.DataFrame(rows)
+
+
+# ── 3. Build the 3 views ──────────────────────────────────────────────────────
+VIEWS = {
+    "all":   {"name": "all data (3 categories)",
+              "cats": CATEGORY_ORDER},
+    "under": {"name": "undermooring (loose300 + loose230)",
+              "cats": ["below_loose300_full", "below_loose230_full"]},
+    "over":  {"name": "overmooring (above_50, panel pooled)",
+              "cats": ["above_50"]},
+}
+
+# Pretty console formatter — three slope blocks side by side
+# (ka steepness | k wavelength-only | kL panel-relative).
+def _fmt_slope(slope: float, r2: float) -> str:
+    if pd.notna(slope):
+        return f"slope={slope:+7.3f} R²={r2:+.2f}"
+    return "slope=    n/a  R²= n/a "
+
+
+def _fmt_row(r):
+    head = (f"{r['category_label']:<32s}  "
+            f"{r['amp']}  {r['wind_label']:<4s}  "
+            f"n={r['n']:>3d}  "
+            f"Kt={r['Kt_mean']:.3f}±{r['Kt_std']:.3f}")
+    ka_block = (f"ka=[{r['ka_min']:.3f},{r['ka_max']:.3f}]  "
+                + _fmt_slope(r['slope_dKt_dka'], r['R2_ka']))
+    k_block  = (f"k=[{r['k_min']:.2f},{r['k_max']:.2f}]  "
+                + _fmt_slope(r['slope_dKt_dk'], r['R2_k']))
+    kL_block = (f"kL=[{r['kL_min']:.1f},{r['kL_max']:.1f}]  "
+                # R²_kL == R²_k (linear rescaling), so reuse R2_k.
+                + _fmt_slope(r['slope_dKt_dkL'], r['R2_k']))
+    return f"{head}  ║ {ka_block} ║ {k_block} ║ {kL_block}"
+
+
+print("\n" + "=" * 100)
+for vkey, vinfo in VIEWS.items():
+    sub = wave_clip[wave_clip["category"].isin(vinfo["cats"])]
+    tab = _aggregate(sub)
+    csv_path = Path(__file__).parent / f"damping_ka_scatter_table_iterate_{vkey}.csv"
+    tab.to_csv(csv_path, index=False)
+    print(f"\n── VIEW: {vinfo['name']}  ({len(tab)} cells, {len(sub)} runs) ──")
+    for _, r in tab.iterrows():
+        print(_fmt_row(r))
+    print(f"   → {csv_path.relative_to(BASE)}")
+print("\n" + "=" * 100)
+print("Done. Edit this script's pooling / row order / column choice and re-run.")
