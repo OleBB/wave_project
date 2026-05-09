@@ -262,13 +262,14 @@ def _make_damping_freq_fig(
     # Mooring-split colours: when the input has more than one Mooring
     # value, draw one curve per (wind, mooring) combo. loose230 reuses
     # the project-wide WIND_COLOR_MAP (red/blue); loose300 gets a
-    # contrasting pair — magenta (full) + turquoise (no), matching the
-    # over-mooring family in ch05_damping_*_scatter_ka (2026-05-09).
+    # muted-classical pair — firebrick (full) + steel blue (no), matching
+    # the over-mooring family in ch05_damping_*_scatter_ka (2026-05-09
+    # professional pass).
     MOORING_WIND_COLORS = {
         ("no",   "loose230"): WIND_COLOR_MAP.get("no"),    # blue
         ("full", "loose230"): WIND_COLOR_MAP.get("full"),  # red
-        ("no",   "loose300"): "#17BECF",                   # turquoise
-        ("full", "loose300"): "#D81B7A",                   # magenta
+        ("no",   "loose300"): "#4682B4",                   # steel blue
+        ("full", "loose300"): "#B22222",                   # firebrick
     }
     _has_mooring = (
         "Mooring" in subset.columns and subset["Mooring"].nunique() > 1
@@ -301,13 +302,15 @@ def _make_damping_freq_fig(
             yerr=grp["std_out_in"],
             label=label, color=color,
             marker=marker, markersize=6, linewidth=1.4,
-            # Errorbars: thicker than the connecting line + larger caps so
-            # within-mooring spread (~0.005–0.04) is visible against the
-            # ~0.05 between-curve gap. Marker outline (black, 0.4px) matches
-            # the convention in ch05_damping_*_scatter_ka (EDGE_LW=0.4)
-            # — same visual language across the CH05 freq + ka figures.
-            markeredgecolor="black", markeredgewidth=0.4,
-            elinewidth=2.0, capsize=4, capthick=2.0,
+            # Errorbars: doubled stroke + doubled cap (2026-05-09) — only 4
+            # freq points on the x-axis with lots of lateral room, so cap
+            # length is free to expand without bumping neighbours. The
+            # ~0.005–0.04 within-mooring spread now reads clearly against
+            # the ~0.05 between-curve gap. Marker outline (black, 0.4px)
+            # matches the convention in ch05_damping_*_scatter_ka
+            # (EDGE_LW=0.4) — same visual language across freq + ka figs.
+            markeredgecolor="black", markeredgewidth=0.4, ecolor="black",
+            elinewidth=2.0, capsize=10, capthick=4.0,
         )
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     # ΔK_t labels: drawn ONLY in the no-mooring-split case. With 4 series

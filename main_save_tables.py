@@ -76,7 +76,7 @@ from wavescripts.table_render import render_table
 TABLE_CAPTIONS = {
     # ── CHAPTER 04 — METHODOLOGY ─────────────────────────────────────────────
     "ch04_probe_noise_floor_table":              "Oversikt over støygulvet til prober ved innledende og endelig oppsett.",   # TODO: write caption
-    "ch04_parallel_probe_psd_agreement_simple":  "Forskjellen mellom parallelle prober",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
+    "ch04_parallel_probe_psd_agreement_simple":  "Forskjellen mellom parallelle prober.",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
     "ch04_window_intervals":                     "",
     "ch04_window_choice_nowind":                 "",
     "ch04_window_choice_fullwind":               "",
@@ -102,13 +102,13 @@ TABLE_CAPTIONS = {
 TABLE_CAPTIONS_SHORT = {
     # ── CHAPTER 04 ───────────────────────────────────────────────────────────
     "ch04_probe_noise_floor_table":              "",   # TODO: short caption
-    "ch04_parallel_probe_psd_agreement_simple":  "",
+    "ch04_parallel_probe_psd_agreement_simple":  "Forskjellen mellom parallelle prober.",
     "ch04_window_intervals":                     "",
     "ch04_window_choice_nowind":                 "",
     "ch04_window_choice_fullwind":               "",
-    "ch04_plateau_values":                       "",
-    "ch04_tidsvindu":                            "Frekvensenes tidsvindu",
-    "ch04_wind_pre_paddle_table":                "",
+    "ch04_plateau_values":                       "Platåverdier",
+    "ch04_tidsvindu":                            "Frekvensenes tidsvindu.",
+    "ch04_wind_pre_paddle_table":                "Vindspekteret fra ulike målinger.",
     "ch04_wind_setup_baseline_table":            "",
 
     # ── CHAPTER 05 ───────────────────────────────────────────────────────────

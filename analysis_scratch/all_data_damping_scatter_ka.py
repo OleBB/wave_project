@@ -162,21 +162,19 @@ summary.to_csv(SCRATCH_CSV, index=False)
 print(f"\n   Summary → {SCRATCH_CSV.relative_to(BASE)}")
 
 # ── 4. Plot — single figure, mooring×panel categories pooled per by_mooring ──
-# Above_50 (over-mooring) palette (2026-05-09 final): pink (fullwind) and
-# turquoise (nowind). Stays inside the project-wide red/blue convention
-# while shifting the hue enough to read as a third mooring family next to
-# loose300 (red/blue) and loose230 (light red/blue). Same colours apply to
-# both panel orientations; full vs reverse is encoded by FILL — full panel
-# = solid; reverse panel = hollow, colour shifts to the marker outline.
-# Below moorings unchanged.
+# Above_50 (over-mooring) palette (2026-05-09, professional pass):
+# steel blue (nowind) + firebrick (fullwind). Both are classical matplotlib
+# named colours — clearly in the red/blue family, more muted than the
+# canon vibrant red/blue (loose300) and clearly distinct from the light
+# salmon/light blue (loose230). Below moorings unchanged.
 #
-# History: 2026-05-09 morning the over palette was turquoise/pink (this).
-# Mid-day briefly tried yellow/purple per user request, then reverted to
-# pink/turquoise — yellow/purple read as "less ugly" but lost the visual
-# binding to the rest of the thesis's red/blue convention.
-ABOVE_FULLWIND_COLOR = "#D81B7A"   # magenta (shifted from pink #E377C2 for
-                                   # more separation from loose230 salmon)
-ABOVE_NOWIND_COLOR   = "#17BECF"   # turquoise
+# History (over-mooring colour iterations):
+#   morning : turquoise / pink  (#17BECF / #E377C2)  — felt cartoonish
+#   mid-day : yellow / purple   (#FFD60A / #9467BD)  — too saturated
+#   evening : turquoise / magenta (#17BECF / #D81B7A) — bright, garish
+#   final   : steel blue / firebrick (#4682B4 / #B22222) — muted, classical
+ABOVE_FULLWIND_COLOR = "#B22222"   # firebrick (muted dark red)
+ABOVE_NOWIND_COLOR   = "#4682B4"   # steel blue (muted blue)
 
 COLORS = {
     ("below_loose300_full", "no"):   WIND_COLOR_MAP["no"],   # standard blue
@@ -212,16 +210,18 @@ CATEGORY_ORDER = [
 ]
 
 # Marker per (category, amp). Below moorings use the project amp-tier
-# convention; above_50 (both panels) uses three highly distinct shapes
-# (diamond / X-cross / hexagon) chosen 2026-05-09 because the previous
-# 6/5/4-point star family wasn't visually separable at small marker sizes.
-# Full vs reverse panel is encoded by fill (see HOLLOW_CATEGORIES), not
-# shape.
+# convention; above_50 (both panels) uses three visually distinct shapes
+# — diamond / filled-plus / hexagon. Pentagon (`p`) was tried for A2 but
+# read as too similar to the hexagon at small thesis-figure sizes; the
+# filled plus (`P`) breaks the polygon pattern entirely and pops cleanly.
+# All three render hollow (face='none', colour to outline) for the
+# reverse-panel split. Full vs reverse panel is encoded by fill (see
+# HOLLOW_CATEGORIES), not shape.
 MARKERS = {
     "below_loose300_full": {0.10: "o",  0.20: "s",  0.30: "^"},
     "below_loose230_full": {0.10: "o",  0.20: "s",  0.30: "^"},
-    "above_50_full":       {0.10: "D",  0.20: "X",  0.30: "h"},
-    "above_50_reverse":    {0.10: "D",  0.20: "X",  0.30: "h"},
+    "above_50_full":       {0.10: "D",  0.20: "P",  0.30: "h"},
+    "above_50_reverse":    {0.10: "D",  0.20: "P",  0.30: "h"},
 }
 WIND_LABEL = {"no": "uten vind", "full": "full vind"}
 MARKER_SIZE = 55

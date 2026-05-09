@@ -116,10 +116,12 @@ COLORS = {
                                                  # (was #FCAE91 light salmon
                                                  # — shifted 2026-05-09 to
                                                  # widen gap to magenta below)
-    # above_50 pooled (full + reverse) — magenta/turquoise + star markers,
-    # giving a clear visual separation from the below mooring family.
-    ("above_50",            "no"):   "#17BECF",  # turquoise
-    ("above_50",            "full"): "#D81B7A",  # magenta (was #E377C2 pink)
+    # above_50 pooled (full + reverse) — steel blue / firebrick + polygon
+    # markers, giving a clear visual separation from the below mooring
+    # family while staying in the muted-classical red/blue palette
+    # (2026-05-09 professional pass).
+    ("above_50",            "no"):   "#4682B4",  # steel blue
+    ("above_50",            "full"): "#B22222",  # firebrick (muted red)
 }
 
 CATEGORY_LABELS = {

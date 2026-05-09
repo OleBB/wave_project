@@ -1604,7 +1604,7 @@ _run_delegated_if_missing(
     label="ch04_per40_and_per240_HG_shifted",
 )
 
-# %% TODO - consider repurpose this - we are no longer using hg window, we use our "earliest possible" window, because the analysis said its better for our limited per40 runs.
+# %% TODO - consider fixing this - we are no longer using hg window, we use our "earliest possible" window, because the analysis said its better for our limited per40 runs.
 # [DATA: DELEG]  — analysis_scratch/hg_per40_window_fitness.py
 """
 ── CH04 § 4n — Proposed H&G window fitness on per40+per240, all 4 freqs ─────
