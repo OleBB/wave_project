@@ -1,0 +1,33 @@
+{
+  "name": "app_panel_pooling",
+  "script": "analysis_scratch/panel_orientation_pooling_table.py",
+  "plot_type": "table",
+  "chapter": "appendix",
+  "caption_label": "tab:app_panel_pooling",
+  "caption_short": "",
+  "n_rows": 6,
+  "summary": {
+    "n_cells": 6,
+    "median_delta": -0.02627881036750096,
+    "mean_delta": -0.012364804409930282,
+    "std_delta": 0.04237581527905848,
+    "abs_delta_max": 0.0714101800546334,
+    "frac_abs_le_0p05": 0.8333333333333334,
+    "frac_abs_le_0p10": 1.0
+  },
+  "filter_scope": {
+    "Mooring": "above_50",
+    "PanelCondition": [
+      "full",
+      "reverse"
+    ],
+    "WindCondition": [
+      "no",
+      "full"
+    ],
+    "freq_range": "all available (1.3 Hz only — reverse not tested elsewhere)",
+    "quality_flag": "ok (default in apply_experimental_filters)"
+  },
+  "delta_convention": "Δ = K_rev − K_full  (negative ⇒ reverse panel transmits less)",
+  "generated_at": "2026-05-09T11:58:45"
+}

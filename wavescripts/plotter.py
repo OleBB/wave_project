@@ -254,13 +254,43 @@ def _make_damping_freq_fig(
     AMP_MARKER = {0.10: "o", 0.20: "s", 0.30: "^"}
     marker = AMP_MARKER.get(round(float(amp), 2), "o")
 
+    # Reader-facing wind labels for this figure (full sentence form,
+    # used here only — wind_to_label() returns the bare "uten"/"full"
+    # used elsewhere in the project).
+    WIND_LEGEND = {"no": "Uten vind", "full": "Full vind", "lowest": "Liten vind"}
+
+    # Mooring-split colours: when the input has more than one Mooring
+    # value, draw one curve per (wind, mooring) combo. loose230 reuses
+    # the project-wide WIND_COLOR_MAP (red/blue); loose300 gets a
+    # contrasting pair (pink for full, turquoise for no).
+    MOORING_WIND_COLORS = {
+        ("no",   "loose230"): WIND_COLOR_MAP.get("no"),    # blue
+        ("full", "loose230"): WIND_COLOR_MAP.get("full"),  # red
+        ("no",   "loose300"): "#17BECF",                   # turquoise
+        ("full", "loose300"): "#E377C2",                   # pink
+    }
+    _has_mooring = (
+        "Mooring" in subset.columns and subset["Mooring"].nunique() > 1
+    )
+    _group_keys = ([GC.WIND_CONDITION, "Mooring"] if _has_mooring
+                   else GC.WIND_CONDITION)
+
     fig, ax = plt.subplots(figsize=figsize)
-    for wind, grp in subset.groupby(GC.WIND_CONDITION):
+    for _key, grp in subset.groupby(_group_keys):
+        if _has_mooring:
+            wind, mooring = _key
+            color = (MOORING_WIND_COLORS.get((wind, mooring))
+                     or WIND_COLOR_MAP.get(wind))
+            label_base = f"{WIND_LEGEND.get(wind, wind_to_label(wind))}, {mooring}"
+        else:
+            wind = _key
+            color = WIND_COLOR_MAP.get(wind)
+            label_base = WIND_LEGEND.get(wind, wind_to_label(wind))
         grp = grp.sort_values(GC.WAVE_FREQUENCY_INPUT)
-        # Append per-wind ka range to the legend label when the grouper
+        # Append per-series ka range to the legend label when the grouper
         # provided min/max ka aggregations (added 2026-05-08 — see
         # filters.py::damping_all_amplitude_grouper).
-        label = wind_to_label(wind)
+        label = label_base
         if "min_ka" in grp.columns and grp["min_ka"].notna().any():
             ka_lo = float(grp["min_ka"].min())
             ka_hi = float(grp["max_ka"].max())
@@ -268,28 +298,54 @@ def _make_damping_freq_fig(
         ax.errorbar(
             freq_to_k(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
             yerr=grp["std_out_in"],
-            label=label, color=WIND_COLOR_MAP.get(wind),
+            label=label, color=color,
             marker=marker, markersize=6, linewidth=1.4, capsize=3,
         )
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
+    # ΔK_t labels: drawn ONLY in the no-mooring-split case. With 4 series
+    # (2 wind × 2 mooring) the text would overlap; the comparison the
+    # reader is doing in the mooring-split version is "do the moorings
+    # agree?", not "what's the wind delta?" — kept in the table.
+    if not _has_mooring:
+        # Sign convention matches damping_freq_table.py:121 (Δ = K_t,full
+        # − K_t,no): negative ⇒ wind reduces transmission. At A1×1.6 Hz
+        # the lower (full) marker sits near y=0.40 and overlaps the
+        # label slightly — accepted.
+        _pivot = subset.pivot(index=GC.WAVE_FREQUENCY_INPUT,
+                              columns=GC.WIND_CONDITION,
+                              values="mean_out_in")
+        if {"no", "full"}.issubset(_pivot.columns):
+            for _f, _row in _pivot.iterrows():
+                if pd.isna(_row["no"]) or pd.isna(_row["full"]):
+                    continue
+                _d = float(_row["full"] - _row["no"])
+                ax.text(freq_to_k(_f), 0.40, rf"$\Delta${_d:+.3f}",
+                        ha="center", va="center", fontsize=8, color="black")
     # Dead-equal y-axis across all 3 subfigures so they stack visually for
     # apples-to-apples reading of A1/A2/A3.
     ax.set_ylim(0.33, 0.93)
     ax.grid(True, alpha=0.3)
-    ax.legend(title="vind", fontsize=8, title_fontsize=8)
+    ax.legend(fontsize=8)
     secax = add_freq_axis(ax)
     secax.set_xticks([1.3, 1.4, 1.5, 1.6])
     secax.set_xticklabels(["1.3", "1.4", "1.5", "1.6"])
-    # Single-letter axis identifiers at the right end, level with the tick
-    # row. Caption defines them: k = wavenumber, f = paddle frequency.
-    ax.set_xlabel("$k$", fontsize=11)
-    ax.xaxis.set_label_coords(1.02, -0.025)
-    secax.set_xlabel("$f$", fontsize=11)
-    secax.xaxis.set_label_coords(1.02, 1.025)
-    # Y-axis: horizontal $\mathcal{T}$ above leftmost tick — matches the
+    # Single-letter axis identifiers (k = wavenumber, f = paddle frequency)
+    # at the right end of each x-axis. Drawn as fig.text in figure-fraction
+    # coordinates because bbox_inches='tight' reliably tracks fig.text
+    # artists; set_label_coords past the axes edge is prone to cropping
+    # (see apply_horizontal_ylabel docstring).
+    ax.set_xlabel("")
+    secax.set_xlabel("")
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.85, bottom=0.13)
+    fig.canvas.draw()
+    _ax_pos = ax.get_position()
+    fig.text(_ax_pos.x1, _ax_pos.y0 - 0.04, "$k$",
+             ha="right", va="top", fontsize=11)
+    fig.text(_ax_pos.x1, _ax_pos.y1 + 0.02, "$f$",
+             ha="right", va="bottom", fontsize=11)
+    # Y-axis: horizontal $K_t$ above leftmost tick — matches the
     # all_data_damping_scatter / inspirational convention. Frees the left
     # margin for the data band.
-    fig.subplots_adjust(left=0.07, right=0.97, top=0.85, bottom=0.13)
     apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
     return fig
 

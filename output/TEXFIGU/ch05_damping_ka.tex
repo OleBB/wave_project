@@ -7,7 +7,7 @@
 %   computed_in       : analysis_scratch/damping_ka_per_volt.py (combined all-amplitudes overview)
 %   plot_type         : damping_ka
 %   data_class        : DELEG
-%   generated_at      : 2026-05-07T17:25:32
+%   generated_at      : 2026-05-09T12:03:57
 %   findings_doc      : memory/methodology_wind_enhances_A_in.md
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -41,29 +41,31 @@
 %   grouper           : 
 %   collapse_panels   : 
 %   fft_window_hz     : 0.1
-%   extra_params      : all three amplitude tiers (A1/A2/A3) overlaid on one panel. frequency range = 1.3–1.6 Hz (thesis scope). panel condition = full. quality_flag ∈ {ok, NaN}. per-tags included: per240 + per40 (per15 excluded — window too short for H&G [50T, 60T]). datasets: PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange, PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange. x-axis = IN ka (FFT) computed per run from measured IN-side wavenumber and amplitude (not derived from dispersion). y-axis = OUT/IN (FFT) from meta.json (canonical IN/OUT mean of same-distance probes; see CLAUDE.md §5). Dashed reference: ratio = 1 (no damping). Encoding: marker shape → amplitude tier (○ A1, □ A2, △ A3); colour → per-tag × wind (blue per240·nowind, red per240·fullwind, turquoise per40·nowind, magenta per40·fullwind). Axes / ticks / grid identical to ch05_damping_ka_A1/A2/A3 for direct visual comparison. Typeset in NewComputerModern10.
+%   extra_params      : all three amplitude tiers (A1/A2/A3) overlaid on one panel. frequency range = 1.3–1.6 Hz (thesis scope). panel condition = full. quality_flag ∈ {ok, NaN}. per-tags included: per240 + per40 (per15 excluded — window too short for H&G [50T, 60T]). datasets: PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange, PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange. x-axis = IN ka (FFT) computed per run from measured IN-side wavenumber and amplitude (not derived from dispersion). y-axis = OUT/IN (FFT) from meta.json (canonical IN/OUT mean of same-distance probes; see CLAUDE.md §5). Dashed reference: ratio = 1 (no damping). Encoding: marker shape → amplitude tier (○ A1, □ A2, △ A3 — orientation/fill within family encodes frequency); colour → mooring × wind (blue loose300·nowind, red loose300·fullwind, light blue loose230·nowind, salmon loose230·fullwind). per240/per40 pooled (no longer colour-encoded after 2026-05-09). Axes / ticks / grid identical to ch05_damping_ka_A1/A2/A3 for direct visual comparison. Typeset in NewComputerModern10.
 %
 % — Summary stats cited in caption ────────────────────────────
-%   stat:n_per240_full : 27
-%   stat:mean_ratio_per240_full : 0.7489
-%   stat:std_ratio_per240_full : 0.0714
-%   stat:ka_lo_per240_full : 0.0499
-%   stat:ka_hi_per240_full : 0.2462
-%   stat:n_per240_no  : 16
-%   stat:mean_ratio_per240_no : 0.6188
-%   stat:std_ratio_per240_no : 0.1241
-%   stat:ka_lo_per240_no : 0.0510
-%   stat:ka_hi_per240_no : 0.1928
-%   stat:n_per40_full : 21
-%   stat:mean_ratio_per40_full : 0.7464
-%   stat:std_ratio_per40_full : 0.0703
-%   stat:ka_lo_per40_full : 0.0503
-%   stat:ka_hi_per40_full : 0.2378
-%   stat:n_per40_no   : 16
-%   stat:mean_ratio_per40_no : 0.6022
-%   stat:std_ratio_per40_no : 0.1264
-%   stat:ka_lo_per40_no : 0.0497
-%   stat:ka_hi_per40_no : 0.2170
+%   stat:n_loose300_full : 32
+%   stat:mean_ratio_loose300_full : 0.7335
+%   stat:std_ratio_loose300_full : 0.0674
+%   stat:ka_lo_loose300_full : 0.0505
+%   stat:ka_hi_loose300_full : 0.2378
+%   stat:n_loose300_no : 30
+%   stat:mean_ratio_loose300_no : 0.6082
+%   stat:std_ratio_loose300_no : 0.1272
+%   stat:ka_lo_loose300_no : 0.0497
+%   stat:ka_hi_loose300_no : 0.2170
+%   stat:n_loose230_full : 16
+%   stat:mean_ratio_loose230_full : 0.7764
+%   stat:std_ratio_loose230_full : 0.0689
+%   stat:ka_lo_loose230_full : 0.0499
+%   stat:ka_hi_loose230_full : 0.2462
+%   stat:n_loose230_no : 2
+%   stat:mean_ratio_loose230_no : 0.6457
+%   stat:std_ratio_loose230_no : 0.0311
+%   stat:ka_lo_loose230_no : 0.0525
+%   stat:ka_hi_loose230_no : 0.0529
+%   stat:n_per240     : 43
+%   stat:n_per40      : 37
 %   stat:n_freq_1p30Hz : 30
 %   stat:n_freq_1p40Hz : 16
 %   stat:n_freq_1p50Hz : 16

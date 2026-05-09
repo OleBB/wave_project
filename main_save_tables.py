@@ -92,6 +92,9 @@ TABLE_CAPTIONS = {
     "ch05_transmission_wind_ratios":     "",
     "ch05_transmission_wind_amplitudes": "",
     "ch05_mooring_focus_at_1_3hz_table": r"Tall til figur \ref{fig:ch05_mooring_focus_at_1_3hz_ka}. Transmisjon for panelrekken fortøyd på ulike måter. Merk: kun for \qty{1.3}{\hertz}. Antall (n) kjøringer.",
+
+    # ── APPENDIX ─────────────────────────────────────────────────────────────
+    "app_panel_pooling": "Sammenlikning av panelretning.",
 }
 TABLE_CAPTIONS_SHORT = {
     # ── CHAPTER 04 ───────────────────────────────────────────────────────────
@@ -112,6 +115,9 @@ TABLE_CAPTIONS_SHORT = {
     "ch05_transmission_wind_ratios":     "",
     "ch05_transmission_wind_amplitudes": "",
     "ch05_mooring_focus_at_1_3hz_table": "Moring vs panelretning. 1,3 Hz",
+
+    # ── APPENDIX ─────────────────────────────────────────────────────────────
+    "app_panel_pooling": "Sammenlikning av panelretning",
 }
 
 # Persist for any downstream reader (e.g. _lookup_central_caption with the
@@ -758,6 +764,66 @@ _render_with_caption_short(
         column_spec    = "ccccccc",
         cell_format    = _cell_format,
         row_groups     = _row_groups,
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
+
+
+# %%
+# [DATA: RENDER]  — analysis_scratch/panel_orientation_pooling_table.py
+"""
+── APPENDIX — Above-50 panel-pooling justification ──────────────────────────
+Per (amp, wind) cell at 1.3 Hz: K_t,full vs K_t,reverse, signed Δ. Six rows
+total (the only frequency where reverse panel was tested).
+
+Pooling is justified by 100% of cells having |Δ| ≤ 0.10 and 83% having
+|Δ| ≤ 0.05 — comparable to within-panel run-to-run noise.
+"""
+_NAME = "app_panel_pooling"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+_AMP_LABEL = {0.10: r"$A_1$", 0.20: r"$A_2$", 0.30: r"$A_3$"}
+_WIND_LABEL = {"no": "uten", "full": "full"}
+
+_cell_format = {
+    "amp_v":  lambda r: _AMP_LABEL.get(round(float(r["amp_v"]), 2),
+                                       rf"$\num{{{r['amp_v']:.2f}}}$"),
+    "wind":   lambda r: _WIND_LABEL.get(r["wind"], str(r["wind"])),
+    "n_full": lambda r: rf"$\num{{{int(r['n_full'])}}}$",
+    "K_full": lambda r: rf"$\num{{{r['K_full']:.3f}}}$",
+    "n_rev":  lambda r: rf"$\num{{{int(r['n_rev'])}}}$",
+    "K_rev":  lambda r: rf"$\num{{{r['K_rev']:.3f}}}$",
+    "delta":  lambda r: rf"$\num{{{r['delta']:+.3f}}}$",
+}
+
+_columns = ["amp_v", "wind", "n_full", "K_full", "n_rev", "K_rev", "delta"]
+_column_headers = [
+    r"$A$",
+    "vind",
+    r"$n_\mathrm{full}$",
+    r"$K_{t,\mathrm{full}}$",
+    r"$n_\mathrm{rev}$",
+    r"$K_{t,\mathrm{rev}}$",
+    r"$\Delta K_t$",
+]
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "ccccccc",
+        cell_format    = _cell_format,
+        row_groups     = [(None, lambda df: df)],
         label          = f"tab:{_NAME}",
         caption        = TABLE_CAPTIONS.get(_NAME) or None,
         short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,

@@ -467,12 +467,12 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch04_sliding_afft_stability":     "",
     "ch04_reconstruction_AvsB":        "",
     "ch04_reconstruction_pure_wind":   "",
-    "ch04_paddle_contamination":       "",
-    "ch04_per40_and_per240_HG_shifted":"",
-    "ch04_hg_per40_window_fitness_f13": "",
-    "ch04_hg_per40_window_fitness_f14": "",
-    "ch04_hg_per40_window_fitness_f15": "",
-    "ch04_hg_per40_window_fitness_f16": "",
+    "ch04_paddle_contamination":       "", #2 plots in one...not i use.
+    "ch04_per40_and_per240_HG_shifted":"", # plot showing K_t but for what exact data? ... ?
+    "ch04_hg_per40_window_fitness_f13": "Korte og lange tidsserier. Utvalgte perioder markert.", #consider adding a small labele inside top left of plot for "inngående" and "utgående"
+    "ch04_hg_per40_window_fitness_f14": "Korte og lange tidsserier. Utvalgte perioder markert.",
+    "ch04_hg_per40_window_fitness_f15": "Korte og lange tidsserier. Utvalgte perioder markert.",
+    "ch04_hg_per40_window_fitness_f16": "Korte og lange tidsserier. Utvalgte perioder markert.",
     # Table captions for ch04_window_intervals, ch04_window_choice_{nowind,fullwind},
     # and ch04_tidsvindu live in main_save_tables.py:TABLE_CAPTIONS.
     "ch04_window_choice":              "",
@@ -517,13 +517,13 @@ FIGURE_CAPTIONS: dict[str, str] = {
     # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
 
     # § 1 — Damping vs frequency (parent + 3 subfigs)
-    "ch05_damping_freq":               "Transmisjonskoeffisient per frekvens. Endelig oppsett. Usikkerhetsstolper viser standardavvik.",
+    "ch05_damping_freq":               "Transmisjonskoeffisient mot frekvens. Endelig oppsett. Usikkerhetsstolper viser standardavvik.",
     "ch05_damping_freq_full_A1":       "Amplitudevalg $A_1$",
     "ch05_damping_freq_full_A2":       "Amplitudevalg $A_2$",
     "ch05_damping_freq_full_A3":       "Amplitudevalg $A_3$",
 
     # § 2 — Damping vs amplitude
-    "ch05_damping_scatter":            "Transmisjonskoeffisient per frekvens. Endelig oppsett. Samlet figur med alle tre amplitudene. Usikkerhetsstolper er fjernet.",
+    "ch05_damping_scatter":            "Transmisjonskoeffisient mot frekvens. Endelig oppsett. Samlet figur med alle tre amplitudene. Usikkerhetsstolper er fjernet.",
 
     # § 3 — Wind effect (table; replaces the old scatter ch05_damping_wind_delta,
     #         archived 2026-04-28).
@@ -565,6 +565,9 @@ FIGURE_CAPTIONS: dict[str, str] = {
 
     # § 7 — All-data scatter (supplementary)
     "ch05_damping_all_data_scatter":   "Alle kjøringer. Vi skiller primært mellom det endelige oppsettet og alle andre oppsett.",
+    "ch05_damping_all_data_scatter_ka":     r"Alle kjøringer mot bølgesteilhet $ka$. Tre konfigurasjoner: under-fortøyning loose300 (rød/blå), under-fortøyning loose230 (lakserød/lyseblå), og over-fortøyning (over_50, full + reverse panel slått sammen — rosa/turkis med stjerner). Sammenslåing av panelretning forsvart i tabell \ref{tab:app_panel_pooling}.",
+    "ch05_damping_undermooring_scatter_ka": r"Som figur \ref{fig:ch05_damping_all_data_scatter_ka}, begrenset til under-fortøyninger (loose300 + loose230, full panel).",
+    "ch05_damping_overmooring_scatter_ka":  r"Som figur \ref{fig:ch05_damping_all_data_scatter_ka}, begrenset til over-fortøyning (over_50, full + reverse panel slått sammen).",
 
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
@@ -607,8 +610,8 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_td_vs_fft":                  "",
     "ch04_td_vs_fft_scatter":          "",
     "ch04_fft_peak_bias_cancellation": "",
-    "ch04_mansard_funke_reflection":   "",
-    "ch04_sw_correction_test":         "",
+    "ch04_mansard_funke_reflection":   "", #not in use. too complex currently.
+    "ch04_sw_correction_test":         "", #not in use. also too complex
     "ch04_sliding_afft_stability":     "",
     "ch04_reconstruction_AvsB":        "",
     "ch04_reconstruction_pure_wind":   "",
@@ -637,15 +640,15 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch04_wind_pre_paddle_overlay":    "Vindsignal før padlestart",
     "ch04_per40_overlay_t10-21":       "Per40 oppstart, fasestart skifter",
     "ch04_per40_overlay_t40-51":       "Per40 nedstart, fase fortsatt skiftet",
-    "ch04_first_arrival":              "",
-    "ch04_timeseries_overview":        "",
+    "ch04_first_arrival":              "", #not in use
+    "ch04_timeseries_overview":        "Oversikt over tidsserier", #
     "ch04_wave_stability":             "",
     "ch04_lateral_nowind":             "",
     "ch04_lateral_nowind_scatter":     "",
 
     # ── CHAPTER 05 ───────────────────────────────────────────────────────────
-    "ch05_damping_freq":               "",
-    "ch05_damping_scatter":            "Transmisjon per frekvens",
+    "ch05_damping_freq":               "Transmisjon mot k. Tre figurer",
+    "ch05_damping_scatter":            "Transmisjon mot k. Samlet figur ",
     # ch05_wind_effect_table, ch05_wind_effect_table_by_amp,
     # ch05_transmission_wind_{ratios,amplitudes} short captions →
     # main_save_tables.py:TABLE_CAPTIONS_SHORT
@@ -664,6 +667,9 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_mooring_focus_at_1_3hz_ka_A3": "Mooring + panelretning, $A_3$.",
     "ch05_full_vs_reverse_at_1_3hz_ka":  "Mooring + panelretning ved 1.30 Hz — alle amplituder samlet.",
     "ch05_damping_all_data_scatter":   "",
+    "ch05_damping_all_data_scatter_ka":     "Alle kjøringer mot $ka$.",
+    "ch05_damping_undermooring_scatter_ka": "Under-fortøyning mot $ka$.",
+    "ch05_damping_overmooring_scatter_ka":  "Over-fortøyning mot $ka$.",
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
     "diag_13hz_consistency":           "",
@@ -2114,8 +2120,16 @@ _pv_damping_freq = {
         # supplementary all-data scatter (CH05 §7). See memory/MEMORY.md
         # "Scope boundary".
         "WaveFrequencyInput [Hz]":   (1.3, 1.6),
-        "WindCondition":             None,
-        "PanelCondition":            None,
+        # Two-condition wind comparison only — exclude "lowest" wind, which
+        # has a single 1.3 Hz × 0.1 V run that would add a third unpaired
+        # legend entry without a Δ-label counterpart.
+        "WindCondition":             ["no", "full"],
+        # Restrict to the normal panel mounting (full row mounted). The
+        # other panel conditions (no panel / reverse) belong to separate
+        # CH05 §2 figures. Without this filter plot_damping_freq emits one
+        # PDF per (panel × amp) = 12 files, but only the three full-panel
+        # subfigures are referenced by the .tex stub and FIGURE_CAPTIONS.
+        "PanelCondition":            "full",
     },
     "plotting": {
         "show_plot":  False,
@@ -2134,16 +2148,42 @@ _pv_damping_freq = {
 }
 
 _damping_meta   = _aef(meta_results, _pv_damping_freq)
-# Pool across moorings (2026-05-05): drop the Mooring column so
-# damping_all_amplitude_grouper skips it as a grouping key. Each
-# (freq, amp, panel, wind) cell then pools all canon moorings into a
-# single row (n-weighted mean / true std / total n_runs), matching the
-# CH05 §1b/§3/§3b tables that were fixed on 2026-05-05. Without this drop,
-# the per-point n_runs tokens written into the figure stub would be
-# per-mooring (e.g. "no-1.40Hz:n=2; no-1.40Hz:n=3") and disagree with the
-# pooled table totals. See memory/finding_wind_effect_table_aggregation_bias.md
-# and analysis_scratch/damping_freq_table.py for the same pattern.
-_damping_meta = _damping_meta.drop(columns=["Mooring"], errors="ignore")
+# Restrict to canon-loose300 only (2026-05-09): the global meta_results
+# merge at line ~776 collapses below_90_loose230 + below_90_loose300 →
+# below_90_loose so the wind-effect tables can pool across them. For
+# this primary-result figure we want a single mooring condition with
+# clean within-mooring errorbars (~0.005-0.04) instead of the
+# mooring/date-confounded pooled errorbars (~0.04-0.13). Loose300 is
+# the choice because it has full nowind coverage at every (amp, freq)
+# cell in the thesis band; loose230 only has nowind data at A1 × 1.3 Hz.
+# The mooring axis becomes the focus of separate later figures
+# (analysis_scratch/all_data_damping_scatter_by_mooring*).
+# Re-derive Mooring from file_date, then keep only loose300.
+_damping_meta = _damping_meta.copy()
+_damping_meta["Mooring"] = _damping_meta["file_date"].astype(str).map({
+    "2026-03-26": "loose230",
+    "2026-03-27": "loose300",
+}).fillna(_damping_meta["Mooring"])
+_damping_meta = _damping_meta[_damping_meta["Mooring"] == "loose300"].copy()
+# Drop probe-dropout runs (2026-05-09): K_t computed from a single IN
+# probe should not exceed 1 — a transmissive panel always damps. When
+# K_t,wall > 1 or K_t,far > 1, that probe's amplitude registered LOWER
+# than the OUT probe, almost certainly a single-probe dropout. The
+# canonical IN mean averages the dropped probe with the surviving one
+# and produces a midway K_t that biases the cell. The 9373/170 probe is
+# known to drop out at higher frequencies (per user note 2026-05-09).
+# Formal quality-flag work deferred — see analysis_scratch/_mooring_variance_decomp.py.
+_A_in_wall = _damping_meta["Probe 9373/170 Amplitude (FFT)"]
+_A_in_far  = _damping_meta["Probe 9373/340 Amplitude (FFT)"]
+_A_out_ctr = _damping_meta["Probe 12400/250 Amplitude (FFT)"]
+_kt_wall = _A_out_ctr / _A_in_wall
+_kt_far  = _A_out_ctr / _A_in_far
+_dropout = (_kt_wall > 1.0) | (_kt_far > 1.0)
+if _dropout.any():
+    print(f"Dropping {_dropout.sum()} runs with K_t,probe > 1 (single-probe dropout):")
+    for _, _r in _damping_meta[_dropout].iterrows():
+        print(f"  Kt_wall={_kt_wall[_r.name]:.3f} Kt_far={_kt_far[_r.name]:.3f}  {_r['path'].split('/')[-1]}")
+    _damping_meta = _damping_meta[~_dropout].copy()
 _damping_grouped = damping_all_amplitude_grouper(_damping_meta)
 plot_damping_freq(_damping_grouped, _pv_damping_freq)
 

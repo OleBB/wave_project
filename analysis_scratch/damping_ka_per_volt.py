@@ -2,11 +2,13 @@
 CH05 §4 — OUT/IN vs ka, per-voltage, fully standalone.
 
 Produces three standalone thesis-grade figures (one per paddle voltage) +
-three matching TEXFIGU stubs. Combines per240 and per40 runs on the same
-panel, with per240 on the canonical thesis colour pair (blue = nowind,
-red = fullwind) and per40 on a magenta/turquoise pair that is visually
-separable from the red/blue without breaking the thesis colour
-convention (feedback_wind_color_convention.md).
+three matching TEXFIGU stubs. Combines per240 and per40 runs (per_tag is
+no longer colour-encoded after 2026-05-09; both pool into the same
+mooring cluster). Colour now distinguishes mooring: loose300 uses the
+canonical thesis colour pair (blue = nowind, red = fullwind), loose230
+uses lightened tints of the same hues (salmon for fullwind, light blue
+for nowind) — brightness step rather than hue jump, keeping the wind→
+colour mapping consistent with feedback_wind_color_convention.md.
 
 Data scope — same as main_save_figures.py `_pv_damping_ka`:
   - two canon lowrange folders (2026-03-26 / 2026-03-27)
@@ -63,11 +65,14 @@ RATIO_COL = "OUT/IN (FFT)"
 # FIGURE_CAPTIONS_SHORT). pu.write_figure_stub looks them up by figure_name
 # via output/.figure_captions.json. Nothing to edit here.
 
-# Wind colour palette: per240 uses the canonical thesis WIND_COLOR_MAP
-# (blue / red, identical to ch05_damping_freq); per40 uses lighter tints
-# of the same hues so the wind→colour convention reads consistently across
-# all CH05 figures and the per-tag distinction is a brightness step rather
-# than a hue jump.
+# Wind colour palette: loose300 uses the canonical thesis WIND_COLOR_MAP
+# (blue / red, identical to ch05_damping_freq); loose230 uses lighter
+# tints of the same hues so the wind→colour convention reads consistently
+# across all CH05 figures and the mooring distinction is a brightness
+# step rather than a hue jump.
+# Earlier convention (until 2026-05-09) lighter-tinted per40 vs per240;
+# the per-tag distinction is no longer color-encoded since both per
+# variants pool into the same mooring cluster for K_t.
 import matplotlib.colors as _mcolors
 
 
@@ -79,14 +84,15 @@ def _lighten(c: str, mix: float = 0.55) -> tuple:
             b + (1.0 - b) * mix)
 
 
-PER_WIND_COLOR = {
-    ("per240", "no"):   WIND_COLOR_MAP["no"],            # canonical blue
-    ("per240", "full"): WIND_COLOR_MAP["full"],          # canonical red
-    ("per40",  "no"):   _lighten(WIND_COLOR_MAP["no"]),   # light blue
-    ("per40",  "full"): _lighten(WIND_COLOR_MAP["full"]), # light red / pink
+MOORING_WIND_COLOR = {
+    ("loose300", "no"):   WIND_COLOR_MAP["no"],            # canonical blue
+    ("loose300", "full"): WIND_COLOR_MAP["full"],          # canonical red
+    ("loose230", "no"):   _lighten(WIND_COLOR_MAP["no"]),   # light blue
+    ("loose230", "full"): _lighten(WIND_COLOR_MAP["full"]), # light salmon
 }
 
 WIND_LABEL = {"no": "uten vind", "full": "full vind"}
+MOORING_LABEL = {"loose300": "loose300", "loose230": "loose230"}
 
 
 # ─── NCM font (thesis body) ───────────────────────────────────────────────
@@ -124,7 +130,8 @@ m = m.dropna(subset=[KA_COL, RATIO_COL, "WindCondition",
                      "WaveAmplitudeInput [Volt]",
                      "WaveFrequencyInput [Hz]"])
 
-# Tag per-run length
+# Tag per-run length (still used as a filter to drop per15; no longer
+# colour-encoded after 2026-05-09).
 _per40  = re.compile(r"per40(?!\d)")
 _per240 = re.compile(r"per240")
 m["per_tag"] = np.where(m["path"].str.contains(_per40,  na=False), "per40",
@@ -132,7 +139,18 @@ m["per_tag"] = np.where(m["path"].str.contains(_per40,  na=False), "per40",
                           "other"))
 m = m[m["per_tag"].isin(("per240", "per40"))].copy()
 
-print(f"  {len(m)} runs (per240={int((m['per_tag']=='per240').sum())}, "
+# Mooring tag (loose230 / loose300) — derived from file_date because the
+# global meta_results merge collapses both into "below_90_loose". Same
+# pattern as main_save_figures.py:2151. Now drives the colour palette.
+m["mooring_tag"] = m["file_date"].astype(str).map({
+    "2026-03-26": "loose230",
+    "2026-03-27": "loose300",
+})
+
+print(f"  {len(m)} runs ("
+      f"loose300={int((m['mooring_tag']=='loose300').sum())}, "
+      f"loose230={int((m['mooring_tag']=='loose230').sum())}; "
+      f"per240={int((m['per_tag']=='per240').sum())}, "
       f"per40={int((m['per_tag']=='per40').sum())})")
 
 ALL_WINDS = sorted(m["WindCondition"].unique())
@@ -167,8 +185,8 @@ def _make_figure(sub: pd.DataFrame,
 
     Marker family encodes amplitude (A1=circle, A2=rectangle, A3=triangle);
     orientation/fill within each family encodes frequency (1.3 → 1.6 Hz).
-    Colour always encodes (per_tag × wind) per PER_WIND_COLOR. Ticks, grid,
-    xlim/ylim, and legend layout are identical between modes.
+    Colour always encodes (mooring × wind) per MOORING_WIND_COLOR. Ticks,
+    grid, xlim/ylim, and legend layout are identical between modes.
     """
     fig, ax = plt.subplots(figsize=(8, 5.5))
 
@@ -177,20 +195,23 @@ def _make_figure(sub: pd.DataFrame,
 
     for amp_val in amp_iter:
         sub_amp = sub[np.isclose(sub["WaveAmplitudeInput [Volt]"], amp_val)]
-        for per_tag in ("per240", "per40"):
+        # Plot order: loose300 first (canonical reference, painted under),
+        # then loose230 (lighter tints, on top — visible against the
+        # darker ones where they overlap).
+        for mooring_tag in ("loose300", "loose230"):
             for wind in ALL_WINDS:
                 for freq, fi in FREQ_IDX.items():
-                    sel = sub_amp[(sub_amp["per_tag"] == per_tag) &
+                    sel = sub_amp[(sub_amp["mooring_tag"] == mooring_tag) &
                                   (sub_amp["WindCondition"] == wind) &
                                   np.isclose(sub_amp["WaveFrequencyInput [Hz]"], freq)]
                     if sel.empty:
                         continue
                     ax.scatter(sel[KA_COL], sel[RATIO_COL],
                                marker=_freq_marker(amp_val, fi),
-                               color=PER_WIND_COLOR[(per_tag, wind)],
+                               color=MOORING_WIND_COLOR[(mooring_tag, wind)],
                                s=55, alpha=0.85,
                                edgecolors="black", linewidths=0.35,
-                               zorder=3)
+                               zorder=3 if mooring_tag == "loose230" else 2)
 
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.7, alpha=0.55)
     ax.set_xlim(XLIM); ax.set_ylim(YLIM)
@@ -202,22 +223,22 @@ def _make_figure(sub: pd.DataFrame,
     ax.grid(True, which="major", alpha=0.30)
     ax.grid(True, which="minor", alpha=0.10)
 
-    # Kjøringstype × vind legend — colour-coded, same in both modes.
+    # Mooring × vind legend — colour-coded, same in both modes.
     wind_handles = [
-        mlines.Line2D([], [], color=PER_WIND_COLOR[("per240", "no")],
+        mlines.Line2D([], [], color=MOORING_WIND_COLOR[("loose300", "no")],
                       marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"Lang tidsserie · {WIND_LABEL['no']}"),
-        mlines.Line2D([], [], color=PER_WIND_COLOR[("per240", "full")],
+                      label=f"loose300 · {WIND_LABEL['no']}"),
+        mlines.Line2D([], [], color=MOORING_WIND_COLOR[("loose300", "full")],
                       marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"Lang tidsserie · {WIND_LABEL['full']}"),
-        mlines.Line2D([], [], color=PER_WIND_COLOR[("per40",  "no")],
+                      label=f"loose300 · {WIND_LABEL['full']}"),
+        mlines.Line2D([], [], color=MOORING_WIND_COLOR[("loose230", "no")],
                       marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"Kort tidsserie · {WIND_LABEL['no']}"),
-        mlines.Line2D([], [], color=PER_WIND_COLOR[("per40",  "full")],
+                      label=f"loose230 · {WIND_LABEL['no']}"),
+        mlines.Line2D([], [], color=MOORING_WIND_COLOR[("loose230", "full")],
                       marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"Kort tidsserie · {WIND_LABEL['full']}"),
+                      label=f"loose230 · {WIND_LABEL['full']}"),
     ]
-    leg_w = ax.legend(handles=wind_handles, title="Kjøringstype · vind",
+    leg_w = ax.legend(handles=wind_handles, title="Moring · vind",
                       title_fontsize=8, fontsize=8,
                       loc="lower right", framealpha=0.92)
     ax.add_artist(leg_w)
@@ -280,10 +301,11 @@ def _f(x, n=4):
 
 def _per_volt_stats(sub: pd.DataFrame) -> dict:
     out = {}
-    for per_tag in ("per240", "per40"):
+    # Mooring × wind — primary visual encoding (colour shade × hue).
+    for mooring_tag in ("loose300", "loose230"):
         for wind in ALL_WINDS:
-            key_tag = f"{per_tag}_{wind}"
-            sel = sub[(sub["per_tag"] == per_tag) &
+            key_tag = f"{mooring_tag}_{wind}"
+            sel = sub[(sub["mooring_tag"] == mooring_tag) &
                       (sub["WindCondition"] == wind)]
             out[f"n_{key_tag}"] = f"{len(sel)}"
             if len(sel):
@@ -291,10 +313,14 @@ def _per_volt_stats(sub: pd.DataFrame) -> dict:
                 out[f"std_ratio_{key_tag}"]  = _f(sel[RATIO_COL].std(),  4)
                 out[f"ka_lo_{key_tag}"]      = _f(sel[KA_COL].min(),     4)
                 out[f"ka_hi_{key_tag}"]      = _f(sel[KA_COL].max(),     4)
+    # Per-tag counts (per240 vs per40) — kept as a diagnostic; no longer
+    # colour-encoded after the 2026-05-09 mooring switch.
+    for per_tag in ("per240", "per40"):
+        out[f"n_{per_tag}"] = f"{int((sub['per_tag'] == per_tag).sum())}"
     # Per-frequency cluster counts
     for freq in ALL_FREQS:
         out[f"n_freq_{freq:.2f}Hz".replace(".", "p")] = f"{int((np.isclose(sub['WaveFrequencyInput [Hz]'], freq)).sum())}"
-    # Per-wind means across per-tags (the headline wind effect)
+    # Per-wind means across moorings (headline wind effect)
     for wind in ALL_WINDS:
         sel_w = sub[sub["WindCondition"] == wind]
         out[f"mean_ratio_{wind}_all"] = _f(sel_w[RATIO_COL].mean(), 4) if len(sel_w) else "NA"
@@ -354,12 +380,14 @@ def _write_stub(sub: pd.DataFrame, volt: float, figure_name: str) -> None:
             f"y-axis = OUT/IN (FFT) from meta.json (canonical IN/OUT mean "
             f"of same-distance probes; see CLAUDE.md §5). "
             f"Dashed reference: ratio = 1 (no damping). "
-            # Colour convention
-            f"Colour convention: per240 (long runs) uses thesis-wide "
+            # Colour convention (updated 2026-05-09 — was per240/per40)
+            f"Colour convention: loose300 mooring uses thesis-wide "
             f"RED = fullwind, BLUE = nowind (feedback_wind_color_convention.md). "
-            f"per40 (short runs) uses magenta (#D946EF) for fullwind and "
-            f"turquoise (#00D4BC) for nowind — chosen for hue-distance from "
-            f"red/blue without crossing into green/orange. "
+            f"loose230 mooring uses lightened tints of the same hues "
+            f"(salmon for fullwind, light blue for nowind) — brightness "
+            f"step rather than hue jump, so the wind→colour mapping reads "
+            f"the same across all CH05 figures. per240/per40 are pooled "
+            f"into the same cluster (no longer colour-encoded). "
             # Typeset
             f"Typeset in NewComputerModern10 (OTFs from TeXLive's "
             f"newcomputermodern package, registered via font_manager)."
@@ -411,9 +439,11 @@ def _write_combined_stub(sub: pd.DataFrame, figure_name: str) -> None:
             f"of same-distance probes; see CLAUDE.md §5). "
             f"Dashed reference: ratio = 1 (no damping). "
             f"Encoding: marker shape → amplitude tier "
-            f"(○ A1, □ A2, △ A3); colour → per-tag × wind "
-            f"(blue per240·nowind, red per240·fullwind, "
-            f"turquoise per40·nowind, magenta per40·fullwind). "
+            f"(○ A1, □ A2, △ A3 — orientation/fill within family encodes "
+            f"frequency); colour → mooring × wind "
+            f"(blue loose300·nowind, red loose300·fullwind, "
+            f"light blue loose230·nowind, salmon loose230·fullwind). "
+            f"per240/per40 pooled (no longer colour-encoded after 2026-05-09). "
             f"Axes / ticks / grid identical to ch05_damping_ka_A1/A2/A3 for "
             f"direct visual comparison. "
             f"Typeset in NewComputerModern10."

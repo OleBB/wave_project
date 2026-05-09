@@ -7,7 +7,7 @@
 %   computed_in       : analysis_scratch/damping_ka_per_volt.py (single-voltage scatter, A2)
 %   plot_type         : damping_ka
 %   data_class        : DELEG
-%   generated_at      : 2026-05-07T17:25:31
+%   generated_at      : 2026-05-09T12:03:56
 %   findings_doc      : memory/methodology_wind_enhances_A_in.md
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -41,29 +41,27 @@
 %   grouper           : 
 %   collapse_panels   : 
 %   fft_window_hz     : 0.1
-%   extra_params      : amplitude tier A2 (paddle V = 0.20 V → nominal measured amplitude at IN ≈ 15.0 mm). frequency range = 1.3–1.6 Hz (thesis scope). panel condition = full. quality_flag ∈ {ok, NaN}. per-tags included: per240 + per40 (per15 excluded — window too short for H&G [50T, 60T]). datasets: PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange, PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange. x-axis = IN ka (FFT) computed per run from measured IN-side wavenumber and amplitude (not derived from dispersion). y-axis = OUT/IN (FFT) from meta.json (canonical IN/OUT mean of same-distance probes; see CLAUDE.md §5). Dashed reference: ratio = 1 (no damping). Colour convention: per240 (long runs) uses thesis-wide RED = fullwind, BLUE = nowind (feedback_wind_color_convention.md). per40 (short runs) uses magenta (#D946EF) for fullwind and turquoise (#00D4BC) for nowind — chosen for hue-distance from red/blue without crossing into green/orange. Typeset in NewComputerModern10 (OTFs from TeXLive's newcomputermodern package, registered via font_manager).
+%   extra_params      : amplitude tier A2 (paddle V = 0.20 V → nominal measured amplitude at IN ≈ 15.0 mm). frequency range = 1.3–1.6 Hz (thesis scope). panel condition = full. quality_flag ∈ {ok, NaN}. per-tags included: per240 + per40 (per15 excluded — window too short for H&G [50T, 60T]). datasets: PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange, PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange. x-axis = IN ka (FFT) computed per run from measured IN-side wavenumber and amplitude (not derived from dispersion). y-axis = OUT/IN (FFT) from meta.json (canonical IN/OUT mean of same-distance probes; see CLAUDE.md §5). Dashed reference: ratio = 1 (no damping). Colour convention: loose300 mooring uses thesis-wide RED = fullwind, BLUE = nowind (feedback_wind_color_convention.md). loose230 mooring uses lightened tints of the same hues (salmon for fullwind, light blue for nowind) — brightness step rather than hue jump, so the wind→colour mapping reads the same across all CH05 figures. per240/per40 are pooled into the same cluster (no longer colour-encoded). Typeset in NewComputerModern10 (OTFs from TeXLive's newcomputermodern package, registered via font_manager).
 %
 % — Summary stats cited in caption ────────────────────────────
-%   stat:n_per240_full : 8
-%   stat:mean_ratio_per240_full : 0.7663
-%   stat:std_ratio_per240_full : 0.0823
-%   stat:ka_lo_per240_full : 0.1005
-%   stat:ka_hi_per240_full : 0.1671
-%   stat:n_per240_no  : 4
-%   stat:mean_ratio_per240_no : 0.6498
-%   stat:std_ratio_per240_no : 0.1387
-%   stat:ka_lo_per240_no : 0.0996
-%   stat:ka_hi_per240_no : 0.1512
-%   stat:n_per40_full : 4
-%   stat:mean_ratio_per40_full : 0.7430
-%   stat:std_ratio_per40_full : 0.0646
-%   stat:ka_lo_per40_full : 0.1004
-%   stat:ka_hi_per40_full : 0.1552
-%   stat:n_per40_no   : 4
-%   stat:mean_ratio_per40_no : 0.6391
-%   stat:std_ratio_per40_no : 0.1373
-%   stat:ka_lo_per40_no : 0.1000
-%   stat:ka_hi_per40_no : 0.1497
+%   stat:n_loose300_full : 8
+%   stat:mean_ratio_loose300_full : 0.7404
+%   stat:std_ratio_loose300_full : 0.0691
+%   stat:ka_lo_loose300_full : 0.1004
+%   stat:ka_hi_loose300_full : 0.1583
+%   stat:n_loose300_no : 8
+%   stat:mean_ratio_loose300_no : 0.6444
+%   stat:std_ratio_loose300_no : 0.1279
+%   stat:ka_lo_loose300_no : 0.0996
+%   stat:ka_hi_loose300_no : 0.1512
+%   stat:n_loose230_full : 4
+%   stat:mean_ratio_loose230_full : 0.7949
+%   stat:std_ratio_loose230_full : 0.0817
+%   stat:ka_lo_loose230_full : 0.1005
+%   stat:ka_hi_loose230_full : 0.1671
+%   stat:n_loose230_no : 0
+%   stat:n_per240     : 12
+%   stat:n_per40      : 8
 %   stat:n_freq_1p30Hz : 5
 %   stat:n_freq_1p40Hz : 5
 %   stat:n_freq_1p50Hz : 5
