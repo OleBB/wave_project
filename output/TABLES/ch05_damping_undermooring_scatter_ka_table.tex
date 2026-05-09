@@ -1,0 +1,90 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ─────────────────────────────────────────────────
+%   script            : analysis_scratch/damping_ka_scatter_table_iterate.py
+%   plot_type         : damping_ka_scatter_table
+%   chapter           : 05
+%   generated_at      : 2026-05-09T15:36:10
+%   caption_label     : tab:ch05_damping_undermooring_scatter_ka_table
+%   caption_short     : Pulesammendrag, under-fortøyning.
+%
+% — Method ─────────────────────────────────────────────────────
+%   x-axis variants    : ka (paddle steepness), k (rad/m), kL (k×L)
+%   L                  : 2.6 m (panel longitudinal length, fixed)
+%   ka                 : `IN Wavenumber (FFT)` × `IN Amplitude (FFT)` [m]
+%   K_t                : `OUT/IN (FFT)` (paddle freq, 0.1 Hz nearest-bin)
+%   Pooling            : (category × amp × wind) — one row per cell
+%   Within-cell fit    : linear K_t = a·x + b for x ∈ {ka, k, kL}
+%                        R²_kL == R²_k (kL is constant rescaling of k);
+%                        R²_ka may differ because ka mixes k and amp.
+%
+% — Reading the table ──────────────────────────────────────────
+%   Each row is one (category × amp × wind) cell.
+%   Rows are paired by wind: the `uten` row is the no-wind baseline,
+%   the `full` row caps the wind comparison.
+%   ΔK_t and slope_ratio are populated on the `full` row only:
+%      ΔK_t        = K̄_t(full)  − K̄_t(no)
+%      slope_ratio = |dK_t/dka|_full / |dK_t/dka|_no
+%   ΔK_t > 0 means wind raises mean transmission; slope_ratio < 1
+%   means wind softens the steepness sensitivity.
+%
+% — Headline findings (this view) ──────────────────────────────
+%   n_pairs           : 6 wind comparisons (3 amps × 2 moorings)
+%   ΔK_t > 0          : 6/6 cells — wind raises K_t in
+%                       every cell of the under family.
+%   slope flattens    : 6/6 cells — wind softens the
+%                       K_t-vs-ka slope in every cell.
+%   Flattening factor : slope_ratio_ka median ≈ 0.37 (loose300, loose230
+%                       track each other tightly).
+%   Reading note      : pair the rows top-down; the `full` row carries
+%                       the comparison columns ΔK_t and slope_ratio.
+%
+% — Beyond the figure ──────────────────────────────────────────
+%   Figure shows clouds; table pins centroids and effect sizes.
+%   The figure cannot show:  per-cell n, exact K̄_t, slope numbers,
+%   or a sign-flip in ΔK_t hidden by overlapping dots. Each is in
+%   the table by design.
+%
+% — Inputs ─────────────────────────────────────────────────────
+%   View               : undermooring (loose300 + loose230)
+%   Coverage           : 12 cells from 214 runs
+%   Quality filter     : quality_flag=ok, paddle freq < 2 Hz,
+%                        K_t ∈ [0.1, 2.0], Mooring != above_200
+%
+% — Companion figure ───────────────────────────────────────────
+%   fig:ch05_damping_all_data_scatter_ka  (parent, all 3 categories)
+%   fig:ch05_damping_undermooring_scatter_ka  (loose300+loose230)
+%   fig:ch05_damping_overmooring_scatter_ka   (above_50, panel pooled)
+%
+% ── end immutable block ───────────────────────────────────────
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{ccccccc}
+    \toprule
+    $A$ & vind & $n$ & $\bar{K_t} \pm \sigma$ & $dK_t/dka$ & $\Delta K_t$ & stigningsforhold \\
+    \midrule
+    \multicolumn{7}{l}{Under, loose300, full panel} \\
+    $A_1$ & uten & $\num{13}$ & $\num{0.561} \pm \num{0.125}$ & $\num{-12.78}$ &  &  \\
+    $A_1$ & full & $\num{13}$ & $\num{0.687} \pm \num{0.082}$ & $\num{-4.71}$ & $\num{+0.126}$ & $\num{0.37}$ \\
+    $A_2$ & uten & $\num{9}$ & $\num{0.619} \pm \num{0.143}$ & $\num{-6.69}$ &  &  \\
+    $A_2$ & full & $\num{13}$ & $\num{0.814} \pm \num{0.114}$ & $\num{-2.59}$ & $\num{+0.195}$ & $\num{0.39}$ \\
+    $A_3$ & uten & $\num{9}$ & $\num{0.644} \pm \num{0.121}$ & $\num{-4.35}$ &  &  \\
+    $A_3$ & full & $\num{13}$ & $\num{0.754} \pm \num{0.057}$ & $\num{-1.48}$ & $\num{+0.110}$ & $\num{0.34}$ \\
+    \midrule
+    \multicolumn{7}{l}{Under, loose230, full panel} \\
+    $A_1$ & uten & $\num{34}$ & $\num{0.524} \pm \num{0.149}$ & $\num{-13.32}$ &  &  \\
+    $A_1$ & full & $\num{29}$ & $\num{0.772} \pm \num{0.128}$ & $\num{-4.95}$ & $\num{+0.248}$ & $\num{0.37}$ \\
+    $A_2$ & uten & $\num{25}$ & $\num{0.712} \pm \num{0.158}$ & $\num{-4.55}$ &  &  \\
+    $A_2$ & full & $\num{30}$ & $\num{0.757} \pm \num{0.115}$ & $\num{-2.68}$ & $\num{+0.045}$ & $\num{0.59}$ \\
+    $A_3$ & uten & $\num{14}$ & $\num{0.638} \pm \num{0.133}$ & $\num{-3.49}$ &  &  \\
+    $A_3$ & full & $\num{12}$ & $\num{0.717} \pm \num{0.067}$ & $\num{-1.33}$ & $\num{+0.079}$ & $\num{0.38}$ \\
+    \bottomrule
+  \end{tabular}
+  \caption[Pulesammendrag, under-fortøyning.]{
+    Som tabell \ref{tab:ch05_damping_all_data_scatter_ka_table}, begrenset til under-fortøyninger (loose300 + loose230, full panel) — tall til figur \ref{fig:ch05_damping_undermooring_scatter_ka}.
+  }
+  \label{tab:ch05_damping_undermooring_scatter_ka_table}
+\end{table}

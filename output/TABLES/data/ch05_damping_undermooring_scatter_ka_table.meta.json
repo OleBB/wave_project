@@ -1,0 +1,75 @@
+{
+  "script": "analysis_scratch/damping_ka_scatter_table_iterate.py",
+  "plot_type": "damping_ka_scatter_table",
+  "chapter": "05",
+  "caption_label": "tab:ch05_damping_undermooring_scatter_ka_table",
+  "caption_short": "",
+  "sections": [
+    {
+      "title": "Method",
+      "lines": [
+        "x-axis variants    : ka (paddle steepness), k (rad/m), kL (k×L)",
+        "L                  : 2.6 m (panel longitudinal length, fixed)",
+        "ka                 : `IN Wavenumber (FFT)` × `IN Amplitude (FFT)` [m]",
+        "K_t                : `OUT/IN (FFT)` (paddle freq, 0.1 Hz nearest-bin)",
+        "Pooling            : (category × amp × wind) — one row per cell",
+        "Within-cell fit    : linear K_t = a·x + b for x ∈ {ka, k, kL}",
+        "                     R²_kL == R²_k (kL is constant rescaling of k);",
+        "                     R²_ka may differ because ka mixes k and amp."
+      ]
+    },
+    {
+      "title": "Reading the table",
+      "lines": [
+        "Each row is one (category × amp × wind) cell.",
+        "Rows are paired by wind: the `uten` row is the no-wind baseline,",
+        "the `full` row caps the wind comparison.",
+        "ΔK_t and slope_ratio are populated on the `full` row only:",
+        "   ΔK_t        = K̄_t(full)  − K̄_t(no)",
+        "   slope_ratio = |dK_t/dka|_full / |dK_t/dka|_no",
+        "ΔK_t > 0 means wind raises mean transmission; slope_ratio < 1",
+        "means wind softens the steepness sensitivity."
+      ]
+    },
+    {
+      "title": "Headline findings (this view)",
+      "lines": [
+        "n_pairs           : 6 wind comparisons (3 amps × 2 moorings)",
+        "ΔK_t > 0          : 6/6 cells — wind raises K_t in",
+        "                    every cell of the under family.",
+        "slope flattens    : 6/6 cells — wind softens the",
+        "                    K_t-vs-ka slope in every cell.",
+        "Flattening factor : slope_ratio_ka median ≈ 0.37 (loose300, loose230",
+        "                    track each other tightly).",
+        "Reading note      : pair the rows top-down; the `full` row carries",
+        "                    the comparison columns ΔK_t and slope_ratio."
+      ]
+    },
+    {
+      "title": "Beyond the figure",
+      "lines": [
+        "Figure shows clouds; table pins centroids and effect sizes.",
+        "The figure cannot show:  per-cell n, exact K̄_t, slope numbers,",
+        "or a sign-flip in ΔK_t hidden by overlapping dots. Each is in",
+        "the table by design."
+      ]
+    },
+    {
+      "title": "Inputs",
+      "lines": [
+        "View               : undermooring (loose300 + loose230)",
+        "Coverage           : 12 cells from 214 runs",
+        "Quality filter     : quality_flag=ok, paddle freq < 2 Hz,",
+        "                     K_t ∈ [0.1, 2.0], Mooring != above_200"
+      ]
+    },
+    {
+      "title": "Companion figure",
+      "lines": [
+        "fig:ch05_damping_all_data_scatter_ka  (parent, all 3 categories)",
+        "fig:ch05_damping_undermooring_scatter_ka  (loose300+loose230)",
+        "fig:ch05_damping_overmooring_scatter_ka   (above_50, panel pooled)"
+      ]
+    }
+  ]
+}
