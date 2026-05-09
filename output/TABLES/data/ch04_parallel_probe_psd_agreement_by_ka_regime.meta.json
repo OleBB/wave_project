@@ -1,0 +1,53 @@
+{
+  "script": "analysis_scratch/parallel_probe_psd_agreement_simple.py",
+  "plot_type": "parallel_probe_psd_agreement_by_ka_regime_table",
+  "chapter": "04",
+  "caption_label": "tab:ch04_parallel_probe_psd_agreement_by_ka_regime",
+  "caption_short": "",
+  "sections": [
+    {
+      "title": "Method",
+      "lines": [
+        "Threshold           : ka = 0.15",
+        "Wind-dominated      : ka < threshold (low amp and/or low freq \u2014",
+        "                      the wave is small enough that wind chop",
+        "                      and lateral asymmetry dominate \u0394).",
+        "Wave-dominated      : ka \u2265 threshold (steeper waves; under wind",
+        "                      the far probe (9373/340) struggles to",
+        "                      track the rapid up-stroke after the",
+        "                      trough, producing systematic negative \u0394).",
+        "Pooling             : (regime \u00d7 wind), across (amp \u00d7 freq).",
+        "                      Pooling across amp is intentional \u2014",
+        "                      amplitude is the dimension probes",
+        "                      disagree most on, so summarising it out",
+        "                      is exactly the contrast we want.",
+        "\u0394\u0304 / \u03c3_\u0394 / \u03b3_1       : mean / std / Fisher-Pearson skew of \u0394%.",
+        "[P5, P95]           : empirical 90 % interval (no Gaussian)."
+      ]
+    },
+    {
+      "title": "Reading",
+      "lines": [
+        "(a) Compare wind-dominated vs wave-dominated within each wind",
+        "    block: \u03c3 should grow markedly under the wave-dominated",
+        "    regime (probe-struggle dominates) compared to the wind-",
+        "    dominated regime (wind-chop dominates).",
+        "(b) Skewness \u03b3_1 should be \u2248 0 in symmetric regimes (uten",
+        "    vind, both regimes; full vind, low ka) but turn",
+        "    negative under (full vind \u00d7 wave-dominated) where the",
+        "    far probe systematically clips peaks.",
+        "(c) [P5, P95] reads as the empirical 90 % range of \u0394 \u2014",
+        "    asymmetric width = asymmetric distribution."
+      ]
+    },
+    {
+      "title": "Companion table + figure",
+      "lines": [
+        "tab:ch04_parallel_probe_psd_agreement_simple \u2014 same data",
+        "    stratified by (wind \u00d7 freq) instead of (wind \u00d7 regime).",
+        "fig:ch04_parallel_probe_agreement_bland_altman \u2014 per-run",
+        "    scatter visualised."
+      ]
+    }
+  ]
+}

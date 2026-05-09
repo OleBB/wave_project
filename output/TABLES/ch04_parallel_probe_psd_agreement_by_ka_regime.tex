@@ -1,0 +1,69 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ─────────────────────────────────────────────────
+%   script            : analysis_scratch/parallel_probe_psd_agreement_simple.py
+%   plot_type         : parallel_probe_psd_agreement_by_ka_regime_table
+%   chapter           : 04
+%   generated_at      : 2026-05-09T21:16:00
+%   caption_label     : tab:ch04_parallel_probe_psd_agreement_by_ka_regime
+%   caption_short     : Probesamsvar — bølgesteilhet-stratifisert.
+%
+% — Method ─────────────────────────────────────────────────────
+%   Threshold           : ka = 0.15
+%   Wind-dominated      : ka < threshold (low amp and/or low freq —
+%                         the wave is small enough that wind chop
+%                         and lateral asymmetry dominate Δ).
+%   Wave-dominated      : ka ≥ threshold (steeper waves; under wind
+%                         the far probe (9373/340) struggles to
+%                         track the rapid up-stroke after the
+%                         trough, producing systematic negative Δ).
+%   Pooling             : (regime × wind), across (amp × freq).
+%                         Pooling across amp is intentional —
+%                         amplitude is the dimension probes
+%                         disagree most on, so summarising it out
+%                         is exactly the contrast we want.
+%   Δ̄ / σ_Δ / γ_1       : mean / std / Fisher-Pearson skew of Δ%.
+%   [P5, P95]           : empirical 90 % interval (no Gaussian).
+%
+% — Reading ────────────────────────────────────────────────────
+%   (a) Compare wind-dominated vs wave-dominated within each wind
+%       block: σ should grow markedly under the wave-dominated
+%       regime (probe-struggle dominates) compared to the wind-
+%       dominated regime (wind-chop dominates).
+%   (b) Skewness γ_1 should be ≈ 0 in symmetric regimes (uten
+%       vind, both regimes; full vind, low ka) but turn
+%       negative under (full vind × wave-dominated) where the
+%       far probe systematically clips peaks.
+%   (c) [P5, P95] reads as the empirical 90 % range of Δ —
+%       asymmetric width = asymmetric distribution.
+%
+% — Companion table + figure ───────────────────────────────────
+%   tab:ch04_parallel_probe_psd_agreement_simple — same data
+%       stratified by (wind × freq) instead of (wind × regime).
+%   fig:ch04_parallel_probe_agreement_bland_altman — per-run
+%       scatter visualised.
+%
+% ── end immutable block ───────────────────────────────────────
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{cccccc}
+    \toprule
+    vind & $N$ & $\overline{\Delta}$ [\%] & $\sigma_{\Delta}$ [\%] & $\gamma_1$ & $[P_5,\,P_{95}]$ [\%] \\
+    \midrule
+    \multicolumn{6}{l}{\itshape Vind-dominert ($ka < 0{,}15$)} \\
+    Uten vind & \num{24} & \num{-0.32} & \num{2.19} & \num{-0.04} & $[\num{-4.3}, \num{+3.3}]$ \\
+    Full vind & \num{29} & \num{-1.09} & \num{9.55} & \num{-1.22} & $[\num{-19.6}, \num{+10.7}]$ \\
+    \midrule
+    \multicolumn{6}{l}{\itshape Bølge-dominert ($ka \geq 0{,}15$)} \\
+    Uten vind & \num{8} & \num{-0.19} & \num{2.20} & \num{-1.09} & $[\num{-3.6}, \num{+1.7}]$ \\
+    Full vind & \num{19} & \num{-5.72} & \num{8.16} & \num{-0.96} & $[\num{-20.7}, \num{+2.5}]$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{
+    % TODO: write caption
+  }
+  \label{tab:ch04_parallel_probe_psd_agreement_by_ka_regime}
+\end{table}
