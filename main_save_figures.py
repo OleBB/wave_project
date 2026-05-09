@@ -2017,7 +2017,7 @@ percent inflation vs A_FFT for that estimator. f badge in upper-right
 corner. x-axis is shifted to relative time [0, 5] s ("fra t=0").
 
 Reader takeaway: at the wind-exposed IN probe, A_p inflates above the
-carrier (+87/+49/+48/+57 % across 1.3-1.6 Hz, 0.1 V fullwind) while A_φ
+carrier (+87/+49/+48/+57 out% across 1.3-1.6 Hz, 0.1 V fullwind) while A_φ
 sits below it; FFT is the only estimator that tracks the paddle amplitude
 robustly under wind. Direct visual motivation for the OUT/IN (FFT) metric
 used as the central thesis result.

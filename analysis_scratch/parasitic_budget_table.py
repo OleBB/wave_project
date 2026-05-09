@@ -121,25 +121,11 @@ def _row(metric_label_tex: str, key: str, fmt: str = "{:.2f}") -> str:
 caption_full  = _lookup_central_caption(THESIS_NAME, kind="full")
 caption_short = _lookup_central_caption(THESIS_NAME, kind="short")
 
-if caption_full:
-    if caption_short:
-        caption_block = (
-            f"  \\caption[{caption_short}]{{\n"
-            f"    {caption_full}\n"
-            f"  }}\n"
-        )
-    else:
-        caption_block = (
-            f"  \\caption{{\n"
-            f"    {caption_full}\n"
-            f"  }}\n"
-        )
-else:
-    caption_block = (
-        "  \\caption{\n"
-        "    % TODO: write caption\n"
-        "  }\n"
-    )
+# Wrap the caption in CAPTION-SYNC sentinels (Option D, 2026-05-09) so
+# analysis_scratch/sync_captions.py can rewrite the caption later
+# without re-running this script.
+from wavescripts.plot_utils import wrap_caption_with_sentinels
+caption_block = wrap_caption_with_sentinels(caption_full, caption_short)
 
 # IMMUTABLE provenance block.
 from datetime import datetime as _dt

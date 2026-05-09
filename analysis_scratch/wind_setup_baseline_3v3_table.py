@@ -188,16 +188,11 @@ for date, sub in df.groupby("date", sort=True):
 _CAPTIONS_JSON = BASE / "output" / ".table_captions.json"
 caption_full  = _lookup_central_caption(THESIS_NAME, kind="full",  json_path=_CAPTIONS_JSON)
 caption_short = _lookup_central_caption(THESIS_NAME, kind="short", json_path=_CAPTIONS_JSON)
-if caption_full and caption_short:
-    caption_block = (
-        f"  \\caption[{caption_short}]{{\n"
-        f"    {caption_full}\n"
-        f"  }}\n"
-    )
-elif caption_full:
-    caption_block = f"  \\caption{{\n    {caption_full}\n  }}\n"
-else:
-    caption_block = "  \\caption{\n    % TODO: write caption\n  }\n"
+# Wrap the caption in CAPTION-SYNC sentinels (Option D, 2026-05-09) so
+# analysis_scratch/sync_captions.py can rewrite the caption later
+# without re-running this script.
+from wavescripts.plot_utils import wrap_caption_with_sentinels
+caption_block = wrap_caption_with_sentinels(caption_full, caption_short)
 
 n_total = len(df)
 n_strict_total = int(df["strict_3v3"].sum())

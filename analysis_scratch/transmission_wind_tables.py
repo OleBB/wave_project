@@ -295,16 +295,13 @@ _CAPTIONS_JSON = BASE / "output" / ".table_captions.json"
 
 def _caption_block(thesis_name: str) -> str:
     """Render \\caption[short]{full} from central TABLE_CAPTIONS lookup,
-    or a TODO placeholder when both are empty."""
+    wrapped in CAPTION-SYNC sentinels (Option D, 2026-05-09) so
+    analysis_scratch/sync_captions.py can rewrite the caption later
+    without re-running this script."""
+    from wavescripts.plot_utils import wrap_caption_with_sentinels
     caption_full  = _lookup_central_caption(thesis_name, kind="full",  json_path=_CAPTIONS_JSON)
     caption_short = _lookup_central_caption(thesis_name, kind="short", json_path=_CAPTIONS_JSON)
-    if caption_full and caption_short:
-        return (f"  \\caption[{caption_short}]{{\n"
-                f"    {caption_full}\n"
-                f"  }}\n")
-    if caption_full:
-        return f"  \\caption{{\n    {caption_full}\n  }}\n"
-    return "  \\caption{\n    % TODO: write caption\n  }\n"
+    return wrap_caption_with_sentinels(caption_full, caption_short)
 
 
 # ── Common immutable-block factory ───────────────────────────────────────

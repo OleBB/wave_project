@@ -220,7 +220,8 @@ def make_figure(wind_tag: str, data: dict, out_pdf: Path) -> None:
     in_zx0,  in_zx1  = in_ws,  in_ws  + zoom_width
     out_zx0, out_zx1 = out_ws, out_ws + zoom_width
 
-    fig = plt.figure(figsize=(6.27, 8.15))
+    fig = plt.figure(figsize=(6.27, 9.15))
+
     gs = fig.add_gridspec(4, 1, height_ratios=[1, 2, 1, 2], hspace=0.42)
     ax_in_full  = fig.add_subplot(gs[0, 0])
     ax_in_zoom  = fig.add_subplot(gs[1, 0])

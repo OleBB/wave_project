@@ -7,7 +7,7 @@
 %   computed_in       : analysis_scratch/inspirational_timeseries.py (single-run time-series render)
 %   plot_type         : inspirational_timeseries
 %   data_class        : DELEG
-%   generated_at      : 2026-05-05T13:42:42
+%   generated_at      : 2026-05-09T22:02:07
 %   findings_doc      : memory/methodology_hg_window_kills_peak_bias.md
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -66,8 +66,8 @@
 %   extra_params      : run_path=wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-nowind-amp0200-freq1400-per240-depth580-mstop30-run1.csv. probes=IN:9373/170+OUT:12400/250. zoom=5 periods at the start of each probe's H&G window (0.5-period lead-in + 4.5 periods inside the window; macro = full recording, ~44.1 s cutoff). H&G window: arrival-anchored [t_arr + 7T, t_arr + 17T] with t_arr = r/c_g(f, h); start UC-snapped within ±T, end UC-snapped to the 10th upcrossing with ±0.5 T guard. Amber vspan on macro = zoom extent; zoom extent sits at each probe's own H&G window start so OUT zoom sits later in time (wave-group lag). Colour convention: blue = nowind, red = fullwind — CLAUDE.md thesis-wide WIND_COLOR_MAP. Typeset in NewComputerModern10 (OTFs from TeXLive's newcomputermodern package, registered via font_manager).
 %
 % — Summary stats cited in caption ────────────────────────────
-%   stat:ka_inn       : 0.1287
-%   stat:ka_Ut        : 0.0878
+%   stat:ka_inn       : 0.1205
+%   stat:ka_Ut        : 0.0835
 %   stat:A_inn_FFT_mm : 15.319
 %   stat:wavelength_inn_m : 0.7986
 %   stat:wavenumber_inn_per_m : 7.8675
@@ -76,7 +76,7 @@
 %   stat:Hm0_inn_mm   : 43.471
 %   stat:Hs_inn_mm    : 31.843
 %   stat:Froude_inn   : 0.22023
-%   stat:Ursell_inn   : 0.10695
+%   stat:Ursell_inn   : 0.10015
 %   stat:wind_over_c_inn : 0.0000
 %   stat:f_over_fPM_inn : nan
 %   stat:wave_stability_inn : 0.8920
@@ -89,7 +89,7 @@
 %   stat:Hm0_Ut_mm    : 29.921
 %   stat:Hs_Ut_mm     : 21.697
 %   stat:Froude_Ut    : 0.21956
-%   stat:Ursell_Ut    : 0.07162
+%   stat:Ursell_Ut    : 0.06811
 %   stat:wind_over_c_Ut : 0.0000
 %   stat:f_over_fPM_Ut : nan
 %   stat:wave_stability_Ut : 0.8972
@@ -134,10 +134,10 @@
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{FIGURES/ch04_inspirational_nowind.pdf}
+% >>> CAPTION-SYNC START (do not edit this block; sync_captions.py overwrites)
   \caption[Tidsserie uten vind]{
-    Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: 
-um{0.1287},   ka, ut:  
-um{0.0878}
+    Tidsserie for bølgen \qty{1.4}{\hertz}, amplitudevalg $A_2$, uten vind. Nærbilde av de første fem periodene i tidsvinduet. ka, inn: \num{0.1287},   ka, ut:  \num{0.0878}
   }
+% <<< CAPTION-SYNC END
   \label{fig:ch04_inspirational_nowind}
 \end{figure}

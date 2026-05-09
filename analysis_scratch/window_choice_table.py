@@ -191,16 +191,11 @@ def render_table(wind_label: str, plat_start_col: str, plat_end_col: str,
     captions_json = BASE / "output" / ".table_captions.json"
     caption_full  = _lookup_central_caption(thesis_name, kind="full",  json_path=captions_json)
     caption_short = _lookup_central_caption(thesis_name, kind="short", json_path=captions_json)
-    if caption_full and caption_short:
-        caption_block = (
-            f"  \\caption[{caption_short}]{{\n"
-            f"    {caption_full}\n"
-            f"  }}\n"
-        )
-    elif caption_full:
-        caption_block = f"  \\caption{{\n    {caption_full}\n  }}\n"
-    else:
-        caption_block = "  \\caption{\n    % TODO: write caption\n  }\n"
+    # Wrap the caption in CAPTION-SYNC sentinels (Option D, 2026-05-09)
+    # so analysis_scratch/sync_captions.py can rewrite the caption later
+    # without re-running this script.
+    from wavescripts.plot_utils import wrap_caption_with_sentinels
+    caption_block = wrap_caption_with_sentinels(caption_full, caption_short)
 
     from datetime import datetime as _dt
     immutable = "\n".join([
