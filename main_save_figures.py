@@ -2188,6 +2188,18 @@ if _dropout.any():
         print(f"  Kt_wall={_kt_wall[_r.name]:.3f} Kt_far={_kt_far[_r.name]:.3f}  {_r['path'].split('/')[-1]}")
     _damping_meta = _damping_meta[~_dropout].copy()
 _damping_grouped = damping_all_amplitude_grouper(_damping_meta)
+# Tighten the stub's `datasets:` provenance to folders whose data actually
+# survives this cell's filters (loose300 + dropout). Without this, the
+# stub still lists 20260326 (loose230) because it's loaded into
+# meta_results — the row-level filter has no effect on the dataset-level
+# provenance otherwise. Match folder name by the date portion of file_date.
+import wavescripts.plot_utils as _pu
+_active_dates = {d.replace("-", "")
+                 for d in _damping_meta["file_date"].astype(str).unique()}
+_pu.ACTIVE_DATASETS = sorted(
+    d.name for d in RESULTS_PROCESSED_DIRS
+    if any(date in d.name for date in _active_dates)
+)
 plot_damping_freq(_damping_grouped, _pv_damping_freq)
 
 # %% — moved to main_save_tables.py (3 migrated tables)
@@ -2267,6 +2279,16 @@ if _dropout.any():
         print(f"  Kt_wall={_kt_wall[_r.name]:.3f} Kt_far={_kt_far[_r.name]:.3f}  {_r['path'].split('/')[-1]}")
     _scatter_meta = _scatter_meta[~_dropout].copy()
 _scatter_grouped = damping_all_amplitude_grouper(_scatter_meta)
+# Tighten the stub's `datasets:` provenance to folders whose data actually
+# survives this cell's filters (loose300 + dropout). Same pattern as the
+# §1 freq cell — match folder name by the date portion of file_date.
+import wavescripts.plot_utils as _pu
+_active_dates = {d.replace("-", "")
+                 for d in _scatter_meta["file_date"].astype(str).unique()}
+_pu.ACTIVE_DATASETS = sorted(
+    d.name for d in RESULTS_PROCESSED_DIRS
+    if any(date in d.name for date in _active_dates)
+)
 plot_damping_scatter(_scatter_grouped, _pv_damping_scatter)
 
 # %%

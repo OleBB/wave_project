@@ -301,7 +301,7 @@ def _make_damping_freq_fig(
             freq_to_k(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
             yerr=grp["std_out_in"],
             label=label, color=color,
-            marker=marker, markersize=6, linewidth=1.4,
+            marker=marker, markersize=0.5, linewidth=1.4,
             # Errorbars: doubled stroke + doubled cap (2026-05-09) — only 4
             # freq points on the x-axis with lots of lateral room, so cap
             # length is free to expand without bumping neighbours. The
