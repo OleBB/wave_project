@@ -112,11 +112,14 @@ COLORS = {
     # but distinguishable; was vivid orange/royal blue earlier, swapped
     # 2026-05-09 once above_50 adopted pink/turquoise).
     ("below_loose230_full", "no"):   "#9ECAE1",  # light blue
-    ("below_loose230_full", "full"): "#FCAE91",  # light salmon
-    # above_50 pooled (full + reverse) — pink/turquoise + star markers,
+    ("below_loose230_full", "full"): "#F4815A",  # orange salmon
+                                                 # (was #FCAE91 light salmon
+                                                 # — shifted 2026-05-09 to
+                                                 # widen gap to magenta below)
+    # above_50 pooled (full + reverse) — magenta/turquoise + star markers,
     # giving a clear visual separation from the below mooring family.
     ("above_50",            "no"):   "#17BECF",  # turquoise
-    ("above_50",            "full"): "#E377C2",  # pink
+    ("above_50",            "full"): "#D81B7A",  # magenta (was #E377C2 pink)
 }
 
 CATEGORY_LABELS = {

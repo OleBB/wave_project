@@ -322,7 +322,7 @@ def _make_figure(sub: pd.DataFrame,
         ]
         ax.legend(handles=freq_handles, title="Frekvens",
                    title_fontsize=8, fontsize=8,
-                   loc="upper left", framealpha=0.92)
+                   loc="upper right", framealpha=0.92) #upper right is the correct placement for these plots.
 
     fig.subplots_adjust(left=0.07, right=0.97, top=0.88, bottom=0.13)
     apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)

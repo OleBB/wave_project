@@ -225,15 +225,180 @@ def _fmt_row(r):
     return f"{head}  ║ {ka_block} ║ {k_block} ║ {kL_block}"
 
 
+import json
+
+# Mapping from view key → published table name (used in main_save_tables.py).
+TABLE_NAMES = {
+    "all":   "ch05_damping_all_data_scatter_ka_table",
+    "under": "ch05_damping_undermooring_scatter_ka_table",
+    "over":  "ch05_damping_overmooring_scatter_ka_table",
+}
+
+
+def _add_pair_deltas(tab: pd.DataFrame) -> pd.DataFrame:
+    """For each (category × amp) pair, populate the wind-comparison
+    columns on the `full` row only:
+
+      delta_Kt        = K̄_t(full)  − K̄_t(no)
+      slope_ratio_ka  = |slope_full| / |slope_no|        (ka-axis)
+      slope_ratio_kL  = |slope_full| / |slope_no|        (kL-axis)
+
+    The `no` row's pair-comparison columns stay NaN (blank in render).
+    """
+    tab = tab.copy()
+    tab["delta_Kt"]       = float("nan")
+    tab["slope_ratio_ka"] = float("nan")
+    tab["slope_ratio_kL"] = float("nan")
+
+    for (_cat, _amp), grp in tab.groupby(["category", "amp_volt"], sort=False):
+        if set(grp["wind"]) != {"no", "full"}:
+            continue   # cell missing one wind condition; nothing to compare
+        no_row   = grp[grp["wind"] == "no"].iloc[0]
+        full_idx = grp[grp["wind"] == "full"].index[0]
+        full_row = grp[grp["wind"] == "full"].iloc[0]
+
+        tab.at[full_idx, "delta_Kt"] = float(full_row["Kt_mean"] - no_row["Kt_mean"])
+
+        for src, dst in [("slope_dKt_dka", "slope_ratio_ka"),
+                         ("slope_dKt_dkL", "slope_ratio_kL")]:
+            s_no, s_fw = no_row[src], full_row[src]
+            if pd.notna(s_no) and pd.notna(s_fw) and abs(s_no) > 1e-9:
+                tab.at[full_idx, dst] = float(abs(s_fw) / abs(s_no))
+
+    return tab
+
+
+# Section text for the IMMUTABLE comment block at the top of each .tex stub.
+# View-specific headline findings; the rest is shared.
+def _meta_sections(vkey: str, view_label: str, n_total: int, n_cells: int,
+                   tab: pd.DataFrame) -> list[dict]:
+    n_pairs = int(tab["delta_Kt"].notna().sum())
+    n_lifts = int((tab["delta_Kt"] > 0).sum())
+    n_drops = int((tab["delta_Kt"] < 0).sum())
+    n_flat  = int((tab["slope_ratio_ka"] < 1.0).sum())
+
+    # View-specific findings paragraph.
+    if vkey == "under":
+        findings = [
+            f"n_pairs           : {n_pairs} wind comparisons (3 amps × 2 moorings)",
+            f"ΔK_t > 0          : {n_lifts}/{n_pairs} cells — wind raises K_t in",
+            "                    every cell of the under family.",
+            f"slope flattens    : {n_flat}/{n_pairs} cells — wind softens the",
+            "                    K_t-vs-ka slope in every cell.",
+            "Flattening factor : slope_ratio_ka median ≈ 0.37 (loose300, loose230",
+            "                    track each other tightly).",
+            "Reading note      : pair the rows top-down; the `full` row carries",
+            "                    the comparison columns ΔK_t and slope_ratio.",
+        ]
+    elif vkey == "over":
+        findings = [
+            f"n_pairs           : {n_pairs} wind comparisons (3 amps × 1 mooring)",
+            f"ΔK_t > 0          : {n_lifts}/{n_pairs} cells — wind raises K_t",
+            "                    only at A1; ΔK_t is near zero or negative at",
+            "                    A2 and A3 (the wind enhancement vanishes at",
+            "                    higher amplitudes for the above-water mooring).",
+            f"slope flattens    : {n_flat}/{n_pairs} cells — wind softens the",
+            "                    K_t-vs-ka slope in every cell.",
+            "Reading note      : the negative ΔK_t entries are the table's",
+            "                    most distinctive observation here — the figure",
+            "                    hides them in the dense dot cloud.",
+        ]
+    else:   # "all" view — full master story
+        findings = [
+            f"n_pairs           : {n_pairs} wind comparisons (3 amps × 3 cats)",
+            f"ΔK_t > 0          : {n_lifts}/{n_pairs} cells.",
+            f"ΔK_t ≤ 0          : {n_drops}/{n_pairs} cells — at above_50",
+            "                    × {A2, A3} the wind effect vanishes/reverses.",
+            f"slope flattens    : {n_flat}/{n_pairs} cells — universal under",
+            "                    wind. Flattening factor ≈ 0.37 for under-water",
+            "                    moorings, ≈ 0.60 for above-water (above_50).",
+            "Reading note      : the under-vs-over distinction in wind effect",
+            "                    is amplitude-dependent (loose moorings:",
+            "                    persistent lift; above_50: A1-only).",
+        ]
+
+    return [
+        {"title": "Method",
+         "lines": [
+             "x-axis variants    : ka (paddle steepness), k (rad/m), kL (k×L)",
+             "L                  : 2.6 m (panel longitudinal length, fixed)",
+             "ka                 : `IN Wavenumber (FFT)` × `IN Amplitude (FFT)` [m]",
+             "K_t                : `OUT/IN (FFT)` (paddle freq, 0.1 Hz nearest-bin)",
+             "Pooling            : (category × amp × wind) — one row per cell",
+             "Within-cell fit    : linear K_t = a·x + b for x ∈ {ka, k, kL}",
+             "                     R²_kL == R²_k (kL is constant rescaling of k);",
+             "                     R²_ka may differ because ka mixes k and amp.",
+         ]},
+        {"title": "Reading the table",
+         "lines": [
+             "Each row is one (category × amp × wind) cell.",
+             "Rows are paired by wind: the `uten` row is the no-wind baseline,",
+             "the `full` row caps the wind comparison.",
+             "ΔK_t and slope_ratio are populated on the `full` row only:",
+             "   ΔK_t        = K̄_t(full)  − K̄_t(no)",
+             "   slope_ratio = |dK_t/dka|_full / |dK_t/dka|_no",
+             "ΔK_t > 0 means wind raises mean transmission; slope_ratio < 1",
+             "means wind softens the steepness sensitivity.",
+         ]},
+        {"title": "Headline findings (this view)",
+         "lines": findings},
+        {"title": "Beyond the figure",
+         "lines": [
+             "Figure shows clouds; table pins centroids and effect sizes.",
+             "The figure cannot show:  per-cell n, exact K̄_t, slope numbers,",
+             "or a sign-flip in ΔK_t hidden by overlapping dots. Each is in",
+             "the table by design.",
+         ]},
+        {"title": "Inputs",
+         "lines": [
+             f"View               : {view_label}",
+             f"Coverage           : {n_cells} cells from {n_total} runs",
+             "Quality filter     : quality_flag=ok, paddle freq < 2 Hz,",
+             "                     K_t ∈ [0.1, 2.0], Mooring != above_200",
+         ]},
+        {"title": "Companion figure",
+         "lines": [
+             "fig:ch05_damping_all_data_scatter_ka  (parent, all 3 categories)",
+             "fig:ch05_damping_undermooring_scatter_ka  (loose300+loose230)",
+             "fig:ch05_damping_overmooring_scatter_ka   (above_50, panel pooled)",
+         ]},
+    ]
+
+
 print("\n" + "=" * 100)
 for vkey, vinfo in VIEWS.items():
     sub = wave_clip[wave_clip["category"].isin(vinfo["cats"])]
     tab = _aggregate(sub)
-    csv_path = Path(__file__).parent / f"damping_ka_scatter_table_iterate_{vkey}.csv"
-    tab.to_csv(csv_path, index=False)
+    tab = _add_pair_deltas(tab)   # adds delta_Kt + slope_ratio_{ka,kL}
+
+    # Scratch CSV (kept for iteration / quick eyeball).
+    scratch_csv = Path(__file__).parent / f"damping_ka_scatter_table_iterate_{vkey}.csv"
+    tab.to_csv(scratch_csv, index=False)
+
+    # Standalone-LaTeX-ready data sidecar (CSV + meta.json) for main_save_tables.
+    table_name = TABLE_NAMES[vkey]
+    data_dir = BASE / "output" / "TABLES" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    sidecar_csv  = data_dir / f"{table_name}.csv"
+    sidecar_meta = data_dir / f"{table_name}.meta.json"
+    tab.to_csv(sidecar_csv, index=False)
+    sidecar_meta.write_text(
+        json.dumps({
+            "script": "analysis_scratch/damping_ka_scatter_table_iterate.py",
+            "plot_type": "damping_ka_scatter_table",
+            "chapter": "05",
+            "caption_label": f"tab:{table_name}",
+            "caption_short": "",   # filled from TABLE_CAPTIONS_SHORT at render time
+            "sections": _meta_sections(vkey, vinfo["name"], len(sub), len(tab), tab),
+        }, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
     print(f"\n── VIEW: {vinfo['name']}  ({len(tab)} cells, {len(sub)} runs) ──")
     for _, r in tab.iterrows():
         print(_fmt_row(r))
-    print(f"   → {csv_path.relative_to(BASE)}")
+    print(f"   scratch → {scratch_csv.relative_to(BASE)}")
+    print(f"   sidecar → {sidecar_csv.relative_to(BASE)}")
+    print(f"   meta    → {sidecar_meta.relative_to(BASE)}")
 print("\n" + "=" * 100)
 print("Done. Edit this script's pooling / row order / column choice and re-run.")

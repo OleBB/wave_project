@@ -123,12 +123,19 @@ print(f"\n   ka range: [{wave_clip['ka'].min():.3f}, {wave_clip['ka'].max():.3f}
 print(f"   freq range: [{wave_clip['WaveFrequencyInput [Hz]'].min():.2f}, "
       f"{wave_clip['WaveFrequencyInput [Hz]'].max():.2f}] Hz")
 
-# Compose the (mooring × panel) category — above_50 fullpanel + reverse pooled.
+# Compose the (mooring × panel) category — above_50 split by panel
+# orientation (2026-05-09): per user request, reverse panel data on
+# above_50 must be visually distinguishable from full panel. Below
+# moorings still keep the "_full" suffix because they only have full
+# panel data in canon. The pooling justification (app_panel_pooling)
+# still holds for the matching table; this split applies to the
+# scatter figure only.
 def _category(row):
     m = row["Mooring"]; p = row["PanelCondition"]
-    if m == "below_90_loose300" and p == "full":            return "below_loose300_full"
-    if m == "below_90_loose230" and p == "full":            return "below_loose230_full"
-    if m == "above_50"          and p in ("full", "reverse"): return "above_50"
+    if m == "below_90_loose300" and p == "full":     return "below_loose300_full"
+    if m == "below_90_loose230" and p == "full":     return "below_loose230_full"
+    if m == "above_50"          and p == "full":     return "above_50_full"
+    if m == "above_50"          and p == "reverse":  return "above_50_reverse"
     return "other"
 
 wave_clip["category"] = wave_clip.apply(_category, axis=1)
@@ -155,34 +162,66 @@ summary.to_csv(SCRATCH_CSV, index=False)
 print(f"\n   Summary → {SCRATCH_CSV.relative_to(BASE)}")
 
 # ── 4. Plot — single figure, mooring×panel categories pooled per by_mooring ──
+# Above_50 (over-mooring) palette (2026-05-09 final): pink (fullwind) and
+# turquoise (nowind). Stays inside the project-wide red/blue convention
+# while shifting the hue enough to read as a third mooring family next to
+# loose300 (red/blue) and loose230 (light red/blue). Same colours apply to
+# both panel orientations; full vs reverse is encoded by FILL — full panel
+# = solid; reverse panel = hollow, colour shifts to the marker outline.
+# Below moorings unchanged.
+#
+# History: 2026-05-09 morning the over palette was turquoise/pink (this).
+# Mid-day briefly tried yellow/purple per user request, then reverted to
+# pink/turquoise — yellow/purple read as "less ugly" but lost the visual
+# binding to the rest of the thesis's red/blue convention.
+ABOVE_FULLWIND_COLOR = "#D81B7A"   # magenta (shifted from pink #E377C2 for
+                                   # more separation from loose230 salmon)
+ABOVE_NOWIND_COLOR   = "#17BECF"   # turquoise
+
 COLORS = {
     ("below_loose300_full", "no"):   WIND_COLOR_MAP["no"],   # standard blue
     ("below_loose300_full", "full"): WIND_COLOR_MAP["full"], # standard red
     ("below_loose230_full", "no"):   "#9ECAE1",              # light blue
-    ("below_loose230_full", "full"): "#FCAE91",              # light salmon
-    ("above_50",            "no"):   "#17BECF",              # turquoise
-    ("above_50",            "full"): "#E377C2",              # pink
+    ("below_loose230_full", "full"): "#F4815A",              # orange salmon
+                                                             # (shifted from
+                                                             # #FCAE91 to widen
+                                                             # gap to magenta)
+    ("above_50_full",       "no"):   ABOVE_NOWIND_COLOR,
+    ("above_50_full",       "full"): ABOVE_FULLWIND_COLOR,
+    ("above_50_reverse",    "no"):   ABOVE_NOWIND_COLOR,
+    ("above_50_reverse",    "full"): ABOVE_FULLWIND_COLOR,
 }
 
+# Categories where the marker is rendered HOLLOW (no fill, colour goes
+# to the outline). Currently used to distinguish above_50 reverse from
+# above_50 full panel.
+HOLLOW_CATEGORIES = {"above_50_reverse"}
+
 CATEGORY_LABELS = {
-    "below_loose300_full": "Under, loose300, full panel",
-    "below_loose230_full": "Under, loose230, full panel",
-    "above_50":            "Over (50 mm), pooled paneler",
+    "below_loose300_full": "Under, 30 cm",
+    "below_loose230_full": "Under, 23 cm",
+    "above_50_full":       "Over",                # mm dropped — implicit
+    "above_50_reverse":    "Over, revers",        # only flag the deviation
 }
 
 CATEGORY_ORDER = [
-    "above_50",             # bottom — paint under
+    "above_50_full",         # bottom — paint under
+    "above_50_reverse",      # bottom-ish; hollow stars sit just above above_50_full
     "below_loose230_full",
-    "below_loose300_full",  # top — canonical reference most visible
+    "below_loose300_full",   # top — canonical reference most visible
 ]
 
 # Marker per (category, amp). Below moorings use the project amp-tier
-# convention; above_50 uses N-pointed stars so the above-vs-below
-# distinction reads from shape at a glance.
+# convention; above_50 (both panels) uses three highly distinct shapes
+# (diamond / X-cross / hexagon) chosen 2026-05-09 because the previous
+# 6/5/4-point star family wasn't visually separable at small marker sizes.
+# Full vs reverse panel is encoded by fill (see HOLLOW_CATEGORIES), not
+# shape.
 MARKERS = {
-    "below_loose300_full": {0.10: "o",        0.20: "s",        0.30: "^"},
-    "below_loose230_full": {0.10: "o",        0.20: "s",        0.30: "^"},
-    "above_50":            {0.10: (6, 1, 0),  0.20: (5, 1, 0),  0.30: (4, 1, 0)},
+    "below_loose300_full": {0.10: "o",  0.20: "s",  0.30: "^"},
+    "below_loose230_full": {0.10: "o",  0.20: "s",  0.30: "^"},
+    "above_50_full":       {0.10: "D",  0.20: "X",  0.30: "h"},
+    "above_50_reverse":    {0.10: "D",  0.20: "X",  0.30: "h"},
 }
 WIND_LABEL = {"no": "uten vind", "full": "full vind"}
 MARKER_SIZE = 55
@@ -194,21 +233,27 @@ def _round_amp(v): return round(float(v), 2)
 # ── Shared axis envelope so the 3 views (all / under / over) compare 1:1 ─────
 # Computed from the all-data subset so each view sits inside the same box.
 XLIM = (0.0, max(0.36, wave_clip["ka"].max() * 1.02))
-YLIM = (0.1, 1.18)
+YLIM = (0.1, 1.05)   # ceiling at 1.05 — drops K_t > 1 outliers (probe
+                     # dropouts) and tightens the y-axis, freeing the
+                     # top band for the stacked legends (2026-05-09).
 
 
 def _make_view(sub: pd.DataFrame, *,
                categories: list[str],
                figure_name: str,
                plot_type: str,
-               view_label: str) -> None:
+               view_label: str,
+               draw_fits: bool = True) -> None:
     """Build one scatter figure restricted to ``categories``, save PDF + stub.
 
     Same axes / encoding as the parent (all-data) figure — only the
     category set changes per view. Shared XLIM/YLIM keeps the three
     views directly comparable.
     """
-    fig, ax = plt.subplots(figsize=(8.5, 8.0))
+    # Sized for A4 portrait minus 1-inch margins (8.27" × 11.69" →
+    # 6.27" × 9.69" printable area). Tall aspect gives the K_t axis more
+    # vertical real estate than the previous near-square (8.5, 8.0).
+    fig, ax = plt.subplots(figsize=(6.27, 9.69))
 
     # Plot order: same as in CATEGORY_ORDER, restricted to this view.
     plot_order = [c for c in CATEGORY_ORDER if c in categories]
@@ -224,14 +269,44 @@ def _make_view(sub: pd.DataFrame, *,
                     continue
                 color  = COLORS.get((cat, wind), "gray")
                 marker = MARKERS[cat][amp_v]
-                sz = MARKER_SIZE * (1.6 if cat == "above_50" else 1.0)
+                sz = MARKER_SIZE * (1.6 if cat.startswith("above_50") else 1.0)
+                # Reverse-panel above_50 cells render hollow: facecolour
+                # is "none", outline gets the wind colour. Full panel
+                # (and all below moorings) render solid with black outline.
+                hollow = cat in HOLLOW_CATEGORIES
+                face_color = "none" if hollow else color
+                edge_color = color  if hollow else "black"
+                edge_lw    = 1.1    if hollow else EDGE_LW
                 ax.scatter(
                     s["ka"], s["OUT/IN (FFT)"],
-                    facecolors=color, edgecolors="black",
+                    facecolors=face_color, edgecolors=edge_color,
                     marker=marker, s=sz,
-                    linewidths=EDGE_LW, alpha=ALPHA,
+                    linewidths=edge_lw, alpha=ALPHA,
                     zorder=3 if cat == "below_loose300_full" else 2,
                 )
+                # Thin per-cell linear fit (one line per (cat × amp × wind))
+                # — direct visual companion to the table rows. Span = cell's
+                # actual ka range. Style: very thin + low alpha so dots stay
+                # primary; colour matches dot face for visual binding to the
+                # cell. Reverse-panel cells use a dashed line so the line
+                # itself echoes the hollow-marker convention. Skip if the
+                # cell has fewer than 2 unique ka values. Disabled in the
+                # combined view (draw_fits=False) — 18 lines on 399 dots
+                # was too dense to read.
+                if draw_fits:
+                    ka_cell = s["ka"].to_numpy(float)
+                    kt_cell = s["OUT/IN (FFT)"].to_numpy(float)
+                    if len(ka_cell) >= 2 and ka_cell.std() > 1e-9:
+                        p = np.polyfit(ka_cell, kt_cell, deg=1)
+                        x_line = np.array([ka_cell.min(), ka_cell.max()])
+                        y_line = np.polyval(p, x_line)
+                        ax.plot(
+                            x_line, y_line,
+                            color=color, lw=0.6, alpha=0.55,
+                            linestyle=(0, (3, 1.5)) if hollow else "-",
+                            zorder=4 if cat == "below_loose300_full" else 3,
+                            solid_capstyle="round",
+                        )
 
     ax.axhline(1.0, color="black", lw=0.6, ls="--", alpha=0.5)
     ax.set_xlabel(r"$ka$  (Inn, målt)", fontsize=11)
@@ -245,28 +320,39 @@ def _make_view(sub: pd.DataFrame, *,
     ax.set_xlim(*XLIM); ax.set_ylim(*YLIM)
 
     # Configuration legend (cat × wind) — only entries relevant to this view.
+    # Reverse-panel above_50 entries render hollow (face='none'); the wind
+    # colour goes to the marker outline so the legend mirrors the figure.
+    # n-counts dropped from labels 2026-05-09 — they live in the companion
+    # tables (tab:ch05_damping_*_scatter_ka_table) where they're easier to
+    # compare across cells.
     config_handles = []
     for cat in plot_order[::-1]:
-        sub_cat = sub[sub["category"] == cat]
-        n_no   = int((sub_cat["WindCondition"] == "no").sum())
-        n_full = int((sub_cat["WindCondition"] == "full").sum())
-        cat_marker_exemplar = "o" if cat != "above_50" else (5, 1, 0)
-        cat_msize = 11 if cat == "above_50" else 9
-        for wind, wlabel, n in (("full", "full vind", n_full),
-                                ("no",   "uten vind", n_no)):
+        is_above = cat.startswith("above_50")
+        # Legend exemplar = the A1 marker from the family (parallel to
+        # below where exemplar = "o" = MARKERS[*]/0.10). Picks the family's
+        # "smoothest" shape so the cat × wind legend reads compactly.
+        cat_marker_exemplar = "D" if is_above else "o"
+        cat_msize = 11 if is_above else 9
+        hollow = cat in HOLLOW_CATEGORIES
+        for wind, wlabel in (("full", "full vind"),
+                             ("no",   "uten vind")):
+            wind_color = COLORS[(cat, wind)]
+            mfc = "none"      if hollow else wind_color
+            mec = wind_color  if hollow else "black"
+            mew = 1.1         if hollow else 0.4
             config_handles.append(
                 mlines.Line2D([], [],
                               marker=cat_marker_exemplar, linestyle="None",
-                              markerfacecolor=COLORS[(cat, wind)],
-                              markeredgecolor="black", markeredgewidth=0.4,
+                              markerfacecolor=mfc,
+                              markeredgecolor=mec, markeredgewidth=mew,
                               markersize=cat_msize,
-                              label=f"{CATEGORY_LABELS[cat]}, {wlabel}  (n={n})")
+                              label=f"{CATEGORY_LABELS[cat]}, {wlabel}")
             )
 
     # Amplitude legend — only the marker family present in this view.
     amp_handles = []
     has_below = any(c.startswith("below_") for c in plot_order)
-    has_above = "above_50" in plot_order
+    has_above = any(c.startswith("above_50") for c in plot_order)
     for v in (0.10, 0.20, 0.30):
         if has_below:
             amp_handles.append(
@@ -279,21 +365,35 @@ def _make_view(sub: pd.DataFrame, *,
         if has_above:
             amp_handles.append(
                 mlines.Line2D([], [], color="black",
-                              marker=MARKERS["above_50"][v], linestyle="None",
+                              marker=MARKERS["above_50_full"][v], linestyle="None",
                               markersize=10, markerfacecolor="lightgray",
                               markeredgecolor="black", markeredgewidth=0.3,
                               label=f"{amp_to_label(v)}{'  (over)' if has_below else ''}")
             )
     amp_legend_ncol = 2 if (has_below and has_above) else 1
 
-    leg_cfg = ax.legend(handles=config_handles, loc="lower left",
-                        bbox_to_anchor=(0.005, 0.005),
+    # Both legends stack in the upper-right corner (2026-05-09 layout):
+    # Konfigurasjon legend on top (wide — typically 2 columns), Amplitude
+    # legend immediately below it. Y-axis ceiling at 1.05 frees the top
+    # band of the data area; legends sit there without occluding dots.
+    # Amplitude legend's anchor y is computed from Konfigurasjon's
+    # rendered bbox so the spacing is correct regardless of how many
+    # rows Konfigurasjon ends up using.
+    leg_cfg = ax.legend(handles=config_handles, loc="upper right",
+                        bbox_to_anchor=(0.995, 0.995),
                         fontsize=7.5, framealpha=0.92,
                         title="Konfigurasjon", title_fontsize=8,
                         ncol=2 if len(config_handles) >= 4 else 1)
     ax.add_artist(leg_cfg)
+
+    # Force a draw so leg_cfg has a real bbox; transform it into axes
+    # coordinates and drop the amplitude legend just below it.
+    fig.canvas.draw()
+    leg_cfg_bbox = leg_cfg.get_window_extent().transformed(ax.transAxes.inverted())
+    amp_anchor_y = leg_cfg_bbox.y0 - 0.010   # tiny gap
+
     ax.legend(handles=amp_handles, loc="upper right",
-              bbox_to_anchor=(0.995, 0.995),
+              bbox_to_anchor=(0.995, amp_anchor_y),
               fontsize=7, framealpha=0.92,
               title="Amplitude", title_fontsize=8,
               ncol=amp_legend_ncol)
@@ -362,18 +462,25 @@ def _make_view(sub: pd.DataFrame, *,
 # ── 4./5./6. Build all three views ────────────────────────────────────────────
 print("\n3. Building views …")
 VIEWS = [
+    # Combined view: regression lines OFF — 18 thin lines over 399 dots
+    # was visually overcrowded. The under/over subviews keep their lines
+    # since they're sparse enough to read; the combined view leans on the
+    # tables for per-cell numbers (tab:ch05_damping_all_data_scatter_ka_table).
     {"name": "all",   "categories": CATEGORY_ORDER,
      "figure_name": "ch05_damping_all_data_scatter_ka",
      "plot_type":   "damping_all_data_scatter_ka",
-     "view_label":  "all data (loose300 + loose230 + above_50 pooled)"},
+     "view_label":  "all data (loose300 + loose230 + above_50 split by panel)",
+     "draw_fits":   False},
     {"name": "under", "categories": ["below_loose300_full", "below_loose230_full"],
      "figure_name": "ch05_damping_undermooring_scatter_ka",
      "plot_type":   "damping_undermooring_scatter_ka",
-     "view_label":  "undermooring only (loose300 + loose230)"},
-    {"name": "over",  "categories": ["above_50"],
+     "view_label":  "undermooring only (loose300 + loose230)",
+     "draw_fits":   True},
+    {"name": "over",  "categories": ["above_50_full", "above_50_reverse"],
      "figure_name": "ch05_damping_overmooring_scatter_ka",
      "plot_type":   "damping_overmooring_scatter_ka",
-     "view_label":  "overmooring only (above_50 full + reverse pooled)"},
+     "view_label":  "overmooring only (above_50 full + reverse, panel-split)",
+     "draw_fits":   True},
 ]
 
 for view in VIEWS:
@@ -381,7 +488,8 @@ for view in VIEWS:
                categories=view["categories"],
                figure_name=view["figure_name"],
                plot_type=view["plot_type"],
-               view_label=view["view_label"])
+               view_label=view["view_label"],
+               draw_fits=view["draw_fits"])
 
 # Also write the all-data scratch sibling for backward compat
 fig_all_pdf_scratch = SCRATCH_PDF

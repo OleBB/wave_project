@@ -316,7 +316,7 @@ hardware_handles = [
                   marker="o", linestyle="None", markersize=8,
                   markerfacecolor="black", markeredgecolor="black",
                   markeredgewidth=0.3,
-                  label="endelig oppsett (h100/low)"),
+                  label="endelig oppsett"),
     mlines.Line2D([], [], color="black",
                   marker="o", linestyle="None", markersize=8,
                   markerfacecolor="none", markeredgecolor="black",

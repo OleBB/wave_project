@@ -262,12 +262,13 @@ def _make_damping_freq_fig(
     # Mooring-split colours: when the input has more than one Mooring
     # value, draw one curve per (wind, mooring) combo. loose230 reuses
     # the project-wide WIND_COLOR_MAP (red/blue); loose300 gets a
-    # contrasting pair (pink for full, turquoise for no).
+    # contrasting pair — magenta (full) + turquoise (no), matching the
+    # over-mooring family in ch05_damping_*_scatter_ka (2026-05-09).
     MOORING_WIND_COLORS = {
         ("no",   "loose230"): WIND_COLOR_MAP.get("no"),    # blue
         ("full", "loose230"): WIND_COLOR_MAP.get("full"),  # red
         ("no",   "loose300"): "#17BECF",                   # turquoise
-        ("full", "loose300"): "#E377C2",                   # pink
+        ("full", "loose300"): "#D81B7A",                   # magenta
     }
     _has_mooring = (
         "Mooring" in subset.columns and subset["Mooring"].nunique() > 1
@@ -302,9 +303,10 @@ def _make_damping_freq_fig(
             marker=marker, markersize=6, linewidth=1.4,
             # Errorbars: thicker than the connecting line + larger caps so
             # within-mooring spread (~0.005–0.04) is visible against the
-            # ~0.05 between-curve gap. Marker outline (black, 0.7px) makes
-            # round/square/triangle distinguishable when colours overlap.
-            markeredgecolor="black", markeredgewidth=0.7,
+            # ~0.05 between-curve gap. Marker outline (black, 0.4px) matches
+            # the convention in ch05_damping_*_scatter_ka (EDGE_LW=0.4)
+            # — same visual language across the CH05 freq + ka figures.
+            markeredgecolor="black", markeredgewidth=0.4,
             elinewidth=2.0, capsize=4, capthick=2.0,
         )
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)

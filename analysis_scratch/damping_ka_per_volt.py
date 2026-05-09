@@ -151,8 +151,9 @@ m["mooring_tag"] = m["file_date"].astype(str).map({
 print(f"  {len(m)} runs ("
       f"loose300={int((m['mooring_tag']=='loose300').sum())}, "
       f"loose230={int((m['mooring_tag']=='loose230').sum())}; "
-      f"per240={int((m['per_tag']=='per240').sum())}, "
-      f"per40={int((m['per_tag']=='per40').sum())})")
+      # f"per240={int((m['per_tag']=='per240').sum())}, "
+      # f"per40={int((m['per_tag']=='per40').sum())})"
+      )
 
 ALL_WINDS = sorted(m["WindCondition"].unique())
 ALL_FREQS = sorted(m["WaveFrequencyInput [Hz]"].unique())
@@ -227,17 +228,17 @@ def _make_figure(sub: pd.DataFrame,
     # Mooring × vind legend — colour-coded, same in both modes.
     wind_handles = [
         mlines.Line2D([], [], color=MOORING_WIND_COLOR[("loose300", "no")],
-                      marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"loose300 · {WIND_LABEL['no']}"),
+                      marker=None, ls="-", ms=6, mec="black", mew=0.3,
+                      label=f"{MOORING_LABEL['loose300']} · {WIND_LABEL['no']}"),
         mlines.Line2D([], [], color=MOORING_WIND_COLOR[("loose300", "full")],
-                      marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"loose300 · {WIND_LABEL['full']}"),
+                      marker=None, ls="-", ms=6, mec="black", mew=0.3,
+                      label=f"{MOORING_LABEL['loose300']} · {WIND_LABEL['full']}"),
         mlines.Line2D([], [], color=MOORING_WIND_COLOR[("loose230", "no")],
-                      marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"loose230 · {WIND_LABEL['no']}"),
+                      marker=None, ls="-", ms=6, mec="black", mew=0.3,
+                      label=f"{MOORING_LABEL['loose230']} · {WIND_LABEL['no']}"),
         mlines.Line2D([], [], color=MOORING_WIND_COLOR[("loose230", "full")],
-                      marker="o", ls="None", ms=6, mec="black", mew=0.3,
-                      label=f"loose230 · {WIND_LABEL['full']}"),
+                      marker=None, ls="-", ms=6, mec="black", mew=0.3,
+                      label=f"{MOORING_LABEL['loose230']} · {WIND_LABEL['full']}"),
     ]
     leg_w = ax.legend(handles=wind_handles, title="Moring · vind",
                       title_fontsize=8, fontsize=8,
@@ -286,7 +287,7 @@ def _make_figure(sub: pd.DataFrame,
         ]
         ax.legend(handles=freq_handles, title="Frekvens",
                    title_fontsize=8, fontsize=8,
-                   loc="upper left", framealpha=0.92)
+                   loc="upper right", framealpha=0.92)
 
     fig.subplots_adjust(left=0.07, right=0.97, top=0.88, bottom=0.13)
     apply_horizontal_ylabel(ax, r"$K_t$", fontsize=12)
@@ -316,8 +317,8 @@ def _per_volt_stats(sub: pd.DataFrame) -> dict:
                 out[f"ka_hi_{key_tag}"]      = _f(sel[KA_COL].max(),     4)
     # Per-tag counts (per240 vs per40) — kept as a diagnostic; no longer
     # colour-encoded after the 2026-05-09 mooring switch.
-    for per_tag in ("per240", "per40"):
-        out[f"n_{per_tag}"] = f"{int((sub['per_tag'] == per_tag).sum())}"
+    # for per_tag in ("per240", "per40"):
+    #     out[f"n_{per_tag}"] = f"{int((sub['per_tag'] == per_tag).sum())}"
     # Per-frequency cluster counts
     for freq in ALL_FREQS:
         out[f"n_freq_{freq:.2f}Hz".replace(".", "p")] = f"{int((np.isclose(sub['WaveFrequencyInput [Hz]'], freq)).sum())}"
