@@ -6,45 +6,101 @@
 %   script            : analysis_scratch/parallel_probe_psd_agreement_simple.py
 %   plot_type         : parallel_probe_psd_agreement_simple_table
 %   chapter           : 04
-%   generated_at      : 2026-05-09T19:59:07
+%   generated_at      : 2026-05-09T21:16:00
 %   caption_label     : tab:ch04_parallel_probe_psd_agreement_simple
-%   caption_short     : Forskjellen mellom parallelle prober.
+%   caption_short     : Probesamsvar — midlere forskjell og løp-til-løp-spredning.
 %
 % — Method ─────────────────────────────────────────────────────
-%   probes            : 9373/170 (wall) vs 9373/340 (far)
-%   band              : ±0.10 Hz around f, integrated PSD
-%   <A>               : 0.5·(mean A_wall + mean A_far) across runs
-%   Δ (far−wall) [%]  : mean across runs of
-%                       100 · (A_far − A_wall) / [½ · (A_far + A_wall)]
-%                       Sign: + ⇒ far reads higher than wall.
+%   probes              : 9373/170 (wall) vs 9373/340 (far)
+%   band                : ±0.10 Hz around f, integrated PSD
+%   Per-run Δ           : 100 · (A_far − A_wall) / [½ · (A_far + A_wall)]
+%                         Sign: + ⇒ far reads higher than wall.
+%   Per-row run set     : only runs paddled at the row's target
+%                         frequency (WaveFrequencyInput == f ±0.005 Hz).
+%                         So each row's N counts only paddle-at-this-f
+%                         runs — the Δ̄ / σ_Δ values reflect probe
+%                         agreement on the actual paddle wave, not
+%                         on PSD band power across mixed paddle freqs.
+%   Δ̄ (column 3)        : mean of Δ across the N runs (per cell).
+%                         Probes' systematic bias on the paddle wave.
+%   σ_Δ (column 4)      : std of Δ across the N runs (per cell).
+%                         Run-to-run scatter (matches the
+%                         individual dots in the Bland-Altman fig).
+%   Layout              : two row-blocks — `Uten vind` then
+%                         `Full vind`. Each block has 4 freq rows.
+%                         The split makes the wind effect on probe
+%                         agreement directly readable.
 %
 % — Inputs ─────────────────────────────────────────────────────
-%   N runs            : 80
-%   data scope        : panel-full, quality-ok, both probes present,
-%                       canon March-2026 lowrange folders.
-%   target frequencies: 1.3, 1.4, 1.5, 1.6 Hz
+%   N (uten/full)       : 13 / 17  per freq
+%   data scope          : panel-full, quality-ok, both probes present,
+%                         canon March-2026 lowrange folders.
+%   target frequencies  : 1.3, 1.4, 1.5, 1.6 Hz
 %
 % — Headline ───────────────────────────────────────────────────
-%   worst |Δ|         : 2.07 %  (across all rows)
-%   companion table   : ch04_parallel_probe_psd_agreement.tex
-%                       (full 10-column statistical breakdown)
+%   Uten vind  : |Δ̄|_max = 2.55 %, σ_Δ = 1.0–2.2 %, N = 13/freq
+%   Full vind  : |Δ̄|_max = 9.26 %, σ_Δ = 4.8–13.0 %, N = 17/freq
+%   Reading             : (a) probes are well-calibrated under no-wind
+%                         (small Δ̄, small σ_Δ); wind inflates BOTH the
+%                         systematic bias and the run-to-run scatter.
+%                         (b) the wall- vs far-probe disagreement under
+%                         wind is what motivates using the MEAN of both
+%                         probes as the canonical IN amplitude.
+%   companion figure    : fig:ch04_parallel_probe_agreement_bland_altman
+%                         (per-run scatter visualised).
+%   companion table     : ch04_parallel_probe_psd_agreement_lowrange_merged.tex
+%                         (additional probe-agreement metrics).
+%
+% — Pooled shape diagnostics (across amp × freq, per wind) ─────
+%   Uten vind  : N= 32  mean=-0.28%  std=2.16%  skew=-0.242  [P5,P95]=[-4.1, +3.0]%
+%   Full vind  : N= 48  mean=-2.92%  std=9.23%  skew=-0.914  [P5,P95]=[-22.0, +10.5]%
+%   Reading skew         : |γ₁| < 0.5 ≈ symmetric (σ_Δ ± reads
+%                          both ways); 0.5–1 = moderately skewed;
+%                          > 1 = heavily skewed (σ overstates one
+%                          side, understates the other).
+%   Reading [P5, P95]    : empirical 90 % interval — no Gaussian
+%                          assumption. Compare width to ±2σ to
+%                          gauge tail behaviour.
+%
+% — Caption suggestion (for reference) ─────────────────────────
+%   If you want both math symbols rendered, ensure $...$ wraps:
+%     $\bar{\Delta}$  and  $\sigma_{\Delta}$  (math-mode).
+%   
+%   One-sentence form:
+%     Samsvar mellom parallelle prober ved padlefrekvens.
+%     $\bar{\Delta}$ er probenes systematiske amplitudeforskjell;
+%     $\sigma_{\Delta}$ er løp-til-løp-spredning.
+%   
+%   Two-sentence form (adds the wind-effect punchline):
+%     Samsvar mellom parallelle prober ved padlefrekvens.
+%     Probene er essensielt identiske uten vind
+%     ($|\bar{\Delta}| < 0{,}3\,\%$, $\sigma_{\Delta} \approx 2\,\%$);
+%     vinden firedobler spredningen og introduserer et
+%     systematisk avvik på opp mot $3\,\%$.
 %
 % ── end immutable block ───────────────────────────────────────
 \begin{table}[htbp]
   \centering
   \small
-  \begin{tabular}{cccc}
+  \begin{tabular}{ccccc}
     \toprule
-    $f$ [\unit{\hertz}] & $N$ & $\langle A \rangle$ [\unit{\milli\metre}] & $\Delta$ (fjern$-$nær) [\%] \\
+    $f$ [\unit{\hertz}] & $N$ & $ka$ spenn & $\overline{\Delta}$ (fjern$-$nær) [\%] & $\sigma_{\Delta}$ [\%] \\
     \midrule
-    \num{1.30} & \num{80} & \num{8.03} & \num{-1.48} \\
-    \num{1.40} & \num{80} & \num{9.38} & \num{-1.78} \\
-    \num{1.50} & \num{80} & \num{8.75} & \num{-1.84} \\
-    \num{1.60} & \num{80} & \num{6.64} & \num{-2.07} \\
+    \multicolumn{5}{l}{\itshape Uten vind} \\
+    \num{1.30} & \num{13} & $[\num{0.05}, \num{0.15}]$ & \num{-0.98} & \num{1.06} \\
+    \num{1.40} & \num{6} & $[\num{0.06}, \num{0.18}]$ & \num{+1.87} & \num{1.04} \\
+    \num{1.50} & \num{6} & $[\num{0.07}, \num{0.19}]$ & \num{-2.55} & \num{1.89} \\
+    \num{1.60} & \num{7} & $[\num{0.07}, \num{0.22}]$ & \num{+1.10} & \num{2.21} \\
+    \midrule
+    \multicolumn{5}{l}{\itshape Full vind} \\
+    \num{1.30} & \num{17} & $[\num{0.05}, \num{0.16}]$ & \num{+0.13} & \num{4.81} \\
+    \num{1.40} & \num{10} & $[\num{0.06}, \num{0.18}]$ & \num{+0.52} & \num{6.20} \\
+    \num{1.50} & \num{10} & $[\num{0.07}, \num{0.22}]$ & \num{-4.58} & \num{12.98} \\
+    \num{1.60} & \num{11} & $[\num{0.08}, \num{0.25}]$ & \num{-9.26} & \num{10.11} \\
     \bottomrule
   \end{tabular}
-  \caption[Forskjellen mellom parallelle prober.]{
-    Forskjellen mellom parallelle prober.
+  \caption[Probesamsvar — midlere forskjell og løp-til-løp-spredning.]{
+    Samsvar mellom parallelle prober. $\bar{\Delta}$ er systematisk avvik i amplitude over N kjøringer. $\sigma_{\Delta}$ er standardavviket
   }
   \label{tab:ch04_parallel_probe_psd_agreement_simple}
 \end{table}

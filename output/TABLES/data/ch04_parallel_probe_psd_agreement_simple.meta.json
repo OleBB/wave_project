@@ -8,29 +8,84 @@
     {
       "title": "Method",
       "lines": [
-        "probes            : 9373/170 (wall) vs 9373/340 (far)",
-        "band              : \u00b10.10 Hz around f, integrated PSD",
-        "<A>               : 0.5\u00b7(mean A_wall + mean A_far) across runs",
-        "\u0394 (far\u2212wall) [%]  : mean across runs of",
-        "                    100 \u00b7 (A_far \u2212 A_wall) / [\u00bd \u00b7 (A_far + A_wall)]",
-        "                    Sign: + \u21d2 far reads higher than wall."
+        "probes              : 9373/170 (wall) vs 9373/340 (far)",
+        "band                : \u00b10.10 Hz around f, integrated PSD",
+        "Per-run \u0394           : 100 \u00b7 (A_far \u2212 A_wall) / [\u00bd \u00b7 (A_far + A_wall)]",
+        "                      Sign: + \u21d2 far reads higher than wall.",
+        "Per-row run set     : only runs paddled at the row's target",
+        "                      frequency (WaveFrequencyInput == f \u00b10.005 Hz).",
+        "                      So each row's N counts only paddle-at-this-f",
+        "                      runs \u2014 the \u0394\u0304 / \u03c3_\u0394 values reflect probe",
+        "                      agreement on the actual paddle wave, not",
+        "                      on PSD band power across mixed paddle freqs.",
+        "\u0394\u0304 (column 3)        : mean of \u0394 across the N runs (per cell).",
+        "                      Probes' systematic bias on the paddle wave.",
+        "\u03c3_\u0394 (column 4)      : std of \u0394 across the N runs (per cell).",
+        "                      Run-to-run scatter (matches the",
+        "                      individual dots in the Bland-Altman fig).",
+        "Layout              : two row-blocks \u2014 `Uten vind` then",
+        "                      `Full vind`. Each block has 4 freq rows.",
+        "                      The split makes the wind effect on probe",
+        "                      agreement directly readable."
       ]
     },
     {
       "title": "Inputs",
       "lines": [
-        "N runs            : 80",
-        "data scope        : panel-full, quality-ok, both probes present,",
-        "                    canon March-2026 lowrange folders.",
-        "target frequencies: 1.3, 1.4, 1.5, 1.6 Hz"
+        "N (uten/full)       : 13 / 17  per freq",
+        "data scope          : panel-full, quality-ok, both probes present,",
+        "                      canon March-2026 lowrange folders.",
+        "target frequencies  : 1.3, 1.4, 1.5, 1.6 Hz"
       ]
     },
     {
       "title": "Headline",
       "lines": [
-        "worst |\u0394|         : 2.07 %  (across all rows)",
-        "companion table   : ch04_parallel_probe_psd_agreement.tex",
-        "                    (full 10-column statistical breakdown)"
+        "Uten vind  : |\u0394\u0304|_max = 2.55 %, \u03c3_\u0394 = 1.0\u20132.2 %, N = 13/freq",
+        "Full vind  : |\u0394\u0304|_max = 9.26 %, \u03c3_\u0394 = 4.8\u201313.0 %, N = 17/freq",
+        "Reading             : (a) probes are well-calibrated under no-wind",
+        "                      (small \u0394\u0304, small \u03c3_\u0394); wind inflates BOTH the",
+        "                      systematic bias and the run-to-run scatter.",
+        "                      (b) the wall- vs far-probe disagreement under",
+        "                      wind is what motivates using the MEAN of both",
+        "                      probes as the canonical IN amplitude.",
+        "companion figure    : fig:ch04_parallel_probe_agreement_bland_altman",
+        "                      (per-run scatter visualised).",
+        "companion table     : ch04_parallel_probe_psd_agreement_lowrange_merged.tex",
+        "                      (additional probe-agreement metrics)."
+      ]
+    },
+    {
+      "title": "Pooled shape diagnostics (across amp \u00d7 freq, per wind)",
+      "lines": [
+        "Uten vind  : N= 32  mean=-0.28%  std=2.16%  skew=-0.242  [P5,P95]=[-4.1, +3.0]%",
+        "Full vind  : N= 48  mean=-2.92%  std=9.23%  skew=-0.914  [P5,P95]=[-22.0, +10.5]%",
+        "Reading skew         : |\u03b3\u2081| < 0.5 \u2248 symmetric (\u03c3_\u0394 \u00b1 reads",
+        "                       both ways); 0.5\u20131 = moderately skewed;",
+        "                       > 1 = heavily skewed (\u03c3 overstates one",
+        "                       side, understates the other).",
+        "Reading [P5, P95]    : empirical 90 % interval \u2014 no Gaussian",
+        "                       assumption. Compare width to \u00b12\u03c3 to",
+        "                       gauge tail behaviour."
+      ]
+    },
+    {
+      "title": "Caption suggestion (for reference)",
+      "lines": [
+        "If you want both math symbols rendered, ensure $...$ wraps:",
+        "  $\\bar{\\Delta}$  and  $\\sigma_{\\Delta}$  (math-mode).",
+        "",
+        "One-sentence form:",
+        "  Samsvar mellom parallelle prober ved padlefrekvens.",
+        "  $\\bar{\\Delta}$ er probenes systematiske amplitudeforskjell;",
+        "  $\\sigma_{\\Delta}$ er l\u00f8p-til-l\u00f8p-spredning.",
+        "",
+        "Two-sentence form (adds the wind-effect punchline):",
+        "  Samsvar mellom parallelle prober ved padlefrekvens.",
+        "  Probene er essensielt identiske uten vind",
+        "  ($|\\bar{\\Delta}| < 0{,}3\\,\\%$, $\\sigma_{\\Delta} \\approx 2\\,\\%$);",
+        "  vinden firedobler spredningen og introduserer et",
+        "  systematisk avvik p\u00e5 opp mot $3\\,\\%$."
       ]
     }
   ]

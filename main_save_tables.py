@@ -76,9 +76,11 @@ from wavescripts.table_render import render_table
 TABLE_CAPTIONS = {
     # ── CHAPTER 04 — METHODOLOGY ─────────────────────────────────────────────
     "ch04_probe_noise_floor_table":              "Oversikt over støygulvet til prober ved innledende og endelig oppsett.",   # TODO: write caption
-    "ch04_parallel_probe_psd_agreement_simple":  "Forskjellen mellom parallelle prober.",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
-    "ch04_parallel_probe_psd_agreement_lowrange_merged":
-        r"Samsvar mellom parallelle prober (\texttt{9373/170} vegg + \texttt{9373/340} langt) ved padlefrekvens, sammenslått for begge vindbetingelser. $P_\mathrm{fjern}/P_\mathrm{nær}$ er forholdet mellom probenes effekt; Pearsons $\rho$ er korrelasjonen mellom probenes båndintegrerte amplituder; \textit{Beste probe} har minst spredning; \textit{Variansøkning} er straffen for å snitte vs.\ å bruke beste enkeltprobe.",
+    "ch04_parallel_probe_psd_agreement_simple": r"Samsvar mellom parallelle prober. $\bar{\Delta}$ er systematisk avvik i amplitude over N kjøringer. $\sigma_{\Delta}$ er standardavviket",#
+    "ch04_parallel_probe_psd_agreement_by_ka_regime": "",   # caption deferred — user owns; see TEX STUB for suggestion
+        #Samsvar mellom parallelle prober (\texttt{9373/170} vegg + \texttt{9373/340} langt) ved padlefrekvens. $\overline{\Delta}$ er midlere relativ amplitudeforskjell over $N$ kjøringer (probenes systematiske avvik). $\sigma_{\Delta}$ er løp-til-løp-spredning av samme størrelse og matcher prikkene i figur~\ref{fig:ch04_parallel_probe_agreement_bland_altman}. At $|\overline{\Delta}| \ll \sigma_{\Delta}$ betyr at probene er kalibrerte godt mot hverandre i snitt, mens enkeltkjøringer ved samme $f$ kan avvike med $\pm 1\,\sigma_{\Delta}$ pga.\ lateral bølgeasymmetri.",
+    "ch04_parallel_probe_psd_agreement_lowrange_merged": r"Samsvar mellom parallelle prober. $P_\mathrm{fjern}/P_\mathrm{nær}$ er forholdet mellom probenes effekt; ",
+#Samsvar mellom parallelle prober (\texttt{9373/170} vegg + \texttt{9373/340} langt) ved padlefrekvens, sammenslått for begge vindbetingelser. $P_\mathrm{fjern}/P_\mathrm{nær}$ er forholdet mellom probenes effekt; Pearsons $\rho$ er korrelasjonen mellom probenes båndintegrerte amplituder; \textit{Beste probe} har minst spredning; \textit{Variansøkning} er straffen for å snitte vs.\ å bruke beste enkeltprobe.",
     "ch04_parallel_probe_psd_agreement_highrange_merged":
         r"Som tabell \ref{tab:ch04_parallel_probe_psd_agreement_lowrange_merged}, men for highrange-oppsettet (under9Mooring, mars 2026). Samme metode og kolonner.",
     "ch04_window_intervals":                     "",
@@ -105,8 +107,9 @@ TABLE_CAPTIONS = {
 }
 TABLE_CAPTIONS_SHORT = {
     # ── CHAPTER 04 ───────────────────────────────────────────────────────────
-    "ch04_probe_noise_floor_table":              "",   # TODO: short caption
-    "ch04_parallel_probe_psd_agreement_simple":  "Forskjellen mellom parallelle prober.",
+    "ch04_probe_noise_floor_table":              "Støygulvet",   # TODO: short caption
+    "ch04_parallel_probe_psd_agreement_simple":  "Probesamsvar — midlere forskjell og løp-til-løp-spredning.",
+    "ch04_parallel_probe_psd_agreement_by_ka_regime": "Probesamsvar — bølgesteilhet-stratifisert.",
     "ch04_parallel_probe_psd_agreement_lowrange_merged":  "Samsvar mellom parallelle prober — uten + full vind (lowrange).",
     "ch04_parallel_probe_psd_agreement_highrange_merged": "Samsvar mellom parallelle prober — uten + full vind (highrange).",
     "ch04_window_intervals":                     "",
@@ -115,7 +118,7 @@ TABLE_CAPTIONS_SHORT = {
     "ch04_plateau_values":                       "Platåverdier",
     "ch04_tidsvindu":                            "Frekvensenes tidsvindu.",
     "ch04_wind_pre_paddle_table":                "Vindspekteret fra ulike målinger.",
-    "ch04_wind_setup_baseline_table":            "",
+    "ch04_wind_setup_baseline_table":            "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
 
     # ── CHAPTER 05 ───────────────────────────────────────────────────────────
     "ch05_damping_freq_table":           "Transmisjon for våre utvalgte bølger. ", #den under er bedre!
@@ -329,13 +332,6 @@ def _fmt_int_n(row: pd.Series) -> str:
     return rf"\num{{{int(row['n'])}}}"
 
 
-def _fmt_amp_2dp(row: pd.Series) -> str:
-    v = row["mean_amp"]
-    if pd.isna(v):
-        return "n/a"
-    return rf"\num{{{v:.2f}}}"
-
-
 def _fmt_signed_pct_2dp(row: pd.Series) -> str:
     v = row["diff_pct"]
     if pd.isna(v):
@@ -343,21 +339,46 @@ def _fmt_signed_pct_2dp(row: pd.Series) -> str:
     return rf"\num{{{v:+.2f}}}"
 
 
+def _fmt_unsigned_pct_2dp(row: pd.Series) -> str:
+    """Unsigned 2-dp percentage, used for σ_Δ (always positive by definition)."""
+    v = row["std_pct"]
+    if pd.isna(v):
+        return "n/a"
+    return rf"\num{{{v:.2f}}}"
+
+
+def _fmt_ka_span(row: pd.Series) -> str:
+    """ka span shown as [min, max], 2 decimals. NaN → n/a."""
+    lo, hi = row.get("ka_min"), row.get("ka_max")
+    if pd.isna(lo) or pd.isna(hi):
+        return "n/a"
+    return rf"$[\num{{{lo:.2f}}}, \num{{{hi:.2f}}}]$"
+
+
 _cell_format = {
     "freq":     _fmt_freq_2dp,
     "n":        _fmt_int_n,
-    "mean_amp": _fmt_amp_2dp,
     "diff_pct": _fmt_signed_pct_2dp,
+    "std_pct":  _fmt_unsigned_pct_2dp,
+    "ka_span":  _fmt_ka_span,    # Variant A — added 2026-05-09
 }
 
-_columns        = ["freq", "n", "mean_amp", "diff_pct"]
+# Column set 2026-05-09 (Variant A): ka span added per row to make the
+# regime visible at a glance (low ka = wind-dominated, high ka = wave-
+# dominated). σ_Δ already pairs with Δ̄; ka pairs with both. ⟨A⟩ stays
+# dropped (unbalanced amp-tier mix per freq made it not a clean scale).
+_columns        = ["freq", "n", "ka_span", "diff_pct", "std_pct"]
 _column_headers = [
     r"$f$ [\unit{\hertz}]",
     r"$N$",
-    r"$\langle A \rangle$ [\unit{\milli\metre}]",
-    r"$\Delta$ (fjern$-$nær) [\%]",
+    r"$ka$ spenn",
+    r"$\overline{\Delta}$ (fjern$-$nær) [\%]",
+    r"$\sigma_{\Delta}$ [\%]",
 ]
 
+# Two row-groups (2026-05-09): Uten vind / Full vind. The data script now
+# emits one row per (freq, wind), so we group by the `wind` column. Italic
+# section headers via \itshape mirror the merged-table convention.
 _render_with_caption_short(
     _META,
     TABLE_CAPTIONS_SHORT.get(_NAME) or "",
@@ -367,15 +388,130 @@ _render_with_caption_short(
         out_tex_path   = _TEX,
         columns        = _columns,
         column_headers = _column_headers,
-        column_spec    = "cccc",
+        column_spec    = "ccccc",   # 5 cols (ka span added 2026-05-09)
         cell_format    = _cell_format,
-        row_groups     = [(None, lambda df: df)],
+        row_groups     = [
+            (r"\itshape Uten vind", lambda df: df[df["wind"] == "nowind"]),
+            (r"\itshape Full vind", lambda df: df[df["wind"] == "fullwind"]),
+        ],
         label          = f"tab:{_NAME}",
         caption        = TABLE_CAPTIONS.get(_NAME) or None,
         short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
     ),
 )
 print(f"   TEX → {_TEX}")
+
+
+# %%
+# [DATA: RENDER]  — analysis_scratch/parallel_probe_psd_agreement_simple.py
+#                   (Variant B output — same data script, different stratification)
+"""
+── CH04 § 3b — Parallel-probe agreement, ka-regime stratified ───────────────
+Same per-run Δ% values as the simple table above, but pooled across
+(amp × freq) per (regime × wind) instead of per (wind × freq). The
+regime split (ka < 0.15 = wind-dominated; ka ≥ 0.15 = wave-dominated)
+makes the physical mechanism visible: under wind × wave-dominated, the
+far probe (9373/340) clips the steep up-stroke after the trough,
+producing systematic negative Δ̄ + heavy left skew (γ_1 ≈ −1).
+
+Companion to the simple table — pick whichever stratification fits the
+chapter argument better. Data shared via the same _per_run / _per_run_ka
+arrays in the script; different aggregation, same source.
+"""
+_NAME_B = "ch04_parallel_probe_psd_agreement_by_ka_regime"
+_CSV_B  = Path(f"output/TABLES/data/{_NAME_B}.csv")
+_META_B = Path(f"output/TABLES/data/{_NAME_B}.meta.json")
+_TEX_B  = Path(f"output/TABLES/{_NAME_B}.tex")
+
+_REGIME_LABEL = {
+    "wind_dominated": "Vind-dominert",
+    "wave_dominated": "Bølge-dominert",
+}
+_WIND_LABEL = {"nowind": "Uten vind", "fullwind": "Full vind"}
+
+
+def _fmt_b_wind(row: pd.Series) -> str:
+    return _WIND_LABEL.get(row["wind"], str(row["wind"]))
+
+
+def _fmt_b_n(row: pd.Series) -> str:
+    return rf"\num{{{int(row['n'])}}}"
+
+
+def _fmt_b_signed(row: pd.Series, key: str, decimals: int = 2) -> str:
+    v = row.get(key)
+    if pd.isna(v):
+        return "n/a"
+    return rf"\num{{{v:+.{decimals}f}}}"
+
+
+def _fmt_b_unsigned(row: pd.Series, key: str, decimals: int = 2) -> str:
+    v = row.get(key)
+    if pd.isna(v):
+        return "n/a"
+    return rf"\num{{{v:.{decimals}f}}}"
+
+
+def _fmt_b_p_interval(row: pd.Series) -> str:
+    p5, p95 = row.get("p5"), row.get("p95")
+    if pd.isna(p5) or pd.isna(p95):
+        return "n/a"
+    return rf"$[\num{{{p5:+.1f}}}, \num{{{p95:+.1f}}}]$"
+
+
+_cell_format_b = {
+    "wind":   _fmt_b_wind,
+    "n":      _fmt_b_n,
+    "mean":   lambda r: _fmt_b_signed(r, "mean", 2),
+    "std":    lambda r: _fmt_b_unsigned(r, "std", 2),
+    "skew":   lambda r: _fmt_b_signed(r, "skew", 2),
+    "p_interval": _fmt_b_p_interval,
+}
+
+_columns_b = ["wind", "n", "mean", "std", "skew", "p_interval"]
+_column_headers_b = [
+    "vind",
+    r"$N$",
+    r"$\overline{\Delta}$ [\%]",
+    r"$\sigma_{\Delta}$ [\%]",
+    r"$\gamma_1$",
+    r"$[P_5,\,P_{95}]$ [\%]",
+]
+
+
+def _row_groups_b():
+    """Two row-groups by regime (wind-dominated above, wave-dominated below).
+    Within each, the rows are sorted (uten, full) to match the wind-effect
+    reading order across all CH04/05 tables."""
+    wind_order = ["nowind", "fullwind"]
+    return [
+        (r"\itshape Vind-dominert ($ka < 0{,}15$)",
+         lambda df: (df[df["regime"] == "wind_dominated"]
+                       .set_index("wind").reindex(wind_order).reset_index())),
+        (r"\itshape Bølge-dominert ($ka \geq 0{,}15$)",
+         lambda df: (df[df["regime"] == "wave_dominated"]
+                       .set_index("wind").reindex(wind_order).reset_index())),
+    ]
+
+
+_render_with_caption_short(
+    _META_B,
+    TABLE_CAPTIONS_SHORT.get(_NAME_B) or "",
+    lambda: render_table(
+        csv_path       = _CSV_B,
+        meta_path      = _META_B,
+        out_tex_path   = _TEX_B,
+        columns        = _columns_b,
+        column_headers = _column_headers_b,
+        column_spec    = "cccccc",
+        cell_format    = _cell_format_b,
+        row_groups     = _row_groups_b(),
+        label          = f"tab:{_NAME_B}",
+        caption        = TABLE_CAPTIONS.get(_NAME_B) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME_B) or None,
+    ),
+)
+print(f"   TEX → {_TEX_B}")
 
 
 # %%
