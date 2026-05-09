@@ -284,6 +284,9 @@ CHAPTER 05 — RESULTS
   §5    (removed — was Swell/Wind/Total band scatter; PSD-band columns dropped 2026-05-02)
   §6    (moved → CH04 §4-3b as ch04_reconstructed)
   §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions
+  §8    ch05_damping_all_data_scatter_ka      [DELEG] ✓  All-data ka-scatter (3 mooring categories: loose300/loose230/above_50)
+        ch05_damping_undermooring_scatter_ka  [DELEG] ✓     └─ subset: under-water moorings only (loose300+loose230, full panel)
+        ch05_damping_overmooring_scatter_ka   [DELEG] ✓     └─ subset: over-water mooring only (above_50, full+reverse pooled)
 
 DIAGNOSTICS
   D1    diag_13hz_consistency            [META]  ✗  1.3 Hz cross-session consistency  [TODO]
@@ -541,10 +544,10 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_t_cross_A3":                 "",
 
     # § 4 — Damping vs ka
-    "ch05_damping_ka":                 "Transmisjonskoeffisient per bølgesteilhet $ka$. Alle tre amplitudevalg. ",
-    "ch05_damping_ka_A1":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_1$.",
-    "ch05_damping_ka_A2":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_2$.",
-    "ch05_damping_ka_A3":              "Transmisjonskoeffisient per bølgesteilhet $ka$. Amplitudevalg $A_3$.",
+    "ch05_damping_ka":                 "Transmisjonskoeffisient mot bølgesteilhet $ka$. Alle tre amplitudevalgene. ",
+    "ch05_damping_ka_A1":              "Transmisjonskoeffisient mot bølgesteilhet $ka$. Amplitudevalg $A_1$.",
+    "ch05_damping_ka_A2":              "Transmisjonskoeffisient mot bølgesteilhet $ka$. Amplitudevalg $A_2$.",
+    "ch05_damping_ka_A3":              "Transmisjonskoeffisient mot bølgesteilhet $ka$. Amplitudevalg $A_3$.",
 
     # § 4a — Damping vs ka with per-wind poly-2 fits # tror æ droppe denne
     "ch05_damping_ka_fit":             "TODO: skriv hovedteksten. Samme data som figur \\ref{fig:ch05_damping_ka}, uten overlagt kurvetilpasning (kombinert kombinert visning blir for trang for tilpasningskurver).",
@@ -565,9 +568,9 @@ FIGURE_CAPTIONS: dict[str, str] = {
 
     # § 7 — All-data scatter (supplementary)
     "ch05_damping_all_data_scatter":   "Alle kjøringer. Vi skiller primært mellom det endelige oppsettet og alle andre oppsett.",
-    "ch05_damping_all_data_scatter_ka":     r"Alle kjøringer mot bølgesteilhet $ka$. Tre konfigurasjoner: under-fortøyning loose300 (rød/blå), under-fortøyning loose230 (lakserød/lyseblå), og over-fortøyning (over_50, full + reverse panel slått sammen — rosa/turkis med stjerner). Sammenslåing av panelretning forsvart i tabell \ref{tab:app_panel_pooling}.",
-    "ch05_damping_undermooring_scatter_ka": r"Som figur \ref{fig:ch05_damping_all_data_scatter_ka}, begrenset til under-fortøyninger (loose300 + loose230, full panel).",
-    "ch05_damping_overmooring_scatter_ka":  r"Som figur \ref{fig:ch05_damping_all_data_scatter_ka}, begrenset til over-fortøyning (over_50, full + reverse panel slått sammen).",
+    "ch05_damping_all_data_scatter_ka":     "Transmisjon mot bølgetall $ka$. Paneler fortøyd på flere måter.",
+    "ch05_damping_undermooring_scatter_ka": "Transmisjon mot bølgetall $ka$. Paneler fortøyd under vann",
+    "ch05_damping_overmooring_scatter_ka":  "Transmisjon mot bølgetall $ka$. Paneler fortøyd over vann",
 
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
@@ -667,9 +670,9 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_mooring_focus_at_1_3hz_ka_A3": "Mooring + panelretning, $A_3$.",
     "ch05_full_vs_reverse_at_1_3hz_ka":  "Mooring + panelretning ved 1.30 Hz — alle amplituder samlet.",
     "ch05_damping_all_data_scatter":   "",
-    "ch05_damping_all_data_scatter_ka":     "Alle kjøringer mot $ka$.",
-    "ch05_damping_undermooring_scatter_ka": "Under-fortøyning mot $ka$.",
-    "ch05_damping_overmooring_scatter_ka":  "Over-fortøyning mot $ka$.",
+    "ch05_damping_all_data_scatter_ka":     "Transmisjon mot $ka$. Ulike fortøyninger.",
+    "ch05_damping_undermooring_scatter_ka": "Transmisjon mot $ka$. Moring under.",
+    "ch05_damping_overmooring_scatter_ka":  "Transmisjon mot $ka$. Moring over.",
 
     # ── DIAGNOSTICS ──────────────────────────────────────────────────────────
     "diag_13hz_consistency":           "",
@@ -2227,6 +2230,42 @@ _pv_damping_scatter = {
 }
 
 _scatter_meta   = _aef(meta_results, _pv_damping_scatter)
+# Restrict to canon-loose300 only (2026-05-09): same rule as the §1
+# `ch05_damping_freq_full_A{1,2,3}` sibling cell. The global meta_results
+# merge at line ~776 collapses below_90_loose230 + below_90_loose300 →
+# below_90_loose so the wind-effect tables can pool across them. For
+# the primary-result scatter we want clean within-mooring errorbars
+# (~0.005–0.04) instead of mooring/date-confounded pooled errorbars
+# (~0.04–0.13). Loose300 is the choice because it has full nowind
+# coverage at every (amp, freq) cell in the thesis band; loose230 only
+# has nowind data at A1 × 1.3 Hz. Mooring axis is the focus of separate
+# later figures (analysis_scratch/all_data_damping_scatter*).
+# Re-derive Mooring from file_date, then keep only loose300.
+_scatter_meta = _scatter_meta.copy()
+_scatter_meta["Mooring"] = _scatter_meta["file_date"].astype(str).map({
+    "2026-03-26": "loose230",
+    "2026-03-27": "loose300",
+}).fillna(_scatter_meta["Mooring"])
+_scatter_meta = _scatter_meta[_scatter_meta["Mooring"] == "loose300"].copy()
+# Drop probe-dropout runs (2026-05-09): K_t computed from a single IN
+# probe should not exceed 1 — a transmissive panel always damps. When
+# K_t,wall > 1 or K_t,far > 1, that probe's amplitude registered LOWER
+# than the OUT probe, almost certainly a single-probe dropout. The
+# canonical IN mean averages the dropped probe with the surviving one
+# and produces a midway K_t that biases the cell. The 9373/170 probe is
+# known to drop out at higher frequencies (per user note 2026-05-09).
+# Same rule as the §1 sibling cell.
+_A_in_wall = _scatter_meta["Probe 9373/170 Amplitude (FFT)"]
+_A_in_far  = _scatter_meta["Probe 9373/340 Amplitude (FFT)"]
+_A_out_ctr = _scatter_meta["Probe 12400/250 Amplitude (FFT)"]
+_kt_wall = _A_out_ctr / _A_in_wall
+_kt_far  = _A_out_ctr / _A_in_far
+_dropout = (_kt_wall > 1.0) | (_kt_far > 1.0)
+if _dropout.any():
+    print(f"Dropping {_dropout.sum()} runs with K_t,probe > 1 (single-probe dropout):")
+    for _, _r in _scatter_meta[_dropout].iterrows():
+        print(f"  Kt_wall={_kt_wall[_r.name]:.3f} Kt_far={_kt_far[_r.name]:.3f}  {_r['path'].split('/')[-1]}")
+    _scatter_meta = _scatter_meta[~_dropout].copy()
 _scatter_grouped = damping_all_amplitude_grouper(_scatter_meta)
 plot_damping_scatter(_scatter_grouped, _pv_damping_scatter)
 
@@ -2516,6 +2555,44 @@ _run_delegated_if_missing(
     [Path("output/FIGURES/ch05_damping_all_data_scatter.pdf"),
      Path("output/TEXFIGU/ch05_damping_all_data_scatter.tex")],
     label="ch05_damping_all_data_scatter",
+)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/all_data_damping_scatter_ka.py
+"""
+── CH05 § 8 — All-data damping scatter on ka axis (3 coordinated views) ─────
+ka-axis sibling of §7. One script (`all_data_damping_scatter_ka.py`) produces
+THREE coordinated PDFs in a single run via its `_make_view(...)` helper:
+
+  ch05_damping_all_data_scatter_ka      — all 3 mooring categories
+                                          (loose300 + loose230 + above_50)
+  ch05_damping_undermooring_scatter_ka  — under-water moorings only
+                                          (loose300 + loose230, full panel)
+  ch05_damping_overmooring_scatter_ka   — over-water mooring only
+                                          (above_50, full + reverse panel
+                                           pooled — see tab:app_panel_pooling)
+
+All three share XLIM=(0, 0.36) and YLIM=(0.1, 1.18) so they read as a
+side-by-side comparison when arranged in LaTeX (parent + two zoomed
+subsets). Marker family separates above/below moorings (○/□/△ for below,
+✶/★/✦ for above_50) so the cross-family ~0.20 K_t gap reads instantly.
+
+Captions live in FIGURE_CAPTIONS / FIGURE_CAPTIONS_SHORT in this file.
+The two child captions cross-reference the parent via \\ref{fig:...}; if
+the parent's caption is reworded, sync the children.
+
+The k-axis sibling `ch05_damping_all_data_scatter` (§7 above) is a
+deliberately separate figure with its own data script — left untouched.
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/all_data_damping_scatter_ka.py",
+    [Path("output/TEXFIGU/ch05_damping_all_data_scatter_ka.tex"),
+     Path("output/FIGURES/ch05_damping_all_data_scatter_ka.pdf"),
+     Path("output/TEXFIGU/ch05_damping_undermooring_scatter_ka.tex"),
+     Path("output/FIGURES/ch05_damping_undermooring_scatter_ka.pdf"),
+     Path("output/TEXFIGU/ch05_damping_overmooring_scatter_ka.tex"),
+     Path("output/FIGURES/ch05_damping_overmooring_scatter_ka.pdf")],
+    label="ch05_damping_all_data_scatter_ka_3views",
 )
 
 

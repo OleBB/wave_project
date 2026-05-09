@@ -92,7 +92,7 @@ MOORING_WIND_COLOR = {
 }
 
 WIND_LABEL = {"no": "uten vind", "full": "full vind"}
-MOORING_LABEL = {"loose300": "loose300", "loose230": "loose230"}
+MOORING_LABEL = {"loose300": "30 cm", "loose230": "23 cm"}
 
 
 # ─── NCM font (thesis body) ───────────────────────────────────────────────
@@ -130,14 +130,15 @@ m = m.dropna(subset=[KA_COL, RATIO_COL, "WindCondition",
                      "WaveAmplitudeInput [Volt]",
                      "WaveFrequencyInput [Hz]"])
 
-# Tag per-run length (still used as a filter to drop per15; no longer
+# now replaced with mooring tag below
+# OTag per-run length (still used as a filter to drop per15; no longer
 # colour-encoded after 2026-05-09).
-_per40  = re.compile(r"per40(?!\d)")
-_per240 = re.compile(r"per240")
-m["per_tag"] = np.where(m["path"].str.contains(_per40,  na=False), "per40",
-                 np.where(m["path"].str.contains(_per240, na=False), "per240",
-                          "other"))
-m = m[m["per_tag"].isin(("per240", "per40"))].copy()
+# _per40  = re.compile(r"per40(?!\d)")
+# _per240 = re.compile(r"per240")
+# m["per_tag"] = np.where(m["path"].str.contains(_per40,  na=False), "per40",
+#                  np.where(m["path"].str.contains(_per240, na=False), "per240",
+#                           "other"))
+# m = m[m["per_tag"].isin(("per240", "per40"))].copy()
 
 # Mooring tag (loose230 / loose300) — derived from file_date because the
 # global meta_results merge collapses both into "below_90_loose". Same

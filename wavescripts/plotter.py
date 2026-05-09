@@ -299,7 +299,13 @@ def _make_damping_freq_fig(
             freq_to_k(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
             yerr=grp["std_out_in"],
             label=label, color=color,
-            marker=marker, markersize=6, linewidth=1.4, capsize=3,
+            marker=marker, markersize=6, linewidth=1.4,
+            # Errorbars: thicker than the connecting line + larger caps so
+            # within-mooring spread (~0.005–0.04) is visible against the
+            # ~0.05 between-curve gap. Marker outline (black, 0.7px) makes
+            # round/square/triangle distinguishable when colours overlap.
+            markeredgecolor="black", markeredgewidth=0.7,
+            elinewidth=2.0, capsize=4, capthick=2.0,
         )
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     # ΔK_t labels: drawn ONLY in the no-mooring-split case. With 4 series
