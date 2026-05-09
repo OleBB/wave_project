@@ -1,5 +1,5 @@
+# %%
 """Render thesis tables from precomputed CSV + meta.json sidecars.
-
 RENDER-ONLY by design — cells in this file NEVER invoke the data
 scripts. Editing column_headers / cell_format / row_groups in a cell
 and re-running it produces a fresh .tex in ~50 ms against whatever
@@ -30,7 +30,7 @@ Currently wired (rendered here, two-step pattern):
   ch04_window_intervals
   ch04_wind_pre_paddle_table
   ch04_plateau_values
-  ch05_damping_freq_table
+  # ch05_damping_freq_table !outadated
   ch05_mooring_focus_at_1_3hz_table
 
 Captions-only (rendered from main_save_figures.py cells):
@@ -77,6 +77,10 @@ TABLE_CAPTIONS = {
     # ── CHAPTER 04 — METHODOLOGY ─────────────────────────────────────────────
     "ch04_probe_noise_floor_table":              "Oversikt over støygulvet til prober ved innledende og endelig oppsett.",   # TODO: write caption
     "ch04_parallel_probe_psd_agreement_simple":  "Forskjellen mellom parallelle prober.",   # TODO: caption — "the two parallel probes agree to within ~2% at every thesis frequency"
+    "ch04_parallel_probe_psd_agreement_lowrange_merged":
+        r"Samsvar mellom parallelle prober (\texttt{9373/170} vegg + \texttt{9373/340} langt) ved padlefrekvens, sammenslått for begge vindbetingelser. $P_\mathrm{fjern}/P_\mathrm{nær}$ er forholdet mellom probenes effekt; Pearsons $\rho$ er korrelasjonen mellom probenes båndintegrerte amplituder; \textit{Beste probe} har minst spredning; \textit{Variansøkning} er straffen for å snitte vs.\ å bruke beste enkeltprobe.",
+    "ch04_parallel_probe_psd_agreement_highrange_merged":
+        r"Som tabell \ref{tab:ch04_parallel_probe_psd_agreement_lowrange_merged}, men for highrange-oppsettet (under9Mooring, mars 2026). Samme metode og kolonner.",
     "ch04_window_intervals":                     "",
     "ch04_window_choice_nowind":                 "",
     "ch04_window_choice_fullwind":               "",
@@ -86,15 +90,15 @@ TABLE_CAPTIONS = {
     "ch04_wind_setup_baseline_table":            "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
 
     # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
-    "ch05_damping_freq_table":           "",   # TODO: caption — per-amp K_t,uten, K_t,vind, ΔK_t across 1.3–1.6 Hz, mirrors ch05_damping_freq layout
+    #"ch05_damping_freq_table":   OUTDATED        "",   # TODO: caption — per-amp K_t,uten, K_t,vind, ΔK_t across 1.3–1.6 Hz, mirrors ch05_damping_freq layout
     "ch05_wind_effect_table":            "Transmisjon for våre utvalgte bølger",
     "ch05_wind_effect_table_by_amp":     "Transmisjon for våre utvalgte bølger",   # TODO: caption — same data as ch05_wind_effect_table, sorted amp-outer / freq-inner
     "ch05_transmission_wind_ratios":     "",
     "ch05_transmission_wind_amplitudes": "",
     "ch05_mooring_focus_at_1_3hz_table": r"Tall til figur \ref{fig:ch05_mooring_focus_at_1_3hz_ka}. Transmisjon for panelrekken fortøyd på ulike måter. Merk: kun for \qty{1.3}{\hertz}. Antall (n) kjøringer.",
-    "ch05_damping_all_data_scatter_ka_table":     r"Tall til figur \ref{fig:ch05_damping_all_data_scatter_ka}. Hver rad puljer kjøringer på (konfigurasjon $\times$ amplitude $\times$ vind). Kolonner: $n$ er antall kjøringer, $ka$- og $kL$-spennet pulen dekker, $\bar{K_t} \pm \sigma$, og lokalt stigningstall fra lineær tilpasning av $K_t$ mot $ka$ og $kL$ innen pulen ($L = 2{,}6$~m).",
-    "ch05_damping_undermooring_scatter_ka_table": r"Som tabell \ref{tab:ch05_damping_all_data_scatter_ka_table}, begrenset til under-fortøyninger (loose300 + loose230, full panel) — tall til figur \ref{fig:ch05_damping_undermooring_scatter_ka}.",
-    "ch05_damping_overmooring_scatter_ka_table":  r"Som tabell \ref{tab:ch05_damping_all_data_scatter_ka_table}, begrenset til over-fortøyning (above\_50, full + reverse panel slått sammen) — tall til figur \ref{fig:ch05_damping_overmooring_scatter_ka}.",
+    "ch05_damping_all_data_scatter_ka_table":     r"Tall til figur \ref{fig:ch05_damping_all_data_scatter_ka}. Hver rad " ,#Tall til figur \ref{fig:ch05_damping_all_data_scatter_ka}. Hver rad samler kjøringer på (konfigurasjon $\times$ amplitude $\times$ vind). Kolonner: $n$ er antall kjøringer, $ka$- og $kL$-spennet samlingen dekker, $\bar{K_t} \pm \sigma$, og lokalt stigningstall fra lineær tilpasning av $K_t$ mot $ka$ og $kL$ innen samlingen ($L = 2{,}6$~m).",
+    "ch05_damping_undermooring_scatter_ka_table": r"Tall til figur \ref{fig:ch05_damping_undermooring_scatter_ka}. ",# begrenset til under-fortøyninger (loose300 + loose230, full panel) — tall til figur \ref{fig:ch05_damping_undermooring_scatter_ka}.",
+    "ch05_damping_overmooring_scatter_ka_table":  r"Tall til figur \ref{fig:ch05_damping_overmooring_scatter_ka}" ,# begrenset til over-fortøyning (above\_50, full + reverse panel slått sammen) — tall til figur \ref{fig:ch05_damping_overmooring_scatter_ka}.",
 
     # ── APPENDIX ─────────────────────────────────────────────────────────────
     "app_panel_pooling": "Sammenlikning av panelretning.",
@@ -103,6 +107,8 @@ TABLE_CAPTIONS_SHORT = {
     # ── CHAPTER 04 ───────────────────────────────────────────────────────────
     "ch04_probe_noise_floor_table":              "",   # TODO: short caption
     "ch04_parallel_probe_psd_agreement_simple":  "Forskjellen mellom parallelle prober.",
+    "ch04_parallel_probe_psd_agreement_lowrange_merged":  "Samsvar mellom parallelle prober — uten + full vind (lowrange).",
+    "ch04_parallel_probe_psd_agreement_highrange_merged": "Samsvar mellom parallelle prober — uten + full vind (highrange).",
     "ch04_window_intervals":                     "",
     "ch04_window_choice_nowind":                 "",
     "ch04_window_choice_fullwind":               "",
@@ -112,15 +118,15 @@ TABLE_CAPTIONS_SHORT = {
     "ch04_wind_setup_baseline_table":            "",
 
     # ── CHAPTER 05 ───────────────────────────────────────────────────────────
-    "ch05_damping_freq_table":           "",
-    "ch05_wind_effect_table":            "",
+    "ch05_damping_freq_table":           "Transmisjon for våre utvalgte bølger. ", #den under er bedre!
+    "ch05_wind_effect_table":            "Vindens effekt på transmisjonen.",
     "ch05_wind_effect_table_by_amp":     "Transmisjon for våre utvalgte bølger",
     "ch05_transmission_wind_ratios":     "",
     "ch05_transmission_wind_amplitudes": "",
     "ch05_mooring_focus_at_1_3hz_table": "Moring vs panelretning. 1,3 Hz",
-    "ch05_damping_all_data_scatter_ka_table":     "Pulesammendrag av $K_t$ mot $ka$/$kL$ — alle konfigurasjoner.",
-    "ch05_damping_undermooring_scatter_ka_table": "Pulesammendrag, under-fortøyning.",
-    "ch05_damping_overmooring_scatter_ka_table":  "Pulesammendrag, over-fortøyning.",
+    "ch05_damping_all_data_scatter_ka_table":     "$K_t$ mot $ka$/$kL$ — alle konfigurasjoner.",
+    "ch05_damping_undermooring_scatter_ka_table": "Sammendrag, fortøyning under vann.",
+    "ch05_damping_overmooring_scatter_ka_table":  "Sammendrag, fortøyning over vann.",
 
     # ── APPENDIX ─────────────────────────────────────────────────────────────
     "app_panel_pooling": "Sammenlikning av panelretning",
@@ -538,74 +544,74 @@ _render_with_caption_short(
 print(f"   TEX → {_TEX}")
 
 
-# %%
-# [DATA: RENDER]  — analysis_scratch/damping_freq_table.py
-"""
-── CH05 § 1b — Damping-vs-frequency table (companion to ch05_damping_freq) ─
-Per amplitude tier (A1/A2/A3), tabulates K_t at no-wind, K_t at full-wind,
-and ΔK_t across the four thesis frequencies. Three row-blocks mirror the
-three stacked subfigures of ch05_damping_freq.
-"""
-_NAME = "ch05_damping_freq_table"
-_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
-_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
-_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+# %%  OUTDATED
+# # [DATA: RENDER]  — analysis_scratch/damping_freq_table.py
+# """
+# ── CH05 § 1b — Damping-vs-frequency table (companion to ch05_damping_freq) ─
+# Per amplitude tier (A1/A2/A3), tabulates K_t at no-wind, K_t at full-wind,
+# and ΔK_t across the four thesis frequencies. Three row-blocks mirror the
+# three stacked subfigures of ch05_damping_freq.
+# """
+# _NAME = "ch05_damping_freq_table"
+# _CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+# _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+# _TEX  = Path(f"output/TABLES/{_NAME}.tex")
 
 
-_THESIS_FREQS = [1.3, 1.4, 1.5, 1.6]
-_THESIS_AMPS  = [0.10, 0.20, 0.30]
-_FREQ_COLS    = [f"f_{f:.1f}" for f in _THESIS_FREQS]
+# _THESIS_FREQS = [1.3, 1.4, 1.5, 1.6]
+# _THESIS_AMPS  = [0.10, 0.20, 0.30]
+# _FREQ_COLS    = [f"f_{f:.1f}" for f in _THESIS_FREQS]
 
 
-def _fmt_unsigned(x: float, decimals: int = 3) -> str:
-    if pd.isna(x):
-        return "—"
-    return f"{x:.{decimals}f}"
+# def _fmt_unsigned(x: float, decimals: int = 3) -> str:
+#     if pd.isna(x):
+#         return "—"
+#     return f"{x:.{decimals}f}"
 
 
-def _fmt_value_cell(freq_col: str):
-    def _impl(row: pd.Series) -> str:
-        v = row[freq_col]
-        if row["kind"] == "delta":
-            return _fmt_signed(v, 3)
-        return _fmt_unsigned(v, 3)
-    return _impl
+# def _fmt_value_cell(freq_col: str):
+#     def _impl(row: pd.Series) -> str:
+#         v = row[freq_col]
+#         if row["kind"] == "delta":
+#             return _fmt_signed(v, 3)
+#         return _fmt_unsigned(v, 3)
+#     return _impl
 
 
-_cell_format = {
-    "amp_label_display": lambda r: str(r["amp_label_display"]),
-    "kind_label":        lambda r: str(r["kind_label"]),
-}
-for _fc in _FREQ_COLS:
-    _cell_format[_fc] = _fmt_value_cell(_fc)
+# _cell_format = {
+#     "amp_label_display": lambda r: str(r["amp_label_display"]),
+#     "kind_label":        lambda r: str(r["kind_label"]),
+# }
+# for _fc in _FREQ_COLS:
+#     _cell_format[_fc] = _fmt_value_cell(_fc)
 
-_columns        = ["amp_label_display", "kind_label"] + _FREQ_COLS
-_column_headers = ["", "", *[f"{f:.1f}\\,Hz" for f in _THESIS_FREQS]]
+# _columns        = ["amp_label_display", "kind_label"] + _FREQ_COLS
+# _column_headers = ["", "", *[f"{f:.1f}\\,Hz" for f in _THESIS_FREQS]]
 
-_row_groups: list[tuple[str | None, callable]] = []
-for _amp in _THESIS_AMPS:
-    _row_groups.append(
-        (None, (lambda a: lambda df: df[np.isclose(df["amp_volt"], a)])(_amp))
-    )
+# _row_groups: list[tuple[str | None, callable]] = []
+# for _amp in _THESIS_AMPS:
+#     _row_groups.append(
+#         (None, (lambda a: lambda df: df[np.isclose(df["amp_volt"], a)])(_amp))
+#     )
 
-_render_with_caption_short(
-    _META,
-    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
-    lambda: render_table(
-        csv_path       = _CSV,
-        meta_path      = _META,
-        out_tex_path   = _TEX,
-        columns        = _columns,
-        column_headers = _column_headers,
-        column_spec    = "ll cccc",
-        cell_format    = _cell_format,
-        row_groups     = _row_groups,
-        label          = f"tab:{_NAME}",
-        caption        = TABLE_CAPTIONS.get(_NAME) or None,
-        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
-    ),
-)
-print(f"   TEX → {_TEX}")
+# _render_with_caption_short(
+#     _META,
+#     TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+#     lambda: render_table(
+#         csv_path       = _CSV,
+#         meta_path      = _META,
+#         out_tex_path   = _TEX,
+#         columns        = _columns,
+#         column_headers = _column_headers,
+#         column_spec    = "ll cccc",
+#         cell_format    = _cell_format,
+#         row_groups     = _row_groups,
+#         label          = f"tab:{_NAME}",
+#         caption        = TABLE_CAPTIONS.get(_NAME) or None,
+#         short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+#     ),
+# )
+# print(f"   TEX → {_TEX}")
 
 
 # %%

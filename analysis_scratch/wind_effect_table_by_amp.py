@@ -124,6 +124,17 @@ table["std_nw"]      = pivot_std["no"]
 table["std_fw"]      = pivot_std["full"]
 table["n_nw"]        = pivot_n["no"].astype("Int64")
 table["n_fw"]        = pivot_n["full"].astype("Int64")
+# Precision summary per cell — for the "n=2 with tiny errorbars is good"
+# story (2026-05-09). Mean within-cell relative scatter, %, averaged over
+# the two wind conditions. Typical values 0.5–4 % flag the measurement
+# as highly repeatable; effect sizes (Δ K_t in the next column) of
+# 5–25 % then dwarf the noise — that's the rhetorical anchor.
+table["sigma_pct"]   = 100.0 * 0.5 * (
+    table["std_nw"] / table["Kt_nw"]
+    + table["std_fw"] / table["Kt_fw"]
+)
+table["n_total"]     = (table["n_nw"].fillna(0).astype(int)
+                        + table["n_fw"].fillna(0).astype(int))
 
 # Keep only thesis-scope (freq, amp) cells.
 # Sort: amplitude OUTER, frequency INNER (the only structural difference
@@ -149,27 +160,20 @@ print(f"\n   CSV → {SCRATCH_CSV.relative_to(BASE)}")
 
 
 # ── 4. Render LaTeX table ──────────────────────────────────────────────────
-def _fmt_signed(x: float, decimals: int = 1) -> str:
-    """Render a signed number with a leading + on positives."""
+# All numerical cells wrapped in \num{} so siunitx renders them with the
+# Norwegian comma decimal marker (set globally via \sisetup{output-decimal-
+# marker={,}} in the document preamble).
+def _num(x: float, decimals: int = 3, signed: bool = False) -> str:
     if pd.isna(x):
         return "—"
-    return f"{x:+.{decimals}f}"
-
-
-def _fmt_unsigned(x: float, decimals: int = 3) -> str:
-    if pd.isna(x):
-        return "—"
-    return f"{x:.{decimals}f}"
-
-def _fmt_ratio(x: float, decimals: int = 3) -> str:
-    """Unsigned ratio (e.g. 1.181, 0.653). NaN → em-dash."""
-    if pd.isna(x):
-        return "—"
-    return f"{x:.{decimals}f}"
+    fmt = f"{{:+.{decimals}f}}" if signed else f"{{:.{decimals}f}}"
+    return rf"\num{{{fmt.format(x)}}}"
 
 
 # Body rows. Insert \midrule between AMPLITUDE blocks for visual grouping.
-# Column order: Amp, f, τ_nw, τ_fw, Δτ, T-økn., D-red.
+# Column order (8 cols): Amp | f | K_t,uten | K_t,vind | ΔK_t | K_t-ratio
+# | n | σ%. The D-ratio column is dropped (2026-05-09); the n + σ%
+# columns are added to underline measurement precision per cell.
 body_rows = []
 last_amp = None
 for _, r in table.iterrows():
@@ -178,11 +182,13 @@ for _, r in table.iterrows():
     if last_amp is not None and a != last_amp:
         body_rows.append(r"\midrule")
     body_rows.append(
-        f"  {amp_to_label(a)} & {f:.1f} & "
-        f"{_fmt_unsigned(r['Kt_nw'], 3)} & {_fmt_unsigned(r['Kt_fw'], 3)} & "
-        f"{_fmt_signed(r['Delta_Kt'], 3)} & "        # ΔK_t as decimal fraction
-        f"{_fmt_ratio(r['ratio_Kt'], 3)} & "         # K_t,vind / K_t,uten
-        f"{_fmt_ratio(r['ratio_D'],  3)} \\\\"        # D_vind / D_uten
+        f"  {amp_to_label(a)} & "
+        rf"\num{{{f:.1f}}} & "
+        f"{_num(r['Kt_nw'],    3)} & {_num(r['Kt_fw'],    3)} & "
+        f"{_num(r['Delta_Kt'], 3, signed=True)} & "
+        f"{_num(r['ratio_Kt'], 3)} & "
+        rf"\num{{{int(r['n_total'])}}} & "
+        f"{_num(r['sigma_pct'], 1)} \\\\"
     )
     last_amp = a
 
@@ -255,18 +261,23 @@ immutable = "\n".join([
     "% ── end immutable block ─────────────────────────────────────────",
 ])
 
-# Same column SET as wind_effect_table.py, just with Amp and f swapped
-# in the leading two columns to match the new sort order.
+# 8 columns (2026-05-09 redesign):
+#   Amp | f [Hz] | K_t,uten | K_t,vind | ΔK_t | K_t (vind/uten) | n | σ [%]
+# D-ratio column dropped, ratio header rewritten as a stacked fraction,
+# n and σ added to convey within-cell measurement precision.
+# Norwegian commas via \num{} in body cells.
 table_body = (
     "\\begin{table}[htbp]\n"
     "  \\centering\n"
     "  \\small\n"
-    "  \\begin{tabular}{cc cc r r r}\n"
+    "  \\begin{tabular}{cc cc c c c c}\n"
     "    \\toprule\n"
-    "      Amp & $f$ [Hz] & $K_{t,\\text{uten}}$ & $K_{t,\\text{vind}}$ "
-    "& $\\Delta K_t$ & "
-    "$K_{t,\\text{vind}}/K_{t,\\text{uten}}$ & "
-    "$D_{\\text{vind}}/D_{\\text{uten}}$ \\\\\n"
+    "      Amp & $f$ [Hz] & "
+    "$K_{t,\\text{uten}}$ & $K_{t,\\text{vind}}$ & "
+    "$\\Delta K_t$ & "
+    "$K_{t}\\frac{\\mathrm{vind}}{\\mathrm{uten}}$ & "
+    "$n$ & "
+    "$\\sigma$ [\\%] \\\\\n"
     "    \\midrule\n"
     + "\n".join(body_rows) + "\n"
     "    \\bottomrule\n"

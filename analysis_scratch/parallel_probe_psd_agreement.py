@@ -276,6 +276,164 @@ def _table_name(range_label, wind_label):
     return f"{THESIS_TABLE_BASE}_{range_label}_{wind_label}"
 
 
+def _format_body_lines(rows: list[dict]) -> list[str]:
+    """Render harmonic-summary rows into LaTeX body lines (one per freq).
+
+    Shared between the per-(range × wind) table and the merged-winds table
+    so the two presentations are guaranteed identical at the cell level.
+    """
+    lines = []
+    for r in rows:
+        # "Beste probe" = single probe with smallest std(A). Mean is excluded
+        # from the comparison (averaging is judged separately by Variansøkning).
+        if np.isfinite(r["std_a"]) and np.isfinite(r["std_b"]):
+            best = "nær" if r["std_a"] < r["std_b"] else "fjern"
+        else:
+            best = "n/a"
+        f_cell = f"\\num{{{r['freq']:.2f}}}"
+        ratio_cell = (f"\\num{{{r['ratio_mean']:.2f}}}"
+                      if np.isfinite(r["ratio_mean"]) else "n/a")
+        rho_cell = (f"\\num{{{r['corr']:+.3f}}}"
+                    if np.isfinite(r["corr"]) else "n/a")
+        best_cell = best
+        # Sign: positive % = averaging WORSENS precision vs the better single
+        # probe. `reduction_pct` is the fractional REDUCTION (negative when
+        # worse), so negate.
+        v_cell = (f"\\num{{{-r['reduction_pct']:+.1f}}}"
+                  if np.isfinite(r["reduction_pct"]) else "n/a")
+        lines.append(
+            f"    {f_cell} & {ratio_cell} & {rho_cell} & {best_cell} & {v_cell} \\\\"
+        )
+    return lines
+
+
+def write_merged_winds_tex_table(
+    rows_by_wind: dict[str, list[dict]],
+    out_path: Path,
+    *,
+    range_label: str,
+    scope_notes: dict,
+) -> None:
+    """Render two wind conditions in ONE .tex with sub-section headers.
+
+    Style modelled on tab:ch04_wind_setup_baseline_table — one combined
+    \\caption + \\label, body uses \\multicolumn{5}{l}{\\itshape <wind>} per
+    sub-section. Cell formatting is identical to the per-cell tables
+    (shared via _format_body_lines), so the merged table reads as the
+    union of the per-cell tables, not a different analysis.
+
+    Wind ordering: nowind (baseline) above, fullwind (perturbation) below.
+    """
+    from datetime import datetime as _dt
+    from wavescripts.plot_utils import _lookup_central_caption
+
+    table_name = f"{THESIS_TABLE_BASE}_{range_label}_merged"
+    # Caption lives in TABLE_CAPTIONS (main_save_tables.py) → persisted at
+    # output/.table_captions.json. The default _lookup_central_caption
+    # path is .figure_captions.json, so pass json_path explicitly.
+    base_dir = Path(__file__).resolve().parent.parent
+    _captions_json = base_dir / "output" / ".table_captions.json"
+    caption_full  = _lookup_central_caption(table_name, kind="full",
+                                            json_path=_captions_json)
+    caption_short = _lookup_central_caption(table_name, kind="short",
+                                            json_path=_captions_json)
+    if caption_full and caption_short:
+        caption_block = (f"  \\caption[{caption_short}]{{\n"
+                         f"    {caption_full}\n  }}\n")
+    elif caption_full:
+        caption_block = f"  \\caption{{\n    {caption_full}\n  }}\n"
+    else:
+        caption_block = ("  \\caption{\n"
+                         "    % TODO: write caption "
+                         "(edit TABLE_CAPTIONS in main_save_tables.py)\n"
+                         "  }\n")
+
+    WIND_HEADER = {"nowind": "Uten vind", "fullwind": "Full vind"}
+
+    # Per-wind n-runs lines for the immutable provenance block.
+    n_lines = []
+    for wkey in ("nowind", "fullwind"):
+        rs = rows_by_wind.get(wkey) or []
+        if rs:
+            n_str = ", ".join(f"{r['freq']:.1f}Hz:n={r['n']}" for r in rs)
+            n_lines.append(f"%   N runs ({wkey:>8}): {n_str}")
+
+    immutable = "\n".join([
+        "%! TEX root = ../main.tex",
+        "% ==============================================================",
+        "% IMMUTABLE — generated automatically, do not edit this block",
+        "%",
+        "% — Provenance ───────────────────────────────────────────────────",
+        "%   script            : analysis_scratch/parallel_probe_psd_agreement.py",
+        "%   plot_type         : parallel_probe_psd_agreement_table_merged",
+        "%   chapter           : 04",
+        f"%   generated_at      : {_dt.now().isoformat(timespec='seconds')}",
+        f"%   caption_label     : tab:{table_name}",
+        f"%   caption_short     : {caption_short or ''}",
+        "%",
+        "% — Method ────────────────────────────────────────────────────",
+        "%   Same per-row analysis as the per-(range × wind) tables; cells",
+        "%   formatted via the shared _format_body_lines helper. Two wind",
+        "%   conditions are stacked in a single \\begin{table}, separated",
+        "%   by italic sub-section headers (\\multicolumn{5}{l}{\\itshape …}),",
+        "%   following the tab:ch04_wind_setup_baseline_table convention.",
+        "%   Pairwise comparison of 9373/170 (wall) and 9373/340 (far) at",
+        "%   each thesis paddle frequency (1.3, 1.4, 1.5, 1.6 Hz).",
+        "%   P_fjern/P_nær : geometric mean across runs of P_far[bin]/P_wall[bin].",
+        "%   Pearsons ρ    : Pearson correlation across runs of band-integrated A.",
+        "%   Beste probe   : single probe with smallest std(A).",
+        "%   Variansøkning [%] : % change in Var(½(A_wall+A_far)) vs the better single.",
+        "%",
+        "% — Inputs ────────────────────────────────────────────────────",
+        *n_lines,
+        f"%   probe-range setup : {range_label}",
+        f"%   data scope (uten) : {scope_notes.get((range_label, 'nowind'), '')}",
+        f"%   data scope (full) : {scope_notes.get((range_label, 'fullwind'), '')}",
+        "%",
+        "% ── end immutable block ─────────────────────────────────────────",
+    ])
+
+    # Body: nowind block, midrule, fullwind block. Sub-section headers
+    # are \multicolumn{5}{l}{\itshape ...} rows, not text outside tabular.
+    body_chunks = []
+    first = True
+    for wkey in ("nowind", "fullwind"):
+        rs = rows_by_wind.get(wkey) or []
+        if not rs:
+            continue
+        if not first:
+            body_chunks.append("    \\midrule")
+        body_chunks.append(
+            f"    \\multicolumn{{5}}{{l}}{{\\itshape {WIND_HEADER[wkey]}}} \\\\"
+        )
+        body_chunks.extend(_format_body_lines(rs))
+        first = False
+    body_str = "\n".join(body_chunks)
+
+    table_body = (
+        "\\begin{table}[hbt]\n"
+        "  \\centering\n"
+        "  \\small\n"
+        + caption_block
+        + f"  \\label{{tab:{table_name}}}\n"
+        "  \\begin{tabular}{ccccc}\n"
+        "    \\toprule\n"
+        "      f [\\unit{\\hertz}] &\n"
+        "      $P_\\mathrm{fjern}/P_\\mathrm{nær}$ (snitt) &\n"
+        "      Pearsons $\\rho$ &\n"
+        "      Beste probe &\n"
+        "      Variansøkning ved snitt [\\%]\\\\\n"
+        "    \\midrule\n"
+        + body_str + "\n"
+        "    \\bottomrule\n"
+        "  \\end{tabular}\n"
+        "\\end{table}\n"
+    )
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(immutable + "\n" + table_body, encoding="utf-8")
+
+
 def write_tex_table(rows, out_path, *, range_label, wind_label, scope_note):
     """Render `rows` (from harmonic_summary) as a thesis-ready LaTeX tabular.
 
@@ -349,30 +507,7 @@ def write_tex_table(rows, out_path, *, range_label, wind_label, scope_note):
         "% ── end immutable block ─────────────────────────────────────────",
     ])
 
-    body_lines = []
-    for r in rows:
-        # "Beste probe" = single probe with smallest std(A). Mean is excluded
-        # from the comparison (averaging is judged separately by Variansøkning).
-        if np.isfinite(r["std_a"]) and np.isfinite(r["std_b"]):
-            best = "nær" if r["std_a"] < r["std_b"] else "fjern"
-        else:
-            best = "n/a"
-
-        f_cell = f"\\num{{{r['freq']:.2f}}}"
-        ratio_cell = (f"\\num{{{r['ratio_mean']:.2f}}}"
-                      if np.isfinite(r["ratio_mean"]) else "n/a")
-        rho_cell = (f"\\num{{{r['corr']:+.3f}}}"
-                    if np.isfinite(r["corr"]) else "n/a")
-        best_cell = best
-        # Sign: positive % = averaging WORSENS precision vs the better single
-        # probe. `reduction_pct` is the fractional REDUCTION (negative when
-        # worse), so negate.
-        v_cell = (f"\\num{{{-r['reduction_pct']:+.1f}}}"
-                  if np.isfinite(r["reduction_pct"]) else "n/a")
-
-        body_lines.append(
-            f"    {f_cell} & {ratio_cell} & {rho_cell} & {best_cell} & {v_cell} \\\\"
-        )
+    body_lines = _format_body_lines(rows)
 
     table_body = (
         "\\begin{table}[hbt]\n"
@@ -577,6 +712,7 @@ def main():
     last_rows = None
     last_harmonized = None
     last_f = None
+    rows_cache: dict[tuple[str, str], list] = {}   # (range, wind) → rows
     for range_label in ("lowrange", "highrange"):
         for wind_label in ("nowind", "fullwind"):
             print(f"\n=== {range_label} / {wind_label} ===")
@@ -589,18 +725,40 @@ def main():
             f, harmonized = harmonize_grid(psd_data, n_grid=N_GRID, f_max=F_MAX_HZ)
             rows = harmonic_summary(harmonized, f, PROBES, TARGET_FREQS,
                                     BAND_HALFWIDTH_HZ)
+            rows_cache[(range_label, wind_label)] = rows
 
-            out_tex = tables_dir / f"{_table_name(range_label, wind_label)}.tex"
-            write_tex_table(
-                rows, out_tex,
-                range_label=range_label, wind_label=wind_label,
-                scope_note=scope_notes[(range_label, wind_label)],
-            )
+            # The four per-(range × wind) .tex files were dropped 2026-05-09
+            # — superseded by the two merged tables below
+            # (ch04_parallel_probe_psd_agreement_{low,high}range_merged).
+            # write_tex_table() is intentionally left in the module so the
+            # individual outputs can be re-enabled by uncommenting one line:
+            #     write_tex_table(rows, tables_dir / f"{_table_name(...)}.tex",
+            #                     range_label=..., wind_label=...,
+            #                     scope_note=scope_notes[(..., ...)])
             print_summary_table(rows, n_runs=len(harmonized))
             if range_label == "lowrange":
                 last_rows = rows
                 last_harmonized = harmonized
                 last_f = f
+
+    # Merged-winds tables (2026-05-09): each (range) gets one table that
+    # stacks both wind conditions via \multicolumn{5}{l}{\itshape ...}
+    # sub-section headers. Style modelled on tab:ch04_wind_setup_baseline_table.
+    # Cell formatting reuses _format_body_lines so the merged table is
+    # cell-for-cell identical to the union of the per-(range × wind) tables.
+    for merge_range in ("lowrange", "highrange"):
+        nw_rows = rows_cache.get((merge_range, "nowind"))
+        fw_rows = rows_cache.get((merge_range, "fullwind"))
+        if nw_rows and fw_rows:
+            print(f"\n=== {merge_range} merged (uten + full vind) ===")
+            out_tex = tables_dir / f"{THESIS_TABLE_BASE}_{merge_range}_merged.tex"
+            write_merged_winds_tex_table(
+                {"nowind": nw_rows, "fullwind": fw_rows},
+                out_tex,
+                range_label=merge_range,
+                scope_notes=scope_notes,
+            )
+            print(f"  Wrote {out_tex.relative_to(base)}")
 
     # Legacy 3-panel diagnostic PDF (pooled lowrange, all winds) — kept for the
     # pre-existing CH04 figure pipeline. Falls back to the lowrange+nowind
