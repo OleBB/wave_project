@@ -5,6 +5,19 @@ type: project
 ---
 # Workflow design note — caption-only edits shouldn't trigger data regen
 
+> **STATUS: IMPLEMENTED 2026-05-09** — Option D (in-place caption
+> patcher with sentinel-bracketed blocks) is live. The sync tool is
+> [`analysis_scratch/sync_captions.py`](../analysis_scratch/sync_captions.py).
+> Renderers updated: `wavescripts/table_render.py`,
+> `wavescripts/plot_utils.py`,
+> `analysis_scratch/parallel_probe_psd_agreement.py`. Stubs get sentinels
+> the first time they're re-rendered after this date; older stubs warn
+> "no sentinels — run the data/figure script once to bootstrap" and skip.
+> Workflow: edit caption in `FIGURE_CAPTIONS` / `TABLE_CAPTIONS` →
+> re-run `main_save_tables.py` (or `main_save_figures.py`) once to
+> refresh the JSON cache → run `python analysis_scratch/sync_captions.py`.
+> Done.
+
 ## The pain point (recorded 2026-05-09 from user)
 
 > "this tex stub needs regen — just because of the caption.

@@ -337,16 +337,24 @@ def write_merged_winds_tex_table(
                                             json_path=_captions_json)
     caption_short = _lookup_central_caption(table_name, kind="short",
                                             json_path=_captions_json)
+    # Wrap the caption in CAPTION-SYNC sentinels so the caption can be
+    # rewritten in-place later via analysis_scratch/sync_captions.py.
     if caption_full and caption_short:
-        caption_block = (f"  \\caption[{caption_short}]{{\n"
-                         f"    {caption_full}\n  }}\n")
+        _cap_inner = (f"  \\caption[{caption_short}]{{\n"
+                      f"    {caption_full}\n  }}")
     elif caption_full:
-        caption_block = f"  \\caption{{\n    {caption_full}\n  }}\n"
+        _cap_inner = f"  \\caption{{\n    {caption_full}\n  }}"
     else:
-        caption_block = ("  \\caption{\n"
-                         "    % TODO: write caption "
-                         "(edit TABLE_CAPTIONS in main_save_tables.py)\n"
-                         "  }\n")
+        _cap_inner = ("  \\caption{\n"
+                      "    % TODO: write caption "
+                      "(edit TABLE_CAPTIONS in main_save_tables.py)\n"
+                      "  }")
+    caption_block = (
+        "% >>> CAPTION-SYNC START "
+        "(do not edit this block; sync_captions.py overwrites)\n"
+        f"{_cap_inner}\n"
+        "% <<< CAPTION-SYNC END\n"
+    )
 
     WIND_HEADER = {"nowind": "Uten vind", "fullwind": "Full vind"}
 
@@ -453,16 +461,24 @@ def write_tex_table(rows, out_path, *, range_label, wind_label, scope_note):
     table_name = _table_name(range_label, wind_label)
     caption_full = _lookup_central_caption(table_name, kind="full")
     caption_short = _lookup_central_caption(table_name, kind="short")
+    # Wrap the caption in CAPTION-SYNC sentinels so the caption can be
+    # rewritten in-place later via analysis_scratch/sync_captions.py.
     if caption_full and caption_short:
-        caption_block = (f"  \\caption[{caption_short}]{{\n"
-                         f"    {caption_full}\n  }}\n")
+        _cap_inner = (f"  \\caption[{caption_short}]{{\n"
+                      f"    {caption_full}\n  }}")
     elif caption_full:
-        caption_block = f"  \\caption{{\n    {caption_full}\n  }}\n"
+        _cap_inner = f"  \\caption{{\n    {caption_full}\n  }}"
     else:
-        caption_block = ("  \\caption{\n"
-                         "    % TODO: write caption "
-                         "(edit FIGURE_CAPTIONS in main_save_figures.py)\n"
-                         "  }\n")
+        _cap_inner = ("  \\caption{\n"
+                      "    % TODO: write caption "
+                      "(edit FIGURE_CAPTIONS in main_save_figures.py)\n"
+                      "  }")
+    caption_block = (
+        "% >>> CAPTION-SYNC START "
+        "(do not edit this block; sync_captions.py overwrites)\n"
+        f"{_cap_inner}\n"
+        "% <<< CAPTION-SYNC END\n"
+    )
 
     n_per_freq = ", ".join(f"{r['freq']:.1f}Hz:n={r['n']}" for r in rows)
     freq_list = ", ".join(f"{r['freq']:.1f}" for r in rows)

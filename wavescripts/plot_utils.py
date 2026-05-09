@@ -519,6 +519,67 @@ def _lookup_central_caption(
     return val if isinstance(val, str) else ""
 
 
+# ── Caption sentinel helpers (Option D, 2026-05-09) ───────────────────────────
+#
+# Caption blocks in rendered .tex stubs are bracketed by sentinel comments
+# so analysis_scratch/sync_captions.py can rewrite the caption in-place
+# without re-running the data/figure script. Renderers should wrap their
+# assembled \caption[...]{...} body with wrap_caption_with_sentinels().
+# See memory/workflow_caption_only_edits_design_note.md.
+
+_CAPTION_SYNC_START_LINE = (
+    "% >>> CAPTION-SYNC START "
+    "(do not edit this block; sync_captions.py overwrites)"
+)
+_CAPTION_SYNC_END_LINE = "% <<< CAPTION-SYNC END"
+
+
+def render_caption_inner(caption_full: str | None,
+                         caption_short: str | None,
+                         indent: str = "  ") -> str:
+    """Render the ``\\caption[short]{full}`` lines (no sentinels yet).
+
+    Empty ``caption_full`` → TODO placeholder. Empty ``caption_short`` →
+    omit the ``[...]`` arg. No trailing newline; caller adds surrounding
+    whitespace.
+    """
+    if caption_full and caption_short:
+        return (
+            f"{indent}\\caption[{caption_short}]{{\n"
+            f"{indent}  {caption_full}\n"
+            f"{indent}}}"
+        )
+    if caption_full:
+        return (
+            f"{indent}\\caption{{\n"
+            f"{indent}  {caption_full}\n"
+            f"{indent}}}"
+        )
+    return (
+        f"{indent}\\caption{{\n"
+        f"{indent}  % TODO: write caption "
+        f"(edit FIGURE_CAPTIONS/TABLE_CAPTIONS)\n"
+        f"{indent}}}"
+    )
+
+
+def wrap_caption_with_sentinels(caption_full: str | None,
+                                caption_short: str | None,
+                                indent: str = "  ") -> str:
+    """Full caption block (sentinel + caption + sentinel + trailing newline).
+
+    Drop-in replacement for ad-hoc ``caption_block = (...)`` assembly in
+    .tex-emitting scripts; the produced text is what
+    ``analysis_scratch/sync_captions.py`` knows how to find and rewrite.
+    """
+    inner = render_caption_inner(caption_full, caption_short, indent=indent)
+    return (
+        f"{_CAPTION_SYNC_START_LINE}\n"
+        f"{inner}\n"
+        f"{_CAPTION_SYNC_END_LINE}\n"
+    )
+
+
 # ── Filename format helpers ────────────────────────────────────────────────────
 
 def _fmt_condition(val) -> str:
@@ -1090,25 +1151,36 @@ def write_figure_stub(meta: dict, plot_type: str,
                       or _lookup_central_caption(stub_filename, kind="full"))
     _caption_short = (meta.get("caption_short")
                       or _lookup_central_caption(stub_filename, kind="short"))
+    # Caption block is wrapped in CAPTION-SYNC sentinels so
+    # ``analysis_scratch/sync_captions.py`` can patch the caption in-place
+    # later without a full figure regen. See the design note at
+    # memory/workflow_caption_only_edits_design_note.md (Option D).
     if _caption_full:
         if _caption_short:
-            _caption_block = (
+            _caption_inner = (
                 f"  \\caption[{_caption_short}]{{\n"
                 f"    {_caption_full}\n"
-                "  }\n"
+                "  }"
             )
         else:
-            _caption_block = (
+            _caption_inner = (
                 f"  \\caption{{\n"
                 f"    {_caption_full}\n"
-                "  }\n"
+                "  }"
             )
     else:
-        _caption_block = (
+        _caption_inner = (
             "  \\caption{\n"
-            "    % TODO: write caption\n"
-            "  }\n"
+            "    % TODO: write caption "
+            "(edit FIGURE_CAPTIONS/TABLE_CAPTIONS)\n"
+            "  }"
         )
+    _caption_block = (
+        "% >>> CAPTION-SYNC START "
+        "(do not edit this block; sync_captions.py overwrites)\n"
+        f"{_caption_inner}\n"
+        "% <<< CAPTION-SYNC END\n"
+    )
 
     _figure_name = meta.get("figure_name") or stub_filename
     _label = f"fig:{_figure_name}"

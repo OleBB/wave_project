@@ -116,22 +116,36 @@ def _render_caption_block(
     caption: str | None,
     short_caption: str | None,
 ) -> str:
+    """Render the caption block, wrapped in CAPTION-SYNC sentinels.
+
+    The sentinels let ``analysis_scratch/sync_captions.py`` patch caption
+    text in-place without re-rendering the table — see the design note at
+    ``memory/workflow_caption_only_edits_design_note.md`` (Option D).
+    """
     if caption and short_caption:
-        return (
+        body = (
             f"  \\caption[{short_caption}]{{\n"
             f"    {caption}\n"
-            f"  }}\n"
+            f"  }}"
         )
-    if caption:
-        return (
+    elif caption:
+        body = (
             f"  \\caption{{\n"
             f"    {caption}\n"
-            f"  }}\n"
+            f"  }}"
+        )
+    else:
+        body = (
+            "  \\caption{\n"
+            "    % TODO: write caption "
+            "(edit FIGURE_CAPTIONS/TABLE_CAPTIONS)\n"
+            "  }"
         )
     return (
-        "  \\caption{\n"
-        "    % TODO: write caption\n"
-        "  }\n"
+        "% >>> CAPTION-SYNC START "
+        "(do not edit this block; sync_captions.py overwrites)\n"
+        f"{body}\n"
+        "% <<< CAPTION-SYNC END\n"
     )
 
 

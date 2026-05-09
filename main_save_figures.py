@@ -15,6 +15,27 @@ Each section corresponds to a thesis chapter and figure/table number.
 Set save_plot=True (or call save_and_stub) when a figure is ready to export.
 Requires processed cache. Run main.py first if stale.
 
+Caption-only edit workflow (Option D, 2026-05-09)
+-------------------------------------------------
+Edited only a caption in FIGURE_CAPTIONS / FIGURE_CAPTIONS_SHORT? You
+do NOT need to re-run any figure script. Re-run this file once (just
+to refresh output/.figure_captions.json — fast: it's just dict
+serialisation), then run:
+
+    python analysis_scratch/sync_captions.py
+
+The sync script walks output/TEXFIGU/*.tex and output/TABLES/*.tex,
+finds the ``% >>> CAPTION-SYNC START ... % <<< CAPTION-SYNC END``
+sentinel block in each, and rewrites the caption inside it from the
+JSON. No data reload, no figure regen.
+
+Bootstrap: a stub gets sentinels the first time it is rendered by an
+updated renderer (wavescripts/plot_utils.py / table_render.py /
+parallel_probe_psd_agreement.py). For older stubs, run the underlying
+figure script once. After that, all caption edits are sync-only.
+
+Design note: memory/workflow_caption_only_edits_design_note.md
+
 INPUT KEYS  (experimental conditions):
     WaveAmplitudeInput [Volt]   — paddle drive voltage (0.1 / 0.2 / 0.3 V).
                                   On reader-facing plots this is relabelled as

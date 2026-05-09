@@ -42,6 +42,26 @@ Captions-only (rendered from main_save_figures.py cells):
   ch05_wind_effect_table_by_amp
   ch05_transmission_wind_ratios
   ch05_transmission_wind_amplitudes
+
+Caption-only edit workflow (Option D, 2026-05-09)
+-------------------------------------------------
+Edited a string in TABLE_CAPTIONS / TABLE_CAPTIONS_SHORT? You don't
+need to re-run the data scripts. Re-run this file once to refresh
+output/.table_captions.json, then run:
+
+    python analysis_scratch/sync_captions.py
+
+The sync script walks output/TEXFIGU/*.tex and output/TABLES/*.tex,
+finds the ``% >>> CAPTION-SYNC START ... % <<< CAPTION-SYNC END``
+sentinel block in each, and rewrites the caption inside it from the
+JSON. No data reload, no figure regen, ~1 second for the whole tree.
+
+Bootstrap: a stub gets sentinels the first time it is rendered by an
+updated renderer (table_render.py / plot_utils.py /
+parallel_probe_psd_agreement.py). For older stubs, run the underlying
+script once. After that, all caption edits are sync-only.
+
+Design note: memory/workflow_caption_only_edits_design_note.md
 """
 
 # %%
