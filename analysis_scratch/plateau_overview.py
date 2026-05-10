@@ -59,7 +59,7 @@ FFT_BAND_HZ      = 0.05
 
 THESIS_FREQS     = [1.3, 1.4, 1.5, 1.6]
 N_OFFSET         = 7
-N_LENGTH         = 10                     # uniform across all thesis freqs
+N_LENGTH         = 5                     # uniform across all thesis freqs. WINDOW SECONDS IS N/F
 
 TANK_LENGTH_M    = 25.0   # wavemaker → back wall (round trip = 2L = 50 m)
 SEICHE_SPEED_M_S = (9.81 * 0.58) ** 0.5   # √(g·h) ≈ 2.385 m/s
@@ -70,7 +70,7 @@ PROBE_R_M        = {"9373/170": 9.373, "9373/340": 9.373, "12400/250": 12.400}
 TANK_DEPTH_M     = HG.TANK_DEPTH_M
 PER40_PERIODS    = 40
 
-SLIDING_STEP_S   = 0.01 #changed from 0.1 to 0.2 testing, and changed to 0.01.
+SLIDING_STEP_S   = 0.2 #changed from 0.1 to 0.2 testing, and tried 0.01. 02 was good enough it seems
 SLIDING_T_LO_S   = 0.0
 SLIDING_T_HI_S   = 55.0
 
