@@ -56,6 +56,9 @@ TEXFIGU_DIR.mkdir(parents=True, exist_ok=True)
 TARGET_DIR = BASE / "waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"
 DATADIR    = BASE / "wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"
 
+# TARGET_DIR = BASE / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"
+# DATADIR    = BASE / "wavedata/20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange"
+
 RUNS = {
     "nowind":   DATADIR / "fullpanel-nowind-amp0200-freq1400-per240-depth580-mstop30-run1.csv",
     "fullwind": DATADIR / "fullpanel-fullwind-amp0200-freq1400-per240-depth580-mstop30-run1.csv",

@@ -1598,14 +1598,25 @@ def plot_reconstructed_combined(
 
     apply_thesis_style()
 
+    # Hardcoded runs — same two CSVs as analysis_scratch/fft_wave_spectrum.py
+    # so the reconstructed-wave figure and the FFT-spectrum figure are
+    # phase-locked to the exact same recordings.
+    BASE    = Path("/Users/ole/Kodevik/wave_project")
+    DATADIR = BASE / "wavedata/20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange"
+    RUNS = {
+        "no":   str(DATADIR / "fullpanel-nowind-amp0200-freq1400-per240-depth580-mstop30-run1.csv"),
+        "full": str(DATADIR / "fullpanel-fullwind-amp0200-freq1400-per240-depth580-mstop30-run1.csv"),
+    }
+
     wind_order = ["no", "full"]
     rows_by_wind: dict = {}
     for w in wind_order:
-        sub = meta_df[meta_df["WindCondition"] == w]
+        path = RUNS[w]
+        sub = meta_df[meta_df["path"] == path]
         if sub.empty:
-            print(f"plot_reconstructed_combined: no run found for wind={w}")
+            print(f"plot_reconstructed_combined: hardcoded path not in "
+                  f"filtered meta for wind={w}: {path}")
             return None, None
-        path = sub.iloc[0]["path"]
         if path not in fft_dict:
             print(f"plot_reconstructed_combined: path missing in fft_dict "
                   f"for wind={w}: {path}")
@@ -1615,6 +1626,7 @@ def plot_reconstructed_combined(
             "path": path,
             "df_fft": fft_dict[path],
         }
+
 
     figsize = plotting.get("figsize") or (8, 11)
     fig, axes = plt.subplots(

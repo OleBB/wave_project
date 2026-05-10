@@ -7,7 +7,7 @@
 %   computed_in       : analysis_scratch/fft_wave_spectrum.py (single-run FFT spectrum bar plot)
 %   plot_type         : spectrum_fft
 %   data_class        : DELEG
-%   generated_at      : 2026-05-05T13:08:38
+%   generated_at      : 2026-05-10T15:16:44
 %   findings_doc      : memory/methodology_hg_window_kills_peak_bias.md
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -82,10 +82,10 @@
 %   stat:bin_width_Ut_fullwind_Hz : 0.13959
 %   stat:N_inn_fullwind_samples : 1793
 %   stat:N_Ut_fullwind_samples : 1791
-%   stat:ka_inn_nowind : 0.1287
-%   stat:ka_Ut_nowind : 0.0878
-%   stat:ka_inn_fullwind : 0.1531
-%   stat:ka_Ut_fullwind : 0.0979
+%   stat:ka_inn_nowind : 0.1205
+%   stat:ka_Ut_nowind : 0.0835
+%   stat:ka_inn_fullwind : 0.1219
+%   stat:ka_Ut_fullwind : 0.0903
 %   stat:wavelength_inn_nowind_m : 0.7986
 %   stat:wavenumber_inn_nowind_per_m : 7.8675
 %   stat:period_inn_nowind_s : 0.71540
@@ -93,7 +93,7 @@
 %   stat:Hm0_inn_nowind_mm : 43.471
 %   stat:Hs_inn_nowind_mm : 31.843
 %   stat:Froude_inn_nowind : 0.22023
-%   stat:Ursell_inn_nowind : 0.10695
+%   stat:Ursell_inn_nowind : 0.10015
 %   stat:wind_over_c_inn_nowind : 0.0000
 %   stat:f_over_fPM_inn_nowind : nan
 %   stat:wavelength_Ut_nowind_m : 0.7937
@@ -103,7 +103,7 @@
 %   stat:Hm0_Ut_nowind_mm : 29.921
 %   stat:Hs_Ut_nowind_mm : 21.697
 %   stat:Froude_Ut_nowind : 0.21956
-%   stat:Ursell_Ut_nowind : 0.07162
+%   stat:Ursell_Ut_nowind : 0.06811
 %   stat:wind_over_c_Ut_nowind : 0.0000
 %   stat:f_over_fPM_Ut_nowind : nan
 %   stat:wavelength_inn_fullwind_m : 0.8044
@@ -113,7 +113,7 @@
 %   stat:Hm0_inn_fullwind_mm : 45.546
 %   stat:Hs_inn_fullwind_mm : 38.232
 %   stat:Froude_inn_fullwind : 0.22103
-%   stat:Ursell_inn_fullwind : 0.13000
+%   stat:Ursell_inn_fullwind : 0.10356
 %   stat:wind_over_c_inn_fullwind : 5.1768
 %   stat:f_over_fPM_inn_fullwind : 5.3102
 %   stat:wavelength_Ut_fullwind_m : 0.8009
@@ -123,7 +123,7 @@
 %   stat:Hm0_Ut_fullwind_mm : 32.740
 %   stat:Hs_Ut_fullwind_mm : 24.540
 %   stat:Froude_Ut_fullwind : 0.22054
-%   stat:Ursell_Ut_fullwind : 0.08202
+%   stat:Ursell_Ut_fullwind : 0.07566
 %   stat:wind_over_c_Ut_fullwind : 5.1883
 %   stat:f_over_fPM_Ut_fullwind : 5.3221
 %   stat:meta_OUT_over_IN_nowind : 0.6885
@@ -200,8 +200,10 @@
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{FIGURES/ch04_fft_wave.pdf}
+% >>> CAPTION-SYNC START (do not edit this block; sync_captions.py overwrites)
   \caption[Fourierspektrum med og uten vind.]{
     Frekvensspekter for bølge på \qty{1.4}{\hertz}, amplitudevalg $A_2$. Oppe uten vind, ned med vind. Innkommende til venstre, utgående til høyre.
   }
+% <<< CAPTION-SYNC END
   \label{fig:ch04_fft_wave}
 \end{figure}
