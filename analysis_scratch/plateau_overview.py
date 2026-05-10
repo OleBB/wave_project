@@ -70,7 +70,7 @@ PROBE_R_M        = {"9373/170": 9.373, "9373/340": 9.373, "12400/250": 12.400}
 TANK_DEPTH_M     = HG.TANK_DEPTH_M
 PER40_PERIODS    = 40
 
-SLIDING_STEP_S   = 0.10
+SLIDING_STEP_S   = 0.01 #changed from 0.1 to 0.2 testing, and changed to 0.01.
 SLIDING_T_LO_S   = 0.0
 SLIDING_T_HI_S   = 55.0
 
@@ -136,7 +136,7 @@ def can_in(df):
 
 def sliding_afft(signal, target_hz, window_s):
     N_win = int(round(window_s * FS))
-    step  = int(round(SLIDING_STEP_S * FS))
+    step  = int(round(SLIDING_STEP_S * FS)) #x2
     n_lo  = int(round(SLIDING_T_LO_S * FS))
     n_hi  = min(len(signal) - N_win, int(round(SLIDING_T_HI_S * FS)))
     if N_win >= len(signal) or n_hi <= n_lo:
