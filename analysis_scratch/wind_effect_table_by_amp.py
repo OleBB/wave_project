@@ -53,7 +53,7 @@ CHAPTER     = "05"
 
 # Same canon scope as wind_effect_table.py.
 RESULTS_DIRS = [
-    BASE / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
+    # BASE / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
     BASE / "waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange",
 ]
 
@@ -256,6 +256,8 @@ table_body = (
     "\\begin{table}[htbp]\n"
     "  \\centering\n"
     "  \\small\n"
+    + caption_block
+    + f"  \\label{{tab:{THESIS_NAME}}}\n"
     "  \\begin{tabular}{cc cc c c c c}\n"
     "    \\toprule\n"
     "      Amp & $f$ [Hz] & "
@@ -263,13 +265,11 @@ table_body = (
     "$\\Delta K_t$ & "
     "$K_{t}\\frac{\\mathrm{vind}}{\\mathrm{uten}}$ & "
     "$n$ & "
-    "$\\sigma$ [\\%] \\\\\n"
+    "$\\sigma_{\\mathrm{rel}}(K_t) [\\%]$ \\\\\n"
     "    \\midrule\n"
     + "\n".join(body_rows) + "\n"
     "    \\bottomrule\n"
     "  \\end{tabular}\n"
-    + caption_block
-    + f"  \\label{{tab:{THESIS_NAME}}}\n"
     "\\end{table}\n"
 )
 

@@ -34,7 +34,7 @@ Outputs:
 Caption text is read from FIGURE_CAPTIONS["ch05_wind_effect_table"] in
 main_save_figures.py via output/.figure_captions.json.
 """
-
+# %%
 import sys
 import warnings
 from pathlib import Path
@@ -62,9 +62,9 @@ THESIS_NAME = "ch05_wind_effect_table"
 OUT_TEX     = BASE / "output" / "TABLES" / f"{THESIS_NAME}.tex"
 CHAPTER     = "05"
 
-# Same canon scope as ch05_damping_freq + ch05_damping_scatter.
+# Reduced  canon scope
 RESULTS_DIRS = [
-    BASE / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
+    # BASE / "waveprocessed/PROCESSED-20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange",
     BASE / "waveprocessed/PROCESSED-20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange",
 ]
 

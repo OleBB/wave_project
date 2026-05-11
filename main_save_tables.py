@@ -113,8 +113,8 @@ TABLE_CAPTIONS = {
 
     # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
     #"ch05_damping_freq_table":   OUTDATED        "",   # TODO: caption — per-amp K_t,uten, K_t,vind, ΔK_t across 1.3–1.6 Hz, mirrors ch05_damping_freq layout
-    "ch05_wind_effect_table":            "Transmisjon for våre utvalgte bølger",
-    "ch05_wind_effect_table_by_amp":     "Transmisjon for våre utvalgte bølger",   # TODO: caption — same data as ch05_wind_effect_table, sorted amp-outer / freq-inner
+    "ch05_wind_effect_table":            "Transmisjon for våre utvalgte bølger - kun med 30cm lang fortøyning",
+    "ch05_wind_effect_table_by_amp":     r"Resultat for $K_t$. Transmisjon for våre utvalgte bølger - kun med 30cm lang fortøyning.",   # TODO: caption — same data as ch05_wind_effect_table, sorted amp-outer / freq-inner
     "ch05_transmission_wind_ratios":     "",
     "ch05_transmission_wind_amplitudes": "",
     "ch05_mooring_focus_at_1_3hz_table": r"Tall til figur \ref{fig:ch05_mooring_focus_at_1_3hz_ka}. Transmisjon for panelrekken fortøyd på ulike måter. Merk: kun for \qty{1.3}{\hertz}. Antall (n) kjøringer.",
@@ -1149,6 +1149,21 @@ for _ka_table_name in (
     "ch05_damping_overmooring_scatter_ka_table",
 ):
     _render_ka_scatter_table(_ka_table_name)
+
+
+# %%
+# [LEGACY DELEG]  — analysis_scratch/wind_effect_table_by_amp.py
+"""
+── CH05 § 3 — Wind-effect table (amp-outer / freq-inner) ────────────────────
+Standalone script: loads data, computes the table, and writes its own .tex
+in one shot (NOT migrated to the two-step CSV+meta pattern). Reads
+caption_full / caption_short from output/.table_captions.json, which was
+written above. Shelled out as a subprocess so its load_analysis_data call
+runs in a fresh interpreter and doesn't pollute this process.
+"""
+import subprocess as _subprocess
+_LEGACY_SCRIPT = BASE / "analysis_scratch" / "wind_effect_table_by_amp.py"
+_subprocess.run([sys.executable, str(_LEGACY_SCRIPT)], check=True)
 
 
 print("\nDone.")
