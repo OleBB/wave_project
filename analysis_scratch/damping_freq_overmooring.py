@@ -110,6 +110,12 @@ _pv = {
         "annotate":   True,
         "legend":     "outside_right",
         "subfig_layout": "column",
+        # Use the over-mooring (above_50) palette — muted firebrick /
+        # steel blue — so this figure shares its colour language with
+        # ch05_damping_overmooring_scatter{,_ka}. Same hex codes as
+        # ABOVE_FULLWIND_COLOR / ABOVE_NOWIND_COLOR in
+        # analysis_scratch/under_and_over_mooring_scatter_k.py.
+        "wind_color_map": {"no": "#4682B4", "full": "#B22222"},
     },
 }
 _meta = _aef(meta, _pv)

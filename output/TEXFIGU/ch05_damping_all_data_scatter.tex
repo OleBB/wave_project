@@ -4,10 +4,10 @@
 %
 % — Provenance ───────────────────────────────────────────────────
 %   script            : analysis_scratch/all_data_damping_scatter.py
-%   computed_in       : analysis_scratch/all_data_damping_scatter.py (cross-condition supplementary scatter)
+%   computed_in       : analysis_scratch/all_data_damping_scatter.py (cross-condition supplementary scatter, mooring × panel encoding)
 %   plot_type         : damping_all_data_scatter
 %   data_class        : DELEG
-%   generated_at      : 2026-05-08T15:34:07
+%   generated_at      : 2026-05-11T10:57:12
 %   findings_doc      : 
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -16,7 +16,7 @@
 %   caption_short     : 
 %
 % — Filters ────────────────────────────────────────────────────
-%   panel             : full
+%   panel             : full + reverse
 %   wind              : no, full
 %   amplitude [V]     : 
 %   frequency [Hz]    : 
@@ -63,18 +63,24 @@
 %   grouper           : 
 %   collapse_panels   : 
 %   fft_window_hz     : 0.1
-%   extra_params      : all PROCESSED-* folders (24). Filter: wave runs (WaveFrequencyInput > 0), full panel, quality_flag=ok, OUT/IN(FFT) ∈ [0.1, 2.0], wind ∈ {no, full}, freq < 2.0 Hz. Encoding: wind → colour (WIND_COLOR_MAP), amplitude → marker shape (○=A1, □=A2, △=A3), hardware → fill (filled = cond4 final, hollow = earlier). Y-axis capped at 1.18 — points above are wind-contamination / low-SNR artefacts (CLAUDE.md §16). Top axis: every used frequency (15 ticks, 0.5–1.9 Hz). Body font: NewComputerModern10 via apply_thesis_style().
+%   extra_params      : all PROCESSED-* folders (24). Filter: wave runs (WaveFrequencyInput > 0), PanelCondition ∈ {full, reverse}, quality_flag=ok, OUT/IN(FFT) ∈ [0.1, 2.0], wind ∈ {no, full}, freq < 2.0 Hz, Mooring != 'above_200'. Encoding: mooring × panel category — colour shade encodes mooring (canonical red/blue for loose300, light salmon/light blue for loose230, firebrick/steel blue for above_50). Marker family encodes mooring family (○/□/△ for below; D/P/h for above_50, hollow on reverse panel). Y-axis capped at 1.18 — points above are wind-contamination / low-SNR artefacts (CLAUDE.md §16). Top axis: every used frequency. Thesis-scope band (1.3–1.6 Hz) shaded as a light-blue axvspan. Body font: NewComputerModern10. K_t SOURCE: canonical OUT/IN (FFT) with per-row LS+PSD override — if |Kt_FFT−Kt_LS|>0.05 AND |Kt_FFT−Kt_PSD|>0.05 AND |Kt_LS−Kt_PSD|<0.05, use Kt_LS (FFT broken on that run — typically by cut_samples breaking window cycle coherence). See script's top-of-file IMMUTABLE block.
 %
 % — Summary stats cited in caption ────────────────────────────
-%   stat:n_total      : 359
-%   stat:n_final_cond4 : 102
-%   stat:n_earlier_hw : 257
+%   stat:n_total      : 399
+%   stat:n_above_50_full : 143
+%   stat:n_above_50_reverse : 42
+%   stat:n_below_loose230_full : 144
+%   stat:n_below_loose300_full : 70
+%   stat:n_above_50   : 185
+%   stat:n_below_90   : 214
 %   stat:n_extreme_clipped : 0
 %   stat:n_drop_2hz   : 1
 %   stat:freq_min     : 0.5
 %   stat:freq_max     : 1.9
 %   stat:k_min        : 1.4599155863466775
 %   stat:k_max        : 14.532699867267207
+%   stat:n_kt_override : 3
+%   stat:kt_override_threshold : 0.05
 %
 % — Subfigures available ───────────────────────────────────────
 %     FIGURES/ch05_damping_all_data_scatter.pdf
@@ -83,8 +89,10 @@
   \centering
   \thispagestyle{empty}
   \includegraphics[width=\linewidth]{FIGURES/ch05_damping_all_data_scatter.pdf}
+% >>> CAPTION-SYNC START (do not edit this block; sync_captions.py overwrites)
   \caption{
     Alle kjøringer. Vi skiller primært mellom det endelige oppsettet og alle andre oppsett.
   }
+% <<< CAPTION-SYNC END
   \label{fig:ch05_damping_all_data_scatter}
 \end{figure}

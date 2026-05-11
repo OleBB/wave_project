@@ -70,6 +70,48 @@ from wavescripts.plot_utils import (
 
 apply_thesis_style()
 
+# ── K_t SOURCE: FFT canonical, with three-way LS+PSD fallback ─────────────────
+# IMPORTANT — read before changing anything that touches y-values.
+#
+# K_t plotted on this figure is NOT a flat `OUT/IN (FFT)` read. Per row we
+# compute the canonical FFT K_t and ALSO the LS and PSD K_t (using each
+# row's `in_probes_used` / `out_probes_used` to know which probes to
+# average), then apply a per-row override:
+#
+#     if |Kt_FFT − Kt_LS| > 0.05  AND  |Kt_FFT − Kt_PSD| > 0.05
+#                                AND  |Kt_LS  − Kt_PSD| < 0.05:
+#         use Kt_LS         # FFT is the odd one out; LS+PSD agree → trust them
+#     else:
+#         use Kt_FFT        # canonical
+#
+# Why: at A3 1.4 Hz nowind above_50 the mar13 run reads Kt_FFT = 0.831
+# (an outlier above its fullwind counterparts at ~0.74); Kt_LS = 0.701
+# and Kt_PSD = 0.715 agree perfectly and put it cleanly in the field.
+# Mechanism: 45 `cut_samples` on probe 9373/340 broke integer-cycle
+# coherence in the H&G-snapped FFT window. LS (sinusoid fit at f_paddle)
+# and PSD (variance integrated over ±0.1 Hz) are robust to that. See
+# the diagnostic memo and CLAUDE.md §6 / §17.
+#
+# Asymmetric in FFT's favour: ONE substitute method disagreeing isn't
+# enough — we require both LS and PSD to disagree with FFT AND to agree
+# with each other. Threshold 0.05 sits well above measurement noise:
+# scanning all 399 in-scope runs the rule fires on exactly 3 (mar13 1.4Hz
+# A3 above_50, mar7 1.1Hz A2 above_50, mar19 1.5Hz A1 loose230), with the
+# next-nearest non-trigger at |Kt_FFT − Kt_LS| ≤ 0.03. None of the
+# three rescued runs is in the canon thesis-band scope (1.3–1.6 Hz, h100
+# lowrange) — they only show up in this supplementary scatter, which
+# spans the broader cross-condition record.
+#
+# Symbol shown on plot is still `K_t` (method-independent). The override
+# count and per-row triggers are printed at runtime and recorded in each
+# view's figure-stub provenance block. To go back to pure FFT, set
+# OVERRIDE_THRESHOLD = float("inf") below — the rule will then never fire.
+#
+# Sibling: analysis_scratch/under_and_over_mooring_scatter_k.py implements
+# the identical rule (k-axis view of the same data subset). Keep the two
+# in sync if you change anything here.
+OVERRIDE_THRESHOLD = 0.05
+
 # ── I/O ────────────────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "all_data_damping_scatter_ka.pdf"
 SCRATCH_CSV = Path(__file__).parent / "all_data_damping_scatter_ka_summary.csv"
@@ -99,6 +141,11 @@ wave = meta[
     & meta["OUT/IN (FFT)"].notna()
     & meta[K_COL].notna()
     & meta[A_COL].notna()
+    # in/out_probes_used drive the per-method K_t recomputation below.
+    # If they're missing on a row, we can't apply the three-way override
+    # rule, so drop the row from this figure's scope.
+    & meta["in_probes_used"].notna()
+    & meta["out_probes_used"].notna()
 ].copy()
 
 n_extreme = ((wave["OUT/IN (FFT)"] > 2.0) | (wave["OUT/IN (FFT)"] < 0.1)).sum()
@@ -119,7 +166,47 @@ if n_above200:
 wave_clip["ka"] = (wave_clip[K_COL].astype(float)
                    * wave_clip[A_COL].astype(float) / 1000.0)
 
-print(f"\n   ka range: [{wave_clip['ka'].min():.3f}, {wave_clip['ka'].max():.3f}]")
+# ── K_t override rule — see top-of-file IMMUTABLE block for full reasoning ───
+# Per row: recompute K_t under each of the three amplitude methods (FFT, LS,
+# PSD) using `in_probes_used` / `out_probes_used` to know which probes
+# contribute. Then keep canonical FFT unless FFT contradicts BOTH LS and
+# PSD, AND those two agree with each other — in which case use LS.
+def _kt_method(row, method_suffix):
+    inp = [p.strip() for p in str(row["in_probes_used"]).split("+")]
+    out = [p.strip() for p in str(row["out_probes_used"]).split("+")]
+    try:
+        a_in  = float(np.nanmean([row[f"Probe {p} Amplitude{method_suffix}"] for p in inp]))
+        a_out = float(np.nanmean([row[f"Probe {p} Amplitude{method_suffix}"] for p in out]))
+        if a_in <= 0 or not np.isfinite(a_in) or not np.isfinite(a_out):
+            return np.nan
+        return a_out / a_in
+    except KeyError:
+        return np.nan
+
+wave_clip["Kt_FFT_recomp"] = wave_clip.apply(lambda r: _kt_method(r, " (FFT)"), axis=1)
+wave_clip["Kt_LS"]         = wave_clip.apply(lambda r: _kt_method(r, " (LS)"),  axis=1)
+wave_clip["Kt_PSD"]        = wave_clip.apply(lambda r: _kt_method(r, " (PSD)"), axis=1)
+wave_clip["Kt_canon"]      = wave_clip["OUT/IN (FFT)"].astype(float)
+
+_dF  = (wave_clip["Kt_canon"] - wave_clip["Kt_LS"]).abs()
+_dP  = (wave_clip["Kt_canon"] - wave_clip["Kt_PSD"]).abs()
+_dLP = (wave_clip["Kt_LS"]    - wave_clip["Kt_PSD"]).abs()
+_override = (_dF > OVERRIDE_THRESHOLD) & (_dP > OVERRIDE_THRESHOLD) & (_dLP < OVERRIDE_THRESHOLD)
+wave_clip["Kt_override"] = _override
+wave_clip["Kt_eff"] = np.where(_override, wave_clip["Kt_LS"], wave_clip["Kt_canon"])
+
+print(f"\n   K_t override (FFT → LS) fires on "
+      f"{int(_override.sum())} of {len(wave_clip)} runs "
+      f"(threshold |ΔKt| > {OVERRIDE_THRESHOLD}, LS+PSD agreement required)")
+if _override.any():
+    _cols = ["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]",
+             "WindCondition", "Mooring", "PanelCondition",
+             "Kt_canon", "Kt_LS", "Kt_PSD"]
+    print(wave_clip[_override][_cols].to_string())
+    print("   Override paths:")
+    for _p in wave_clip[_override]["path"]:
+        print(f"     {_p.split('/wavedata/', 1)[1]}")
+
 print(f"   freq range: [{wave_clip['WaveFrequencyInput [Hz]'].min():.2f}, "
       f"{wave_clip['WaveFrequencyInput [Hz]'].max():.2f}] Hz")
 
@@ -277,8 +364,9 @@ def _make_view(sub: pd.DataFrame, *,
                 face_color = "none" if hollow else color
                 edge_color = color  if hollow else "black"
                 edge_lw    = 1.1    if hollow else EDGE_LW
+                # y-source: Kt_eff = per-row FFT→LS override (see top-of-file block).
                 ax.scatter(
-                    s["ka"], s["OUT/IN (FFT)"],
+                    s["ka"], s["Kt_eff"],
                     facecolors=face_color, edgecolors=edge_color,
                     marker=marker, s=sz,
                     linewidths=edge_lw, alpha=ALPHA,
@@ -295,7 +383,8 @@ def _make_view(sub: pd.DataFrame, *,
                 # was too dense to read.
                 if draw_fits:
                     ka_cell = s["ka"].to_numpy(float)
-                    kt_cell = s["OUT/IN (FFT)"].to_numpy(float)
+                    # Kt_eff: per-row FFT→LS override rule (see top-of-file block).
+                    kt_cell = s["Kt_eff"].to_numpy(float)
                     if len(ka_cell) >= 2 and ka_cell.std() > 1e-9:
                         p = np.polyfit(ka_cell, kt_cell, deg=1)
                         x_line = np.array([ka_cell.min(), ka_cell.max()])
@@ -318,6 +407,21 @@ def _make_view(sub: pd.DataFrame, *,
     ax.grid(which="major", alpha=0.30, lw=0.6)
     ax.grid(which="minor", alpha=0.15, lw=0.4)
     ax.set_xlim(*XLIM); ax.set_ylim(*YLIM)
+
+    # LS-override count annotation (lower-left corner of the data area).
+    # See top-of-file IMMUTABLE block for the override rule. Always rendered,
+    # even when n=0, so the reader knows the check was applied.
+    _n_ls_swap = int(sub[sub["category"].isin(categories)]["Kt_override"].sum())
+    ax.text(
+        XLIM[0] + 0.02 * (XLIM[1] - XLIM[0]),
+        YLIM[0] + 0.025,
+        f"n = {_n_ls_swap} data estimert med LS",
+        ha="left", va="bottom",
+        fontsize=8, color="#555555", alpha=0.90,
+        bbox=dict(boxstyle="round,pad=0.25",
+                  facecolor="white", alpha=0.80, edgecolor="none"),
+        zorder=5,
+    )
 
     # Configuration legend (cat × wind) — only entries relevant to this view.
     # Reverse-panel above_50 entries render hollow (face='none'); the wind
@@ -443,13 +547,25 @@ def _make_view(sub: pd.DataFrame, *,
             f"Encoding: same as parent — colour shade encodes mooring (within "
             f"red/blue families); marker family encodes mooring family "
             f"(○/□/△ for below; 6/5/4-pt stars for above_50). "
-            f"Shared XLIM/YLIM with the parent for direct visual comparison."
+            f"Shared XLIM/YLIM with the parent for direct visual comparison. "
+            f"K_t SOURCE: canonical OUT/IN (FFT) with per-row LS+PSD override "
+            f"— if |Kt_FFT−Kt_LS|>{OVERRIDE_THRESHOLD} AND "
+            f"|Kt_FFT−Kt_PSD|>{OVERRIDE_THRESHOLD} AND "
+            f"|Kt_LS−Kt_PSD|<{OVERRIDE_THRESHOLD}, use Kt_LS (FFT broken on "
+            f"that run — typically by cut_samples breaking window cycle "
+            f"coherence). Override fires on 3/399 in-scope runs across the "
+            f"full dataset, none of which is in the canon thesis-band scope. "
+            f"See script's top-of-file IMMUTABLE block."
         ),
         extra_stats={
             "n_total":  len(sub_view),
             **{f"n_{c}": int((sub_view["category"] == c).sum()) for c in categories},
             "ka_min":   float(sub_view["ka"].min()),
             "ka_max":   float(sub_view["ka"].max()),
+            # n_kt_override = runs in this view where the FFT-vs-LS+PSD
+            # rule swapped Kt_FFT for Kt_LS. See top-of-script IMMUTABLE.
+            "n_kt_override": int(sub_view["Kt_override"].sum()),
+            "kt_override_threshold": OVERRIDE_THRESHOLD,
         },
     )
     pu.write_figure_stub(_meta_stub, plot_type=plot_type,

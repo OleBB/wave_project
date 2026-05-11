@@ -237,15 +237,24 @@ def _draw_damping_freq_ax(
 
 
 def _make_damping_freq_fig(
-    stats_df: pd.DataFrame, panel: str, amp: float, figsize: tuple = (5, 4)
+    stats_df: pd.DataFrame, panel: str, amp: float, figsize: tuple = (5, 4),
+    wind_color_map: dict | None = None,
 ) -> plt.Figure:
     """
     Single axes: OUT/IN vs frequency for one (panel, amplitude) combination.
     Colour = wind condition. Marker shape = amplitude tier (○ A1, □ A2, △ A3),
     consistent with the rest of CH05 — trains the reader's eye.
     No internal faceting — LaTeX arranges subfigures.
+
+    `wind_color_map` (optional): per-wind colour override. When provided,
+    replaces the project-wide `WIND_COLOR_MAP` for this figure only.
+    Used by the over-mooring damping_freq script to render with the
+    firebrick/steel-blue palette that matches `ch05_damping_overmooring_scatter*`.
     """
     apply_thesis_style()   # NewComputerModern body font (idempotent).
+    # Per-figure colour resolution: caller-provided override wins; otherwise
+    # fall back to the project-wide canonical palette.
+    _color_map = wind_color_map if wind_color_map else WIND_COLOR_MAP
     subset = stats_df[
         (stats_df[GC.PANEL_CONDITION] == panel) &
         (stats_df[GC.WAVE_AMPLITUDE_INPUT] == amp)
@@ -281,12 +290,15 @@ def _make_damping_freq_fig(
     for _key, grp in subset.groupby(_group_keys):
         if _has_mooring:
             wind, mooring = _key
+            # MOORING_WIND_COLORS still wins on multi-mooring figures
+            # (loose230 vs loose300 split); fall through to _color_map
+            # for any wind not in that dict.
             color = (MOORING_WIND_COLORS.get((wind, mooring))
-                     or WIND_COLOR_MAP.get(wind))
+                     or _color_map.get(wind))
             label_base = f"{WIND_LEGEND.get(wind, wind_to_label(wind))}, {mooring}"
         else:
             wind = _key
-            color = WIND_COLOR_MAP.get(wind)
+            color = _color_map.get(wind)
             label_base = WIND_LEGEND.get(wind, wind_to_label(wind))
         grp = grp.sort_values(GC.WAVE_FREQUENCY_INPUT)
         # Append per-series ka range to the legend label when the grouper
@@ -301,16 +313,15 @@ def _make_damping_freq_fig(
             freq_to_k(grp[GC.WAVE_FREQUENCY_INPUT].values), grp["mean_out_in"],
             yerr=grp["std_out_in"],
             label=label, color=color,
-            marker=marker, markersize=0.5, linewidth=1.4,
-            # Errorbars: doubled stroke + doubled cap (2026-05-09) — only 4
-            # freq points on the x-axis with lots of lateral room, so cap
-            # length is free to expand without bumping neighbours. The
-            # ~0.005–0.04 within-mooring spread now reads clearly against
-            # the ~0.05 between-curve gap. Marker outline (black, 0.4px)
-            # matches the convention in ch05_damping_*_scatter_ka
-            # (EDGE_LW=0.4) — same visual language across freq + ka figs.
-            markeredgecolor="black", markeredgewidth=0.4, ecolor="black",
-            elinewidth=2.0, capsize=10, capthick=4.0,
+            marker=marker, markersize=5, linewidth=1.4,
+            # Errorbars: tiny coloured bars matching the wind colour
+            # (reverted 2026-05-11 from the 2026-05-09 doubled-black style,
+            # which visually overshadowed the data on cells with n=2 and
+            # genuine ~0.05 spread — e.g. 1.6 Hz fullwind A3 over-mooring).
+            # Marker outline (black, 0.4px) matches the convention in
+            # ch05_damping_*_scatter_ka (EDGE_LW=0.4).
+            markeredgecolor="black", markeredgewidth=0.4, ecolor=color,
+            elinewidth=1.0, capsize=3, capthick=1.0,
         )
     ax.axhline(1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
     # ΔK_t labels: drawn ONLY in the no-mooring-split case. With 4 series
@@ -380,6 +391,10 @@ def plot_damping_freq(
     show_plot = plotting.get("show_plot", False)
     save_plot = plotting.get("save_plot", False)
     figsize   = plotting.get("figsize", (5, 4))
+    # Optional per-figure wind-colour override (e.g. firebrick/steel-blue
+    # for the over-mooring damping_freq sibling). Defaults to the canonical
+    # WIND_COLOR_MAP via _make_damping_freq_fig's `wind_color_map=None`.
+    wind_color_map = plotting.get("wind_color_map")
 
     panel_conditions = sorted(stats_df[GC.PANEL_CONDITION].unique())
     amplitudes       = sorted(stats_df[GC.WAVE_AMPLITUDE_INPUT].unique())
@@ -407,7 +422,8 @@ def plot_damping_freq(
     if show_plot:
         for panel in panel_conditions:
             for amp in amplitudes:
-                fig = _make_damping_freq_fig(stats_df, panel, amp, figsize=figsize)
+                fig = _make_damping_freq_fig(stats_df, panel, amp, figsize=figsize,
+                                              wind_color_map=wind_color_map)
                 plt.show()
 
     if save_plot:
@@ -478,7 +494,8 @@ def plot_damping_freq(
         subfig_captions = []
         for panel in panel_conditions:
             for amp in amplitudes:
-                fig_s = _make_damping_freq_fig(stats_df, panel, amp, figsize=figsize)
+                fig_s = _make_damping_freq_fig(stats_df, panel, amp, figsize=figsize,
+                                                wind_color_map=wind_color_map)
                 amp_tag = amp_to_tag(amp)
                 fname = f"{figure_name}_{panel}_{amp_tag}"
                 _save_figure(fig_s, fname, save_pgf=True)

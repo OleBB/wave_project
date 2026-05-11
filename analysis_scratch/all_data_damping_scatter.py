@@ -1,23 +1,35 @@
 """
-All-data damping scatter (CH05 supplementary)
-==============================================
+All-data damping scatter (CH05 supplementary, k-axis)
+======================================================
 
-Cross-condition pattern check: OUT/IN(FFT) for every quality-ok,
-full-panel wave run across the full experimental record (cond1 h272/high,
-cond2 h136/high, cond3 h100/high WRONG, cond4 h100/low — final, plus the
-legacy Nov-2025 probe config). The thesis-headline result uses cond4 only
-at 1.3–1.6 Hz; this figure shows the broader band so the reader can see
-the cond4 cluster in context.
+Cross-condition pattern check: K_t (OUT/IN with per-row LS+PSD override)
+for every quality-ok, full+reverse-panel wave run across the broader
+experimental record. The thesis-headline §1 result uses canon (cond4
+h100/lowrange) loose300 only at 1.3–1.6 Hz; this figure shows the wider
+band and the other moorings so the reader can see the canonical cluster
+in context.
 
-Visual language (matches ch05_damping_freq, ch05_damping_ka):
-  - Wind condition  → colour (WIND_COLOR_MAP: blue=no, red=full)
-  - Amplitude tier  → marker shape (○ = A1 = 0.1V, □ = A2 = 0.2V, △ = A3 = 0.3V)
-  - Hardware        → marker fill (filled = cond4 final, hollow = earlier)
+Visual encoding (mooring × panel — mirrors the ka sibling
+`all_data_damping_scatter_ka.py` and the k-axis under/over script
+`under_and_over_mooring_scatter_k.py`):
 
-The hardware dimension was the primary colour axis in v1 (5 distinct
-colours). v2 (this file, 2026-04-28) downgrades it to a fill modifier —
-the canonical cond4 cluster reads as solid colour; earlier hardware reads
-as hollow markers in the same wind/amp encoding. The v1 is archived at
+  - 4 categories: below_loose300 full | below_loose230 full
+                  above_50 full     | above_50 reverse
+  - Mooring × wind → colour:
+      below_loose300:  canonical red / blue   (WIND_COLOR_MAP)
+      below_loose230:  light salmon / light blue
+      above_50:        firebrick / steel blue
+  - Mooring family → marker family:
+      below moorings:  ○ A1, □ A2, △ A3
+      above_50:        D  A1, P  A2, h  A3
+  - above_50 reverse-panel: hollow markers (face='none', colour to edge)
+
+History: this script was rewritten 2026-05-11 from the earlier
+hardware-based encoding (cond4 final vs earlier hardware, filled vs
+hollow) to the mooring × panel encoding used by the ka sibling. The
+old hardware-encoded v2 is recoverable from git history (search for
+`assign_condition` and `FINAL_CONDITION = "cond4_h100_low"`). A v1
+with hardware as the primary colour axis is archived at
     ignore_this_archive/analysis_scratch/all_data_damping_scatter_v1_2026-04-28.{py,pdf,_summary.csv}
 
 Run from repo root:
@@ -67,6 +79,42 @@ from wavescripts.plot_utils import (
 # r"\usepackage{siunitx}" to text.latex.preamble — slower but literal.
 apply_thesis_style()
 
+# ── K_t SOURCE: FFT canonical, with three-way LS+PSD fallback ─────────────────
+# IMPORTANT — read before changing anything that touches y-values.
+#
+# K_t plotted on this figure is NOT a flat `OUT/IN (FFT)` read. Per row we
+# compute the canonical FFT K_t and ALSO the LS and PSD K_t (using each
+# row's `in_probes_used` / `out_probes_used` to know which probes to
+# average), then apply a per-row override:
+#
+#     if |Kt_FFT − Kt_LS| > 0.05  AND  |Kt_FFT − Kt_PSD| > 0.05
+#                                AND  |Kt_LS  − Kt_PSD| < 0.05:
+#         use Kt_LS         # FFT is the odd one out; LS+PSD agree → trust them
+#     else:
+#         use Kt_FFT        # canonical
+#
+# Why: a handful of runs have non-zero `cut_samples_*` (e.g. mar13 1.4 Hz
+# A3 nowind above_50, mar19 1.5 Hz A1 fullwind loose230) — those gaps
+# break integer-cycle coherence in the H&G-snapped FFT window and leak
+# the paddle-bin amplitude out, inflating K_t. The LS sinusoid fit at
+# f_paddle and the PSD variance integration are bin-grid-independent
+# and robust to such gaps; when they corroborate each other against
+# FFT, we trust them.
+#
+# Asymmetric in FFT's favour: ONE substitute method disagreeing isn't
+# enough — we require both LS and PSD to disagree with FFT AND to agree
+# with each other. Threshold 0.05 sits well above measurement noise:
+# next-nearest non-trigger has |Kt_FFT − Kt_LS| ≤ 0.03 across the
+# in-scope dataset, clean separation from the few triggered runs.
+#
+# Sibling scripts that implement the identical rule:
+#   - analysis_scratch/under_and_over_mooring_scatter_k.py    (k-axis under/over)
+#   - analysis_scratch/all_data_damping_scatter_ka.py         (ka-axis all/under/over)
+# Keep all three in sync if you change anything here.
+#
+# Kill-switch: set OVERRIDE_THRESHOLD = float("inf") to revert to pure FFT.
+OVERRIDE_THRESHOLD = 0.05
+
 # ── I/O ────────────────────────────────────────────────────────────────────────
 SCRATCH_PDF = Path(__file__).parent / "all_data_damping_scatter.pdf"
 SCRATCH_CSV = Path(__file__).parent / "all_data_damping_scatter_summary.csv"
@@ -85,38 +133,40 @@ meta, _, _, _ = load_analysis_data(*all_dirs, load_processed=False)
 print(f"   {len(meta)} total rows")
 
 # ── 2. Classify and filter ─────────────────────────────────────────────────────
-def assign_condition(row):
-    in_pos = row.get("in_position", None)
-    if in_pos == "9373/250":
-        return "legacy_nov2025"
-    h = row.get("probe_height_mm", PROBE_HEIGHT_DEFAULT_MM)
-    r = row.get("probe_range_mode", "high")
-    if pd.isna(h):
-        h = PROBE_HEIGHT_DEFAULT_MM
-    h = int(h)
-    if h == 272 and r == "high":
-        return "cond1_h272_high"
-    if h == 136 and r == "high":
-        return "cond2_h136_high"
-    if h == 100 and r == "high":
-        return "cond3_h100_high_WRONG"
-    if h == 100 and r == "low":
-        return "cond4_h100_low"
+# Mooring × panel-orientation category — mirrors the ka sibling (see top-of-file
+# IMMUTABLE block sibling cross-reference). Replaces the earlier hardware-based
+# encoding (cond1/2/3/4 + legacy) — that lens lives in
+# `ignore_this_archive/analysis_scratch/all_data_damping_scatter_hardware_2026-04-28/`
+# via git history if anyone wants to recover it.
+def _category(row):
+    m = row.get("Mooring", None)
+    p = row.get("PanelCondition", None)
+    if m == "below_90_loose300" and p == "full":     return "below_loose300_full"
+    if m == "below_90_loose230" and p == "full":     return "below_loose230_full"
+    if m == "above_50"          and p == "full":     return "above_50_full"
+    if m == "above_50"          and p == "reverse":  return "above_50_reverse"
     return "other"
-
-meta["condition"] = meta.apply(assign_condition, axis=1)
 
 wave = meta[
     meta["WaveFrequencyInput [Hz]"].notna()
     & (meta["WaveFrequencyInput [Hz]"] > 0)
-    & (meta["PanelCondition"] == "full")
+    # 2026-05-11: switched from `== "full"` to `isin(["full", "reverse"])`
+    # so the above_50 reverse-panel runs join the figure (panel-pooled
+    # for above_50; below moorings only have full panel in canon).
+    # Encoding mirrors the ka sibling (mooring × panel, not hardware).
+    & meta["PanelCondition"].isin(["full", "reverse"])
     & (meta["quality_flag"] == "ok")
     & meta["OUT/IN (FFT)"].notna()
+    # in/out_probes_used drive the per-method K_t recomputation below.
+    # If they're missing on a row, we can't apply the three-way override
+    # rule, so drop the row from this figure's scope.
+    & meta["in_probes_used"].notna()
+    & meta["out_probes_used"].notna()
 ].copy()
 
 n_extreme = ((wave["OUT/IN (FFT)"] > 2.0) | (wave["OUT/IN (FFT)"] < 0.1)).sum()
 wave_clip = wave[(wave["OUT/IN (FFT)"] <= 2.0) & (wave["OUT/IN (FFT)"] >= 0.1)].copy()
-print(f"   {len(wave)} wave/fullpanel/quality=ok runs  ({n_extreme} extreme outliers clipped)")
+print(f"   {len(wave)} wave/quality=ok runs  ({n_extreme} extreme outliers clipped)")
 
 wave_clip = wave_clip[wave_clip["WindCondition"].isin(["no", "full"])].copy()
 print(f"   {len(wave_clip)} after restricting to wind ∈ {{no, full}}")
@@ -127,22 +177,70 @@ n_drop_2hz = int((wave_clip["WaveFrequencyInput [Hz]"] >= 2.0).sum())
 wave_clip = wave_clip[wave_clip["WaveFrequencyInput [Hz]"] < 2.0].copy()
 print(f"   {len(wave_clip)} after dropping {n_drop_2hz} run(s) at f >= 2.0 Hz")
 
+# Drop the 3 oddball above_200 mooring runs (same as ka sibling).
+n_above200 = int((wave_clip["Mooring"] == "above_200").sum())
+wave_clip = wave_clip[wave_clip["Mooring"] != "above_200"].copy()
+if n_above200:
+    print(f"   dropped {n_above200} runs at Mooring=above_200")
+
 wave_clip["k"] = freq_to_k(wave_clip["WaveFrequencyInput [Hz]"].values)
 
-print("\n2. Counts per condition × wind:")
-pivot = wave_clip.groupby(["condition", "WindCondition"]).size().unstack(fill_value=0)
-print(pivot.to_string())
+# ── K_t override rule — see top-of-file IMMUTABLE block for full reasoning ───
+# Per row: recompute K_t under each of the three amplitude methods (FFT, LS,
+# PSD) using `in_probes_used` / `out_probes_used` to know which probes
+# contribute. Then keep canonical FFT unless FFT contradicts BOTH LS and
+# PSD, AND those two agree with each other — in which case use LS.
+def _kt_method(row, method_suffix):
+    inp = [p.strip() for p in str(row["in_probes_used"]).split("+")]
+    out = [p.strip() for p in str(row["out_probes_used"]).split("+")]
+    try:
+        a_in  = float(np.nanmean([row[f"Probe {p} Amplitude{method_suffix}"] for p in inp]))
+        a_out = float(np.nanmean([row[f"Probe {p} Amplitude{method_suffix}"] for p in out]))
+        if a_in <= 0 or not np.isfinite(a_in) or not np.isfinite(a_out):
+            return np.nan
+        return a_out / a_in
+    except KeyError:
+        return np.nan
 
-# Mark the "is final hardware" flag — used to choose filled vs hollow marker.
-FINAL_CONDITION = "cond4_h100_low"
-wave_clip["is_final"] = wave_clip["condition"] == FINAL_CONDITION
+wave_clip["Kt_LS"]    = wave_clip.apply(lambda r: _kt_method(r, " (LS)"),  axis=1)
+wave_clip["Kt_PSD"]   = wave_clip.apply(lambda r: _kt_method(r, " (PSD)"), axis=1)
+wave_clip["Kt_canon"] = wave_clip["OUT/IN (FFT)"].astype(float)
 
-print("\n   final-vs-earlier hardware split:")
-print(wave_clip.groupby(["is_final", "WindCondition"]).size()
+_dF  = (wave_clip["Kt_canon"] - wave_clip["Kt_LS"]).abs()
+_dP  = (wave_clip["Kt_canon"] - wave_clip["Kt_PSD"]).abs()
+_dLP = (wave_clip["Kt_LS"]    - wave_clip["Kt_PSD"]).abs()
+_override = (_dF > OVERRIDE_THRESHOLD) & (_dP > OVERRIDE_THRESHOLD) & (_dLP < OVERRIDE_THRESHOLD)
+wave_clip["Kt_override"] = _override
+wave_clip["Kt_eff"] = np.where(_override, wave_clip["Kt_LS"], wave_clip["Kt_canon"])
+
+print(f"\n   K_t override (FFT → LS) fires on "
+      f"{int(_override.sum())} of {len(wave_clip)} runs "
+      f"(threshold |ΔKt| > {OVERRIDE_THRESHOLD}, LS+PSD agreement required)")
+if _override.any():
+    _cols = ["WaveFrequencyInput [Hz]", "WaveAmplitudeInput [Volt]",
+             "WindCondition", "PanelCondition",
+             "Kt_canon", "Kt_LS", "Kt_PSD"]
+    if "Mooring" in wave_clip.columns:
+        _cols.insert(3, "Mooring")
+    print(wave_clip[_override][_cols].to_string())
+    print("   Override paths:")
+    for _p in wave_clip[_override]["path"]:
+        print(f"     {_p.split('/wavedata/', 1)[1]}")
+
+# ── Categorize by (mooring × panel) and prune "other" ─────────────────────────
+wave_clip["category"] = wave_clip.apply(_category, axis=1)
+n_other = int((wave_clip["category"] == "other").sum())
+if n_other:
+    print(f"   {n_other} runs in 'other' category dropped")
+    wave_clip = wave_clip[wave_clip["category"] != "other"].copy()
+
+print("\n2. Counts per category × wind:")
+print(wave_clip.groupby(["category", "WindCondition"]).size()
                 .unstack(fill_value=0).to_string())
+print(f"   total: {len(wave_clip)} runs")
 
-# ── 3. Save summary CSV (same fields as v1, plus is_final) ─────────────────────
-summary = (wave_clip.groupby(["condition", "is_final", "WindCondition", "PanelCondition"])
+# ── 3. Save summary CSV grouped by mooring×panel category ────────────────────
+summary = (wave_clip.groupby(["category", "WindCondition", "PanelCondition"])
                      .agg(n=("path", "count"),
                           freq_min=("WaveFrequencyInput [Hz]", "min"),
                           freq_max=("WaveFrequencyInput [Hz]", "max"),
@@ -152,88 +250,90 @@ summary = (wave_clip.groupby(["condition", "is_final", "WindCondition", "PanelCo
 summary.to_csv(SCRATCH_CSV, index=False)
 print(f"\n   Summary → {SCRATCH_CSV.relative_to(BASE)}")
 
-# ── 4. Plot ───────────────────────────────────────────────────────────────────
-# Wind condition → colour (thesis-wide WIND_COLOR_MAP).
-WIND_LABEL = {"no": "uten vind", "full": "med vind"}
+# ── 4. Plot — mooring × panel encoding (mirrors ka all-data + k-axis under/over) ──
+# Replaces the earlier hardware-based encoding (cond4 vs earlier, filled vs
+# hollow). Sibling scripts that use the identical scheme:
+#   - analysis_scratch/all_data_damping_scatter_ka.py (all-data, under, over)
+#   - analysis_scratch/under_and_over_mooring_scatter_k.py (under, over)
+# Above-water (above_50) gets a distinct marker family (D/P/h) and a muted
+# colour palette (firebrick / steel blue) so the over-vs-under K_t gap reads
+# at a glance.
+ABOVE_FULLWIND_COLOR = "#B22222"   # firebrick (muted dark red)
+ABOVE_NOWIND_COLOR   = "#4682B4"   # steel blue (muted blue)
 
-# Amplitude → marker (paddle-voltage → tier shape).
-AMP_MARKER = {0.10: "o", 0.20: "s", 0.30: "^"}   # circle / square / triangle
-AMP_MARKER_DEFAULT = "X"                          # any unexpected V (e.g. 0.6)
-MARKER_SIZE = 55                                  # constant — shape carries the info
+COLORS = {
+    ("below_loose300_full", "no"):   WIND_COLOR_MAP["no"],   # canonical blue
+    ("below_loose300_full", "full"): WIND_COLOR_MAP["full"], # canonical red
+    ("below_loose230_full", "no"):   "#9ECAE1",              # light blue
+    ("below_loose230_full", "full"): "#F4815A",              # orange salmon
+    ("above_50_full",       "no"):   ABOVE_NOWIND_COLOR,
+    ("above_50_full",       "full"): ABOVE_FULLWIND_COLOR,
+    ("above_50_reverse",    "no"):   ABOVE_NOWIND_COLOR,
+    ("above_50_reverse",    "full"): ABOVE_FULLWIND_COLOR,
+}
+HOLLOW_CATEGORIES = {"above_50_reverse"}
+CATEGORY_LABELS = {
+    "below_loose300_full": "Under, 30 cm",
+    "below_loose230_full": "Under, 23 cm",
+    "above_50_full":       "Over",
+    "above_50_reverse":    "Over, revers",
+}
+# Paint order: above_50 first (background), below moorings on top — canonical
+# loose300 stays most visible. Mirrors the ka sibling.
+CATEGORY_ORDER = [
+    "above_50_full", "above_50_reverse",
+    "below_loose230_full", "below_loose300_full",
+]
+MARKERS = {
+    "below_loose300_full": {0.10: "o",  0.20: "s",  0.30: "^"},
+    "below_loose230_full": {0.10: "o",  0.20: "s",  0.30: "^"},
+    "above_50_full":       {0.10: "D",  0.20: "P",  0.30: "h"},
+    "above_50_reverse":    {0.10: "D",  0.20: "P",  0.30: "h"},
+}
+WIND_LABEL = {"no": "uten vind", "full": "full vind"}
+MARKER_SIZE = 55
+ALPHA = 0.75
+EDGE_LW = 0.4
 
-# Final-vs-earlier hardware → fill style.
-#   final (cond4):  fully filled with the wind colour (edge slightly darker)
-#   earlier:        hollow (facecolor='none'), edge in the wind colour
-ALPHA_FILLED  = 0.65
-ALPHA_HOLLOW  = 0.85
-EDGE_LW_FILLED = 0.3
-EDGE_LW_HOLLOW = 1.4
+def _round_amp(v): return round(float(v), 2)
 
 
-def _round_amp(v):
-    return round(float(v), 2)
-
-
-# A4 portrait, 1-inch margins → text width 6.27 in, text height 9.69 in.
-# 6.27 × 9.5 fills the page with room for caption (~0.2 in residual).
+# A4 portrait, 1-inch margins → text width 6.27 in. Same aspect as before.
 fig, ax = plt.subplots(figsize=(6.27, 9.5))
 
-# Plot order: earlier hardware first (so the more-numerous final cond4
-# markers paint over them — keeps the canonical data on top).
-for is_final in [False, True]:
-    sub_h = wave_clip[wave_clip["is_final"] == is_final]
-    if sub_h.empty:
+for cat in CATEGORY_ORDER:
+    sub_cat = wave_clip[wave_clip["category"] == cat]
+    if sub_cat.empty:
         continue
-    for wind, color in [("no", WIND_COLOR_MAP["no"]),
-                        ("full", WIND_COLOR_MAP["full"])]:
-        for amp_v, marker in AMP_MARKER.items():
-            s = sub_h[(sub_h["WindCondition"] == wind)
-                      & (sub_h["WaveAmplitudeInput [Volt]"].apply(_round_amp) == amp_v)]
+    for wind in ("no", "full"):
+        for amp_v in (0.10, 0.20, 0.30):
+            s = sub_cat[(sub_cat["WindCondition"] == wind)
+                        & (sub_cat["WaveAmplitudeInput [Volt]"].apply(_round_amp) == amp_v)]
             if s.empty:
                 continue
-            if is_final:
-                fc = color
-                ec = "black"
-                lw = EDGE_LW_FILLED
-                a  = ALPHA_FILLED
-            else:
-                fc = "none"
-                ec = color
-                lw = EDGE_LW_HOLLOW
-                a  = ALPHA_HOLLOW
+            color  = COLORS.get((cat, wind), "gray")
+            marker = MARKERS[cat][amp_v]
+            sz = MARKER_SIZE * (1.6 if cat.startswith("above_50") else 1.0)
+            hollow = cat in HOLLOW_CATEGORIES
+            face_color = "none" if hollow else color
+            edge_color = color  if hollow else "black"
+            edge_lw    = 1.1    if hollow else EDGE_LW
+            # y-source: Kt_eff = per-row FFT→LS override (see top-of-file block).
             ax.scatter(
-                s["k"], s["OUT/IN (FFT)"],
-                facecolors=fc,
-                edgecolors=ec,
-                marker=marker,
-                s=MARKER_SIZE,
-                linewidths=lw,
-                alpha=a,
-                zorder=3 if is_final else 2,
+                s["k"], s["Kt_eff"],
+                facecolors=face_color, edgecolors=edge_color,
+                marker=marker, s=sz, linewidths=edge_lw, alpha=ALPHA,
+                zorder=3 if cat == "below_loose300_full" else 2,
             )
 
-# Catch-all for amplitudes outside {0.1, 0.2, 0.3} (rare — 0.6 V if any).
-_recognised_amps = set(AMP_MARKER.keys())
+# Catch-all for amplitudes outside {0.1, 0.2, 0.3} — uncommon (mostly 0.6V).
+# Print a note; do NOT plot (no marker mapping for them under this scheme).
+_recognised_amps = {0.10, 0.20, 0.30}
 unknown = wave_clip[~wave_clip["WaveAmplitudeInput [Volt]"]
                     .apply(_round_amp).isin(_recognised_amps)]
 if not unknown.empty:
     print(f"   note: {len(unknown)} runs with amp ∉ {{0.1, 0.2, 0.3}} V "
-          f"plotted as marker '{AMP_MARKER_DEFAULT}'")
-    for is_final in [False, True]:
-        u = unknown[unknown["is_final"] == is_final]
-        if u.empty: continue
-        for wind, color in [("no", WIND_COLOR_MAP["no"]),
-                            ("full", WIND_COLOR_MAP["full"])]:
-            uw = u[u["WindCondition"] == wind]
-            if uw.empty: continue
-            ax.scatter(uw["k"], uw["OUT/IN (FFT)"],
-                       facecolors=(color if is_final else "none"),
-                       edgecolors=("black" if is_final else color),
-                       marker=AMP_MARKER_DEFAULT,
-                       s=MARKER_SIZE,
-                       linewidths=(EDGE_LW_FILLED if is_final else EDGE_LW_HOLLOW),
-                       alpha=(ALPHA_FILLED if is_final else ALPHA_HOLLOW),
-                       zorder=3 if is_final else 2)
+          f"NOT plotted (mooring×amp marker scheme has no slot for them).")
 
 # Thesis-scope band (1.3–1.6 Hz) → light blue axvspan in k-space.
 thesis_k_lo = float(freq_to_k(np.array([1.3]))[0])
@@ -265,6 +365,22 @@ ax.grid(which="minor", alpha=0.15, lw=0.4)
 # not informative for the cross-condition pattern check.
 ax.set_ylim(0.1, 1.18)
 
+# LS-override count annotation (lower-left corner). See top-of-file IMMUTABLE
+# block for the override rule. Always rendered, even when n=0, so the reader
+# knows the check was applied.
+_n_ls_swap = int(wave_clip["Kt_override"].sum())
+_xlim_lo, _xlim_hi = ax.get_xlim()
+ax.text(
+    _xlim_lo + 0.02 * (_xlim_hi - _xlim_lo),
+    0.1 + 0.025,
+    f"n = {_n_ls_swap} data estimert med LS",
+    ha="left", va="bottom",
+    fontsize=8, color="#555555", alpha=0.90,
+    bbox=dict(boxstyle="round,pad=0.25",
+              facecolor="white", alpha=0.80, edgecolor="none"),
+    zorder=5,
+)
+
 # Top axis: every frequency that actually appears in the dataset, as ticks
 # (instead of the default sparse "every 0.5 Hz" labels).
 secax = add_freq_axis(ax)
@@ -276,83 +392,62 @@ secax.set_xticks(_used_freqs)
 secax.set_xticklabels([f"{f:.1f}" for f in _used_freqs])
 secax.tick_params(labelsize=7)
 
-# ── Legend ────────────────────────────────────────────────────────────────────
-# Three small legends, one per dimension.
-# ka range per wind condition for the legend — same data subset the scatter
-# plots. Prefer "IN ka (FFT)" from meta (post-2026-05-07 fix); fallback
-# computes it from k × IN-amplitude with mm→m conversion.
-_ka_ranges = {}
-for _w in ["no", "full"]:
-    _sub = wave_clip[wave_clip["WindCondition"] == _w]
-    if "IN ka (FFT)" in _sub.columns:
-        _ka_vals = _sub["IN ka (FFT)"].dropna()
-    elif "IN Amplitude (FFT)" in _sub.columns:
-        _ka_vals = (_sub["k"] * _sub["IN Amplitude (FFT)"] * 1e-3).dropna()
-    else:
-        _ka_vals = pd.Series(dtype=float)
-    _ka_ranges[_w] = (float(_ka_vals.min()), float(_ka_vals.max())) if len(_ka_vals) else None
+# ── Legend — two stacked legends (mirrors ka sibling _make_view) ─────────────
+#   Konfigurasjon  (cat × wind, 8 entries — 4 categories × 2 winds, 2-col layout)
+#   Amplitude      (3 amps × 2 marker families = 6 entries, 2-col layout)
+config_handles = []
+for cat in CATEGORY_ORDER[::-1]:
+    is_above = cat.startswith("above_50")
+    cat_marker_exemplar = "D" if is_above else "o"
+    cat_msize = 11 if is_above else 9
+    hollow = cat in HOLLOW_CATEGORIES
+    for wind, wlabel in (("full", "full vind"), ("no", "uten vind")):
+        wind_color = COLORS[(cat, wind)]
+        mfc = "none"      if hollow else wind_color
+        mec = wind_color  if hollow else "black"
+        mew = 1.1         if hollow else 0.4
+        config_handles.append(
+            mlines.Line2D([], [],
+                          marker=cat_marker_exemplar, linestyle="None",
+                          markerfacecolor=mfc, markeredgecolor=mec,
+                          markeredgewidth=mew, markersize=cat_msize,
+                          label=f"{CATEGORY_LABELS[cat]}, {wlabel}")
+        )
+amp_handles = []
+for v in (0.10, 0.20, 0.30):
+    amp_handles.append(
+        mlines.Line2D([], [], color="black",
+                      marker=MARKERS["below_loose300_full"][v], linestyle="None",
+                      markersize=8, markerfacecolor="lightgray",
+                      markeredgecolor="black", markeredgewidth=0.3,
+                      label=f"{amp_to_label(v)}  (under)"))
+    amp_handles.append(
+        mlines.Line2D([], [], color="black",
+                      marker=MARKERS["above_50_full"][v], linestyle="None",
+                      markersize=10, markerfacecolor="lightgray",
+                      markeredgecolor="black", markeredgewidth=0.3,
+                      label=f"{amp_to_label(v)}  (over)"))
 
-def _wind_label_with_ka(w):
-    rng = _ka_ranges.get(w)
-    return WIND_LABEL[w] if rng is None else \
-        f"{WIND_LABEL[w]}  ($ka$: {rng[0]:.3f}–{rng[1]:.3f})"
-
-wind_handles = [
-    mlines.Line2D([], [], color=WIND_COLOR_MAP[w],
-                  linestyle="-", linewidth=5,
-                  label=_wind_label_with_ka(w))
-    for w in ["no", "full"]
-]
-amp_handles = [
-    mlines.Line2D([], [], color="black",
-                  marker=AMP_MARKER[v], linestyle="None", markersize=8,
-                  markerfacecolor="lightgray", markeredgecolor="black",
-                  markeredgewidth=0.3,
-                  label=amp_to_label(v))
-    for v in (0.10, 0.20, 0.30)
-]
-hardware_handles = [
-    mlines.Line2D([], [], color="black",
-                  marker="o", linestyle="None", markersize=8,
-                  markerfacecolor="black", markeredgecolor="black",
-                  markeredgewidth=0.3,
-                  label="endelig oppsett"),
-    mlines.Line2D([], [], color="black",
-                  marker="o", linestyle="None", markersize=8,
-                  markerfacecolor="none", markeredgecolor="black",
-                  markeredgewidth=1.4,
-                  label="tidligere oppsett"),
-]
-
-# Layout: all three legends stacked along the right edge, top → bottom:
-#   Probeinnstillinger  (hardware fill, 2 entries)
-#   Vind                (wind colour, 2 entries)
-#   Amplitude           (marker shape, 3 entries)
-# y-anchors are in axes-fraction; tweak if boxes overlap or there's a gap.
-leg_hw = ax.legend(handles=hardware_handles, loc="upper right",
-                   bbox_to_anchor=(0.995, 0.995),
-                   fontsize=8, framealpha=0.92,
-                   title="Eksperiment", title_fontsize=8)
-ax.add_artist(leg_hw)
-
-leg_w = ax.legend(handles=wind_handles, loc="upper right",
-                  bbox_to_anchor=(0.995, 0.86),
-                  fontsize=8, framealpha=0.92,
-                  title="Vind", title_fontsize=8)
-ax.add_artist(leg_w)
-
+leg_cfg = ax.legend(handles=config_handles, loc="upper right",
+                    bbox_to_anchor=(0.995, 0.995),
+                    fontsize=7.5, framealpha=0.92,
+                    title="Konfigurasjon", title_fontsize=8,
+                    ncol=2)
+ax.add_artist(leg_cfg)
+fig.canvas.draw()
+leg_cfg_bbox = leg_cfg.get_window_extent().transformed(ax.transAxes.inverted())
+amp_anchor_y = leg_cfg_bbox.y0 - 0.010
 ax.legend(handles=amp_handles, loc="upper right",
-          bbox_to_anchor=(0.995, 0.74),
-          fontsize=8, framealpha=0.92,
-          title="Amplitude", title_fontsize=8)
+          bbox_to_anchor=(0.995, amp_anchor_y),
+          fontsize=7, framealpha=0.92,
+          title="Amplitude", title_fontsize=8, ncol=2)
 
-# In-figure subtitle removed by request — counts (n_total, n_final, etc.)
-# go into the caption manually. Print them here so they're easy to copy.
+# Diagnostic prints — for caption authoring.
 n_total = len(wave_clip)
-n_final = int(wave_clip["is_final"].sum())
+n_over  = int((wave_clip["category"].str.startswith("above_50")).sum())
+n_under = int((wave_clip["category"].str.startswith("below_")).sum())
 print(f"\n   For caption use:  n = {n_total} kjøringer  "
-      f"({n_final} fra endelig oppsett, "
-      f"{n_total - n_final} fra tidligere oppsett).")
+      f"(over: {n_over}, under: {n_under}).")
 
 fig.subplots_adjust(left=0.10, right=0.98, top=0.95, bottom=0.06)
 
@@ -390,40 +485,55 @@ pu.ACTIVE_DATASETS = [Path(d).name for d in all_dirs]
 _meta_stub = pu.build_fig_meta(
     {
         "filters": {
-            "PanelCondition":   "full",
+            "PanelCondition":   "full + reverse",
             "WindCondition":    "no, full",
             "quality_flag":     "ok",
+            "categories":       ", ".join(CATEGORY_ORDER),
         },
         "plotting": {"figure_name": THESIS_NAME},
     },
     chapter=CHAPTER,
     extra={"script": "analysis_scratch/all_data_damping_scatter.py"},
     computed_in=("analysis_scratch/all_data_damping_scatter.py "
-                 "(cross-condition supplementary scatter)"),
+                 "(cross-condition supplementary scatter, mooring × panel encoding)"),
     data_class="DELEG",
     findings_doc=None,
     fft_window_hz=0.1,
     extra_params=(
         f"all PROCESSED-* folders ({len(all_dirs)}). "
-        f"Filter: wave runs (WaveFrequencyInput > 0), full panel, quality_flag=ok, "
-        f"OUT/IN(FFT) ∈ [0.1, 2.0], wind ∈ {{no, full}}, freq < 2.0 Hz. "
-        f"Encoding: wind → colour (WIND_COLOR_MAP), amplitude → marker shape "
-        f"(○=A1, □=A2, △=A3), hardware → fill (filled = cond4 final, "
-        f"hollow = earlier). Y-axis capped at 1.18 — points above are "
+        f"Filter: wave runs (WaveFrequencyInput > 0), PanelCondition ∈ "
+        f"{{full, reverse}}, quality_flag=ok, OUT/IN(FFT) ∈ [0.1, 2.0], "
+        f"wind ∈ {{no, full}}, freq < 2.0 Hz, Mooring != 'above_200'. "
+        f"Encoding: mooring × panel category — colour shade encodes mooring "
+        f"(canonical red/blue for loose300, light salmon/light blue for "
+        f"loose230, firebrick/steel blue for above_50). Marker family encodes "
+        f"mooring family (○/□/△ for below; D/P/h for above_50, hollow on "
+        f"reverse panel). Y-axis capped at 1.18 — points above are "
         f"wind-contamination / low-SNR artefacts (CLAUDE.md §16). "
-        f"Top axis: every used frequency (15 ticks, 0.5–1.9 Hz). "
-        f"Body font: NewComputerModern10 via apply_thesis_style()."
+        f"Top axis: every used frequency. Thesis-scope band (1.3–1.6 Hz) "
+        f"shaded as a light-blue axvspan. Body font: NewComputerModern10. "
+        f"K_t SOURCE: canonical OUT/IN (FFT) with per-row LS+PSD override "
+        f"— if |Kt_FFT−Kt_LS|>{OVERRIDE_THRESHOLD} AND "
+        f"|Kt_FFT−Kt_PSD|>{OVERRIDE_THRESHOLD} AND "
+        f"|Kt_LS−Kt_PSD|<{OVERRIDE_THRESHOLD}, use Kt_LS (FFT broken on "
+        f"that run — typically by cut_samples breaking window cycle "
+        f"coherence). See script's top-of-file IMMUTABLE block."
     ),
     extra_stats={
         "n_total":           len(wave_clip),
-        "n_final_cond4":     n_final,
-        "n_earlier_hw":      len(wave_clip) - n_final,
+        **{f"n_{c}": int((wave_clip["category"] == c).sum()) for c in CATEGORY_ORDER},
+        "n_above_50":        int(wave_clip["category"].str.startswith("above_50").sum()),
+        "n_below_90":        int(wave_clip["category"].str.startswith("below_").sum()),
         "n_extreme_clipped": int(n_extreme),
         "n_drop_2hz":        int(n_drop_2hz),
         "freq_min":          float(wave_clip["WaveFrequencyInput [Hz]"].min()),
         "freq_max":          float(wave_clip["WaveFrequencyInput [Hz]"].max()),
         "k_min":             float(wave_clip["k"].min()),
         "k_max":             float(wave_clip["k"].max()),
+        # n_kt_override = runs where the FFT-vs-LS+PSD rule swapped
+        # Kt_FFT for Kt_LS. See top-of-script IMMUTABLE.
+        "n_kt_override":     int(wave_clip["Kt_override"].sum()),
+        "kt_override_threshold": OVERRIDE_THRESHOLD,
     },
 )
 pu.write_figure_stub(_meta_stub, plot_type="damping_all_data_scatter",

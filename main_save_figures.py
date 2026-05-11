@@ -305,7 +305,9 @@ CHAPTER 05 — RESULTS
   §4c   ch05_full_vs_reverse_at_1_3hz_ka  [DELEG] ~  Combined: same data as §4b, all 3 amps in one scatter (axes match §4)
   §5    (removed — was Swell/Wind/Total band scatter; PSD-band columns dropped 2026-05-02)
   §6    (moved → CH04 §4-3b as ch04_reconstructed)
-  §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions
+  §7    ch05_damping_all_data_scatter    [DELEG] ✓  Supplementary: OUT/IN across ALL conditions (k-axis)
+        ch05_damping_undermooring_scatter [DELEG] ✓     └─ subset: under-water moorings (loose300+loose230, full panel) — k-axis
+        ch05_damping_overmooring_scatter  [DELEG] ✓     └─ subset: over-water mooring (above_50, full+reverse pooled) — k-axis
   §8    ch05_damping_all_data_scatter_ka      [DELEG] ✓  All-data ka-scatter (3 mooring categories: loose300/loose230/above_50)
         ch05_damping_undermooring_scatter_ka  [DELEG] ✓     └─ subset: under-water moorings only (loose300+loose230, full panel)
         ch05_damping_overmooring_scatter_ka   [DELEG] ✓     └─ subset: over-water mooring only (above_50, full+reverse pooled)
@@ -594,8 +596,11 @@ FIGURE_CAPTIONS: dict[str, str] = {
 
     # § 6 — moved to CH04 §4-3b as ch04_reconstructed (paired with ch04_fft_wave)
 
-    # § 7 — All-data scatter (supplementary)
+    # § 7 — All-data scatter (supplementary, k-axis)
     "ch05_damping_all_data_scatter":   "Alle kjøringer. Vi skiller primært mellom det endelige oppsettet og alle andre oppsett.",
+    "ch05_damping_undermooring_scatter": "Transmisjon mot bølgetall $k$. Paneler fortøyd under vann.",
+    "ch05_damping_overmooring_scatter":  "Transmisjon mot bølgetall $k$. Paneler fortøyd over vann.",
+    # § 8 — All-data scatter (supplementary, ka-axis)
     "ch05_damping_all_data_scatter_ka":     "Transmisjon mot bølgetall $ka$. Paneler fortøyd på flere måter.",
     "ch05_damping_undermooring_scatter_ka": "Transmisjon mot bølgetall $ka$. Paneler fortøyd under vann",
     "ch05_damping_overmooring_scatter_ka":  "Transmisjon mot bølgetall $ka$. Paneler fortøyd over vann",
@@ -699,6 +704,8 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
     "ch05_mooring_focus_at_1_3hz_ka_A3": "Mooring + panelretning, $A_3$.",
     "ch05_full_vs_reverse_at_1_3hz_ka":  "Mooring + panelretning ved 1.30 Hz — alle amplituder samlet.",
     "ch05_damping_all_data_scatter":   "",
+    "ch05_damping_undermooring_scatter": "Transmisjon mot $k$. Moring under.",
+    "ch05_damping_overmooring_scatter":  "Transmisjon mot $k$. Moring over.",
     "ch05_damping_all_data_scatter_ka":     "Transmisjon mot $ka$. Ulike fortøyninger.",
     "ch05_damping_undermooring_scatter_ka": "Transmisjon mot $ka$. Moring under.",
     "ch05_damping_overmooring_scatter_ka":  "Transmisjon mot $ka$. Moring over.",
@@ -2629,6 +2636,37 @@ _run_delegated_if_missing(
 )
 
 # %%
+# [DATA: DELEG]  — analysis_scratch/under_and_over_mooring_scatter_k.py
+"""
+── CH05 § 7b — k-axis under/over-mooring damping scatter (paired subsets) ───
+k-axis siblings of the §8 ka-axis under/over views. Same mooring×panel
+data subset and categorical encoding as the ka script — only x-axis
+differs (k from dispersion instead of paddle-only ka). Single delegated
+script writes BOTH figures in one run.
+
+  ch05_damping_undermooring_scatter — under-water moorings only
+                                       (loose300 + loose230, full panel)
+  ch05_damping_overmooring_scatter  — over-water mooring only
+                                       (above_50, full + reverse pooled)
+
+K_t source on all three §7 figures (parent + these two subsets) uses the
+per-row LS+PSD override rule documented in each script's top-of-file
+IMMUTABLE block: if |Kt_FFT−Kt_LS| > 0.05 AND |Kt_FFT−Kt_PSD| > 0.05
+AND |Kt_LS−Kt_PSD| < 0.05 → use Kt_LS. Rule fires on a small handful
+of runs across the supplementary scope (typically 1–3 per figure);
+canon thesis-band (1.3–1.6 Hz, h100 lowrange) is unaffected. Each
+figure shows "n = X data estimert med LS" in its lower-left corner.
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/under_and_over_mooring_scatter_k.py",
+    [Path("output/FIGURES/ch05_damping_undermooring_scatter.pdf"),
+     Path("output/TEXFIGU/ch05_damping_undermooring_scatter.tex"),
+     Path("output/FIGURES/ch05_damping_overmooring_scatter.pdf"),
+     Path("output/TEXFIGU/ch05_damping_overmooring_scatter.tex")],
+    label="ch05_damping_under_overmooring_scatter_k",
+)
+
+# %%
 # [DATA: DELEG]  — analysis_scratch/all_data_damping_scatter_ka.py
 """
 ── CH05 § 8 — All-data damping scatter on ka axis (3 coordinated views) ─────
@@ -2653,7 +2691,10 @@ The two child captions cross-reference the parent via \\ref{fig:...}; if
 the parent's caption is reworded, sync the children.
 
 The k-axis sibling `ch05_damping_all_data_scatter` (§7 above) is a
-deliberately separate figure with its own data script — left untouched.
+deliberately separate figure with its own data script and hardware-based
+encoding (cond4 final vs earlier hardware, filled vs hollow). The §7/§7b/§8
+parent-and-subset cluster all use the same per-row LS+PSD override rule
+for K_t (see each script's top-of-file IMMUTABLE block).
 """
 _run_delegated_if_missing(
     "analysis_scratch/all_data_damping_scatter_ka.py",
