@@ -289,6 +289,7 @@ CHAPTER 04 — METHODOLOGY
 
 CHAPTER 05 — RESULTS
   §1    ch05_damping_freq                [META]  ✓  OUT/IN (FFT) vs frequency  ← primary result
+  §1b   ch05_damping_freq_overmooring    [DELEG] ✓     └─ over-forankring sibling (above_50, panel pooled)
   §2    ch05_damping_scatter             [META]  ✓  OUT/IN scatter vs amplitude
   §3    ch05_wind_effect_table           [DELEG] ~  Wind effect: per-(freq,amp) ΔK_t + % gains/reductions table
         ch05_wind_effect_table_by_amp    [DELEG] ✓     └─ same data, sorted amp-outer / freq-inner (sibling layout)
@@ -546,6 +547,12 @@ FIGURE_CAPTIONS: dict[str, str] = {
     "ch05_damping_freq_full_A2":       "Amplitudevalg $A_2$",
     "ch05_damping_freq_full_A3":       "Amplitudevalg $A_3$",
 
+    # § 1 sibling — Damping vs frequency, over-forankring (above_50, panel pooled)
+    "ch05_damping_freq_overmooring":    "Transmisjonskoeffisient mot frekvens, over-forankring (above\\_50). Helpanel og reverspanel slått sammen (begrunnelse: tab:app_panel_pooling). Usikkerhetsstolper viser standardavvik.",
+    "ch05_damping_freq_overmooring_A1": "Amplitudevalg $A_1$",
+    "ch05_damping_freq_overmooring_A2": "Amplitudevalg $A_2$",
+    "ch05_damping_freq_overmooring_A3": "Amplitudevalg $A_3$",
+
     # § 2 — Damping vs amplitude
     "ch05_damping_scatter":            "Transmisjonskoeffisient mot frekvens. Endelig oppsett. Samlet figur med alle tre amplitudene. Usikkerhetsstolper er fjernet.",
 
@@ -672,6 +679,7 @@ FIGURE_CAPTIONS_SHORT: dict[str, str] = {
 
     # ── CHAPTER 05 ───────────────────────────────────────────────────────────
     "ch05_damping_freq":               "Transmisjon mot k. Tre figurer",
+    "ch05_damping_freq_overmooring":    "Transmisjon mot k, over-forankring. Tre figurer",
     "ch05_damping_scatter":            "Transmisjon mot k. Samlet figur ",
     # ch05_wind_effect_table, ch05_wind_effect_table_by_amp,
     # ch05_transmission_wind_{ratios,amplitudes} short captions →
@@ -2222,6 +2230,26 @@ _pu.ACTIVE_DATASETS = sorted(
     if any(date in d.name for date in _active_dates)
 )
 plot_damping_freq(_damping_grouped, _pv_damping_freq)
+
+# %%
+# [DATA: DELEG]  — analysis_scratch/damping_freq_overmooring.py
+"""
+── CH05 § 1b — Damping vs frequency, over-forankring (above_50) ────────────
+Sibling of §1 covering the over-water mooring (above_50). Same x/y/colour
+conventions as ch05_damping_freq_full_A{1,2,3} but full+reverse panel
+pooled (collapse_panels=True; justification: tab:app_panel_pooling).
+
+above_50 data is not in meta_results (which restricts to the two canon
+below_90 folders), so this figure is delegated to its own script that
+loads all PROCESSED-* folders and filters down to Mooring=='above_50'.
+"""
+_run_delegated_if_missing(
+    "analysis_scratch/damping_freq_overmooring.py",
+    [Path("output/TEXFIGU/ch05_damping_freq_overmooring.tex"),
+     *(Path(f"output/FIGURES/ch05_damping_freq_overmooring_{t}.pdf")
+       for t in ("A1", "A2", "A3"))],
+    label="ch05_damping_freq_overmooring",
+)
 
 # %% — moved to main_save_tables.py (3 migrated tables)
 # ch05_damping_freq_table, ch05_mooring_focus_at_1_3hz_table, ch04_plateau_values

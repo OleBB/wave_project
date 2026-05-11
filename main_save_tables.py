@@ -1015,9 +1015,9 @@ script; render here is render-only (per the 2026-05-08 convention).
 """
 
 _KA_TABLE_CATEGORY_LABEL = {
-    "below_loose300_full": "Under, loose300, full panel",
-    "below_loose230_full": "Under, loose230, full panel",
-    "above_50":            "Over (50 mm), pooled paneler",
+    "below_loose300_full": "Under, 30 cm",
+    "below_loose230_full": "Under, 23 cm",
+    "above_50":            "Over, normal+reversert",
 }
 _KA_TABLE_AMP_LABEL  = {0.10: r"$A_1$", 0.20: r"$A_2$", 0.30: r"$A_3$"}
 _KA_TABLE_WIND_LABEL = {"no": "uten", "full": "full"}
