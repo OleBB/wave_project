@@ -1,0 +1,49 @@
+{
+  "script": "analysis_scratch/wind_qc_table.py",
+  "plot_type": "wind_qc_nowind_table",
+  "chapter": "04",
+  "caption_label": "tab:ch04_wind_qc_nowind_table",
+  "caption_short": "",
+  "sections": [
+    {
+      "title": "Inputs",
+      "lines": [
+        "datasets : PROCESSED-20260326 (loose230, 23 cm strikk),",
+        "           PROCESSED-20260327 (loose300, 30 cm strikk)",
+        "filter   : quality_flag == 'ok' (all panel conditions pooled)",
+        "probes   : 8804/250, 9373/170, 9373/340, 12400/250",
+        "wind set : nowind only"
+      ]
+    },
+    {
+      "title": "Method",
+      "lines": [
+        "Pre-paddle window per probe = [0, r/sqrt(gH)] seconds.",
+        "  sqrt(gH) = 2.385 m/s at H = 0.58 m (shallow-water limit).",
+        "  8804/250  \u2192 3.69 s   (windward, exposed wind fetch ~6.4 m)",
+        "  9373/170  \u2192 3.93 s   (IN reference, wall side)",
+        "  9373/340  \u2192 3.93 s   (IN parallel, far side)",
+        "  12400/250 \u2192 5.20 s   (panel-shadowed)",
+        "\u03b7 demeaned within window, then RMS = sqrt(mean(\u03b7\u00b2)).",
+        "Cells: mean \u00b1 std (max) across runs in cell.",
+        "Std uses ddof=1; n=1 cells show std=0.",
+        "Outlier flagging deferred to user-side analysis off the audit",
+        "CSV (analysis_scratch/wind_qc_table_audit.csv)."
+      ]
+    },
+    {
+      "title": "Reading the table (nowind implication)",
+      "lines": [
+        "Stillwater check: under no wind the pre-paddle window should",
+        "contain only residual motion from previous runs + probe noise.",
+        "Mean RMS at probe noise-floor level (CLAUDE.md \u00a716) confirms",
+        "the tank had settled before most runs began.",
+        "The max column surfaces runs where settling time was insufficient",
+        "\u2014 e.g. when a per40 paddle run was followed immediately by",
+        "the next run without waiting for the wave train to decay.",
+        "loose230 has only 5 nowind controls (n=5 is too small for",
+        "the max to be meaningful); loose300 has 37 nowind runs."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+%! TEX root = ../main.tex
+% ==============================================================
+% IMMUTABLE — generated automatically, do not edit this block
+%
+% — Provenance ─────────────────────────────────────────────────
+%   script            : analysis_scratch/wind_qc_table.py
+%   plot_type         : wind_qc_fullwind_table
+%   chapter           : 04
+%   generated_at      : 2026-05-12T11:44:32
+%   caption_label     : tab:ch04_wind_qc_fullwind_table
+%   caption_short     : Pre-padle $\eta$-RMS med full vind --- reproduserbarhet av vindinngangen.
+%
+% — Inputs ─────────────────────────────────────────────────────
+%   datasets : PROCESSED-20260326 (loose230, 23 cm strikk),
+%              PROCESSED-20260327 (loose300, 30 cm strikk)
+%   filter   : quality_flag == 'ok' (all panel conditions pooled)
+%   probes   : 8804/250, 9373/170, 9373/340, 12400/250
+%   wind set : fullwind only
+%
+% — Method ─────────────────────────────────────────────────────
+%   Pre-paddle window per probe = [0, r/sqrt(gH)] seconds.
+%     sqrt(gH) = 2.385 m/s at H = 0.58 m (shallow-water limit).
+%     8804/250  → 3.69 s   (windward, exposed wind fetch ~6.4 m)
+%     9373/170  → 3.93 s   (IN reference, wall side)
+%     9373/340  → 3.93 s   (IN parallel, far side)
+%     12400/250 → 5.20 s   (panel-shadowed)
+%   η demeaned within window, then RMS = sqrt(mean(η²)).
+%   Cells: mean ± std (max) across runs in cell.
+%   Std uses ddof=1; n=1 cells show std=0.
+%   Outlier flagging deferred to user-side analysis off the audit
+%   CSV (analysis_scratch/wind_qc_table_audit.csv).
+%
+% — Reading the table (fullwind implication) ───────────────────
+%   Wind reproducibility: under full wind every pre-paddle window
+%   contains a fully developed wind-wave field. The mean RMS shows
+%   the typical wind-wave amplitude (~4 mm at windward probes,
+%   < 0.4 mm at the panel-shadowed OUT probe).
+%   The std column divided by the mean (CV ≈ 14 %) is the
+%   run-to-run reproducibility of the wind input. This sets the
+%   precision floor for A_in,fw and therefore for K_t,fw — it
+%   cannot be reduced by within-canon averaging beyond √n.
+%   The max column flags any unusually windy single run.
+%
+% ── end immutable block ───────────────────────────────────────
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{lcc}
+    \toprule
+    Probe & \texttt{loose230} (n=35) & \texttt{loose300} (n=41) \\
+    \midrule
+    \texttt{8804/250} (Foran) & $\num{3.61} \pm \num{0.62}$ (\textit{maks} \num{5.38}) & $\num{3.81} \pm \num{0.57}$ (\textit{maks} \num{4.96}) \\
+    \texttt{9373/170} (Innkommende, vegg) & $\num{3.84} \pm \num{0.75}$ (\textit{maks} \num{5.84}) & $\num{4.28} \pm \num{0.68}$ (\textit{maks} \num{6.15}) \\
+    \texttt{9373/340} (Innkommende, fjern) & $\num{4.17} \pm \num{0.53}$ (\textit{maks} \num{5.26}) & $\num{4.14} \pm \num{0.53}$ (\textit{maks} \num{5.11}) \\
+    \texttt{12400/250} (Utgående) & $\num{0.35} \pm \num{0.05}$ (\textit{maks} \num{0.47}) & $\num{0.32} \pm \num{0.02}$ (\textit{maks} \num{0.37}) \\
+    \bottomrule
+  \end{tabular}
+% >>> CAPTION-SYNC START (do not edit this block; sync_captions.py overwrites)
+  \caption[Pre-padle $\eta$-RMS med full vind --- reproduserbarhet av vindinngangen.]{
+    Pre-padle $\eta$-RMS per probe, med full vind. Samme vindusdefinisjon som i tabell~\ref{tab:ch04_wind_qc_nowind_table}. Celler: middel $\pm$ std (maks). Innkommende-probene ser typisk \qty{4}{\milli\meter} RMS, mens utgående-proben (i panelets vindskygge) ser under \qty{0.4}{\milli\meter} --- panelet skygger vinden effektivt. Forholdet std/middel ($\approx \qty{14}{\percent}$ ved innkommende-probene) er vindens egen kjøring-til-kjøring-variasjon. Det setter et nedre tak på presisjonen i $K_t$ med vind: ved $n = 5$ kjøringer per celle reduseres tallet til $\approx \qty{7}{\percent}$ med $\sqrt{n}$-gjennomsnitting.
+  }
+% <<< CAPTION-SYNC END
+  \label{tab:ch04_wind_qc_fullwind_table}
+\end{table}
