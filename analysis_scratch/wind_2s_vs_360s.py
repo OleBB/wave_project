@@ -69,7 +69,10 @@ LABELS = {
 
 SNIPPET_S = 3.0          # 3 s safe at all probes: closest is 8804 mm, √(gh)=2.39 m/s → 3.68 s safety
 SNIPPET_N = int(SNIPPET_S * FS)
-PSD_PROBE = "9373/170"   # which probe to draw the spectrum for (IN, wall side)
+# Average the PSD across the two parallel IN probes at \qty{9.373}{\meter}
+# (wall + far) per run before ensembling. Captures the lateral redundancy of
+# the wind field at the IN position and gives a single Posisjon-2 spectrum.
+PSD_PROBES = ["9373/170", "9373/340"]
 TAG       = f"{SNIPPET_S:g}s"   # suffix for output filenames so prior runs are preserved
 
 # ── Load: TWO canon folders only ─────────────────────────────────────────
@@ -198,42 +201,73 @@ print(f"  → {per_run_csv.relative_to(BASE)}")
 
 pu.apply_thesis_style()
 
-# ── Spectrum plot — IN probe only ────────────────────────────────────────
+# ── Spectrum plot — combined Posisjon-2 probes (9373/170 + 9373/340) ────
 nperseg = int(8 * FS)   # 8 s segments → Δf = 0.125 Hz (per long-run Welch)
 
-# Long-run PSDs — one per long run (5 PSDs at most)
-long_psds = []
+def _avg_welch_long(run_path: str) -> np.ndarray | None:
+    """Mean Welch PSD across the two parallel Posisjon-2 probes for one
+    long run. Returns shape-(n_freq,) array, or None if data missing."""
+    psds = []
+    for probe in PSD_PROBES:
+        eta = _eta(proc[run_path], probe)
+        if eta is None:
+            continue
+        f_l, P_l = welch(eta - np.nanmean(eta), fs=FS,
+                         window="hann", nperseg=nperseg,
+                         scaling="density", detrend="linear")
+        psds.append((f_l, P_l))
+    if not psds:
+        return None
+    return psds[0][0], np.mean([p for _, p in psds], axis=0)
+
+
+def _avg_periodogram_snip(run_path: str) -> tuple[np.ndarray, np.ndarray] | None:
+    """Mean periodogram PSD across the two parallel Posisjon-2 probes for
+    the 3 s pre-paddle window of one wave run."""
+    psds = []
+    for probe in PSD_PROBES:
+        eta = _eta(proc[run_path], probe)
+        if eta is None or len(eta) < SNIPPET_N:
+            continue
+        seg = eta[:SNIPPET_N]
+        if not np.all(np.isfinite(seg)):
+            continue
+        f_s, P_s = periodogram(seg - np.mean(seg), fs=FS,
+                               window="hann", scaling="density",
+                               detrend="linear")
+        psds.append((f_s, P_s))
+    if not psds:
+        return None
+    return psds[0][0], np.mean([p for _, p in psds], axis=0)
+
+
+# Long-run PSDs — one per long run, averaged across the two Posisjon-2 probes
+long_psds  = []
 freqs_long = None
 for lp in long_present:
-    eta = _eta(proc[lp], PSD_PROBE)
-    if eta is None:
+    out = _avg_welch_long(lp)
+    if out is None:
         continue
-    f_l, P_l = welch(eta - np.nanmean(eta), fs=FS,
-                     window="hann", nperseg=nperseg,
-                     scaling="density", detrend="linear")
+    f_l, P_combined = out
     if freqs_long is None:
         freqs_long = f_l
-    long_psds.append(P_l)
+    long_psds.append(P_combined)
 long_psds = np.vstack(long_psds)
 long_p50 = np.nanpercentile(long_psds, 50, axis=0)
 long_p16 = np.nanpercentile(long_psds, 16, axis=0)
 long_p84 = np.nanpercentile(long_psds, 84, axis=0)
 
-# 2 s pre-paddle snippet PSDs — one per wave run
+# 3 s pre-paddle snippet PSDs — one per wave run, averaged across Posisjon-2 probes
 snip_psds  = []
 freqs_snip = None
 for wp in wave_paths:
-    eta = _eta(proc[wp], PSD_PROBE)
-    if eta is None or len(eta) < SNIPPET_N:
+    out = _avg_periodogram_snip(wp)
+    if out is None:
         continue
-    seg = eta[:SNIPPET_N]
-    if not np.all(np.isfinite(seg)):
-        continue
-    f_s, P_s = periodogram(seg - np.mean(seg), fs=FS,
-                           window="hann", scaling="density", detrend="linear")
+    f_s, P_combined = out
     if freqs_snip is None:
         freqs_snip = f_s
-    snip_psds.append(P_s)
+    snip_psds.append(P_combined)
 snip_psds = np.vstack(snip_psds)
 snip_p16 = np.nanpercentile(snip_psds, 16, axis=0)
 snip_p50 = np.nanpercentile(snip_psds, 50, axis=0)
@@ -241,11 +275,12 @@ snip_p84 = np.nanpercentile(snip_psds, 84, axis=0)
 
 fig, ax = plt.subplots(figsize=(11, 6))
 
+_PROBE_STR = " + ".join(PSD_PROBES)
+
 ax.fill_between(freqs_long, long_p16, long_p84, color="#1E9C68", alpha=0.20,
-                label=f"lang serie 16–84 % (n={long_psds.shape[0]})") #better to just say 68%?
+                label=f"lang serie 16–84 % (n={long_psds.shape[0]})")
 ax.semilogy(freqs_long, long_p50, color="#1E9C68", lw=2.0,
             label=f"lang serie median (n={long_psds.shape[0]}, Welch nperseg=8 s)")
-#todo - fix the lables explaining 16 84  in words or terminology...
 ax.fill_between(freqs_snip, snip_p16, snip_p84, color="#FEA11B", alpha=0.22,
                 label=f"{SNIPPET_S:g} s etter start, 16–84 % (n={snip_psds.shape[0]})")
 ax.semilogy(freqs_snip, snip_p50, color="#FEA11B", lw=1.8, ls="--",
@@ -260,7 +295,9 @@ ax.set_xlim(0, 16)
 # )
 ax.grid(True, which="major", alpha=0.40)
 ax.grid(True, which="minor", alpha=0.18)
-ax.legend(loc="upper right", fontsize=10)
+ax.legend(loc="upper right", fontsize=10,
+          title=f"Posisjon 2 ({_PROBE_STR}, snitt)",
+          title_fontsize=9)
 
 png_out = Path(__file__).parent / f"wind_2s_vs_360s_spectrum_{TAG}.png"
 fig.savefig(png_out, dpi=160, bbox_inches="tight")
@@ -338,8 +375,10 @@ _meta = pu.build_fig_meta(
         f"safe because √(gh) = 2.39 m/s and the closest probe (8804 mm) "
         f"sees no paddle motion before 3.68 s. Per-snippet single periodogram "
         f"(Hann, linear detrend, Δf = {1/SNIPPET_S:.3f} Hz) → 16–84 "
-        f"envelope + median (orange dashed). Probe shown: "
-        f"{LABELS[PSD_PROBE]}. Colour convention is local (green = long-run, "
+        f"envelope + median (orange dashed). Probes shown: "
+        f"mean PSD across {', '.join(LABELS[p] for p in PSD_PROBES)} "
+        f"(parallelle Posisjon-2 prober, snitt per kjøring før ensemblet). "
+        f"Colour convention is local (green = long-run, "
         f"orange = pre-paddle); does NOT use the thesis-wide WIND_COLOR_MAP "
         f"because both curves represent the same wind condition (fullwind)."
     ),

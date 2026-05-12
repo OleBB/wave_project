@@ -7,7 +7,7 @@
 %   computed_in       : analysis_scratch/wind_2s_vs_360s.py
 %   plot_type         : wind_pre_paddle_psd
 %   data_class        : DELEG
-%   generated_at      : 2026-05-05T12:32:09
+%   generated_at      : 2026-05-12T13:53:20
 %   findings_doc      : (none)
 %
 % — Thesis context ──────────────────────────────────────────────
@@ -63,7 +63,7 @@
 %   grouper           : 
 %   collapse_panels   : 
 %   fft_window_hz     : 
-%   extra_params      : Wind characterisation validation: does the 3 s pre-paddle window of a wave run reproduce the wind PSD measured on long (~31–381 s) nowave+fullwind runs? Canon datasets only (PROCESSED-20260326-*-lowrange + PROCESSED-20260327-*-lowrange — final probe config march2026_better_rearranging). Long-run set: 5 runs, durations 31, 33, 63, 360, 381 s. Per-long-run Welch PSD (Hann, nperseg = 8 s, linear detrend, Δf = 0.125 Hz) → 16–84 percentile envelope + median (green). Pre-paddle ensemble: first 3 s of all 70 fullwind+wave runs in the same datasets — safe because √(gh) = 2.39 m/s and the closest probe (8804 mm) sees no paddle motion before 3.68 s. Per-snippet single periodogram (Hann, linear detrend, Δf = 0.333 Hz) → 16–84 envelope + median (orange dashed). Probe shown: 9373/170 (IN, wall). Colour convention is local (green = long-run, orange = pre-paddle); does NOT use the thesis-wide WIND_COLOR_MAP because both curves represent the same wind condition (fullwind).
+%   extra_params      : Wind characterisation validation: does the 3 s pre-paddle window of a wave run reproduce the wind PSD measured on long (~31–381 s) nowave+fullwind runs? Canon datasets only (PROCESSED-20260326-*-lowrange + PROCESSED-20260327-*-lowrange — final probe config march2026_better_rearranging). Long-run set: 5 runs, durations 31, 33, 63, 360, 381 s. Per-long-run Welch PSD (Hann, nperseg = 8 s, linear detrend, Δf = 0.125 Hz) → 16–84 percentile envelope + median (green). Pre-paddle ensemble: first 3 s of all 70 fullwind+wave runs in the same datasets — safe because √(gh) = 2.39 m/s and the closest probe (8804 mm) sees no paddle motion before 3.68 s. Per-snippet single periodogram (Hann, linear detrend, Δf = 0.333 Hz) → 16–84 envelope + median (orange dashed). Probes shown: mean PSD across Posisjon 2, nær, Posisjon 2, fjern (parallelle Posisjon-2 prober, snitt per kjøring før ensemblet). Colour convention is local (green = long-run, orange = pre-paddle); does NOT use the thesis-wide WIND_COLOR_MAP because both curves represent the same wind condition (fullwind).
 %
 % — Summary stats cited in caption ────────────────────────────
 %   stat:snippet_seconds : 3
@@ -94,8 +94,10 @@
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{FIGURES/ch04_wind_pre_paddle_psd.pdf}
+% >>> CAPTION-SYNC START (do not edit this block; sync_captions.py overwrites)
   \caption{
-    % TODO: write caption
+    % TODO: write caption (edit FIGURE_CAPTIONS/TABLE_CAPTIONS)
   }
+% <<< CAPTION-SYNC END
   \label{fig:ch04_wind_pre_paddle_psd}
 \end{figure}

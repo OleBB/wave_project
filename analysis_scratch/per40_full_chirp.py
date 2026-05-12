@@ -72,11 +72,11 @@ FIG_W   = A4_W_IN - 2.0  # 6.27"
 
 
 def _format_info_box(chosen, f_hz, amp, probe):
-    """Info-box string: probe label, amp/freq, Δt in 7T–17T window.
+    """Info-box string: role — amp, freq / Δt over the 7T–17T window.
 
-    Δt = (start_fw − start_nw)/FS, read from `Computed Probe {pos} start`
-    in the per-run meta — this is the snap-aligned anchor of the 10-period
-    analysis window. Negative Δt = fullwind window starts earlier.
+    Δt = (start_fw − start_nw)/FS, from `Computed Probe {pos} start` per
+    run — the snap-aligned anchor of the 10-period analysis window.
+    Negative Δt = fullwind window starts earlier.
     """
     start_col = f"Computed Probe {probe} start"
     fw = chosen.get((f_hz, amp, "full"))
@@ -85,11 +85,9 @@ def _format_info_box(chosen, f_hz, amp, probe):
         dt_str = r"$\Delta t$ = n/a"
     else:
         dt_ms = (float(fw[start_col]) - float(nw[start_col])) / FS * 1000.0
-        tag = "fullvind tidligere" if dt_ms < 0 else "fullvind senere"
-        dt_str = rf"$\Delta t$ = {dt_ms:+.0f} ms ({tag})"
+        dt_str = rf"$\Delta t$ = {dt_ms:+.0f} ms"
     return (
-        f"{PROBE_LABEL_NO[probe]} ({probe})\n"
-        f"{AMP_LABEL[amp]}, {f_hz:.1f} Hz\n"
+        f"{PROBE_LABEL_NO[probe]} — {AMP_LABEL[amp]}, {f_hz:.1f} Hz\n"
         f"{dt_str}"
     )
 
@@ -295,7 +293,8 @@ def plot_detail(meta, big, chosen, out_path, f_hz, amp):
 def plot_overlay_zoom(meta, big, chosen, out_path,
                       f_hz, amp, t_start, t_end, label,
                       thesis_pdf=None, thesis_name=None,
-                      info_loc="upper left"):
+                      info_loc="upper left",
+                      legend_loc="upper right"):
     eta_col = f"eta_{PROBE}"
     T_paddle = 1.0 / f_hz
 
@@ -308,24 +307,22 @@ def plot_overlay_zoom(meta, big, chosen, out_path,
             continue
         row = chosen[key]
         eta = big[big["_path"] == row["path"]][eta_col].values
-        eta_sm = _light_smooth(eta)
         t = np.arange(len(eta)) / FS
 
         i0 = max(0, int(t_start * FS))
         i1 = min(len(eta), int(t_end * FS))
 
-        # raw (faint) — no legend entry
-        ax.plot(t[i0:i1], eta[i0:i1], color=WIND_COLOR[w], lw=0.5,
-                alpha=0.35)
-        # smoothed — legend entry per wind condition
-        ax.plot(t[i0:i1], eta_sm[i0:i1], color=WIND_COLOR[w], lw=1.0,
+        # Raw signal only — no smoothing overlay (the waves speak for themselves)
+        ax.plot(t[i0:i1], eta[i0:i1], color=WIND_COLOR[w], lw=0.6,
                 label=WIND_LABEL[w])
 
         # Paddle-period grid: vertical lines every T_pad anchored to the
-        # smoothed signal's first upcrossing inside the visible window.
-        eta_win = eta_sm[i0:i1]
-        signs = np.sign(eta_win - np.nanmean(eta_win))
-        diff = np.diff(signs)
+        # first raw-signal upcrossing inside the visible window. Smoothing
+        # used only internally for robust upcrossing detection — not plotted.
+        eta_sm   = _light_smooth(eta)
+        eta_win  = eta_sm[i0:i1]
+        signs    = np.sign(eta_win - np.nanmean(eta_win))
+        diff     = np.diff(signs)
         first_uc = np.where(diff > 0)[0]
         if len(first_uc):
             t0_uc = (i0 + first_uc[0]) / FS
@@ -335,9 +332,16 @@ def plot_overlay_zoom(meta, big, chosen, out_path,
 
     ax.axhline(0, color="k", lw=0.3)
     ax.set_xlim(t_start, t_end)
+    # Same η-cap as ch04_wind_pre_paddle_overlay so the two figure families
+    # are amplitude-comparable by eye.
+    ax.set_ylim(-22, 22)
     ax.set_xlabel("Tid [s]")
     ax.grid(alpha=0.3)
-    ax.legend(fontsize=9, loc="upper right")
+    # Wind-condition legend. "upper center" puts the two-entry legend
+    # side-by-side at the top center, leaving the info box upper-left
+    # uncrowded.
+    _legend_kwargs = (dict(ncol=2) if "center" in legend_loc else {})
+    ax.legend(fontsize=9, loc=legend_loc, **_legend_kwargs)
 
     # Info box — probe / amp / freq / Δt over 7T–17T window
     info_xy = {"upper left":   (0.012, 0.96, "left"),
@@ -501,18 +505,19 @@ def main():
                 f_hz=1.3, amp=0.2)
     print("  → analysis_scratch/per40_full_chirp_detail_1.3Hz_0.2V.png")
 
-    print("\nOverlay zooms (fw vs nw, raw + smoothed, paddle-period grid)...")
+    print("\nOverlay zooms (fw vs nw, raw, paddle-period grid)...")
     plot_overlay_zoom(meta, big, chosen,
                       OUT_DIR / "per40_full_chirp_overlay_t10-21.png",
-                      f_hz=1.3, amp=0.2, t_start=10, t_end=21,
+                      f_hz=1.4, amp=0.2, t_start=10, t_end=21,
                       label="ramp-up + settle",
                       thesis_pdf=BASE / "output/FIGURES/ch04_per40_overlay_t10-21.pdf",
-                      thesis_name="ch04_per40_overlay_t10-21")
+                      thesis_name="ch04_per40_overlay_t10-21",
+                      legend_loc="upper center")
     print("  → analysis_scratch/per40_full_chirp_overlay_t10-21.png "
           "+ output/FIGURES/ch04_per40_overlay_t10-21.pdf")
     plot_overlay_zoom(meta, big, chosen,
                       OUT_DIR / "per40_full_chirp_overlay_t40-51.png",
-                      f_hz=1.3, amp=0.2, t_start=40, t_end=51,
+                      f_hz=1.4, amp=0.2, t_start=40, t_end=51,
                       label="ramp-down + decay",
                       thesis_pdf=BASE / "output/FIGURES/ch04_per40_overlay_t40-51.pdf",
                       thesis_name="ch04_per40_overlay_t40-51",

@@ -108,8 +108,9 @@ TABLE_CAPTIONS = {
     "ch04_window_choice_fullwind":               "",
     "ch04_plateau_values":                       "Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.",
     "ch04_tidsvindu":                            "Frekvensenes tidsvinduer",
-    "ch04_wind_qc_nowind_table":                 r"Pre-padle $\eta$-RMS per probe, uten vind. Vindu per probe $= r/\sqrt{gH}$ sekunder (henholdsvis \qty{3.69}{\second}, \qty{3.93}{\second}, \qty{3.93}{\second}, \qty{5.20}{\second}) --- den seneste tida en padlefrekvens-bølge kan ha rukket fram til proben. Celler: middel $\pm$ std (maks). RMS på probenes støygulvnivå (\S\ref{sec:probeusikkerhet}) bekrefter at tanken hadde falt til ro før kjøringene startet. Maks-kolonnen flagger enkeltkjøringer hvor stilltilstanden ikke var fullt etablert. \texttt{loose230} har bare 5 uten-vind-kontroller; \texttt{loose300} har 37.",
-    "ch04_wind_qc_fullwind_table":               r"Pre-padle $\eta$-RMS per probe, med full vind. Samme vindusdefinisjon som i tabell~\ref{tab:ch04_wind_qc_nowind_table}. Celler: middel $\pm$ std (maks). Innkommende-probene ser typisk \qty{4}{\milli\meter} RMS, mens utgående-proben (i panelets vindskygge) ser under \qty{0.4}{\milli\meter} --- panelet skygger vinden effektivt. Forholdet std/middel ($\approx \qty{14}{\percent}$ ved innkommende-probene) er vindens egen kjøring-til-kjøring-variasjon. Det setter et nedre tak på presisjonen i $K_t$ med vind: ved $n = 5$ kjøringer per celle reduseres tallet til $\approx \qty{7}{\percent}$ med $\sqrt{n}$-gjennomsnitting.",
+    "ch04_wind_qc_nowind_table":                 r"Verdier for kvadratisk gjennomsnitt ($\eta_{\mathrm{RMS}}$) av overflatehevningen uten vind. Alle verdier i millimeter. Hver enkelt probe bruker verdier fra tidsvinduet før første bølgevegelse. ", #
+    #Pre-padle $\eta_\text{RMS}$ per probe, uten vind. Alle verdier i \unit{\milli\meter}. Vindu per probe $= r/\sqrt{gH}$ sekunder (henholdsvis \qty{3.69}{\second}, \qty{3.93}{\second}, \qty{3.93}{\second}, \qty{5.20}{\second}) --- den seneste tida en padlefrekvens-bølge kan ha rukket fram til proben. Verdiene ligger på probenes støygulvnivå (\S\ref{sec:probeusikkerhet}), som bekrefter at tanken hadde falt til ro før kjøringene startet. $\max(\eta_\text{RMS})$-kolonnen flagger enkeltkjøringer hvor stilltilstanden ikke var fullt etablert. \qty{23}{\cm}-fortøyninga har bare 5 uten-vind-kontroller; \qty{30}{\cm}-fortøyninga har 37.",
+    "ch04_wind_qc_fullwind_table":               r"Verdier for kvadratisk gjennomsnitt ($\eta_{\mathrm{RMS}}$) av overflatehevningen med vind. Alle verdier i millimeter. Hver enkelt probe bruker verdier fra tidsvinduet før første bølgevegelse.",
     "ch04_wind_setup_baseline_table":            "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
 
     # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
@@ -648,41 +649,69 @@ _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
 _TEX  = Path(f"output/TABLES/{_NAME}.tex")
 
 
+_PROBE_POSITION_LABEL = {
+    "8804/250":  "Posisjon 1, foran",
+    "9373/170":  "Posisjon 2, innkommende (nær)",
+    "9373/340":  "Posisjon 2, innkommende (fjern)",
+    "12400/250": "Posisjon 3, utgående",
+}
+
+
 def _fmt_probe_label(row: pd.Series) -> str:
-    probe = row["probe"]
-    role  = row["role"]
-    if probe == "9373/170":
-        role = "Innkommende, vegg"
-    elif probe == "9373/340":
-        role = "Innkommende, fjern"
-    return rf"\texttt{{{probe}}} ({role})"
+    return _PROBE_POSITION_LABEL[row["probe"]]
 
 
-def _fmt_rms_cell(canon: str, wind_tag: str):
-    """wind_tag is 'no' or 'full' to pick the right columns from the CSV."""
+def _fmt_meanstd_cell(canon: str, wind_tag: str):
+    """wind_tag is 'no' or 'full' — picks the matching meta columns."""
     def _impl(row: pd.Series) -> str:
-        m  = row.get(f"rms_{wind_tag}_mean_{canon}")
-        s  = row.get(f"rms_{wind_tag}_std_{canon}")
-        mx = row.get(f"rms_{wind_tag}_max_{canon}")
+        m = row.get(f"rms_{wind_tag}_mean_{canon}")
+        s = row.get(f"rms_{wind_tag}_std_{canon}")
         if pd.isna(m):
             return "—"
-        return (rf"$\num{{{m:.2f}}} \pm \num{{{s:.2f}}}$"
-                rf" (\textit{{maks}} \num{{{mx:.2f}}})")
+        return rf"$\num{{{m:.2f}}} \pm \num{{{s:.2f}}}$"
+    return _impl
+
+
+def _fmt_max_cell(canon: str, wind_tag: str):
+    def _impl(row: pd.Series) -> str:
+        mx = row.get(f"rms_{wind_tag}_max_{canon}")
+        if pd.isna(mx):
+            return "—"
+        return rf"$\num{{{mx:.2f}}}$"
     return _impl
 
 
 _cell_format = {
-    "probe":    _fmt_probe_label,
-    "loose230": _fmt_rms_cell("loose230", "no"),
-    "loose300": _fmt_rms_cell("loose300", "no"),
+    "probe":         _fmt_probe_label,
+    "loose230_mean": _fmt_meanstd_cell("loose230", "no"),
+    "loose230_max":  _fmt_max_cell("loose230",     "no"),
+    "loose300_mean": _fmt_meanstd_cell("loose300", "no"),
+    "loose300_max":  _fmt_max_cell("loose300",     "no"),
 }
 
-_columns        = ["probe", "loose230", "loose300"]
-_column_headers = [
-    "Probe",
-    r"\texttt{loose230} (n=5)",
-    r"\texttt{loose300} (n=37)",
+_columns        = [
+    "probe",
+    "loose230_mean", "loose230_max",
+    "loose300_mean", "loose300_max",
 ]
+_column_headers = []  # unused — see header_block below
+
+
+def _qc_header_block(n_loose230: int, n_loose300: int) -> str:
+    """Two-row header: top = fortøyning label (multicolumn spans 2),
+    bottom = $\\eta_\\text{RMS}\\pm\\sigma$ | $\\max(\\eta_\\text{RMS})$ pair per fortøyning."""
+    indent = "    "
+    return "\n".join([
+        f"{indent}\\toprule",
+        f"{indent} & \\multicolumn{{2}}{{c}}{{\\qty{{23}}{{\\cm}} fortøyning ($n={n_loose230}$)}}"
+        f" & \\multicolumn{{2}}{{c}}{{\\qty{{30}}{{\\cm}} fortøyning ($n={n_loose300}$)}} \\\\",
+        f"{indent}\\cmidrule(lr){{2-3}} \\cmidrule(lr){{4-5}}",
+        f"{indent}Probe"
+        f" & $\\eta_\\text{{RMS}}\\pm\\sigma$ & $\\max(\\eta_\\text{{RMS}})$"
+        f" & $\\eta_\\text{{RMS}}\\pm\\sigma$ & $\\max(\\eta_\\text{{RMS}})$ \\\\",
+        f"{indent}\\midrule",
+    ])
+
 
 _render_with_caption_short(
     _META,
@@ -693,12 +722,13 @@ _render_with_caption_short(
         out_tex_path   = _TEX,
         columns        = _columns,
         column_headers = _column_headers,
-        column_spec    = "lcc",
+        column_spec    = "lcccc",
         cell_format    = _cell_format,
         row_groups     = [(None, lambda df: df)],
         label          = f"tab:{_NAME}",
         caption        = TABLE_CAPTIONS.get(_NAME) or None,
         short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+        header_block   = _qc_header_block(n_loose230=5, n_loose300=37),
     ),
 )
 print(f"   TEX → {_TEX}")
@@ -721,17 +751,19 @@ _TEX  = Path(f"output/TABLES/{_NAME}.tex")
 
 
 _cell_format = {
-    "probe":    _fmt_probe_label,
-    "loose230": _fmt_rms_cell("loose230", "full"),
-    "loose300": _fmt_rms_cell("loose300", "full"),
+    "probe":         _fmt_probe_label,
+    "loose230_mean": _fmt_meanstd_cell("loose230", "full"),
+    "loose230_max":  _fmt_max_cell("loose230",     "full"),
+    "loose300_mean": _fmt_meanstd_cell("loose300", "full"),
+    "loose300_max":  _fmt_max_cell("loose300",     "full"),
 }
 
-_columns        = ["probe", "loose230", "loose300"]
-_column_headers = [
-    "Probe",
-    r"\texttt{loose230} (n=35)",
-    r"\texttt{loose300} (n=41)",
+_columns        = [
+    "probe",
+    "loose230_mean", "loose230_max",
+    "loose300_mean", "loose300_max",
 ]
+_column_headers = []  # unused — see _qc_header_block
 
 _render_with_caption_short(
     _META,
@@ -742,12 +774,13 @@ _render_with_caption_short(
         out_tex_path   = _TEX,
         columns        = _columns,
         column_headers = _column_headers,
-        column_spec    = "lcc",
+        column_spec    = "lcccc",
         cell_format    = _cell_format,
         row_groups     = [(None, lambda df: df)],
         label          = f"tab:{_NAME}",
         caption        = TABLE_CAPTIONS.get(_NAME) or None,
         short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+        header_block   = _qc_header_block(n_loose230=35, n_loose300=41),
     ),
 )
 print(f"   TEX → {_TEX}")

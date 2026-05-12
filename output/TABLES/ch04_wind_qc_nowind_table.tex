@@ -6,7 +6,7 @@
 %   script            : analysis_scratch/wind_qc_table.py
 %   plot_type         : wind_qc_nowind_table
 %   chapter           : 04
-%   generated_at      : 2026-05-12T11:44:32
+%   generated_at      : 2026-05-12T13:01:35
 %   caption_label     : tab:ch04_wind_qc_nowind_table
 %   caption_short     : Pre-padle $\eta$-RMS uten vind --- stilltilstand-kontroll.
 %
@@ -45,19 +45,21 @@
 \begin{table}[htbp]
   \centering
   \small
-  \begin{tabular}{lcc}
+  \begin{tabular}{lcccc}
     \toprule
-    Probe & \texttt{loose230} (n=5) & \texttt{loose300} (n=37) \\
+     & \multicolumn{2}{c}{\qty{23}{\cm} fortøyning ($n=5$)} & \multicolumn{2}{c}{\qty{30}{\cm} fortøyning ($n=37$)} \\
+    \cmidrule(lr){2-3} \cmidrule(lr){4-5}
+    Probe & $\eta_\text{RMS}\pm\sigma$ & $\max(\eta_\text{RMS})$ & $\eta_\text{RMS}\pm\sigma$ & $\max(\eta_\text{RMS})$ \\
     \midrule
-    \texttt{8804/250} (Foran) & $\num{0.03} \pm \num{0.02}$ (\textit{maks} \num{0.05}) & $\num{0.09} \pm \num{0.14}$ (\textit{maks} \num{0.62}) \\
-    \texttt{9373/170} (Innkommende, vegg) & $\num{0.02} \pm \num{0.02}$ (\textit{maks} \num{0.04}) & $\num{0.09} \pm \num{0.14}$ (\textit{maks} \num{0.69}) \\
-    \texttt{9373/340} (Innkommende, fjern) & $\num{0.03} \pm \num{0.01}$ (\textit{maks} \num{0.04}) & $\num{0.09} \pm \num{0.14}$ (\textit{maks} \num{0.66}) \\
-    \texttt{12400/250} (Utgående) & $\num{0.02} \pm \num{0.02}$ (\textit{maks} \num{0.04}) & $\num{0.08} \pm \num{0.08}$ (\textit{maks} \num{0.31}) \\
+    Posisjon 1, foran & $\num{0.03} \pm \num{0.02}$ & $\num{0.05}$ & $\num{0.09} \pm \num{0.14}$ & $\num{0.62}$ \\
+    Posisjon 2, innkommende (nær) & $\num{0.02} \pm \num{0.02}$ & $\num{0.04}$ & $\num{0.09} \pm \num{0.14}$ & $\num{0.69}$ \\
+    Posisjon 2, innkommende (fjern) & $\num{0.03} \pm \num{0.01}$ & $\num{0.04}$ & $\num{0.09} \pm \num{0.14}$ & $\num{0.66}$ \\
+    Posisjon 3, utgående & $\num{0.02} \pm \num{0.02}$ & $\num{0.04}$ & $\num{0.08} \pm \num{0.08}$ & $\num{0.31}$ \\
     \bottomrule
   \end{tabular}
 % >>> CAPTION-SYNC START (do not edit this block; sync_captions.py overwrites)
   \caption[Pre-padle $\eta$-RMS uten vind --- stilltilstand-kontroll.]{
-    Pre-padle $\eta$-RMS per probe, uten vind. Vindu per probe $= r/\sqrt{gH}$ sekunder (henholdsvis \qty{3.69}{\second}, \qty{3.93}{\second}, \qty{3.93}{\second}, \qty{5.20}{\second}) --- den seneste tida en padlefrekvens-bølge kan ha rukket fram til proben. Celler: middel $\pm$ std (maks). RMS på probenes støygulvnivå (\S\ref{sec:probeusikkerhet}) bekrefter at tanken hadde falt til ro før kjøringene startet. Maks-kolonnen flagger enkeltkjøringer hvor stilltilstanden ikke var fullt etablert. \texttt{loose230} har bare 5 uten-vind-kontroller; \texttt{loose300} har 37.
+    Verdier for kvadratisk gjennomsnitt ($\eta_{\mathrm{RMS}}$) av overflatehevningen uten vind. Alle verdier i millimeter. Hver enkelt probe bruker verdier fra tidsvinduet før første bølgevegelse. 
   }
 % <<< CAPTION-SYNC END
   \label{tab:ch04_wind_qc_nowind_table}

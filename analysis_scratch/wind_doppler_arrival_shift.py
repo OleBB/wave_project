@@ -100,12 +100,27 @@ A4_W_IN = 8.27
 FIG_W   = A4_W_IN - 2.0  # 6.27"
 
 
-def _info_box_text(fw_runs, nw_runs, f_hz, amp, probe):
-    """Info-box string: probe label, amp/freq, Δt in the 7T–17T window.
+def _wrap_to_half_period(dt_ms: float, f_hz: float) -> float:
+    """Wrap a snap-difference into the principal range [-T/2, +T/2].
 
-    Δt = (start_fw − start_nw)/FS read from `Computed Probe {pos} start`
-    in each run's meta — the snap-aligned anchor of the 10-period
-    analysis window. Negative Δt = fullwind window starts earlier.
+    The H&G snap aligns each window to its nearest upcrossing within
+    ±T of the expected sample. When the wind and nowind runs snap to
+    different cycles, the raw snap-difference can exceed ±T/2 even
+    though the underlying phase shift is smaller. Wrapping recovers
+    the de-aliased shift assuming |true shift| < T/2 — the regime
+    consistent with the other (already-aliased-free) windward probes.
+    """
+    T_ms = 1000.0 / f_hz
+    return ((dt_ms + T_ms / 2.0) % T_ms) - T_ms / 2.0
+
+
+def _info_box_text(fw_runs, nw_runs, f_hz, amp, probe):
+    """Info-box string: role — amp, freq / Δt over the 7T–17T window.
+
+    Δt = (start_fw − start_nw)/FS from `Computed Probe {pos} start`
+    per run — the snap-aligned anchor of the 10-period analysis window.
+    Wrapped to [-T/2, +T/2] to de-alias snap-cycle ambiguity.
+    Negative Δt = fullwind window starts earlier.
     """
     start_col = f"Computed Probe {probe} start"
     fw_val = fw_runs[start_col].iloc[0] if len(fw_runs) and start_col in fw_runs.columns else np.nan
@@ -113,12 +128,11 @@ def _info_box_text(fw_runs, nw_runs, f_hz, amp, probe):
     if not np.isfinite(fw_val) or not np.isfinite(nw_val):
         dt_str = r"$\Delta t$ = n/a"
     else:
-        dt_ms = (float(fw_val) - float(nw_val)) / FS * 1000.0
-        tag = "fullvind tidligere" if dt_ms < 0 else "fullvind senere"
-        dt_str = rf"$\Delta t$ = {dt_ms:+.0f} ms ({tag})"
+        dt_ms_raw = (float(fw_val) - float(nw_val)) / FS * 1000.0
+        dt_ms = _wrap_to_half_period(dt_ms_raw, f_hz)
+        dt_str = rf"$\Delta t$ = {dt_ms:+.0f} ms"
     return (
-        f"{PROBE_LABEL_NO[probe]} ({probe})\n"
-        f"{AMP_LABEL[amp]}, {f_hz:.1f} Hz\n"
+        f"{PROBE_LABEL_NO[probe]} — {AMP_LABEL[amp]}, {f_hz:.1f} Hz\n"
         f"{dt_str}"
     )
 
@@ -478,6 +492,13 @@ def plot_pre_paddle(meta: pd.DataFrame, out_path: Path,
         ax.grid(alpha=0.3)
         ax.axhline(0, color="k", lw=0.3)
 
+        # Shared η-range across the three panels so amplitudes are directly
+        # comparable by eye. Capped at ±22 mm — fits the IN-side wave train
+        # at A_2 with headroom, and shrinks the OUT panel visually so the
+        # near-zero OUT signal reads as "small" rather than "big" (it's the
+        # latter when scaled to its own data).
+        ax.set_ylim(-22, 22)
+
         # Info box per probe (probe label / amp / freq / Δt 7T–17T window)
         ax.text(0.012, 0.96,
                 _info_box_text(fw_runs, nw_runs, f_pick, amp_pick, probe),
@@ -486,7 +507,7 @@ def plot_pre_paddle(meta: pd.DataFrame, out_path: Path,
                           ec="grey", alpha=0.9))
 
         if probe == probes_stacked[0]:
-            ax.legend(fontsize=8, loc="upper right")
+            ax.legend(fontsize=8, loc="upper center", ncol=2)
 
     axes[-1].set_xlabel("Tid [s]")
     axes[-1].set_xlim(0, 25)
@@ -649,7 +670,7 @@ def main() -> None:
 
     print("\nPlotting pre-paddle window (paddle-trigger sanity check)...")
     plot_pre_paddle(meta, OUT_DIR / "wind_doppler_arrival_shift_paddle_start.png",
-                    f_pick=1.3, amp_pick=0.2,
+                    f_pick=1.4, amp_pick=0.2,
                     thesis_pdf=BASE / "output/FIGURES/ch04_wind_pre_paddle_overlay.pdf",
                     thesis_name="ch04_wind_pre_paddle_overlay")
     print(f"  → analysis_scratch/wind_doppler_arrival_shift_paddle_start.png "

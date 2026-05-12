@@ -157,12 +157,16 @@ def _render_body(
     row_groups: list[tuple[str | None, Callable[[pd.DataFrame], pd.DataFrame]]],
     cell_format: dict[str, Callable[[pd.Series], str]],
     indent: str = "    ",
+    header_block: str | None = None,
 ) -> str:
-    if len(columns) != len(column_headers):
-        raise ValueError(
-            f"columns ({len(columns)}) and column_headers "
-            f"({len(column_headers)}) must have the same length"
-        )
+    """Render the tabular body.
+
+    If ``header_block`` is provided, it replaces the default
+    ``\\toprule + column_headers + \\midrule`` block. The caller is then
+    responsible for emitting toprule/cmidrule/midrule lines themselves
+    (use this for multi-row headers with multicolumn / cmidrule grouping).
+    ``column_headers`` is unused when ``header_block`` is set.
+    """
     n_cols = len(columns)
 
     body: list[str] = [
@@ -170,10 +174,21 @@ def _render_body(
         "  \\centering",
         "  \\small",
         f"  \\begin{{tabular}}{{{column_spec}}}",
-        f"{indent}\\toprule",
-        f"{indent}{' & '.join(column_headers)} \\\\",
-        f"{indent}\\midrule",
     ]
+
+    if header_block is None:
+        if len(columns) != len(column_headers):
+            raise ValueError(
+                f"columns ({len(columns)}) and column_headers "
+                f"({len(column_headers)}) must have the same length"
+            )
+        body.extend([
+            f"{indent}\\toprule",
+            f"{indent}{' & '.join(column_headers)} \\\\",
+            f"{indent}\\midrule",
+        ])
+    else:
+        body.append(header_block.rstrip("\n"))
 
     for i, (group_label, filter_fn) in enumerate(row_groups):
         sub = filter_fn(df)
@@ -205,8 +220,15 @@ def render_table(
     label: str,
     caption: str | None = None,
     short_caption: str | None = None,
+    header_block: str | None = None,
 ) -> None:
     """Render a CSV + meta.json pair into a thesis-style LaTeX table.
+
+    For tables with multi-row headers (e.g. a top-row mooring/canon label
+    spanning two sub-columns via ``\\multicolumn{2}{c}{…}`` + ``\\cmidrule``),
+    pass the full pre-rendered header text via ``header_block``. When
+    provided it replaces the default ``\\toprule + headers + \\midrule``
+    block, and ``column_headers`` is unused.
 
     See module docstring for the meta dict shape and the caption logic.
     """
@@ -222,6 +244,7 @@ def render_table(
         column_spec=column_spec,
         row_groups=row_groups,
         cell_format=cell_format,
+        header_block=header_block,
     )
 
     caption_block = _render_caption_block(caption, short_caption)

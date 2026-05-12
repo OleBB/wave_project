@@ -1,9 +1,9 @@
 probe,segment,n,mean_mm,sigma_mm,Hs_mm,mean_std,sigma_std,Hs_std
-8804/250 (upstream),long nowave runs (ensemble across 5),5,0.177,3.617,14.467,0.227,0.186,0.745
-8804/250 (upstream),3 s pre-paddle (ensemble across 70 wave runs),70,0.33,3.76,15.039,0.356,0.641,2.565
-"9373/170 (IN, wall)",long nowave runs (ensemble across 5),5,0.161,4.281,17.122,0.443,0.197,0.789
-"9373/170 (IN, wall)",3 s pre-paddle (ensemble across 70 wave runs),70,0.323,4.042,16.167,0.37,0.826,3.306
-"9373/340 (IN, far)",long nowave runs (ensemble across 5),5,0.165,4.078,16.314,0.298,0.223,0.894
-"9373/340 (IN, far)",3 s pre-paddle (ensemble across 70 wave runs),70,0.412,4.123,16.492,0.468,0.601,2.405
-12400/250 (OUT),long nowave runs (ensemble across 5),5,-0.013,0.36,1.439,0.063,0.05,0.202
-12400/250 (OUT),3 s pre-paddle (ensemble across 70 wave runs),70,0.002,0.329,1.317,0.069,0.044,0.176
+Posisjon 1,long nowave runs (ensemble across 5),5,0.177,3.617,14.467,0.227,0.186,0.745
+Posisjon 1,3 s pre-paddle (ensemble across 70 wave runs),70,0.33,3.76,15.039,0.356,0.641,2.565
+"Posisjon 2, nær",long nowave runs (ensemble across 5),5,0.161,4.281,17.122,0.443,0.197,0.789
+"Posisjon 2, nær",3 s pre-paddle (ensemble across 70 wave runs),70,0.323,4.042,16.167,0.37,0.826,3.306
+"Posisjon 2, fjern",long nowave runs (ensemble across 5),5,0.165,4.078,16.314,0.298,0.223,0.894
+"Posisjon 2, fjern",3 s pre-paddle (ensemble across 70 wave runs),70,0.412,4.123,16.492,0.468,0.601,2.405
+Posisjon 3,long nowave runs (ensemble across 5),5,-0.013,0.36,1.439,0.063,0.05,0.202
+Posisjon 3,3 s pre-paddle (ensemble across 70 wave runs),70,0.002,0.329,1.317,0.069,0.044,0.176

@@ -1,21 +1,21 @@
 probe,long_run,duration_s,mean_mm,sigma_mm,Hs_mm
-8804/250 (upstream),20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run1.csv,31.0,-0.228,3.426,13.703
-8804/250 (upstream),20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,63.0,0.263,3.474,13.896
-8804/250 (upstream),20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop330-run1.csv,381.0,0.267,3.556,14.224
-8804/250 (upstream),20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,33.0,0.312,3.823,15.291
-8804/250 (upstream),20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run4.csv,360.0,0.27,3.806,15.224
-"9373/170 (IN, wall)",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run1.csv,31.0,-0.628,4.339,17.356
-"9373/170 (IN, wall)",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,63.0,0.408,4.086,16.346
-"9373/170 (IN, wall)",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop330-run1.csv,381.0,0.346,4.154,16.615
-"9373/170 (IN, wall)",20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,33.0,0.378,4.591,18.363
-"9373/170 (IN, wall)",20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run4.csv,360.0,0.3,4.233,16.931
-"9373/340 (IN, far)",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run1.csv,31.0,-0.348,3.909,15.638
-"9373/340 (IN, far)",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,63.0,0.325,4.155,16.62
-"9373/340 (IN, far)",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop330-run1.csv,381.0,0.296,4.225,16.9
-"9373/340 (IN, far)",20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,33.0,0.169,3.785,15.138
-"9373/340 (IN, far)",20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run4.csv,360.0,0.384,4.318,17.272
-12400/250 (OUT),20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run1.csv,31.0,-0.066,0.446,1.784
-12400/250 (OUT),20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,63.0,-0.069,0.355,1.422
-12400/250 (OUT),20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop330-run1.csv,381.0,0.049,0.35,1.402
-12400/250 (OUT),20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,33.0,-0.038,0.319,1.277
-12400/250 (OUT),20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run4.csv,360.0,0.061,0.328,1.312
+Posisjon 1,20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run1.csv,31.0,-0.228,3.426,13.703
+Posisjon 1,20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,63.0,0.263,3.474,13.896
+Posisjon 1,20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop330-run1.csv,381.0,0.267,3.556,14.224
+Posisjon 1,20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,33.0,0.312,3.823,15.291
+Posisjon 1,20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run4.csv,360.0,0.27,3.806,15.224
+"Posisjon 2, nær",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run1.csv,31.0,-0.628,4.339,17.356
+"Posisjon 2, nær",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,63.0,0.408,4.086,16.346
+"Posisjon 2, nær",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop330-run1.csv,381.0,0.346,4.154,16.615
+"Posisjon 2, nær",20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,33.0,0.378,4.591,18.363
+"Posisjon 2, nær",20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run4.csv,360.0,0.3,4.233,16.931
+"Posisjon 2, fjern",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run1.csv,31.0,-0.348,3.909,15.638
+"Posisjon 2, fjern",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,63.0,0.325,4.155,16.62
+"Posisjon 2, fjern",20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop330-run1.csv,381.0,0.296,4.225,16.9
+"Posisjon 2, fjern",20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,33.0,0.169,3.785,15.138
+"Posisjon 2, fjern",20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run4.csv,360.0,0.384,4.318,17.272
+Posisjon 3,20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run1.csv,31.0,-0.066,0.446,1.784
+Posisjon 3,20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,63.0,-0.069,0.355,1.422
+Posisjon 3,20260326-ProbePos4_31_FPV_2-tett6roof-under9Mooring-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop330-run1.csv,381.0,0.049,0.35,1.402
+Posisjon 3,20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run2.csv,33.0,-0.038,0.319,1.277
+Posisjon 3,20260327-ProbePos4_31_FPV_2-tett6roof-under9Mooring30-height100-lowrange/fullpanel-fullwind-nowave-depth580-mstop30-run4.csv,360.0,0.061,0.328,1.312
