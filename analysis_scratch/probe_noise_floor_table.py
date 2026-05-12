@@ -69,8 +69,8 @@ SCRATCH_CSV = BASE / "analysis_scratch" / f"{THESIS_NAME}.csv"
 # Probes in row order — display label tracks the existing thesis vocabulary.
 PROBE_ORDER = [
     ("8804/250",  "Posisjon 1"),
-    ("9373/170",  "Posisjon 2A"),
-    ("9373/340",  "Posisjon 2B"),
+    ("9373/170",  "Posisjon 2 (nær)"),
+    ("9373/340",  "Posisjon 2 (fjern)"),
     ("12400/250", "Posisjon 3"),
 ]
 
