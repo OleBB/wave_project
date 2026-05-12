@@ -54,6 +54,8 @@ BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
 from wavescripts.constants import HG, c_group  # noqa: E402
+from wavescripts.plot_utils import apply_thesis_style  # noqa: E402
+apply_thesis_style()
 
 OUT_DIR = BASE / "analysis_scratch"
 FS = 250.0  # sampling rate (Hz)
@@ -81,6 +83,44 @@ PROBE_COLOR = {
 FREQS = [1.3, 1.4, 1.5, 1.6]
 AMPS  = [0.1, 0.2, 0.3]
 WINDS = ["no", "full"]
+
+WIND_COLOR_OVERLAY = {"no": "#1f77b4", "full": "#d62728"}
+WIND_LABEL = {"no": "Uten vind", "full": "Full vind"}
+
+PROBE_LABEL_NO = {
+    "8804/250":  "Foran",
+    "9373/170":  "Innkommende",
+    "9373/340":  "Innkommende",
+    "12400/250": "Utgående",
+}
+AMP_LABEL = {0.1: r"$A_1$", 0.2: r"$A_2$", 0.3: r"$A_3$"}
+
+# A4 width minus 1 inch (narrow margins) → matches \linewidth in thesis.
+A4_W_IN = 8.27
+FIG_W   = A4_W_IN - 1.0  # 7.27"
+
+
+def _info_box_text(fw_runs, nw_runs, f_hz, amp, probe):
+    """Info-box string: probe label, amp/freq, Δt in the 7T–17T window.
+
+    Δt = (start_fw − start_nw)/FS read from `Computed Probe {pos} start`
+    in each run's meta — the snap-aligned anchor of the 10-period
+    analysis window. Negative Δt = fullwind window starts earlier.
+    """
+    start_col = f"Computed Probe {probe} start"
+    fw_val = fw_runs[start_col].iloc[0] if len(fw_runs) and start_col in fw_runs.columns else np.nan
+    nw_val = nw_runs[start_col].iloc[0] if len(nw_runs) and start_col in nw_runs.columns else np.nan
+    if not np.isfinite(fw_val) or not np.isfinite(nw_val):
+        dt_str = r"$\Delta t$ = n/a"
+    else:
+        dt_ms = (float(fw_val) - float(nw_val)) / FS * 1000.0
+        tag = "fullvind tidligere" if dt_ms < 0 else "fullvind senere"
+        dt_str = rf"$\Delta t$ = {dt_ms:+.0f} ms ({tag})"
+    return (
+        f"{PROBE_LABEL_NO[probe]} ({probe})\n"
+        f"{AMP_LABEL[amp]}, {f_hz:.1f} Hz\n"
+        f"{dt_str}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -412,35 +452,49 @@ def plot_pre_paddle(meta: pd.DataFrame, out_path: Path,
     if eta_fw is None or eta_nw is None:
         return
 
-    fig, axes = plt.subplots(3, 1, figsize=(15, 8), sharex=True)
-    for ax, probe in zip(axes, ["8804/250", "9373/170", "12400/250"]):
+    fig, axes = plt.subplots(3, 1, figsize=(FIG_W, 5.5), sharex=True)
+    fig.subplots_adjust(left=0.065, right=0.995, top=0.965,
+                        bottom=0.10, hspace=0.18)
+
+    probes_stacked = ["8804/250", "9373/170", "12400/250"]
+    for ax, probe in zip(axes, probes_stacked):
         eta_col = f"eta_{probe}"
         if eta_col not in eta_fw.columns:
             continue
         t_fw = np.arange(len(eta_fw)) / FS
         t_nw = np.arange(len(eta_nw)) / FS
-        ax.plot(t_nw, eta_nw[eta_col].values, color="#1f77b4",
-                lw=0.6, label="nowind")
-        ax.plot(t_fw, eta_fw[eta_col].values, color="#d62728",
-                lw=0.6, alpha=0.85, label="fullwind")
+        ax.plot(t_nw, eta_nw[eta_col].values,
+                color=WIND_COLOR_OVERLAY["no"], lw=0.6,
+                label=WIND_LABEL["no"])
+        ax.plot(t_fw, eta_fw[eta_col].values,
+                color=WIND_COLOR_OVERLAY["full"], lw=0.6, alpha=0.85,
+                label=WIND_LABEL["full"])
 
-        # Theoretical first-arrival time at this probe
+        # Theoretical first-arrival time at this probe (faint guide)
         r = PROBE_R[probe]
-        t_arr = r / c_group(f_pick)  # s, no offset
-        ax.axvline(t_arr, color="k", ls=":", lw=0.5,
-                   label=f"r/c_g = {t_arr:.2f}s")
-        ax.set_ylabel(f"η [mm]\n{probe}")
-        ax.grid(alpha=0.3)
-        if probe == "8804/250":
-            ax.legend(fontsize=8, loc="upper left")
+        t_arr = r / c_group(f_pick)
+        ax.axvline(t_arr, color="k", ls=":", lw=0.5)
 
-    axes[-1].set_xlabel("time [s] — full pre-paddle + arrival window")
+        ax.grid(alpha=0.3)
+        ax.axhline(0, color="k", lw=0.3)
+
+        # Info box per probe (probe label / amp / freq / Δt 7T–17T window)
+        ax.text(0.012, 0.96,
+                _info_box_text(fw_runs, nw_runs, f_pick, amp_pick, probe),
+                transform=ax.transAxes, fontsize=8, va="top", ha="left",
+                bbox=dict(boxstyle="round,pad=0.3", fc="white",
+                          ec="grey", alpha=0.9))
+
+        if probe == probes_stacked[0]:
+            ax.legend(fontsize=8, loc="upper right")
+
+    axes[-1].set_xlabel("Tid [s]")
     axes[-1].set_xlim(0, 25)
-    fig.suptitle(f"Pre-paddle + first arrival, f={f_pick} Hz, A={amp_pick} V "
-                 f"— if paddle starts at same recorded time in fw and nw, "
-                 f"any post-arrival Δt is propagation/detection",
-                 fontsize=10)
-    fig.tight_layout()
+
+    # y-axis label lifted to figure top-left
+    fig.text(0.006, 0.985, r"$\eta$ [mm]", fontsize=10,
+             va="top", ha="left")
+
     fig.savefig(out_path, dpi=130)
     if thesis_pdf is not None:
         thesis_pdf.parent.mkdir(parents=True, exist_ok=True)

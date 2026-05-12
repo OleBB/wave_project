@@ -40,6 +40,9 @@ import matplotlib.pyplot as plt
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
+from wavescripts.plot_utils import apply_thesis_style  # noqa: E402
+apply_thesis_style()
+
 OUT_DIR = BASE / "analysis_scratch"
 FS = 250.0
 
@@ -53,6 +56,42 @@ AMPS  = [0.1, 0.2, 0.3]
 WINDS = ["no", "full"]
 PROBE = "9373/170"
 WIND_COLOR = {"no": "#1f77b4", "full": "#d62728"}
+WIND_LABEL = {"no": "Uten vind", "full": "Full vind"}
+
+PROBE_LABEL_NO = {
+    "8804/250":  "Foran",
+    "9373/170":  "Innkommende",
+    "9373/340":  "Innkommende",
+    "12400/250": "Utgående",
+}
+AMP_LABEL = {0.1: r"$A_1$", 0.2: r"$A_2$", 0.3: r"$A_3$"}
+
+# A4 width minus 1 inch margin on each side → matches \linewidth in thesis.
+A4_W_IN = 8.27
+FIG_W   = A4_W_IN - 2.0  # 6.27"
+
+
+def _format_info_box(chosen, f_hz, amp, probe):
+    """Info-box string: probe label, amp/freq, Δt in 7T–17T window.
+
+    Δt = (start_fw − start_nw)/FS, read from `Computed Probe {pos} start`
+    in the per-run meta — this is the snap-aligned anchor of the 10-period
+    analysis window. Negative Δt = fullwind window starts earlier.
+    """
+    start_col = f"Computed Probe {probe} start"
+    fw = chosen.get((f_hz, amp, "full"))
+    nw = chosen.get((f_hz, amp, "no"))
+    if fw is None or nw is None or pd.isna(fw.get(start_col)) or pd.isna(nw.get(start_col)):
+        dt_str = r"$\Delta t$ = n/a"
+    else:
+        dt_ms = (float(fw[start_col]) - float(nw[start_col])) / FS * 1000.0
+        tag = "fullvind tidligere" if dt_ms < 0 else "fullvind senere"
+        dt_str = rf"$\Delta t$ = {dt_ms:+.0f} ms ({tag})"
+    return (
+        f"{PROBE_LABEL_NO[probe]} ({probe})\n"
+        f"{AMP_LABEL[amp]}, {f_hz:.1f} Hz\n"
+        f"{dt_str}"
+    )
 
 SETTLE_TOL = 0.10        # ±10% of T_paddle
 SETTLE_RUN = 3           # 3 consecutive cycles in band
@@ -258,7 +297,10 @@ def plot_overlay_zoom(meta, big, chosen, out_path,
                       thesis_pdf=None, thesis_name=None):
     eta_col = f"eta_{PROBE}"
     T_paddle = 1.0 / f_hz
-    fig, ax = plt.subplots(figsize=(14, 5))
+
+    fig, ax = plt.subplots(figsize=(FIG_W, 3.2))
+    fig.subplots_adjust(left=0.055, right=0.995, top=0.93, bottom=0.16)
+
     for w in WINDS:
         key = (f_hz, amp, w)
         if key not in chosen:
@@ -271,13 +313,15 @@ def plot_overlay_zoom(meta, big, chosen, out_path,
         i0 = max(0, int(t_start * FS))
         i1 = min(len(eta), int(t_end * FS))
 
+        # raw (faint) — no legend entry
         ax.plot(t[i0:i1], eta[i0:i1], color=WIND_COLOR[w], lw=0.5,
-                alpha=0.35, label=f"{w} raw")
+                alpha=0.35)
+        # smoothed — legend entry per wind condition
         ax.plot(t[i0:i1], eta_sm[i0:i1], color=WIND_COLOR[w], lw=1.0,
-                label=f"{w} smoothed")
+                label=WIND_LABEL[w])
 
-        # Mark paddle-period grid: vertical lines every T_pad starting at the
-        # smoothed signal's first upcrossing in this window
+        # Paddle-period grid: vertical lines every T_pad anchored to the
+        # smoothed signal's first upcrossing inside the visible window.
         eta_win = eta_sm[i0:i1]
         signs = np.sign(eta_win - np.nanmean(eta_win))
         diff = np.diff(signs)
@@ -290,15 +334,20 @@ def plot_overlay_zoom(meta, big, chosen, out_path,
 
     ax.axhline(0, color="k", lw=0.3)
     ax.set_xlim(t_start, t_end)
-    ax.set_xlabel("time [s]")
-    ax.set_ylabel("η [mm]")
-    ax.set_title(f"Per40 overlay — {f_hz} Hz, {amp} V, IN ({PROBE})  "
-                 f"— {label} (t = {t_start}-{t_end} s)\n"
-                 f"faint vertical lines: T_pad grid anchored to first uc per condition",
-                 fontsize=11)
+    ax.set_xlabel("Tid [s]")
     ax.grid(alpha=0.3)
     ax.legend(fontsize=9, loc="upper right")
-    fig.tight_layout()
+
+    # Info box — probe / amp / freq / Δt over 7T–17T window
+    ax.text(0.012, 0.96, _format_info_box(chosen, f_hz, amp, PROBE),
+            transform=ax.transAxes, fontsize=8, va="top", ha="left",
+            bbox=dict(boxstyle="round,pad=0.3", fc="white",
+                      ec="grey", alpha=0.9))
+
+    # y-axis label, lifted to figure top-left corner
+    fig.text(0.006, 0.985, r"$\eta$ [mm]", fontsize=10,
+             va="top", ha="left")
+
     fig.savefig(out_path, dpi=140)
     if thesis_pdf is not None:
         thesis_pdf.parent.mkdir(parents=True, exist_ok=True)
