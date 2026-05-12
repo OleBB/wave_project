@@ -294,7 +294,8 @@ def plot_detail(meta, big, chosen, out_path, f_hz, amp):
 # ---------------------------------------------------------------------------
 def plot_overlay_zoom(meta, big, chosen, out_path,
                       f_hz, amp, t_start, t_end, label,
-                      thesis_pdf=None, thesis_name=None):
+                      thesis_pdf=None, thesis_name=None,
+                      info_loc="upper left"):
     eta_col = f"eta_{PROBE}"
     T_paddle = 1.0 / f_hz
 
@@ -339,8 +340,11 @@ def plot_overlay_zoom(meta, big, chosen, out_path,
     ax.legend(fontsize=9, loc="upper right")
 
     # Info box — probe / amp / freq / Δt over 7T–17T window
-    ax.text(0.012, 0.96, _format_info_box(chosen, f_hz, amp, PROBE),
-            transform=ax.transAxes, fontsize=8, va="top", ha="left",
+    info_xy = {"upper left":   (0.012, 0.96, "left"),
+               "upper center": (0.5,   0.96, "center"),
+               "upper right":  (0.988, 0.96, "right")}[info_loc]
+    ax.text(info_xy[0], info_xy[1], _format_info_box(chosen, f_hz, amp, PROBE),
+            transform=ax.transAxes, fontsize=8, va="top", ha=info_xy[2],
             bbox=dict(boxstyle="round,pad=0.3", fc="white",
                       ec="grey", alpha=0.9))
 
@@ -348,10 +352,12 @@ def plot_overlay_zoom(meta, big, chosen, out_path,
     fig.text(0.006, 0.985, r"$\eta$ [mm]", fontsize=10,
              va="top", ha="left")
 
-    fig.savefig(out_path, dpi=140)
+    # Force the saved PDF to match figsize exactly (apply_thesis_style sets
+    # savefig.bbox='tight', which would otherwise crop and shrink the page).
+    fig.savefig(out_path, dpi=140, bbox_inches=fig.bbox_inches)
     if thesis_pdf is not None:
         thesis_pdf.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(thesis_pdf)
+        fig.savefig(thesis_pdf, bbox_inches=fig.bbox_inches)
     plt.close(fig)
 
     if thesis_name is not None:
@@ -509,7 +515,8 @@ def main():
                       f_hz=1.3, amp=0.2, t_start=40, t_end=51,
                       label="ramp-down + decay",
                       thesis_pdf=BASE / "output/FIGURES/ch04_per40_overlay_t40-51.pdf",
-                      thesis_name="ch04_per40_overlay_t40-51")
+                      thesis_name="ch04_per40_overlay_t40-51",
+                      info_loc="upper center")
     print("  → analysis_scratch/per40_full_chirp_overlay_t40-51.png "
           "+ output/FIGURES/ch04_per40_overlay_t40-51.pdf")
 

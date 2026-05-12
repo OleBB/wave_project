@@ -108,7 +108,8 @@ TABLE_CAPTIONS = {
     "ch04_window_choice_fullwind":               "",
     "ch04_plateau_values":                       "Beregnet amplitude fra hvert tidsvindu. Samlet for alle tre amplituder.Inngående og utgående. Transmisjonskoeffisient, og dens standardavvik.",
     "ch04_tidsvindu":                            "Frekvensenes tidsvinduer",
-    "ch04_wind_pre_paddle_table":                "Vindspekteret fra lange målinger sammenliknet med 3-sekundersmålinger fra hver kjøring",
+    "ch04_wind_qc_nowind_table":                 r"Pre-padle $\eta$-RMS per probe, uten vind. Vindu per probe $= r/\sqrt{gH}$ sekunder (henholdsvis \qty{3.69}{\second}, \qty{3.93}{\second}, \qty{3.93}{\second}, \qty{5.20}{\second}) --- den seneste tida en padlefrekvens-bølge kan ha rukket fram til proben. Celler: middel $\pm$ std (maks). RMS på probenes støygulvnivå (\S\ref{sec:probeusikkerhet}) bekrefter at tanken hadde falt til ro før kjøringene startet. Maks-kolonnen flagger enkeltkjøringer hvor stilltilstanden ikke var fullt etablert. \texttt{loose230} har bare 5 uten-vind-kontroller; \texttt{loose300} har 37.",
+    "ch04_wind_qc_fullwind_table":               r"Pre-padle $\eta$-RMS per probe, med full vind. Samme vindusdefinisjon som i tabell~\ref{tab:ch04_wind_qc_nowind_table}. Celler: middel $\pm$ std (maks). Innkommende-probene ser typisk \qty{4}{\milli\meter} RMS, mens utgående-proben (i panelets vindskygge) ser under \qty{0.4}{\milli\meter} --- panelet skygger vinden effektivt. Forholdet std/middel ($\approx \qty{14}{\percent}$ ved innkommende-probene) er vindens egen kjøring-til-kjøring-variasjon. Det setter et nedre tak på presisjonen i $K_t$ med vind: ved $n = 5$ kjøringer per celle reduseres tallet til $\approx \qty{7}{\percent}$ med $\sqrt{n}$-gjennomsnitting.",
     "ch04_wind_setup_baseline_table":            "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
 
     # ── CHAPTER 05 — RESULTS ─────────────────────────────────────────────────
@@ -137,7 +138,8 @@ TABLE_CAPTIONS_SHORT = {
     "ch04_window_choice_fullwind":               "",
     "ch04_plateau_values":                       "Platåverdier",
     "ch04_tidsvindu":                            "Frekvensenes tidsvindu.",
-    "ch04_wind_pre_paddle_table":                "Vindspekteret fra ulike målinger.",
+    "ch04_wind_qc_nowind_table":                 "Pre-padle $\\eta$-RMS uten vind --- stilltilstand-kontroll.",
+    "ch04_wind_qc_fullwind_table":               "Pre-padle $\\eta$-RMS med full vind --- reproduserbarhet av vindinngangen.",
     "ch04_wind_setup_baseline_table":            "Målt endring i vannstand ved å se på utgående probe. Fire datasett.",
 
     # ── CHAPTER 05 ───────────────────────────────────────────────────────────
@@ -246,7 +248,8 @@ def _fmt_signed(x: float, decimals: int = 3) -> str:
 #   ch04_probe_noise_floor_table             [RENDER] ✓  3σ noise per probe — innledende vs endelig
 #   ch04_parallel_probe_psd_agreement_simple [RENDER] ✓  Δ% (far−wall) per thesis freq
 #   ch04_window_intervals                    [RENDER] ✓  H&G theoretical window intervals per freq
-#   ch04_wind_pre_paddle_table               [RENDER] ✓  σ_η long vs 3 s pre-paddle per probe
+#   ch04_wind_qc_nowind_table                [RENDER] ✓  pre-paddle η RMS per (probe, canon) — stillwater check
+#   ch04_wind_qc_fullwind_table              [RENDER] ✓  pre-paddle η RMS per (probe, canon) — wind reproducibility
 #   ch05_damping_freq_table          [RENDER] ✓  Per-amp K_t,uten/K_t,vind/ΔK_t at 1.3–1.6 Hz
 #   ch05_mooring_focus_at_1_3hz_table [RENDER] ✓  Mooring × panel × wind transmission at 1.30 Hz
 #   ch04_plateau_values              [RENDER] ✓  A_in/A_out/K_t per (amp, freq, wind), all 3 amplitudes
@@ -628,56 +631,57 @@ print(f"   TEX → {_TEX}")
 
 
 # %%
-# [DATA: RENDER]  — analysis_scratch/wind_pre_paddle_table.py
+# [DATA: RENDER]  — analysis_scratch/wind_qc_table.py  (NOWIND half)
 """
-── CH04 § 4q — Pre-paddle wind summary (long-run vs 3 s) per probe ─────────
-Per probe row: long-run σ_η, 3 s mean σ_η, Δ%, 3 s 1σ scatter. One block,
-four rows.
+── CH04 — Pre-paddle wind QC table: NOWIND (stillwater check) ──────────
+Per-probe row × per-canon column. For each (probe, canon) cell under
+nowind: mean ± std (max) of pre-paddle η RMS [mm].
+
+Implication: RMS at probe noise floor confirms tank was still before
+the run. Max column flags individual runs that hadn't fully settled.
+
+Regenerate with:  python analysis_scratch/wind_qc_table.py
 """
-_NAME = "ch04_wind_pre_paddle_table"
+_NAME = "ch04_wind_qc_nowind_table"
 _CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
 _META = Path(f"output/TABLES/data/{_NAME}.meta.json")
 _TEX  = Path(f"output/TABLES/{_NAME}.tex")
 
 
+def _fmt_probe_label(row: pd.Series) -> str:
+    probe = row["probe"]
+    role  = row["role"]
+    if probe == "9373/170":
+        role = "Innkommende, vegg"
+    elif probe == "9373/340":
+        role = "Innkommende, fjern"
+    return rf"\texttt{{{probe}}} ({role})"
 
-def _fmt_mm(col: str, decimals: int = 2):
+
+def _fmt_rms_cell(canon: str, wind_tag: str):
+    """wind_tag is 'no' or 'full' to pick the right columns from the CSV."""
     def _impl(row: pd.Series) -> str:
-        v = row[col]
-        if pd.isna(v):
+        m  = row.get(f"rms_{wind_tag}_mean_{canon}")
+        s  = row.get(f"rms_{wind_tag}_std_{canon}")
+        mx = row.get(f"rms_{wind_tag}_max_{canon}")
+        if pd.isna(m):
             return "—"
-        return rf"$\num{{{v:.{decimals}f}}}$"
-    return _impl
-
-
-def _fmt_signed_pct(col: str, decimals: int = 1):
-    def _impl(row: pd.Series) -> str:
-        v = row[col]
-        if pd.isna(v):
-            return "—"
-        sign = "+" if v >= 0 else "-"
-        return rf"${sign}\num{{{abs(v):.{decimals}f}}}$"
+        return (rf"$\num{{{m:.2f}}} \pm \num{{{s:.2f}}}$"
+                rf" (\textit{{maks}} \num{{{mx:.2f}}})")
     return _impl
 
 
 _cell_format = {
-    "probe":               lambda r: str(r["probe"]),
-    "sigma_long_mm":       _fmt_mm("sigma_long_mm", 2),
-    "sigma_3s_mm":         _fmt_mm("sigma_3s_mm",   2),
-    "delta_pct":           _fmt_signed_pct("delta_pct", 1),
-    "sigma_3s_scatter_mm": _fmt_mm("sigma_3s_scatter_mm", 2),
+    "probe":    _fmt_probe_label,
+    "loose230": _fmt_rms_cell("loose230", "no"),
+    "loose300": _fmt_rms_cell("loose300", "no"),
 }
 
-_columns        = [
-    "probe", "sigma_long_mm", "sigma_3s_mm", "delta_pct",
-    "sigma_3s_scatter_mm",
-]
+_columns        = ["probe", "loose230", "loose300"]
 _column_headers = [
     "Probe",
-    r"$\sigma_\eta$ (lang) [\unit{\milli\metre}]",
-    r"$\sigma_\eta$ (\qty{3}{\second}) [\unit{\milli\metre}]",
-    r"$\Delta$ [\%]",
-    r"$\sigma_\eta$ (\qty{3}{\second}, $1\sigma$) [\unit{\milli\metre}]",
+    r"\texttt{loose230} (n=5)",
+    r"\texttt{loose300} (n=37)",
 ]
 
 _render_with_caption_short(
@@ -689,7 +693,56 @@ _render_with_caption_short(
         out_tex_path   = _TEX,
         columns        = _columns,
         column_headers = _column_headers,
-        column_spec    = "lcccc",
+        column_spec    = "lcc",
+        cell_format    = _cell_format,
+        row_groups     = [(None, lambda df: df)],
+        label          = f"tab:{_NAME}",
+        caption        = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
+
+
+# %%
+# [DATA: RENDER]  — analysis_scratch/wind_qc_table.py  (FULLWIND half)
+"""
+── CH04 — Pre-paddle wind QC table: FULLWIND (wind reproducibility) ────
+Per-probe row × per-canon column. For each (probe, canon) cell under
+fullwind: mean ± std (max) of pre-paddle η RMS [mm].
+
+Implication: std/mean ≈ 14 % at windward probes is wind-input
+run-to-run reproducibility; sets the precision floor for K_t,fw.
+"""
+_NAME = "ch04_wind_qc_fullwind_table"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+
+_cell_format = {
+    "probe":    _fmt_probe_label,
+    "loose230": _fmt_rms_cell("loose230", "full"),
+    "loose300": _fmt_rms_cell("loose300", "full"),
+}
+
+_columns        = ["probe", "loose230", "loose300"]
+_column_headers = [
+    "Probe",
+    r"\texttt{loose230} (n=35)",
+    r"\texttt{loose300} (n=41)",
+]
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path       = _CSV,
+        meta_path      = _META,
+        out_tex_path   = _TEX,
+        columns        = _columns,
+        column_headers = _column_headers,
+        column_spec    = "lcc",
         cell_format    = _cell_format,
         row_groups     = [(None, lambda df: df)],
         label          = f"tab:{_NAME}",

@@ -95,9 +95,9 @@ PROBE_LABEL_NO = {
 }
 AMP_LABEL = {0.1: r"$A_1$", 0.2: r"$A_2$", 0.3: r"$A_3$"}
 
-# A4 width minus 1 inch (narrow margins) → matches \linewidth in thesis.
+# A4 width minus 1 inch margin on each side → matches \linewidth in thesis.
 A4_W_IN = 8.27
-FIG_W   = A4_W_IN - 1.0  # 7.27"
+FIG_W   = A4_W_IN - 2.0  # 6.27"
 
 
 def _info_box_text(fw_runs, nw_runs, f_hz, amp, probe):
@@ -495,10 +495,12 @@ def plot_pre_paddle(meta: pd.DataFrame, out_path: Path,
     fig.text(0.006, 0.985, r"$\eta$ [mm]", fontsize=10,
              va="top", ha="left")
 
-    fig.savefig(out_path, dpi=130)
+    # Force the saved PDF to match figsize exactly (apply_thesis_style sets
+    # savefig.bbox='tight', which would otherwise crop and shrink the page).
+    fig.savefig(out_path, dpi=130, bbox_inches=fig.bbox_inches)
     if thesis_pdf is not None:
         thesis_pdf.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(thesis_pdf)
+        fig.savefig(thesis_pdf, bbox_inches=fig.bbox_inches)
     plt.close(fig)
 
     if thesis_name is not None:
