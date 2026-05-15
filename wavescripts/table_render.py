@@ -221,6 +221,7 @@ def render_table(
     caption: str | None = None,
     short_caption: str | None = None,
     header_block: str | None = None,
+    caption_position: str = "bottom",
 ) -> None:
     """Render a CSV + meta.json pair into a thesis-style LaTeX table.
 
@@ -229,6 +230,10 @@ def render_table(
     pass the full pre-rendered header text via ``header_block``. When
     provided it replaces the default ``\\toprule + headers + \\midrule``
     block, and ``column_headers`` is unused.
+
+    ``caption_position`` is ``"bottom"`` (default; caption + label appear
+    after the tabular) or ``"top"`` (caption + label appear above the
+    tabular, between ``\\small`` and ``\\begin{tabular}``).
 
     See module docstring for the meta dict shape and the caption logic.
     """
@@ -248,16 +253,33 @@ def render_table(
     )
 
     caption_block = _render_caption_block(caption, short_caption)
+    label_line = f"  \\label{{{label}}}\n"
 
-    full = (
-        immutable
-        + "\n"
-        + body
-        + "\n"
-        + caption_block
-        + f"  \\label{{{label}}}\n"
-        + "\\end{table}\n"
-    )
+    if caption_position == "top":
+        # Insert caption + label between \small and \begin{tabular} so the
+        # caption renders above the table body.
+        marker = "  \\begin{tabular}"
+        pre, _, tabular_rest = body.partition(marker)
+        full = (
+            immutable
+            + "\n"
+            + pre
+            + caption_block
+            + label_line
+            + marker
+            + tabular_rest
+            + "\n\\end{table}\n"
+        )
+    else:
+        full = (
+            immutable
+            + "\n"
+            + body
+            + "\n"
+            + caption_block
+            + label_line
+            + "\\end{table}\n"
+        )
 
     out_tex_path.parent.mkdir(parents=True, exist_ok=True)
     out_tex_path.write_text(full, encoding="utf-8")

@@ -153,9 +153,24 @@ mask = (
     & a_col.between(0.05, 0.35)
     & (combined_meta["PanelCondition"] == "full")
     & combined_meta["WindCondition"].isin(WINDS)
-    & (combined_meta["quality_flag"] == "ok")
+    # Match ch05_damping_freq's quality gate (apply_experimental_filters
+    # default): keep "ok" plus "probe_malfunction_secondary".
+    & combined_meta["quality_flag"].isin(["ok", "probe_malfunction_secondary"])
 )
 sel = combined_meta[mask].copy()
+# Single-probe dropout filter — match ch05_damping_freq
+# (main_save_figures.py ~line 2207). K_t from a single IN probe can't
+# exceed 1: a transmissive panel always damps. K_t,probe > 1 means that
+# probe's amplitude registered below the OUT probe — a single-probe
+# dropout (the 9373/170 probe is known to drop out at higher frequencies).
+_kt_wall = sel[f"Probe {OUT_PROBE} Amplitude (FFT)"] / sel[f"Probe {IN_PROBES[0]} Amplitude (FFT)"]
+_kt_far  = sel[f"Probe {OUT_PROBE} Amplitude (FFT)"] / sel[f"Probe {IN_PROBES[1]} Amplitude (FFT)"]
+_dropout = (_kt_wall > 1.0) | (_kt_far > 1.0)
+if _dropout.any():
+    print(f"Dropping {_dropout.sum()} runs with K_t,probe > 1 (single-probe dropout):")
+    for _, _r in sel[_dropout].iterrows():
+        print(f"  Kt_wall={_kt_wall[_r.name]:.3f} Kt_far={_kt_far[_r.name]:.3f}  {_r['path'].split('/')[-1]}")
+    sel = sel[~_dropout].copy()
 print(f"\n{len(sel)} canon runs at full panel, quality ok.")
 
 

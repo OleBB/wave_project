@@ -59,7 +59,7 @@ FFT_BAND_HZ      = 0.05
 
 THESIS_FREQS     = [1.3, 1.4, 1.5, 1.6]
 N_OFFSET         = 7
-N_LENGTH         = 5                     # uniform across all thesis freqs. WINDOW SECONDS IS N/F
+N_LENGTH         = 10                     # uniform across all thesis freqs. WINDOW SECONDS IS N/F
 
 TANK_LENGTH_M    = 25.0   # wavemaker → back wall (round trip = 2L = 50 m)
 SEICHE_SPEED_M_S = (9.81 * 0.58) ** 0.5   # √(g·h) ≈ 2.385 m/s
@@ -186,9 +186,24 @@ def build_figure_for(target_amp: float, amp_label_tex: str,
         & f_col.between(THESIS_FREQS[0] - 0.02, THESIS_FREQS[-1] + 0.02)
         & (combined_meta["PanelCondition"] == "full")
         & combined_meta["WindCondition"].isin(WINDS)
-        & (combined_meta["quality_flag"] == "ok")
+        # Match ch05_damping_freq's quality gate (apply_experimental_filters
+        # default): keep "ok" plus "probe_malfunction_secondary".
+        & combined_meta["quality_flag"].isin(["ok", "probe_malfunction_secondary"])
     )
     sel = combined_meta[mask].copy()
+    # Single-probe dropout filter — match ch05_damping_freq
+    # (main_save_figures.py ~line 2207). K_t from a single IN probe can't
+    # exceed 1: a transmissive panel always damps. K_t,probe > 1 means that
+    # probe's amplitude registered below the OUT probe — a single-probe
+    # dropout (the 9373/170 probe is known to drop out at higher frequencies).
+    _kt_wall = sel[f"Probe {OUT_PROBE} Amplitude (FFT)"] / sel[f"Probe {IN_PROBES[0]} Amplitude (FFT)"]
+    _kt_far  = sel[f"Probe {OUT_PROBE} Amplitude (FFT)"] / sel[f"Probe {IN_PROBES[1]} Amplitude (FFT)"]
+    _dropout = (_kt_wall > 1.0) | (_kt_far > 1.0)
+    if _dropout.any():
+        print(f"   Dropping {_dropout.sum()} runs with K_t,probe > 1 (single-probe dropout):")
+        for _, _r in sel[_dropout].iterrows():
+            print(f"     Kt_wall={_kt_wall[_r.name]:.3f} Kt_far={_kt_far[_r.name]:.3f}  {_r['path'].split('/')[-1]}")
+        sel = sel[~_dropout].copy()
     print(f"\n— {amp_tag} ({target_amp:.2f} V): {len(sel)} canon runs.")
 
     # Sliding A_FFT per (f, wind, probe, run)
@@ -216,7 +231,11 @@ def build_figure_for(target_amp: float, amp_label_tex: str,
             print(f"   f={f} Hz, wind={wind}: {len(rs)} runs")
 
     # ── Build figure ────────────────────────────────────────────────────
-    fig, axes = plt.subplots(len(THESIS_FREQS), 2, figsize=(11, 13),
+    # Sized for an A4 page with 1-inch margins (text block 6.27 x 9.69 in).
+    # At \includegraphics[width=\linewidth] only the aspect ratio matters:
+    # h/w = 15.3/11 = 1.39 -> rendered height 6.27 * 1.39 = 8.72 in, leaving
+    # ~0.97 in of text height below the figure for a 2-line 12 pt caption.
+    fig, axes = plt.subplots(len(THESIS_FREQS), 2, figsize=(11, 15.3),
                              sharex=True, sharey=True)
     PROBE_R_PANEL = {"IN": PROBE_R_M[IN_PROBES[0]], "OUT": PROBE_R_M[OUT_PROBE]}
 
@@ -280,8 +299,10 @@ def build_figure_for(target_amp: float, amp_label_tex: str,
                label=r"Første bevegelse, $r/\sqrt{gh}$"),
     ]
     fig.legend(handles=legend_handles, loc="lower center", ncol=3,
-               fontsize=12, bbox_to_anchor=(0.5, -0.005), frameon=True)
-    fig.tight_layout(rect=[0, 0.025, 1, 0.97])
+               fontsize=12, bbox_to_anchor=(0.5, 0.008), frameon=True)
+    # Reserve the bottom 6 % of the figure for the legend so it sits clear
+    # below the bottom-row x-axis instead of overlapping the "[s]" labels.
+    fig.tight_layout(rect=[0, 0.06, 1, 0.97])
 
     # Align horizontal y-label's left edge with leftmost tick label edge
     fig.canvas.draw()

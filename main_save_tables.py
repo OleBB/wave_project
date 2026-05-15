@@ -123,6 +123,7 @@ TABLE_CAPTIONS = {
     "ch05_damping_all_data_scatter_ka_table":     r"Tall til figur \ref{fig:ch05_damping_all_data_scatter_ka}. Hver rad " ,#Tall til figur \ref{fig:ch05_damping_all_data_scatter_ka}. Hver rad samler kjøringer på (konfigurasjon $\times$ amplitude $\times$ vind). Kolonner: $n$ er antall kjøringer, $ka$- og $kL$-spennet samlingen dekker, $\bar{K_t} \pm \sigma$, og lokalt stigningstall fra lineær tilpasning av $K_t$ mot $ka$ og $kL$ innen samlingen ($L = 2{,}6$~m).",
     "ch05_damping_undermooring_scatter_ka_table": r"Tall til figur \ref{fig:ch05_damping_undermooring_scatter_ka}. ",# begrenset til under-fortøyninger (loose300 + loose230, full panel) — tall til figur \ref{fig:ch05_damping_undermooring_scatter_ka}.",
     "ch05_damping_overmooring_scatter_ka_table":  r"Tall til figur \ref{fig:ch05_damping_overmooring_scatter_ka}" ,# begrenset til over-fortøyning (above\_50, full + reverse panel slått sammen) — tall til figur \ref{fig:ch05_damping_overmooring_scatter_ka}.",
+    "ch05_in_out_amplitudes_vs_freq_table":       r"Inngående og utgående amplituder for våre utvalgte frekvenser. ``Pluss-minus'' viser standardavviket (merk at det er få målinger per datapunkt).",
 
     # ── APPENDIX ─────────────────────────────────────────────────────────────
     "app_panel_pooling": "Sammenlikning av panelretning.",
@@ -153,6 +154,7 @@ TABLE_CAPTIONS_SHORT = {
     "ch05_damping_all_data_scatter_ka_table":     "$K_t$ mot $ka$/$kL$ — alle konfigurasjoner.",
     "ch05_damping_undermooring_scatter_ka_table": "Sammendrag, fortøyning under vann.",
     "ch05_damping_overmooring_scatter_ka_table":  "Sammendrag, fortøyning over vann.",
+    "ch05_in_out_amplitudes_vs_freq_table":       "Verdier for målte amplituder",
 
     # ── APPENDIX ─────────────────────────────────────────────────────────────
     "app_panel_pooling": "Sammenlikning av panelretning",
@@ -1021,6 +1023,89 @@ _render_with_caption_short(
         label          = f"tab:{_NAME}",
         caption        = TABLE_CAPTIONS.get(_NAME) or None,
         short_caption  = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+    ),
+)
+print(f"   TEX → {_TEX}")
+
+
+# %%
+# [DATA: RENDER]  — analysis_scratch/in_out_amplitudes_table.py
+"""
+── CH05 (companion table) — IN/OUT FFT amplitudes per (f, A, wind) ──────────
+Sibling of ch04_plateau_values using the same per-run probe-shifted window
+FFT but reporting A_IN ± σ(A_IN) and A_OUT ± σ(A_OUT) per cell (no K_t).
+24 cells (4 freqs × 3 amps × 2 winds), grouped by amp tier.
+"""
+_NAME = "ch05_in_out_amplitudes_vs_freq_table"
+_CSV  = Path(f"output/TABLES/data/{_NAME}.csv")
+_META = Path(f"output/TABLES/data/{_NAME}.meta.json")
+_TEX  = Path(f"output/TABLES/{_NAME}.tex")
+
+
+_IO_AMP_TIERS = [
+    (0.10, "A1", r"$A_1$"),
+    (0.20, "A2", r"$A_2$"),
+    (0.30, "A3", r"$A_3$"),
+]
+_IO_WIND_LABEL = {"no": "uten", "full": "full"}
+
+
+def _io_fmt_num_or_dash(value: float, decimals: int) -> str:
+    if pd.isna(value):
+        return r"\textendash"
+    return rf"$\num{{{value:.{decimals}f}}}$"
+
+
+def _io_fmt_amp_pm(row: pd.Series, mean_key: str, sd_key: str) -> str:
+    m, s = row.get(mean_key), row.get(sd_key)
+    if pd.isna(m):
+        return r"\textendash"
+    if pd.isna(s):
+        return rf"$\num{{{m:.2f}}}$"
+    return rf"$\num{{{m:.2f}}} \pm \num{{{s:.2f}}}$"
+
+
+_cell_format = {
+    "freq":  lambda r: rf"$\num{{{r['freq']:.1f}}}$",
+    "wind":  lambda r: _IO_WIND_LABEL[r["wind"]],
+    "n":     lambda r: rf"$\num{{{int(r['n'])}}}$",
+    "A_in":  lambda r: _io_fmt_amp_pm(r, "A_in",  "A_in_sd"),
+    "A_out": lambda r: _io_fmt_amp_pm(r, "A_out", "A_out_sd"),
+}
+
+_columns        = ["freq", "wind", "n", "A_in", "A_out"]
+_column_headers = [
+    r"$f$ [\unit{\hertz}]",
+    "vind",
+    r"$n$",
+    r"$A_\mathrm{Inn}$ [\unit{\milli\meter}]",
+    r"$A_\mathrm{Ut}$ [\unit{\milli\meter}]",
+]
+
+_row_groups: list[tuple[str | None, callable]] = []
+for _amp, _short, _label in _IO_AMP_TIERS:
+    _group_label = rf"\textbf{{{_label}}} ($V = {_amp:.2f}$ V)"
+    _row_groups.append(
+        (_group_label,
+         (lambda a: lambda df: df[np.isclose(df["amp_v"], a)])(_amp))
+    )
+
+_render_with_caption_short(
+    _META,
+    TABLE_CAPTIONS_SHORT.get(_NAME) or "",
+    lambda: render_table(
+        csv_path         = _CSV,
+        meta_path        = _META,
+        out_tex_path     = _TEX,
+        columns          = _columns,
+        column_headers   = _column_headers,
+        column_spec      = "ccccc",
+        cell_format      = _cell_format,
+        row_groups       = _row_groups,
+        label            = f"tab:{_NAME}",
+        caption          = TABLE_CAPTIONS.get(_NAME) or None,
+        short_caption    = TABLE_CAPTIONS_SHORT.get(_NAME) or None,
+        caption_position = "top",
     ),
 )
 print(f"   TEX → {_TEX}")
